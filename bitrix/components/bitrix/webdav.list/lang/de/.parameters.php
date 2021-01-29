@@ -1,0 +1,29 @@
+<?
+$MESS ['T_IBLOCK_DESC_FACT'] = "Aktivierungsdatum";
+$MESS ['T_IBLOCK_DESC_ADD_SECTIONS_CHAIN'] = "Bereich in der Navigationskette anzeigen";
+$MESS ['T_IBLOCK_DESC_ASC'] = "Aufsteigend";
+$MESS ['IBLOCK_CACHE_FILTER'] = "Cachen wenn der Filter aktiv ist";
+$MESS ['T_IBLOCK_DESC_ACTIVE_DATE_FORMAT'] = "Datumsformat";
+$MESS ['T_IBLOCK_DESC_FTSAMP'] = "Letzte Änderung";
+$MESS ['T_IBLOCK_DESC_DESC'] = "Absteigend";
+$MESS ['T_IBLOCK_DESC_DETAIL_PAGE_URL'] = "URL - Detailansicht (Standardwert aus Informationsblock-Einstellungen)";
+$MESS ['T_IBLOCK_DESC_IBBY1'] = "Sortierrichtung für den zweiten Sortierdurchgang der Dokumente";
+$MESS ['T_IBLOCK_DESC_IBBY2'] = "Sortierrichtung für den zweiten Sortierdurchgang der Dokumente";
+$MESS ['T_IBLOCK_DESC_DOCS_PANEL'] = "Buttons für diese Komponente zum administrativen Panel hinzufügen";
+$MESS ['T_IBLOCK_DESC_PAGER_DOCS'] = "News";
+$MESS ['T_IBLOCK_DESC_LIST_CONT'] = "Dokumenten pro Seite";
+$MESS ['T_IBLOCK_DESC_IBORD1'] = "Feld für den zweiten Sortierdurchgang der Dokumente";
+$MESS ['T_IBLOCK_DESC_IBORD2'] = "Feld für den zweiten Sortierdurchgang der Dokumente";
+$MESS ['IBLOCK_FIELD'] = "Felder";
+$MESS ['T_IBLOCK_FILTER'] = "Filter";
+$MESS ['T_IBLOCK_DESC_HIDE_LINK_WHEN_NO_DETAIL'] = "Link verbergen, wenn es keine detailierte Beschreibung gibt";
+$MESS ['T_IBLOCK_DESC_FID'] = "ID";
+$MESS ['T_IBLOCK_DESC_INCLUDE_IBLOCK_INTO_CHAIN'] = "Informationsblock in der Navigationskette anzeigen";
+$MESS ['T_IBLOCK_DESC_LIST_ID'] = "Informationsblock-ID";
+$MESS ['T_IBLOCK_DESC_PREVIEW_TRUNCATE_LEN'] = "Maximale Vorschaulänge für die Anzeige (nur für den Text)";
+$MESS ['T_IBLOCK_DESC_FNAME'] = "Überschrift";
+$MESS ['T_IBLOCK_PROPERTY'] = "Eigenschaften";
+$MESS ['IBLOCK_SECTION_ID'] = "Bereichs ID";
+$MESS ['T_IBLOCK_DESC_FSORT'] = "Sortierung";
+$MESS ['T_IBLOCK_DESC_LIST_TYPE'] = "Informationsblocktyp (wird nur für die Prüfung benutzt)";
+?>

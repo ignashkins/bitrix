@@ -1,0 +1,35 @@
+<?
+$MESS["WD_TITLE_TIMESTAMP"] = "Geändert";
+$MESS["WD_TITLE_ACTIVE"] = "Veröffentlicht";
+$MESS["WD_TITLE_SORT"] = "Sortierung";
+$MESS["WD_TITLE_NAME"] = "Überschrift";
+$MESS["WD_TITLE_STATUS"] = "Status";
+$MESS["WD_TITLE_MODIFIED_BY"] = "Geändert von";
+$MESS["WD_TITLE_CODE"] = "Mnemonischer Code";
+$MESS["WD_TITLE_EXTCODE"] = "Externe ID";
+$MESS["WD_TITLE_ELS"] = "Dateien";
+$MESS["WD_TITLE_SECS"] = "Unterbereiche";
+$MESS["WD_TITLE_ADMIN_DCREATE"] = "Erstellt";
+$MESS["WD_TITLE_ADMIN_WCREATE2"] = "Erstellt von";
+$MESS["WD_TITLE_EXTERNAL_SHOWS"] = "Angezeigt";
+$MESS["WD_TITLE_EXTERNAL_PREV_TEXT"] = "Vorschautext";
+$MESS["WD_TITLE_EXTERNAL_DET_TEXT"] = "Detaillierte Beschreibung";
+$MESS["WD_TITLE_TAGS"] = "Tags";
+$MESS["WD_TITLE_EXTERNAL_WFNEW"] = "Noch nicht veröffentlicht";
+$MESS["WD_TITLE_EXTERNAL_LOCK"] = "Blockieren";
+$MESS["WD_TITLE_EXTERNAL_LOCK_BY"] = "Blockiert von";
+$MESS["WD_TITLE_EXTERNAL_LOCK_WHEN"] = "Blockiert am";
+$MESS["WD_TITLE_EXTERNAL_COM"] = "Kommentar des Adminstrators";
+$MESS["WD_TITLE_FILE_SIZE"] = "Größe";
+$MESS["WD_WF_COMMENT1"] = "Sie dürfen Dateien bearbeiten";
+$MESS["WD_WF_COMMENT2"] = "Sie dürfen KEINE Dateien bearbeiten.";
+$MESS["WD_WF_ATTENTION1"] = "Sie dürfen Dateien löschen.";
+$MESS["WD_WF_ATTENTION2"] = "Sie dürfen Dateien im Status #STATUS# bearbeiten.";
+$MESS["WD_WF_ATTENTION3"] = "Sie dürfen Dateien im Status #STATUS# bearbeiten.";
+$MESS["WD_MOVE_TO"] = "Verschieben ";
+$MESS["WD_CONTENT"] = "Obere Ebene";
+$MESS["IBLIST_A_BP_H"] = "Geschäftsprozess";
+$MESS["WD_TITLE_PUBLIC"] = "Veröffentlicht";
+$MESS["WD_ALL"] = "Gesamt";
+$MESS["WD_VERSIONS"] = "Versionen";
+?>

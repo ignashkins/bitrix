@@ -1,0 +1,20 @@
+<?php
+$MESS["VI_DOCS_BODY"] = "Entsprechend der Gesetzgebung in einigen Ländern kann der Telefonie-Anbieter von Ihnen verlangen, dass Sie juristische Unterlagen bereitstellen, um gemietete Nummern nutzen zu dürfen.<br>Sie müssen Unterlagen bereitstellen, damit die Nummer während der ganzen Zeit der Miete für Sie reserviert bleibt.";
+$MESS["VI_DOCS_BODY_2"] = "In einigen Ländern ist es gesetzlich vorgeschrieben, dass die Telefonie-Anbieter Dokumente von Ihnen verlangen können, bevor Sie die gemieteten Nummern nutzen können.<br>Das ist erforderlich, wenn Sie die Nummern während der ganzen Mietzeit behalten und nutzen möchten. Sie werden die Nummern nicht nutzen können, solange Sie die erforderlichen Dokumente nicht hochladen und diese auch bestätigt werden.";
+$MESS["VI_DOCS_COUNTRY_RU"] = "Russland";
+$MESS["VI_DOCS_SERVICE_ERROR"] = "Fehler beim Senden der Anfrage an den Service zum Dokumentenupload";
+$MESS["VI_DOCS_STATUS"] = "Status:";
+$MESS["VI_DOCS_TABLE_COMMENT"] = "Kommentar";
+$MESS["VI_DOCS_TABLE_LINK"] = "Upload-History des Dokuments";
+$MESS["VI_DOCS_TABLE_OWNER"] = "Besitzer";
+$MESS["VI_DOCS_TABLE_STATUS"] = "Prüfstatus";
+$MESS["VI_DOCS_TABLE_TYPE"] = "Rechtsträger";
+$MESS["VI_DOCS_TABLE_UPLOAD"] = "Hochgeladen am";
+$MESS["VI_DOCS_TITLE"] = "Unterlagen hochladen, um Telefonnummern zu mieten";
+$MESS["VI_DOCS_UNTIL_DATE"] = "Sie müssen Unterlagen bis zum #DATE# hochladen";
+$MESS["VI_DOCS_UNTIL_DATE_NOTICE"] = "Nach dem angegebenen Datum werden reservierte Nummern deaktiviert, der Betrag wird auf Ihren Account zurückgezahlt.<br><br>Die gemieteten Nummern sind bis zum Schluss der Laufzeit der Miete.";
+$MESS["VI_DOCS_UPDATE_BTN"] = "Neue Unterlagen hochladen";
+$MESS["VI_DOCS_UPLOAD_BTN"] = "Unterlagen hochladen";
+$MESS["VI_DOCS_UPLOAD_NOTICE"] = "Beachten Sie bitte, dass Ihre Unterlagen direkt zu Fastcom LLC hochgeladen werden, wo sie überprüft werden, ob sie der Gesetzgebung des jeweiligen Landes entsprechen. Bitrix24 speichert bzw. verarbeitet keine Daten, die Sie zum Prüfen an Fastcom LLC weitergeben.";
+$MESS["VI_DOCS_UPLOAD_WHILE_RENT"] = "Falls zum Mieten einer Telefonnummer die Verifizierung von Dokumenten erforderlich sein wird, wird in der Benutzeroberfläche das Formular zur Verifizierung der Dokumente erscheinen";
+$MESS["VI_DOCS_WAIT"] = "Wird hochgeladen... Bitte warten";

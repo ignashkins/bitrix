@@ -1,0 +1,5 @@
+<?php
+$MESS["CONTACT_CENTER_MENU_TOP_MODULE_NOT_INSTALLED"] = "Das Modul Intranet ist nicht installiert.";
+$MESS["MENU_CONTACT_CENTER"] = "Contact Center";
+$MESS["MENU_CONTACT_CENTER_IMOL_DETAILED_STATISTICS"] = "Konversationen";
+$MESS["MENU_CONTACT_CENTER_IMOL_STATISTICS"] = "Konversationsstatistik";

@@ -1,0 +1,37 @@
+<?
+$MESS ['WD_ACTIVE'] = "Die Datei ist aktiv";
+$MESS ['WD_NAME'] = "Überschrift";
+$MESS ['WD_TAGS'] = "Tags";
+$MESS ['WD_FILE'] = "Datei";
+$MESS ['WD_FILE_REPLACE'] = "Datei ersetzen";
+$MESS ['WD_SAVE'] = "Speichern";
+$MESS ['WD_APPLY'] = "Anwenden";
+$MESS ['WD_CANCEL'] = "Abbrechen";
+$MESS ['WD_DESCRIPTION'] = "Beschreibung";
+$MESS ['WD_FILE_CREATED'] = "Erstellt";
+$MESS ['WD_FILE_MODIFIED'] = "Geändert";
+$MESS ['WD_FILE_ACTIVITY'] = "Aktiv";
+$MESS ['WD_FILE_SIZE'] = "Größe";
+$MESS ['WD_FILE_STATUS'] = "Status";
+$MESS ['WD_FILE_COMMENTS'] = "Kommentare";
+$MESS ['WD_OPEN_FILE'] = "Datei öffnen.";
+$MESS ['WD_VIEW_FILE'] = "anzeigen";
+$MESS ['WD_VIEW_FILE_TITLE'] = "Dateieigenschaften anzeigen.";
+$MESS ['WD_DOWNLOAD_FILE'] = "download";
+$MESS ['WD_WF_CURRENT_VERSION'] = "aktuelle Version:";
+$MESS ['WD_WF_ORIGINAL'] = "Original:";
+$MESS ['WD_MAIN_PARAMS'] = "Allgemeine Parameter";
+$MESS ['WD_WF_PARAMS'] = "Workflow-Parameter";
+$MESS ['WD_PARENT_SECTION'] = "Übergeordneter Bereich";
+$MESS ['WD_CONTENT'] = "Obere Ebene";
+$MESS ['IBEL_E_TAB_BIZPROC'] = "Geschäftsprozesse";
+$MESS ['IBEL_BIZPROC_STOP'] = "Anhalten";
+$MESS ['IBEL_BIZPROC_STATE'] = "Aktueller Status:";
+$MESS ['IBEL_BIZPROC_RUN_CMD'] = "Aktion ausführen:";
+$MESS ['IBEL_BIZPROC_RUN_CMD_NO'] = "keine";
+$MESS ['IBEL_BIZPROC_TASKS'] = "Geschäftsprozess-Aufgaben:";
+$MESS ['IBEL_E_PUBLISHED'] = "Dokument veröffentlicht";
+$MESS ['WD_Y'] = "Ja";
+$MESS ['WD_N'] = "nein";
+$MESS ['WD_HISTORY'] = "History";
+?>

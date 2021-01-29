@@ -1,0 +1,32 @@
+<?
+$MESS["IM_CHAT_CALL"] = "Anruf";
+$MESS["IM_CHAT_GENERAL"] = "Allgemeiner Chat";
+$MESS["IM_CHAT_GROUP_NEW"] = "Privater Chat";
+$MESS["IM_CHAT_LINES"] = "Kommunikationskanal";
+$MESS["IM_CHAT_OPEN_NEW"] = "Öffentlicher Chat";
+$MESS["IM_CL_BOT"] = "Chat-Bot";
+$MESS["IM_CL_USER"] = "Nutzer";
+$MESS["IM_CL_USER_B24"] = "Mitarbeiter";
+$MESS["IM_CL_USER_EXTRANET"] = "Externer Nutzer";
+$MESS["IM_CL_USER_LINES"] = "Nutzer der Kommunikationskanäle";
+$MESS["IM_F_ATTACH"] = "Anhang";
+$MESS["IM_F_FILE"] = "Datei";
+$MESS["IM_F_RATING"] = "Ranking";
+$MESS["IM_M_BIRTHDAY_MESSAGE_SHORT"] = "Hat heute Geburtstag!";
+$MESS["IM_M_DELETED"] = "Diese Nachricht wurde gelöscht.";
+$MESS["IM_M_ICON"] = "Icon";
+$MESS["IM_M_QUOTE_BLOCK"] = "Zitat";
+$MESS["IM_STATUS_AWAY"] = "Abwesend";
+$MESS["IM_STATUS_AWAY_TITLE"] = "Abwesend für #TIME#";
+$MESS["IM_STATUS_BOT"] = "Chat-Bot";
+$MESS["IM_STATUS_DND"] = "Beschäftigt";
+$MESS["IM_STATUS_GUEST"] = "Nicht verfügbar";
+$MESS["IM_STATUS_LINES-ONLINE"] = "Nutzer der Kommunikationskanäle";
+$MESS["IM_STATUS_MOBILE"] = "Mobile App";
+$MESS["IM_STATUS_NA"] = "Nicht verfügbar";
+$MESS["IM_STATUS_NETWORK"] = "Bitrix24.Network";
+$MESS["IM_STATUS_OFFLINE"] = "Offline";
+$MESS["IM_STATUS_ONLINE"] = "Online";
+$MESS["IM_STATUS_VACATION"] = "Im Urlaub";
+$MESS["IM_STATUS_VACATION_TITLE"] = "Im Urlaub bis zum #DATE#";
+?>

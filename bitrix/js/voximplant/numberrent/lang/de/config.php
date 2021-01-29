@@ -1,0 +1,19 @@
+<?php
+$MESS["VI_CANCEL_DELETE_NUMBER_ERROR"] = "Anbieter der Telefonnummer hat beim Versuch, die Verbindung zu trennen, einen Fehler zurückgesendet. Versuchen Sie bitte später erneut.";
+$MESS["VI_DELETE_NUMBER_ERROR"] = "Anbieter der Telefonnummer hat beim Trennen der Verbindung einen Fehler zurückgesendet. Versuchen Sie bitte später erneut.";
+$MESS["VI_NUMBER_BUNDLE_WILL_BE_DELETED"] = "Das Paket wird innerhalb von 24 Stunden deaktiviert.";
+$MESS["VI_NUMBER_CONFIRM_ACTION"] = "Bestätigen Sie die Aktion";
+$MESS["VI_NUMBER_CONFIRM_BUNDLE_DISCONNECTION"] = "Ein Paket kann nicht teilweise deaktiviert. Möchten Sie alle Nummern des Pakets deaktivieren?";
+$MESS["VI_NUMBER_ERROR"] = "Fehler";
+$MESS["VI_NUMBER_NUMBER_DELETE_CONFIRM"] = "Möchten Sie die Nummer #NUMBER# für Ihr Bitrix24 wirklich deaktivieren?";
+$MESS["VI_NUMBER_NUMBER_RENTED_IN_BUNDLE"] = "Diese Nummer wurde als ein Paket von #COUNT# Nummern gemietet:";
+$MESS["VI_NUMBER_NUMBER_WILL_BE_DELETED"] = "Die Nummer wird innerhalb von 24 Stunden deaktiviert.";
+$MESS["VI_NUMBER_RENT_CLOSE"] = "Schließen";
+$MESS["VI_NUMBER_RENT_CONFIGURE_NUMBER"] = "Nummer konfigurieren";
+$MESS["VI_NUMBER_RENT_CONFIGURE_NUMBERS"] = "Nummern konfigurieren";
+$MESS["VI_NUMBER_RENT_CONGRATULATIONS"] = "Glückwunsch!";
+$MESS["VI_NUMBER_RENT_DOCUMENTS_REQUIRED"] = "Sie müssen juristische Unterlagen hochladen, um die gemietete Nummer nutzen zu können.";
+$MESS["VI_NUMBER_RENT_NUMBERS_ATTACHED"] = "Die Nummern #NUMBERS# sind mit Ihrem Bitrix24 verbunden!";
+$MESS["VI_NUMBER_RENT_NUMBER_ATTACHED"] = "Die Nummer #NUMBER# ist mit Ihrem Bitrix24 verbunden!";
+$MESS["VI_NUMBER_RENT_NUMBER_RESERVED"] = "Die Nummer #NUMBER# ist für Sie reserviert.";
+$MESS["VI_NUMBER_RENT_UPLOAD_DOCUMENTS"] = "Unterlagen hochladen";
