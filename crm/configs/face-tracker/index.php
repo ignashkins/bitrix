@@ -11,10 +11,16 @@ $APPLICATION->includeComponent('bitrix:crm.control_panel', '',
 		'ACTIVE_ITEM_ID' => ''
 	)
 );
-$APPLICATION->IncludeComponent(
+
+if (
+	\Bitrix\Main\Loader::includeModule('crm')
+	&& CCrmAuthorizationHelper::CheckConfigurationUpdatePermission()
+)
+{
+	$APPLICATION->IncludeComponent(
 		"bitrix:faceid.tracker.settings",
 		".default"
-);
-
+	);
+}
 
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/footer.php");

@@ -1,14 +1,19 @@
 <?php
 namespace Bitrix\ImOpenLines;
 
-use \Bitrix\Main,
-	\Bitrix\Main\Loader,
-	\Bitrix\Main\Type\DateTime,
-	\Bitrix\Main\Localization\Loc;
-use \Bitrix\ImConnector,
-	\Bitrix\ImConnector\Output,
-	\Bitrix\ImConnector\Library;
-use \Bitrix\Im\Text as ImText;
+use Bitrix\Main,
+	Bitrix\Main\Loader,
+	Bitrix\Main\Type\DateTime,
+	Bitrix\Main\Localization\Loc;
+use Bitrix\Pull;
+use Bitrix\ImConnector,
+	Bitrix\ImConnector\Output,
+	Bitrix\ImConnector\Library,
+	Bitrix\ImConnector\InteractiveMessage;
+use Bitrix\Im\Bot\Keyboard,
+	Bitrix\Im\Text as ImText,
+	Bitrix\Im\User as ImUser,
+	Bitrix\Im\Model\ChatTable;
 
 Loc::loadMessages(__FILE__);
 
@@ -18,28 +23,39 @@ class Connector
 	const TYPE_NETWORK = 'network';
 	const TYPE_CONNECTOR = 'connector';
 
-	public const TYPE_USER_BLOCK = 'USER';
-
 	const EVENT_IMOPENLINE_MESSAGE_SEND = 'OnImopenlineMessageSend';
 	const EVENT_IMOPENLINE_MESSAGE_RECEIVE = 'OnImopenlineMessageReceive';
 
-	private const LOCK_MAX_ITERATIONS = 3;
+	public const LOCK_MAX_ITERATIONS = 3;
 
-	static $noVote = array(
-		//self::TYPE_LIVECHAT,
+	static $noVote = [
+		self::TYPE_LIVECHAT,
 		//self::TYPE_NETWORK
-	);
+	];
 
 	private $error = null;
 	private $moduleLoad = false;
 
+	/** @var Result */
+	protected $result;
+
+	/**
+	 * Connector constructor.
+	 * @throws Main\LoaderException
+	 */
 	public function __construct()
 	{
 		$imLoad = Loader::includeModule('im');
 		$pullLoad = Loader::includeModule('pull');
 		$connectorLoad = Loader::includeModule('imconnector');
-		if ($imLoad && $pullLoad && $connectorLoad)
+		if (
+			$imLoad &&
+			$pullLoad &&
+			$connectorLoad
+		)
 		{
+			$this->result = new Result();
+			//old version
 			$this->error = new BasicError(null, '', '');
 			$this->moduleLoad = true;
 		}
@@ -47,20 +63,29 @@ class Connector
 		{
 			if (!$imLoad)
 			{
+				$this->result->addError(new Error(Loc::getMessage('IMOL_CHAT_ERROR_IM_LOAD'), 'IM_LOAD_ERROR', __METHOD__));
+				//old version
 				$this->error = new BasicError(__METHOD__, 'IM_LOAD_ERROR', Loc::getMessage('IMOL_CHAT_ERROR_IM_LOAD'));
 			}
 			elseif (!$pullLoad)
 			{
+				$this->result->addError(new Error(Loc::getMessage('IMOL_CHAT_ERROR_PULL_LOAD'), 'PULL_LOAD_ERROR', __METHOD__));
+				//old version
 				$this->error = new BasicError(__METHOD__, 'PULL_LOAD_ERROR', Loc::getMessage('IMOL_CHAT_ERROR_PULL_LOAD'));
 			}
 			elseif (!$connectorLoad)
 			{
+				$this->result->addError(new Error(Loc::getMessage('IMOL_CHAT_ERROR_CONNECTOR_LOAD'), 'CONNECTOR_LOAD_ERROR', __METHOD__));
+				//old version
 				$this->error = new BasicError(__METHOD__, 'CONNECTOR_LOAD_ERROR', Loc::getMessage('IMOL_CHAT_ERROR_CONNECTOR_LOAD'));
 			}
 		}
 	}
 
-	private function isModuleLoad()
+	/**
+	 * @return bool
+	 */
+	private function isModuleLoad(): bool
 	{
 		return $this->moduleLoad;
 	}
@@ -85,6 +110,7 @@ class Connector
 		if (!empty($params))
 		{
 			if (
+				!in_array($params['connector']['connector_id'], self::$noVote) &&
 				(
 					mb_strpos($params['message']['text'], '1') === 0
 					|| mb_strpos($params['message']['text'], '0') === 0
@@ -139,7 +165,7 @@ class Connector
 					{
 						$keyboard = $params['message']['keyboard'];
 					}
-					$addMessage["KEYBOARD"] = \Bitrix\Im\Bot\Keyboard::getKeyboardByJson($keyboard);
+					$addMessage["KEYBOARD"] = Keyboard::getKeyboardByJson($keyboard);
 				}
 			}
 			if (!empty($params['message']['fileLinks']))
@@ -189,6 +215,9 @@ class Connector
 						$addMessage['MESSAGE'] <> ''
 					)
 					{
+						$userViewChat = false;
+						$addVoteResult = false;
+
 						$session = new Session();
 						$resultLoadSession = $session->load([
 							'USER_CODE' => self::getUserCode($params['connector']),
@@ -196,7 +225,10 @@ class Connector
 							'DEFERRED_JOIN' => 'Y',
 							'VOTE_SESSION' => $voteSession? 'Y': 'N'
 						]);
-						if ($resultLoadSession)
+						if (
+							$resultLoadSession ||
+							$session->isCloseVote()
+						)
 						{
 							$addMessage["TO_CHAT_ID"] = $session->getData('CHAT_ID');
 							if (!empty($params['message']['files']))
@@ -215,7 +247,10 @@ class Connector
 									$addMessage["MESSAGE"] = '[FILE]';
 								}
 							}
+						}
 
+						if ($resultLoadSession)
+						{
 							if ($session->isNowCreated())
 							{
 								$customDataMessage = '';
@@ -238,7 +273,7 @@ class Connector
 								{
 									if ($params['connector']['connector_id'] == self::TYPE_LIVECHAT)
 									{
-										$orm = \Bitrix\Im\Model\ChatTable::getById($params['chat']['id']);
+										$orm = ChatTable::getById($params['chat']['id']);
 										$guestChatData = $orm->fetch();
 									}
 									else
@@ -264,13 +299,13 @@ class Connector
 								if ($customDataMessage)
 								{
 									Im::addMessage([
-										"TO_CHAT_ID" => $session->getData('CHAT_ID'),
+										'TO_CHAT_ID' => $session->getData('CHAT_ID'),
 										'MESSAGE' => $customDataMessage,
 										'ATTACH' => $customDataAttach,
 										'SYSTEM' => 'Y',
 										'SKIP_COMMAND' => 'Y',
-										"PARAMS" => [
-											"CLASS" => "bx-messenger-content-item-system"
+										'PARAMS' => [
+											'CLASS' => 'bx-messenger-content-item-system'
 										],
 									]);
 								}
@@ -278,7 +313,6 @@ class Connector
 
 							$session->joinUser();
 
-							$addVoteResult = false;
 							if($session->getData('OPERATOR_ID') > 0)
 							{
 								$userViewChat = \CIMContactList::InRecent($session->getData('OPERATOR_ID'), IM_MESSAGE_OPEN_LINE, $session->getData('CHAT_ID'));
@@ -288,20 +322,23 @@ class Connector
 								$userViewChat  = false;
 							}
 
-							if ($voteSession && $session->getData('WAIT_VOTE') == 'Y')
+							if (
+								$voteSession &&
+								$session->getData('WAIT_VOTE') == 'Y'
+							)
 							{
 								$voteValue = 0;
 								if (mb_strlen($addMessage["MESSAGE"]) > 1)
 								{
 									$userViewChat = true;
 								}
-								if (!in_array($params['connector']['connector_id'], self::$noVote) && mb_strpos($addMessage["MESSAGE"], '1') === 0)
+								if (mb_strpos($addMessage["MESSAGE"], '1') === 0)
 								{
 									$voteValue = 5;
 									$addMessage["MESSAGE"] = '[like]'.mb_substr($addMessage["MESSAGE"], 1);
 									$addVoteResult = $session->getConfig('VOTE_MESSAGE_2_LIKE');
 								}
-								else if (!in_array($params['connector']['connector_id'], self::$noVote) && mb_strpos($addMessage["MESSAGE"], '0') === 0)
+								else if (mb_strpos($addMessage["MESSAGE"], '0') === 0)
 								{
 									$voteValue = 1;
 									$addMessage["MESSAGE"] = '[dislike]'.mb_substr($addMessage["MESSAGE"], 1);
@@ -309,6 +346,13 @@ class Connector
 								}
 								if ($addVoteResult)
 								{
+									$voteEventParams = [
+										'SESSION_DATA' => $session->getData(),
+										'VOTE' => $voteValue,
+									];
+									$event = new Main\Event('imopenlines', 'OnSessionVote', $voteEventParams);
+									$event->send();
+
 									$addMessage['RECENT_ADD'] = $userViewChat? 'Y': 'N';
 									$session->update(['VOTE' => $voteValue, 'WAIT_VOTE' => 'N']);
 
@@ -324,7 +368,13 @@ class Connector
 							{
 								$voteSession = false;
 							}
+						}
 
+						if (
+							$resultLoadSession ||
+							$session->isCloseVote()
+						)
+						{
 							$event = new Main\Event('imopenlines', self::EVENT_IMOPENLINE_MESSAGE_RECEIVE, $addMessage);
 							$event->send();
 
@@ -339,145 +389,161 @@ class Connector
 							}
 
 							$messageId = Im::addMessage($addMessage);
-							if ($messageId)
+						}
+
+						if (
+							$resultLoadSession &&
+							!empty($messageId)
+						)
+						{
+							$isGroupChatAllowed = \Bitrix\ImConnector\Connector::isChatGroup($params['connector']['connector_id']) != true;
+
+							if ($addMessage["MESSAGE"] && $params['extra']['disable_tracker'] !== 'Y' && $isGroupChatAllowed)
 							{
-								$isGroupChatAllowed = \Bitrix\ImConnector\Connector::isChatGroup($params['connector']['connector_id']) != true;
-
-								if ($addMessage["MESSAGE"] && $params['extra']['disable_tracker'] !== 'Y' && $isGroupChatAllowed)
-								{
-									$tracker = new \Bitrix\ImOpenLines\Tracker();
-									$tracker->setSession($session);
-									$tracker->message([
-										'ID' => $messageId,
-										'TEXT' => $addMessage["MESSAGE"]
-									]);
-								}
-								if ($params['message']['id'])
-								{
-									if ($params['connector']['connector_id'] == self::TYPE_LIVECHAT)
-									{
-										if ($session->isNowCreated())
-										{
-											$updateParams = [
-												'CONNECTOR_MID' => $messageId,
-												'IMOL_SID' => $session->getData('ID'),
-												"IMOL_FORM" => "welcome",
-												"TYPE" => "lines",
-												"COMPONENT_ID" => "bx-imopenlines-message",
-											];
-										}
-										else
-										{
-											$updateParams = [
-												'CONNECTOR_MID' => $messageId,
-											];
-										}
-										\CIMMessageParam::Set($params['message']['id'], $updateParams);
-										\CIMMessageParam::SendPull($params['message']['id'], array_keys($updateParams));
-
-										\Bitrix\ImOpenLines\Mail::removeSessionFromMailQueue($session->getData('ID'), false);
-									}
-
-									\CIMMessageParam::Set($messageId, ['CONNECTOR_MID' => $params['message']['id']]);
-									if (!in_array($params['connector']['connector_id'], [self::TYPE_LIVECHAT, self::TYPE_NETWORK]))
-									{
-										\CIMMessageParam::SendPull($messageId, ['CONNECTOR_MID']);
-									}
-								}
-
-								if ($addVoteResult)
-								{
-									Im::addMessage([
-										"TO_CHAT_ID" => $session->getData('CHAT_ID'),
-										"MESSAGE" => $addVoteResult,
-										"SYSTEM" => 'Y',
-										"IMPORTANT_CONNECTOR" => 'Y',
-										"PARAMS" => [
-											"CLASS" => "bx-messenger-content-item-ol-output"
-										],
-										"RECENT_ADD" => $userViewChat? 'Y': 'N'
-									]);
-								}
-
-								//Automatic messages
-								(new AutomaticAction($session))->automaticAddMessage($messageId, $finishSession, $voteSession);
-
-								$limit = ImConnector\Connector::getReplyLimit($params['connector']['connector_id']);
-								$chat = $session->getChat();
-								if (!empty($limit['BLOCK_DATE']) && !empty($limit['BLOCK_REASON']) && $chat)
-								{
-									$limit['BLOCK_DATE'] = (new DateTime())->add($limit['BLOCK_DATE'].' SECONDS');
-									ReplyBlock::add($session->getData('ID'), $chat, $limit);
-								}
-								elseif (ImConnector\Connector::isNeedToAutoDeleteBlock($params['connector']['connector_id']))
-								{
-									ReplyBlock::delete($session->getData('ID'), $chat);
-								}
-
-								$updateSession['MESSAGE_COUNT'] = true;
-								$updateSession['DATE_LAST_MESSAGE'] = new \Bitrix\Main\Type\DateTime();
-
-								if (isset($params['extra']))
-								{
-									foreach($params['extra'] as $field => $value)
-									{
-										$oldValue = $session->getData($field);
-										if ($oldValue != $value)
-										{
-											$updateSession[$field] = $value;
-										}
-									}
-								}
-
-								$session->update($updateSession);
-
-								if (
-									$session->getConfig('AGREEMENT_MESSAGE') == 'Y' &&
-									!$session->chat->isNowCreated() &&
-									$session->getUser() && $session->getUser('USER_ID') == $params['message']['user_id'] &&
-									$session->getUser('USER_CODE') && $session->getUser('AGREES') == 'N'
-								)
-								{
-									\Bitrix\ImOpenLines\Common::setUserAgrees([
-										'AGREEMENT_ID' => $session->getConfig('AGREEMENT_ID'),
-										'CRM_ACTIVITY_ID' => $session->getData('CRM_ACTIVITY_ID'),
-										'SESSION_ID' => $session->getData('SESSION_ID'),
-										'CONFIG_ID' => $session->getData('CONFIG_ID'),
-										'USER_CODE' => $session->getUser('USER_CODE'),
-									]);
-								}
-
-								$queueManager = Queue::initialization($session);
-								if($queueManager)
-								{
-									$queueManager->automaticActionAddMessage($finishSession, $voteSession);
-								}
-
-								if (!$session->isNowCreated() && $finishSession === true)
-								{
-									$session->finish(true);
-								}
-
-						$this->callMessageTrigger($session, $messageId, $addMessage);
-
-								//In case it's not a vote message or system message we make a new record
-								if (!$voteSession && $params['message']['user_id'] != 0 && !\Bitrix\Im\User::getInstance($params['message']['user_id'])->isBot())
-								{
-									$kpi = new KpiManager($session->getData('ID'));
-									$kpi->addMessage(
-										[
-											'MESSAGE_ID' => $messageId,
-											'LINE_ID' => $session->getData('CONFIG_ID'),
-											'OPERATOR_ID' => $session->getData('OPERATOR_ID')
-										]
-									);
-								}
-
-								$result = [
-									'SESSION_ID' => $session->isNowCreated()? $session->getData('ID'): 0,
-									'MESSAGE_ID' => $messageId
-								];
+								$tracker = new \Bitrix\ImOpenLines\Tracker();
+								$tracker->setSession($session);
+								$tracker->message([
+									'ID' => $messageId,
+									'TEXT' => $addMessage["MESSAGE"]
+								]);
 							}
+							if ($params['message']['id'])
+							{
+								if ($params['connector']['connector_id'] == self::TYPE_LIVECHAT)
+								{
+									if ($session->isNowCreated())
+									{
+										$updateParams = [
+											'CONNECTOR_MID' => $messageId,
+											'IMOL_SID' => $session->getData('ID'),
+											'IMOL_FORM' => 'welcome',
+											'TYPE' => 'lines',
+											'COMPONENT_ID' => 'bx-imopenlines-message',
+										];
+									}
+									else
+									{
+										$updateParams = [
+											'CONNECTOR_MID' => $messageId,
+										];
+									}
+									\CIMMessageParam::Set($params['message']['id'], $updateParams);
+									\CIMMessageParam::SendPull($params['message']['id'], array_keys($updateParams));
+
+									\Bitrix\ImOpenLines\Mail::removeSessionFromMailQueue($session->getData('ID'), false);
+								}
+
+								\CIMMessageParam::Set($messageId, ['CONNECTOR_MID' => $params['message']['id']]);
+								if (!in_array($params['connector']['connector_id'], [self::TYPE_LIVECHAT, self::TYPE_NETWORK]))
+								{
+									\CIMMessageParam::SendPull($messageId, ['CONNECTOR_MID']);
+								}
+							}
+
+							if ($addVoteResult)
+							{
+								Im::addMessage([
+									"TO_CHAT_ID" => $session->getData('CHAT_ID'),
+									"MESSAGE" => $addVoteResult,
+									"SYSTEM" => 'Y',
+									"IMPORTANT_CONNECTOR" => 'Y',
+									"PARAMS" => [
+										"CLASS" => "bx-messenger-content-item-ol-output"
+									],
+									"RECENT_ADD" => $userViewChat? 'Y': 'N'
+								]);
+							}
+
+							//Automatic messages
+							(new AutomaticAction($session))->automaticAddMessage($messageId, $finishSession, $voteSession);
+
+							$limit = ImConnector\Connector::getReplyLimit($params['connector']['connector_id']);
+							$chat = $session->getChat();
+							if (
+								!empty($limit['BLOCK_DATE']) &&
+								!empty($limit['BLOCK_REASON']) &&
+								$chat
+							)
+							{
+								$limit['BLOCK_DATE'] = (new DateTime())->add($limit['BLOCK_DATE'].' SECONDS');
+								ReplyBlock::add($session->getData('ID'), $chat, $limit);
+							}
+							elseif (ImConnector\Connector::isNeedToAutoDeleteBlock($params['connector']['connector_id']))
+							{
+								ReplyBlock::delete($session->getData('ID'), $chat);
+							}
+
+							$updateSession['MESSAGE_COUNT'] = true;
+							$updateSession['DATE_LAST_MESSAGE'] = new DateTime();
+
+							if (isset($params['extra']))
+							{
+								foreach($params['extra'] as $field => $value)
+								{
+									$oldValue = $session->getData($field);
+									if ($oldValue != $value)
+									{
+										$updateSession[$field] = $value;
+									}
+								}
+							}
+
+							$session->update($updateSession);
+
+							if (
+								$session->getConfig('AGREEMENT_MESSAGE') == 'Y' &&
+								!$session->chat->isNowCreated() &&
+								$session->getUser() && $session->getUser('USER_ID') == $params['message']['user_id'] &&
+								$session->getUser('USER_CODE') && $session->getUser('AGREES') == 'N'
+							)
+							{
+								\Bitrix\ImOpenLines\Common::setUserAgrees([
+									'AGREEMENT_ID' => $session->getConfig('AGREEMENT_ID'),
+									'CRM_ACTIVITY_ID' => $session->getData('CRM_ACTIVITY_ID'),
+									'SESSION_ID' => $session->getData('SESSION_ID'),
+									'CONFIG_ID' => $session->getData('CONFIG_ID'),
+									'USER_CODE' => $session->getUser('USER_CODE'),
+								]);
+							}
+
+							$queueManager = Queue::initialization($session);
+							if($queueManager)
+							{
+								$queueManager->automaticActionAddMessage($finishSession, $voteSession);
+							}
+
+							if (!$session->isNowCreated() && $finishSession === true)
+							{
+								$session->finish(true);
+							}
+
+							$this->callMessageTrigger($session, $messageId, $addMessage);
+
+							//In case it's not a vote message or system message we make a new record
+							if (!$voteSession && $params['message']['user_id'] != 0 && !ImUser::getInstance($params['message']['user_id'])->isBot())
+							{
+								$kpi = new KpiManager($session->getData('ID'));
+								$kpi->addMessage(
+									[
+										'MESSAGE_ID' => $messageId,
+										'LINE_ID' => $session->getData('CONFIG_ID'),
+										'OPERATOR_ID' => $session->getData('OPERATOR_ID')
+									]
+								);
+							}
+
+							$result = [
+								'SESSION_ID' => $session->isNowCreated()? $session->getData('ID'): 0,
+								'MESSAGE_ID' => $messageId
+							];
+						}
+
+						if (
+							!$resultLoadSession &&
+							$session->isCloseVote()
+						)
+						{
+							Im::addCloseVoteMessage($session->getData('CHAT_ID'), $session->getConfig('VOTE_TIME_LIMIT'));
 						}
 					}
 
@@ -536,6 +602,10 @@ class Connector
 		return $result;
 	}
 
+	/**
+	 * @param $params
+	 * @return bool
+	 */
 	public function updateMessage($params)
 	{
 		if (empty($params))
@@ -563,6 +633,10 @@ class Connector
 		return true;
 	}
 
+	/**
+	 * @param $params
+	 * @return bool
+	 */
 	public function deleteMessage($params)
 	{
 		if (empty($params))
@@ -594,7 +668,7 @@ class Connector
 	 * Sending messages to external channels.
 	 *
 	 * @param $params
-	 * @return bool
+	 * @return Result
 	 * @throws Main\ArgumentException
 	 * @throws Main\ArgumentNullException
 	 * @throws Main\ArgumentOutOfRangeException
@@ -603,17 +677,14 @@ class Connector
 	 * @throws Main\ObjectPropertyException
 	 * @throws Main\SystemException
 	 */
-	public function sendMessage($params): bool
+	public function sendMessage($params): Result
 	{
-		if (!$this->isModuleLoad())
-		{
-			return false;
-		}
+		$result = $this->result;
 
-		Log::write($params, 'SEND MESSAGE');
-
-		if($params['no_session'] == 'Y')
+		if($result->isSuccess())
 		{
+			Log::write($params, 'SEND MESSAGE');
+
 			$fields = [
 				'im' => [
 					'chat_id' => $params['message']['chat_id'],
@@ -631,73 +702,53 @@ class Connector
 				],
 			];
 
-			if ($params['connector']['connector_id'] == self::TYPE_NETWORK)
-			{
-				$network = new Network();
-				$network->sendMessage($params['connector']['line_id'], $fields, '');
-			}
-			else
-			{
-				$connector = new Output($params['connector']['connector_id'], $params['connector']['line_id']);
-				$result = $connector->sendMessage([$fields]);
-				if (!$result->isSuccess())
-				{
-					$this->error = new Error(__METHOD__, 'CONNECTOR_SEND_ERROR', $result->getErrorMessages());
+			$actualLineId = $params['connector']['line_id'];
 
-					return false;
-				}
-			}
-		}
-		else
-		{
 			$session = new Session();
-			$resultLoadSession = $session->load([
-				'USER_CODE' => self::getUserCode($params['connector']),
-				'MODE' => Session::MODE_OUTPUT,
-				'OPERATOR_ID' => $params['message']['user_id']
-			]);
-			if (!$resultLoadSession)
+			if($params['no_session'] !== 'Y')
 			{
-				return false;
-			}
+				$resultLoadSession = $session->load([
+					'USER_CODE' => self::getUserCode($params['connector']),
+					'MODE' => Session::MODE_OUTPUT,
+					'OPERATOR_ID' => $params['message']['user_id']
+				]);
+				if (!$resultLoadSession)
+				{
+					$result->addError(new Error('Failed to load session', 'IMOPENLINES_ERROR_LOAD_SESSION', __METHOD__));
+				}
 
-			if (ReplyBlock::isBlocked($session))
-			{
-				return false;
-			}
+				if (
+					$result->isSuccess() &&
+					ReplyBlock::isBlocked($session)
+				)
+				{
+					$result->addError(new Error('This chat is blocked for sending outgoing messages', 'IMOPENLINES_ERROR_SESSION_BLOCKED', __METHOD__));
+				}
 
-			//Automatic messages
-			(new AutomaticAction($session))->automaticSendMessage($params['message']['id']);
+				if(
+					$result->isSuccess() &&
+					$session->getConfig('ACTIVE') !== 'Y'
+				)
+				{
+					$result->addError(new Error('The open line is deactivated', 'IMOPENLINES_ERROR_LINE_DEACTIVATED', __METHOD__));
+				}
 
-			if ($session->getConfig('ACTIVE') == 'Y')
-			{
-				$fields = [
-					'im' => [
-						'chat_id' => $params['message']['chat_id'],
-						'message_id' => $params['message']['id']
-					],
-					'message' => [
-						'user_id' => $params['message']['user_id'],
-						'text' => $params['message']['text'],
-						'files' => $params['message']['files'],
-						'attachments' => $params['message']['attachments'],
-						'params' => $params['message']['params'],
-					],
-					'chat' => [
-						'id' => $params['connector']['chat_id']
-					],
-				];
-
-				if ($params['message']['system'] != 'Y')
+				if(
+					$result->isSuccess() &&
+					$params['message']['system'] !== 'Y'
+				)
 				{
 					$updateSession = [
 						'MESSAGE_COUNT' => true,
-						'DATE_LAST_MESSAGE' => new \Bitrix\Main\Type\DateTime()
+						'DATE_LAST_MESSAGE' => new DateTime()
 					];
 
-					if (!$session->getData('DATE_FIRST_ANSWER') && !empty($session->getData('OPERATOR_ID')) && Queue::isRealOperator($session->getData('OPERATOR_ID')))
+					if (
+						!$session->getData('DATE_FIRST_ANSWER') &&
+						!empty($session->getData('OPERATOR_ID')) && Queue::isRealOperator($session->getData('OPERATOR_ID'))
+					)
 					{
-						$currentTime = new \Bitrix\Main\Type\DateTime();
+						$currentTime = new DateTime();
 						$updateSession['DATE_FIRST_ANSWER'] = $currentTime;
 						$updateSession['TIME_FIRST_ANSWER'] = $currentTime->getTimestamp()-$session->getData('DATE_CREATE')->getTimestamp();
 					}
@@ -709,41 +760,56 @@ class Connector
 					];
 					$session->update($updateSession);
 					$eventData['STATUS_AFTER'] = $session->getData('STATUS');
-					\Bitrix\ImOpenLines\Queue\Event::checkFreeSlotBySendMessage($eventData);
+					Queue\Event::checkFreeSlotBySendMessage($eventData);
 				}
 
-				if ($params['connector']['connector_id'] == self::TYPE_NETWORK)
+				if($result->isSuccess())
 				{
-					$network = new Network();
-					$network->sendMessage($params['connector']['line_id'], $fields, $session->getData('USER_CODE'));
+					$actualLineId = Queue::getActualLineId([
+						'LINE_ID' =>  $params['connector']['line_id'],
+						'USER_CODE' => $session->getData('USER_CODE')
+					]);
 				}
-				else
-				{
-					$connector = new Output($params['connector']['connector_id'], $params['connector']['line_id']);
-					$result = $connector->sendMessage([$fields]);
-					if (!$result->isSuccess())
-					{
-						$this->error = new Error(__METHOD__, 'CONNECTOR_SEND_ERROR', $result->getErrorMessages());
+			}
 
-						return false;
-					}
-				}
-				//For all connectors, except livechat
-				if (!\Bitrix\Im\User::getInstance($session->getData('OPERATOR_ID'))->isBot() &&
-					$params['message']['system'] != 'Y')
+			if(
+				$params['no_session'] !== 'Y' &&
+				$result->isSuccess()
+			)
+			{
+				//Automatic messages
+				(new AutomaticAction($session))->automaticSendMessage($params['message']['id']);
+			}
+
+			if (
+				$params['no_session'] !== 'Y' &&
+				$params['message']['system'] != 'Y' &&
+				$result->isSuccess() &&
+				!ImUser::getInstance($session->getData('OPERATOR_ID'))->isBot()
+			)
+			{
+				KpiManager::setSessionLastKpiMessageAnswered($session->getData('ID'));
+			}
+
+			if ($result->isSuccess())
+			{
+				$fields['user'] = Queue::getUserData($actualLineId, $fields['message']['user_id']);
+
+				$connector = new Output($params['connector']['connector_id'], $params['connector']['line_id']);
+				$resultSendMessage = $connector->sendMessage([$fields]);
+
+				if(!$resultSendMessage->isSuccess())
 				{
-					KpiManager::setSessionLastKpiMessageAnswered($session->getData('ID'));
+					$result->addErrors($resultSendMessage->getErrors());
 				}
 			}
 		}
 
-		return true;
+		return $result;
 	}
 
 	/**
 	 * @param $fields
-	 * @param $user
-	 * @param string $userCodeSession
 	 * @return bool
 	 * @throws Main\ArgumentException
 	 * @throws Main\ArgumentNullException
@@ -752,32 +818,34 @@ class Connector
 	 * @throws Main\ObjectPropertyException
 	 * @throws Main\SystemException
 	 */
-	public function sendStatusWriting($fields, $user, $userCodeSession = ''): bool
+	public function sendStatusWriting($fields): bool
 	{
-		Log::write([$fields, $user], 'STATUS WRITING');
-		if ($fields['connector']['connector_id'] == self::TYPE_NETWORK)
-		{
-			$network = new Network();
-			$network->sendStatusWriting($fields['connector']['line_id'], $fields, $userCodeSession);
-		}
-		else if (self::isNeedConnectorWritingStatus($fields['connector']['connector_id']))
+		Log::write([$fields], 'STATUS WRITING');
+		if(self::isNeedConnectorWritingStatus($fields['connector']['connector_id']))
 		{
 			$connector = new Output($fields['connector']['connector_id'], $fields['connector']['line_id']);
-			$fields['message']['type'] = 'typing_start';
-			$result = $connector->sendMessage([$fields]);
+			$result = $connector->sendStatusWriting([$fields]);
+
 			if (!$result->isSuccess())
 			{
 				$this->error = new Error(__METHOD__, 'CONNECTOR_SEND_ERROR', $result->getErrorMessages());
 			}
 		}
-		else if (self::isLiveChat($fields['connector']['connector_id']))
-		{
-			\CIMMessenger::StartWriting('chat'.$fields['connector']['chat_id'], $user['id'], $user['name'], true);
-		}
 
 		return false;
 	}
 
+	/**
+	 * @param $connector
+	 * @param $messages
+	 * @param $event
+	 * @return false
+	 * @throws Main\ArgumentException
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
 	public function sendStatusRead($connector, $messages, $event)
 	{
 		if (empty($messages))
@@ -814,7 +882,7 @@ class Connector
 			$chat->updateFieldData([\Bitrix\ImOpenLines\Chat::FIELD_LIVECHAT => [
 				'READED' => 'Y',
 				'READED_ID' => $maxId,
-				'READED_TIME' => new \Bitrix\Main\Type\DateTime()
+				'READED_TIME' => new DateTime()
 			]]);
 		}
 		else
@@ -839,11 +907,24 @@ class Connector
 		return false;
 	}
 
+	/**
+	 * @param $params
+	 * @return string
+	 */
 	public static function getUserCode($params)
 	{
 		return $params['connector_id'].'|'.$params['line_id'].'|'.$params['chat_id'].'|'.$params['user_id'];
 	}
 
+	/**
+	 * @param $fields
+	 * @param $chat
+	 * @return array|bool
+	 * @throws Main\ArgumentException
+	 * @throws Main\LoaderException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
 	public static function onBeforeMessageSend($fields, $chat)
 	{
 		if ($chat['CHAT_ENTITY_TYPE'] != 'LINES')
@@ -852,7 +933,7 @@ class Connector
 		if ($fields['FROM_USER_ID'] <= 0)
 			return true;
 
-		if (\Bitrix\Im\User::getInstance($fields['FROM_USER_ID'])->isConnector())
+		if (ImUser::getInstance($fields['FROM_USER_ID'])->isConnector())
 			return true;
 
 		if (!Loader::includeModule('imconnector'))
@@ -881,9 +962,24 @@ class Connector
 		return $result;
 	}
 
+	/**
+	 * @param $messageId
+	 * @param $messageFields
+	 * @param $flags
+	 * @return bool
+	 * @throws Main\ArgumentException
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 * @throws Main\LoaderException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
 	public static function onMessageUpdate($messageId, $messageFields, $flags)
 	{
-		if ($flags['BY_EVENT'] || !isset($messageFields['PARAMS']['CONNECTOR_MID']))
+		if (
+			$flags['BY_EVENT'] ||
+			!isset($messageFields['PARAMS']['CONNECTOR_MID'])
+		)
 		{
 			return false;
 		}
@@ -894,13 +990,22 @@ class Connector
 		if ($messageFields['CHAT_ENTITY_TYPE'] == 'LINES')
 		{
 		}
-		else if (\Bitrix\ImOpenLines\Connector::isLiveChat($messageFields['CHAT_ENTITY_TYPE']))
+		else if (self::isLiveChat($messageFields['CHAT_ENTITY_TYPE']))
 		{
 			$connectorId = self::TYPE_LIVECHAT;
 		}
 		else
 		{
 			return false;
+		}
+
+		if (
+			$messageFields['SYSTEM'] != 'Y' &&
+			self::isEnableSendMessageWithSignature($connectorId, $lineId) &&
+			$messageFields['AUTHOR_ID'] > 0
+		)
+		{
+			$flags['TEXT'] = '[b]' . htmlspecialchars_decode(self::getOperatorName($lineId, $messageFields['AUTHOR_ID'], $messageFields['CHAT_ENTITY_ID'])) . ':[/b]'.($flags['TEXT'] <> ''? '[br] '.$flags['TEXT']: '');
 		}
 
 		if ($connectorId == self::TYPE_LIVECHAT)
@@ -913,47 +1018,48 @@ class Connector
 			\CIMMessenger::EnableMessageCheck();
 		}
 		else if (
-			isset($lineId) && isset($connectorChatId)
-			&& !empty($messageFields['PARAMS']['CONNECTOR_MID']) && is_array($messageFields['PARAMS']['CONNECTOR_MID'])
+			isset($lineId) && isset($connectorChatId) &&
+			!empty($messageFields['PARAMS']['CONNECTOR_MID']) &&
+			is_array($messageFields['PARAMS']['CONNECTOR_MID']) &&
+			Loader::includeModule('imconnector')
 		)
 		{
-			if ($messageFields['SYSTEM'] != 'Y' && self::isEnableSendMessageWithSignature($connectorId, $lineId) && $messageFields['AUTHOR_ID'] > 0)
-			{
-				$flags['TEXT'] = '[b]' . htmlspecialchars_decode(self::getOperatorName($lineId, $messageFields['AUTHOR_ID'], $messageFields['CHAT_ENTITY_ID'])) . ':[/b]'.($flags['TEXT'] <> ''? '[br] '.$flags['TEXT']: '');
-			}
-
-			$fields = array(
-				'im' => array(
+			$fields = [
+				'im' => [
 					'chat_id' => $messageFields['CHAT_ID'],
 					'message_id' => $messageFields['ID']
-				),
-				'message' => array(
+				],
+				'message' => [
 					'id' => $messageFields['PARAMS']['CONNECTOR_MID'],
 					'text' => $flags['TEXT'],
-				),
-				'chat' => array(
+				],
+				'chat' => [
 					'id' => $connectorChatId
-				),
-			);
+				],
+			];
 
-			if ($connectorId == self::TYPE_NETWORK)
-			{
-				$network = new Network();
-				$network->updateMessage($lineId, $fields);
-			}
-			else if (Loader::includeModule('imconnector'))
-			{
-				$connector = new Output($connectorId, $lineId);
-				$connector->updateMessage(Array($fields));
-			}
+			$connector = new Output($connectorId, $lineId);
+			$connector->updateMessage([$fields]);
 		}
 
 		return true;
 	}
 
+	/**
+	 * @param $messageId
+	 * @param $messageFields
+	 * @param $flags
+	 * @return bool
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 * @throws Main\LoaderException
+	 */
 	public static function onMessageDelete($messageId, $messageFields, $flags)
 	{
-		if ($flags['BY_EVENT'] || !isset($messageFields['PARAMS']['CONNECTOR_MID']))
+		if (
+			$flags['BY_EVENT'] ||
+			!isset($messageFields['PARAMS']['CONNECTOR_MID'])
+		)
 		{
 			return false;
 		}
@@ -962,7 +1068,7 @@ class Connector
 		{
 			list($connectorType, $lineId, $connectorChatId) = explode("|", $messageFields['CHAT_ENTITY_ID']);
 		}
-		else if (\Bitrix\ImOpenLines\Connector::isLiveChat($messageFields['CHAT_ENTITY_TYPE']))
+		else if (Connector::isLiveChat($messageFields['CHAT_ENTITY_TYPE']))
 		{
 			$connectorType = self::TYPE_LIVECHAT;
 		}
@@ -980,36 +1086,32 @@ class Connector
 			}
 			\CIMMessenger::EnableMessageCheck();
 		}
-		else if(isset($lineId) && isset($connectorChatId))
+		else if(
+			isset($lineId) &&
+			isset($connectorChatId) &&
+			Loader::includeModule('imconnector')
+		)
 		{
-			$fields = array();
+			$fields = [];
 			foreach($messageFields['PARAMS']['CONNECTOR_MID'] as $mid)
 			{
-				$fields[] = array(
-					'im' => array(
+				$fields[] = [
+					'im' => [
 						'chat_id' => $messageFields['CHAT_ID'],
 						'message_id' => $messageFields['ID']
-					),
-					'message' => array(
+					],
+					'message' => [
 						'id' => $mid
-					),
-					'chat' => array(
+					],
+					'chat' => [
 						'id' => $connectorChatId
-					),
-				);
+					],
+				];
 			}
 			if (!empty($fields))
 			{
-				if ($connectorType == self::TYPE_NETWORK)
-				{
-					$network = new Network();
-					$network->deleteMessage($lineId, $fields[0]);
-				}
-				else if(Loader::includeModule('imconnector'))
-				{
-					$connector = new Output($connectorType, $lineId);
-					$connector->deleteMessage($fields);
-				}
+				$connector = new Output($connectorType, $lineId);
+				$connector->deleteMessage($fields);
 			}
 		}
 
@@ -1039,18 +1141,21 @@ class Connector
 
 		if ($messageFields['AUTHOR_ID'] > 0)
 		{
-			$user = \Bitrix\Im\User::getInstance($messageFields['AUTHOR_ID']);
+			$user = ImUser::getInstance($messageFields['AUTHOR_ID']);
 			if ($user->isConnector())
 				return false;
 		}
 
 		if (
-			($messageFields['SILENT_CONNECTOR'] == 'Y' || $messageFields['CHAT_'.Chat::getFieldName(Chat::FIELD_SILENT_MODE)] == 'Y')
+			(
+				$messageFields['SILENT_CONNECTOR'] == 'Y' ||
+				$messageFields['CHAT_'.Chat::getFieldName(Chat::FIELD_SILENT_MODE)] == 'Y'
+			)
 			&& $messageFields['IMPORTANT_CONNECTOR'] != 'Y'
 		)
 		{
-			\CIMMessageParam::Set($messageId, Array('CLASS' => "bx-messenger-content-item-system"));
-			\CIMMessageParam::SendPull($messageId, Array('CLASS'));
+			\CIMMessageParam::Set($messageId, ['CLASS' => 'bx-messenger-content-item-system']);
+			\CIMMessageParam::SendPull($messageId, ['CLASS']);
 			return false;
 		}
 
@@ -1082,7 +1187,7 @@ class Connector
 
 			if (isset($messageFields['PARAMS']['CLASS']))
 			{
-				$messageFields['PARAMS']['CLASS'] = str_replace("bx-messenger-content-item-ol-output", "", $messageFields['PARAMS']['CLASS']);
+				$messageFields['PARAMS']['CLASS'] = str_replace('bx-messenger-content-item-ol-output', "", $messageFields['PARAMS']['CLASS']);
 			}
 
 			$params = [];
@@ -1105,29 +1210,29 @@ class Connector
 			}
 
 			$message = [
-				"TO_CHAT_ID" => $connectorChatId,
-				"FROM_USER_ID" => $messageFields['AUTHOR_ID'],
-				"SYSTEM" => $messageFields['SYSTEM'],
-				"URL_PREVIEW" => $messageFields['URL_PREVIEW'],
-				"ATTACH" => $messageFields['ATTACH'],
-				"PARAMS" => $params,
-				"SKIP_USER_CHECK" => "Y",
-				"SKIP_COMMAND" => "Y",
-				"SKIP_CONNECTOR" => "Y",
-				"EXTRA_PARAMS" => [
-					"CONTEXT" => "LIVECHAT",
-					"LINE_ID" => $lineId
+				'TO_CHAT_ID' => $connectorChatId,
+				'FROM_USER_ID' => $messageFields['AUTHOR_ID'],
+				'SYSTEM' => $messageFields['SYSTEM'],
+				'URL_PREVIEW' => $messageFields['URL_PREVIEW'],
+				'ATTACH' => $messageFields['ATTACH'],
+				'PARAMS' => $params,
+				'SKIP_USER_CHECK' => 'Y',
+				'SKIP_COMMAND' => 'Y',
+				'SKIP_CONNECTOR' => 'Y',
+				'EXTRA_PARAMS' => [
+					'CONTEXT' => 'LIVECHAT',
+					'LINE_ID' => $lineId
 				],
 			];
 			if (array_key_exists('MESSAGE', $messageFields))
 			{
-				$message["MESSAGE"] = $messageFields['MESSAGE'];
+				$message['MESSAGE'] = $messageFields['MESSAGE'];
 			}
 
 			if($messageFields['NO_SESSION_OL'] !== 'Y')
 			{
 				$session = new Session();
-				$resultLoadSession  =$session->load([
+				$resultLoadSession = $session->load([
 					'MODE' => Session::MODE_OUTPUT,
 					'USER_CODE' => $messageFields['CHAT_ENTITY_ID'],
 					'OPERATOR_ID' => $messageFields['AUTHOR_ID']
@@ -1137,13 +1242,17 @@ class Connector
 				{
 					$updateSession = [
 						'MESSAGE_COUNT' => true,
-						'DATE_LAST_MESSAGE' => new \Bitrix\Main\Type\DateTime(),
-						'DATE_MODIFY' => new \Bitrix\Main\Type\DateTime(),
+						'DATE_LAST_MESSAGE' => new DateTime(),
+						'DATE_MODIFY' => new DateTime(),
 						'USER_ID' => $messageFields['AUTHOR_ID'],
 					];
-					if (!$session->getData('DATE_FIRST_ANSWER') && !empty($session->getData('OPERATOR_ID')) && Queue::isRealOperator($session->getData('OPERATOR_ID')))
+					if (
+						!$session->getData('DATE_FIRST_ANSWER') &&
+						!empty($session->getData('OPERATOR_ID')) &&
+						Queue::isRealOperator($session->getData('OPERATOR_ID'))
+					)
 					{
-						$currentTime = new \Bitrix\Main\Type\DateTime();
+						$currentTime = new DateTime();
 						$updateSession['DATE_FIRST_ANSWER'] = $currentTime;
 						$updateSession['TIME_FIRST_ANSWER'] = $currentTime->getTimestamp()-$session->getData('DATE_CREATE')->getTimestamp();
 					}
@@ -1155,15 +1264,30 @@ class Connector
 					];
 					$session->update($updateSession);
 					$eventData['STATUS_AFTER'] = $session->getData('STATUS');
-					\Bitrix\ImOpenLines\Queue\Event::checkFreeSlotBySendMessage($eventData);
+					Queue\Event::checkFreeSlotBySendMessage($eventData);
 
 					//for livechat only condition
-					if (!\Bitrix\Im\User::getInstance($session->getData('OPERATOR_ID'))->isBot() &&
-						$messageFields['SYSTEM'] != 'Y')
+					if (
+						!ImUser::getInstance($session->getData('OPERATOR_ID'))->isBot() &&
+						$messageFields['SYSTEM'] != 'Y'
+					)
 					{
 						KpiManager::setSessionLastKpiMessageAnswered($session->getData('ID'));
 					}
 				}
+			}
+
+			$isActiveKeyboard = false;
+			if (
+				!empty($connectorChatId) &&
+				$connectorChatId > 0 &&
+				Loader::includeModule('imconnector'))
+			{
+				//Processing for native messages
+				$interactiveMessage = InteractiveMessage\Output::getInstance($messageFields['TO_CHAT_ID'], ['connectorId' => 'livechat']);
+				$message = $interactiveMessage->nativeMessageProcessing($message);
+
+				$isActiveKeyboard = $interactiveMessage->isLoadedKeyboard();
 			}
 
 			$mid = Im::addMessage($message);
@@ -1190,6 +1314,7 @@ class Connector
 				}
 
 				\CIMMessageParam::Set($messageId, ['CONNECTOR_MID' => $mid]);
+				\CIMMessageParam::SendPull($messageId, $paramsMessageLiveChat);
 				\CIMMessageParam::Set($mid, $paramsMessageLiveChat);
 				\CIMMessageParam::SendPull($mid, $paramsMessageLiveChat);
 			}
@@ -1228,7 +1353,7 @@ class Connector
 				}
 			}
 
-			$attaches = Array();
+			$attaches = [];
 			if (isset($messageFields['PARAMS']['ATTACH']))
 			{
 				foreach ($messageFields['PARAMS']['ATTACH'] as $attach)
@@ -1240,7 +1365,7 @@ class Connector
 				}
 			}
 
-			$files = Array();
+			$files = [];
 			if (isset($messageFields['FILES']) && Loader::includeModule('disk'))
 			{
 				$config = Model\ConfigTable::getById($lineId)->fetch();
@@ -1267,26 +1392,26 @@ class Connector
 						$source = $fileModel->getFile();
 						if ($source)
 						{
-							$files[] = array(
+							$files[] = [
 								'name' => $file['name'],
 								'type' => $file['type'],
 								'link' => $file['link'],
 								'width' => $source["WIDTH"],
 								'height' => $source["HEIGHT"],
 								'size' => $file['size']
-							);
+							];
 							$merged = true;
 						}
 					}
 
 					if (!$merged)
 					{
-						$files[] = array(
+						$files[] = [
 							'name' => $file['name'],
 							'type' => $file['type'],
 							'link' => $file['link'],
 							'size' => $file['size']
-						);
+						];
 					}
 				}
 			}
@@ -1302,14 +1427,14 @@ class Connector
 				$messageFields['MESSAGE'] = '[b]' . htmlspecialchars_decode(self::getOperatorName($lineId, $messageFields['AUTHOR_ID'], $messageFields['CHAT_ENTITY_ID'])) . ':[/b]'.($messageFields['MESSAGE'] <> ''? '[br] '.$messageFields['MESSAGE']: '');
 			}
 
-			$fields = array(
-				'connector' => Array(
+			$fields = [
+				'connector' => [
 					'connector_id' => $connectorId,
 					'line_id' => $lineId,
 					'user_id' => $connectorUserId,
 					'chat_id' => $connectorChatId,
-				),
-				'message' => Array(
+				],
+				'message' => [
 					'id' => $messageId,
 					'chat_id' => $messageFields['TO_CHAT_ID'],
 					'user_id' => $messageFields['FROM_USER_ID'],
@@ -1318,24 +1443,44 @@ class Connector
 					'attachments' => $attaches,
 					'params' => $params,
 					'system' => $messageFields['SYSTEM']
-				),
+				],
 				'no_session' => $messageFields['NO_SESSION_OL']
-			);
+			];
 
 			if (in_array($connectorId, self::getListShowDeliveryStatus()))
 			{
-				\CIMMessageParam::Set($messageId, Array('SENDING' => 'Y', 'SENDING_TS' => time()));
-				\CIMMessageParam::SendPull($messageId, Array('SENDING', 'SENDING_TS'));
+				\CIMMessageParam::Set(
+					$messageId,
+					[
+						'SENDING' => 'Y',
+						'SENDING_TS' => time()
+					]
+				);
+				\CIMMessageParam::SendPull(
+					$messageId,
+					[
+						'SENDING',
+						'SENDING_TS'
+					]
+				);
+				//TODO: To turn on the new messenger
+				//Pull\Event::send();
 			}
 
 			$manager = new self();
-			if (!$manager->sendMessage($fields))
+			$resultSendMessage = $manager->sendMessage($fields);
+			if (!$resultSendMessage->isSuccess())
 			{
-				Im::addMessage([
-					"TO_CHAT_ID" => $messageFields['TO_CHAT_ID'],
-					"MESSAGE" => Loc::getMessage('IMOL_CHAT_ERROR_CONNECTOR_SEND'),
-					"SYSTEM" => 'Y',
-				]);
+				$isErrorLineDeactivated = $resultSendMessage->getErrorCollection()->get('IMOPENLINES_ERROR_LINE_DEACTIVATED');
+				if(!$isErrorLineDeactivated)
+				{
+					Im::addMessage([
+						'TO_CHAT_ID' => $messageFields['TO_CHAT_ID'],
+						'MESSAGE' => Loc::getMessage('IMOL_CHAT_ERROR_CONNECTOR_SEND'),
+						'SYSTEM' => 'Y',
+					]);
+				}
+
 				return false;
 			}
 		}
@@ -1355,71 +1500,119 @@ class Connector
 	 */
 	public static function onStartWriting($params)
 	{
-		$userCode = '';
-
-		if (empty($params['CHAT']) || !in_array($params['CHAT']['ENTITY_TYPE'], ['LINES', 'LIVECHAT']) || $params['BY_EVENT'])
-			return true;
-
-		if ($params['CHAT']['ENTITY_TYPE'] == 'LINES')
+		if (
+			empty($params['CHAT']) ||
+			!in_array($params['CHAT']['ENTITY_TYPE'], ['LINES', 'LIVECHAT']) ||
+			$params['BY_EVENT']
+		)
 		{
-			//TODO: Replace with the method \Bitrix\ImOpenLines\Chat::parseLinesChatEntityId
-			list($connectorId, $lineId, $connectorChatId, $connectorUserId) = explode('|', $params['CHAT']['ENTITY_ID']);
-			$userCode = $params['CHAT']['ENTITY_ID'];
+			$result = true;
 		}
-		else // LIVECHAT
+		else
 		{
-			$connectorChatId = 0;
-			$connectorId = self::TYPE_LIVECHAT;
-			//TODO: Replace with the method \Bitrix\ImOpenLines\Chat::parseLiveChatEntityId
-			list($lineId, $connectorUserId) = explode('|', $params['CHAT']['ENTITY_ID']);
-
-			$userCode = $connectorId.'|'.$lineId.'|'.$params['CHAT']['ID'].'|'.$params['USER_ID'];
-
-			$orm = Model\SessionTable::getList([
-				'select' => ['CHAT_ID'],
-				'filter' => [
-					'=USER_CODE' => $userCode,
-					'=CLOSED' => 'N'
-				]
-			]);
-			if ($session = $orm->fetch())
+			if ($params['CHAT']['ENTITY_TYPE'] == 'LINES')
 			{
-				$connectorChatId = $session['CHAT_ID'];
+				$chatData = Chat::parseLinesChatEntityId($params['CHAT']['ENTITY_ID']);
+				$userCode = $params['CHAT']['ENTITY_ID'];
+			}
+			else // LIVECHAT
+			{
+				$chatData = Chat::parseLinesChatEntityId($params['CHAT']['ENTITY_ID']);
+				$chatData['connectorChatId'] = 0;
+				$chatData['connectorId'] = self::TYPE_LIVECHAT;
+
+				$userCode = $chatData['connectorId'] . '|' . $chatData['lineId'] . '|' . $params['CHAT']['ID'] . '|' . $params['USER_ID'];
+
+				$orm = Model\SessionTable::getList([
+					'select' => ['CHAT_ID'],
+					'filter' => [
+						'=USER_CODE' => $userCode,
+						'=CLOSED' => 'N'
+					]
+				]);
+				if ($session = $orm->fetch())
+				{
+					$chatData['connectorChatId'] = $session['CHAT_ID'];
+				}
+			}
+
+			if (
+				$chatData['connectorChatId'] <= 0 &&
+				!self::isNeedConnectorWritingStatus($chatData['connectorId'])
+			)
+			{
+				$result = true;
+			}
+			else
+			{
+				$chat = new Chat($params['CHAT']['ID']);
+				if (
+					$chat->isSilentModeEnabled() ||
+					$params['LINES_SILENT_MODE']
+				)
+				{
+					$result = true;
+				}
+				else
+				{
+					$actualLineId = Queue::getActualLineId([
+						'LINE_ID' =>  $chatData['lineId'],
+						'USER_CODE' => $userCode
+					]);
+
+					$fields = [
+						'connector' => [
+							'connector_id' => $chatData['connectorId'],
+							'line_id' => $chatData['lineId'],
+							'user_id' => $chatData['connectorUserId'],
+							'chat_id' => $chatData['connectorChatId'],
+						],
+						'chat' => ['id' => $chatData['connectorChatId']],
+						'user' => Queue::getUserData($actualLineId, $params['USER_ID'])
+					];
+
+					$manager = new self();
+					$result = $manager->sendStatusWriting($fields);
+				}
 			}
 		}
 
-		if ($connectorChatId <= 0 && !self::isNeedConnectorWritingStatus($connectorId))
+		return $result;
+	}
+
+	/**
+	 * @param Main\Event $event
+	 * @return array|array[]
+	 */
+	protected static function preparationDataOnSession(Main\Event $event): array
+	{
+		$result = [];
+
+		$parameters = $event->getParameters();
+
+		$session = $parameters['RUNTIME_SESSION'];
+		if ($session instanceof Session)
 		{
-			return true;
+			$chatEntityId = Chat::parseLinesChatEntityId($session->getData('USER_CODE'));
+
+			$result = [
+				'connector' => [
+					'connector_id' => $chatEntityId['connectorId'],
+					'line_id' => $chatEntityId['lineId'],
+					'chat_id' => $chatEntityId['connectorChatId'],
+					'user_id' => $chatEntityId['connectorUserId'],
+				],
+				'session' => [
+					'id' => $session->getData('ID'),
+					'closed' => $session->getData('CLOSED'),
+					'parent_id' => $session->getData('PARENT_ID'),
+				],
+				'chat' => ['id' => $chatEntityId['connectorChatId']],
+				'user' => ['id' => $chatEntityId['connectorUserId']],
+			];
 		}
 
-		$chat = new Chat($params['CHAT']['ID']);
-		if ($chat->isSilentModeEnabled() || $params['LINES_SILENT_MODE'])
-			return true;
-
-		$userData = \Bitrix\Im\User::getInstance($params['USER_ID']);
-		if ($userData->isBot())
-			return false;
-
-		$fields = [
-			'connector' => [
-				'connector_id' => $connectorId,
-				'line_id' => $lineId,
-				'user_id' => $connectorUserId,
-				'chat_id' => $connectorChatId,
-			],
-			'chat' => ['id' => $connectorChatId],
-			'user' => $params['USER_ID']
-		];
-
-		$manager = new self();
-		return $manager->sendStatusWriting($fields, $userData->getArray(
-			[
-				'LIVECHAT' => $lineId,
-				'USER_CODE' => $userCode,
-				'JSON' => 'Y'
-			]),
-			$userCode);
+		return $result;
 	}
 
 	/**
@@ -1430,38 +1623,17 @@ class Connector
 	 */
 	public static function onSessionStart(Main\Event $event)
 	{
-		$parameters = $event->getParameters();
+		$fields = self::preparationDataOnSession($event);
 
-		/** @var \Bitrix\ImOpenLines\Session $session */
-		$session = $parameters['RUNTIME_SESSION'];
-		if ($session instanceof \Bitrix\ImOpenLines\Session)
+		if (
+			!empty($fields)
+			&& Loader::includeModule('imconnector')
+		)
 		{
-			$chatEntityId = \Bitrix\ImOpenLines\Chat::parseLinesChatEntityId($session->getData('USER_CODE'));
+			Log::write($fields, 'SESSION STARTED');
 
-			if ($chatEntityId['connectorId'] === self::TYPE_NETWORK)
-			{
-				$fields = [
-					'connector' => array(
-						'connector_id' => $chatEntityId['connectorId'],
-						'line_id' => $chatEntityId['lineId'],
-						'chat_id' => $chatEntityId['connectorChatId'],
-						'user_id' => $chatEntityId['connectorUserId'],
-					),
-					'session' => array(
-						'id' => $session->getData('ID'),
-						'closed' => $session->getData('CLOSED'),
-					),
-					'chat' => ['id' => $chatEntityId['connectorChatId']],
-					'user' => $chatEntityId['connectorUserId']
-				];
-				if (!empty($fields))
-				{
-					Log::write($fields, 'SESSION STARTED');
-
-					$network = new Network();
-					$network->sessionStart($chatEntityId['lineId'], $fields);
-				}
-			}
+			$connector = new Output($fields['connector']['connector_id'], $fields['connector']['line_id']);
+			$connector->sessionStart([$fields]);
 		}
 	}
 
@@ -1473,41 +1645,29 @@ class Connector
 	 */
 	public static function onSessionFinish(Main\Event $event)
 	{
-		$parameters = $event->getParameters();
+		$fields = self::preparationDataOnSession($event);
 
-		/** @var \Bitrix\ImOpenLines\Session $session */
-		$session = $parameters['RUNTIME_SESSION'];
-		if ($session instanceof \Bitrix\ImOpenLines\Session)
+		if (
+			!empty($fields)
+			&& Loader::includeModule('imconnector')
+		)
 		{
-			$chatEntityId = \Bitrix\ImOpenLines\Chat::parseLinesChatEntityId($session->getData('USER_CODE'));
+			Log::write($fields, 'SESSION FINISHED');
 
-			if ($chatEntityId['connectorId'] === self::TYPE_NETWORK)
-			{
-				$fields = [
-					'connector' => array(
-						'connector_id' => $chatEntityId['connectorId'],
-						'line_id' => $chatEntityId['lineId'],
-						'chat_id' => $chatEntityId['connectorChatId'],
-						'user_id' => $chatEntityId['connectorUserId'],
-					),
-					'session' => array(
-						'id' => $session->getData('ID'),
-						'closed' => $session->getData('CLOSED'),
-					),
-					'chat' => ['id' => $chatEntityId['connectorChatId']],
-					'user' => ['id' => $chatEntityId['connectorUserId']],
-				];
-				if (!empty($fields))
-				{
-					Log::write($fields, 'SESSION FINISHED');
-
-					$network = new Network();
-					$network->sessionFinish($chatEntityId['lineId'], $fields);
-				}
-			}
+			$connector = new Output($fields['connector']['connector_id'], $fields['connector']['line_id']);
+			$connector->sessionFinish([$fields]);
 		}
 	}
 
+	/**
+	 * @param $params
+	 * @return bool
+	 * @throws Main\ArgumentException
+	 * @throws Main\Db\SqlQueryException
+	 * @throws Main\LoaderException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
 	public static function onChatRead($params)
 	{
 		if (!in_array($params['CHAT_ENTITY_TYPE'], Array('LINES', 'LIVECHAT')) || $params['BY_EVENT'])
@@ -1572,6 +1732,15 @@ class Connector
 		return $manager->sendStatusRead($connector, $messages, $event);
 	}
 
+	/**
+	 * @param $params
+	 * @return array|false
+	 * @throws Main\ArgumentException
+	 * @throws Main\LoaderException
+	 * @throws Main\ObjectException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
 	public static function onReceivedEntity($params)
 	{
 		$userId = intval($params['user']);
@@ -1605,6 +1774,10 @@ class Connector
 		return $manager->addMessage($fields);
 	}
 
+	/**
+	 * @param Main\Event $event
+	 * @return array|false
+	 */
 	public static function onReceivedMessage(\Bitrix\Main\Event $event)
 	{
 		$params = $event->getParameters();
@@ -1614,6 +1787,10 @@ class Connector
 		return static::onReceivedEntity($params);
 	}
 
+	/**
+	 * @param Main\Event $event
+	 * @return array|false
+	 */
 	public static function onReceivedPost(\Bitrix\Main\Event $event)
 	{
 		$params = $event->getParameters();
@@ -1625,6 +1802,10 @@ class Connector
 		return static::onReceivedEntity($params);
 	}
 
+	/**
+	 * @param Main\Event $event
+	 * @return bool
+	 */
 	public static function onReceivedMessageUpdate(\Bitrix\Main\Event $event)
 	{
 		$params = $event->getParameters();
@@ -1660,11 +1841,19 @@ class Connector
 		return $manager->updateMessage($fields);
 	}
 
+	/**
+	 * @param Main\Event $event
+	 * @return bool
+	 */
 	public static function onReceivedPostUpdate(\Bitrix\Main\Event $event)
 	{
 		return self::onReceivedMessageUpdate($event);
 	}
 
+	/**
+	 * @param Main\Event $event
+	 * @return bool
+	 */
 	public static function onReceivedMessageDelete(\Bitrix\Main\Event $event)
 	{
 		$params = $event->getParameters();
@@ -1700,38 +1889,66 @@ class Connector
 		return $manager->deleteMessage($fields);
 	}
 
+	/**
+	 * @param Main\Event $event
+	 * @return bool
+	 */
 	public static function onReceivedStatusError(\Bitrix\Main\Event $event)
 	{
 		return true;
 	}
 
+	/**
+	 * @param Main\Event $event
+	 * @return bool
+	 * @throws Main\LoaderException
+	 */
 	public static function onReceivedStatusDelivery(\Bitrix\Main\Event $event)
 	{
 		$params = $event->getParameters();
 		if (empty($params))
+		{
 			return false;
+		}
 
 		Log::write($params, 'CONNECTOR - STATUS DELIVERY');
 
 		if (!Loader::includeModule('im'))
+		{
 			return false;
+		}
 
-		\CIMMessageParam::Set($params['im']['message_id'], Array('CONNECTOR_MID' => $params['message']['id'], 'SENDING' => 'N', 'SENDING_TS' => 0));
-		\CIMMessageParam::SendPull($params['im']['message_id'], Array('CONNECTOR_MID', 'SENDING', 'SENDING_TS'));
+		\CIMMessageParam::Set($params['im']['message_id'], ['CONNECTOR_MID' => $params['message']['id'], 'SENDING' => 'N', 'SENDING_TS' => 0]);
+		\CIMMessageParam::SendPull($params['im']['message_id'], ['CONNECTOR_MID', 'SENDING', 'SENDING_TS']);
 
 		return true;
 	}
 
+	/**
+	 * @param Main\Event $event
+	 * @return bool
+	 */
 	public static function onReceivedStatusReading(\Bitrix\Main\Event $event)
 	{
 		return true;
 	}
 
+	/**
+	 * @param Main\Event $event
+	 * @return bool
+	 * @throws Main\ArgumentException
+	 * @throws Main\LoaderException
+	 * @throws Main\ObjectException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
 	public static function onReceivedStatusWrites(\Bitrix\Main\Event $event)
 	{
 		$params = $event->getParameters();
 		if (empty($params))
+		{
 			return false;
+		}
 
 		if (!isset($params['message']['user_id']))
 		{
@@ -1773,6 +1990,40 @@ class Connector
 		return true;
 	}
 
+	/**
+	 * @param Main\Event $event
+	 * @return bool
+	 * @throws Main\ArgumentException
+	 * @throws Main\LoaderException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
+	public static function OnReceivedError(\Bitrix\Main\Event $event): bool
+	{
+		$result = false;
+
+		$params = $event->getParameters();
+
+		if (
+			!empty($params) &&
+			!empty($params['connector']) &&
+			Loader::includeModule('imconnector')
+		)
+		{
+			$result = ImConnector\Connector::initConnectorHandler($params['connector'])->receivedError($params);
+		}
+
+		return $result;
+	}
+
+	/**
+	 * @param Main\Event $event
+	 * @return bool
+	 * @throws Main\ArgumentException
+	 * @throws Main\LoaderException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
 	public static function OnReceivedStatusBlock(\Bitrix\Main\Event $event): bool
 	{
 		$params = $event->getParameters();
@@ -1801,7 +2052,7 @@ class Connector
 
 			$limit = [
 				'BLOCK_DATE' => new DateTime(),
-				'BLOCK_REASON' => self::TYPE_USER_BLOCK
+				'BLOCK_REASON' => Library::BLOCK_REASON_USER
 			];
 
 			if ($params['message']['type'] === 'message_deny')
@@ -1819,27 +2070,35 @@ class Connector
 		return false;
 	}
 
+	/**
+	 * @return array
+	 * @throws Main\LoaderException
+	 */
 	public static function getListCanDeleteMessage()
 	{
-		$connectorList = array();
+		$connectorList = [];
 		if (Loader::includeModule('imconnector'))
 		{
-			$connectorList = \Bitrix\ImConnector\Connector::getListConnectorDelExternalMessages();
+			$connectorList = ImConnector\Connector::getListConnectorDelExternalMessages();
 		}
 
 		return $connectorList;
 	}
 
+	/**
+	 * @return array
+	 * @throws Main\LoaderException
+	 */
 	public static function getListShowDeliveryStatus()
 	{
-		$connectorList = array();
+		$connectorList = [];
 		if (Loader::includeModule('imconnector'))
 		{
-			//$connectorList = \Bitrix\ImConnector\Connector::getListConnectorShowDeliveryStatus();
-			$connectorList = array_keys(\Bitrix\ImConnector\Connector::getListConnector()); // TODO change method to getListConnectorShowDeliveryStatus()
+			//$connectorList = ImConnector\Connector::getListConnectorShowDeliveryStatus();
+			$connectorList = array_keys(ImConnector\Connector::getListConnector()); // TODO change method to getListConnectorShowDeliveryStatus()
 			foreach ($connectorList as $key => $connectorId)
 			{
-				if (\Bitrix\ImOpenLines\Connector::isLiveChat($connectorId))
+				if (self::isLiveChat($connectorId))
 				{
 					unset($connectorList[$key]);
 				}
@@ -1849,12 +2108,16 @@ class Connector
 		return $connectorList;
 	}
 
+	/**
+	 * @return array
+	 * @throws Main\LoaderException
+	 */
 	public static function getListCanUpdateOwnMessage()
 	{
-		$connectorList = array();
+		$connectorList = [];
 		if (Loader::includeModule('imconnector'))
 		{
-			$connectorList = \Bitrix\ImConnector\Connector::getListConnectorEditInternalMessages();
+			$connectorList = ImConnector\Connector::getListConnectorEditInternalMessages();
 		}
 
 		$connectorList[] = self::TYPE_LIVECHAT;
@@ -1864,12 +2127,16 @@ class Connector
 		return $connectorList;
 	}
 
+	/**
+	 * @return array
+	 * @throws Main\LoaderException
+	 */
 	public static function getListCanDeleteOwnMessage()
 	{
-		$connectorList = array();
+		$connectorList = [];
 		if (Loader::includeModule('imconnector'))
 		{
-			$connectorList = \Bitrix\ImConnector\Connector::getListConnectorDelInternalMessages();
+			$connectorList = ImConnector\Connector::getListConnectorDelInternalMessages();
 		}
 		$connectorList[] = self::TYPE_LIVECHAT;
 
@@ -1903,7 +2170,7 @@ class Connector
 		if ($userArray)
 		{
 			$result =  array_merge(
-				\Bitrix\Im\User::getInstance($userId)->getFields(),
+				ImUser::getInstance($userId)->getFields(),
 				array_change_key_case($userArray, CASE_LOWER)
 			);
 		}
@@ -1967,13 +2234,17 @@ class Connector
 		}
 		else
 		{
-			$result = \Bitrix\Im\User::getInstance($userId)->getAvatar();
+			$result = ImUser::getInstance($userId)->getAvatar();
 		}
 
 		return $result;
 	}
 
-
+	/**
+	 * @param $connectorId
+	 * @return bool
+	 * @throws Main\LoaderException
+	 */
 	public static function isEnableSendSystemMessage($connectorId)
 	{
 		if (in_array($connectorId, array(self::TYPE_LIVECHAT, self::TYPE_NETWORK)))
@@ -1982,7 +2253,7 @@ class Connector
 		}
 		else if (Loader::includeModule('imconnector'))
 		{
-			$result = \Bitrix\ImConnector\Connector::isNeedSystemMessages($connectorId);
+			$result = ImConnector\Connector::isNeedSystemMessages($connectorId);
 		}
 		else
 		{
@@ -1992,9 +2263,18 @@ class Connector
 		return $result;
 	}
 
+	/**
+	 * @param $connectorId
+	 * @param int $lineId
+	 * @return bool
+	 * @throws Main\ArgumentException
+	 * @throws Main\LoaderException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
 	public static function isEnableSendMessageWithSignature($connectorId, $lineId = 0)
 	{
-		$lineId = intval($lineId);
+		$lineId = (int)$lineId;
 		if ($lineId > 0)
 		{
 			$isShowOperatorData = Config::isShowOperatorData($lineId);
@@ -2016,19 +2296,18 @@ class Connector
 		return $result;
 	}
 
-	public static function isConnectorSendMessageWithSignature($connectorId)
+	/**
+	 * @param $connectorId
+	 * @return bool
+	 * @throws Main\LoaderException
+	 */
+	public static function isConnectorSendMessageWithSignature($connectorId): bool
 	{
-		if (in_array($connectorId, array(self::TYPE_LIVECHAT, self::TYPE_NETWORK)))
+		$result = false;
+
+		if (Loader::includeModule('imconnector'))
 		{
-			$result = false;
-		}
-		else if (Loader::includeModule('imconnector'))
-		{
-			$result = \Bitrix\ImConnector\Connector::isNeedSignature($connectorId);
-		}
-		else
-		{
-			$result = true;
+			$result = ImConnector\Connector::isNeedSignature($connectorId);
 		}
 
 		return $result;
@@ -2154,7 +2433,6 @@ class Connector
 	/**
 	 * @param $idConnector
 	 * @return bool
-	 * @throws Main\LoaderException
 	 */
 	public static function isNeedCRMTracker(string $idConnector): bool
 	{
@@ -2168,7 +2446,11 @@ class Connector
 		return $result;
 	}
 
-
+	/**
+	 * @param $chatId
+	 * @param $customData
+	 * @throws Main\LoaderException
+	 */
 	public static function saveCustomData($chatId, $customData)
 	{
 		$customDataMessage = '';
@@ -2188,16 +2470,16 @@ class Connector
 		}
 		if ($customDataMessage)
 		{
-			Im::addMessage(Array(
+			Im::addMessage([
 				"TO_CHAT_ID" => $chatId,
 				'MESSAGE' => $customDataMessage,
 				'ATTACH' => $customDataAttach,
 				'SYSTEM' => 'Y',
 				'SKIP_COMMAND' => 'Y',
-				"PARAMS" => Array(
+				"PARAMS" => [
 					"CLASS" => "bx-messenger-content-item-system"
-				),
-			));
+				],
+			]);
 		}
 	}
 

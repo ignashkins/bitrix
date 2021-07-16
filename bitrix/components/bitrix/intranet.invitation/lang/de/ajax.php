@@ -1,6 +1,5 @@
 <?php
 $MESS["BX24_INVITE_DIALOG_ADDED"] = "<b>Glückwunsch!</b><br><br>Eine Benachrichtigung über Registrierung wurde an den ausgewählten Nutzer gesendet.<br><br>Um zu sehen, wer eingeladen wurde, sollten Sie <a style=\"white-space:nowrap;\" href=\"#SITE_DIR#company/?show_user=inactive\">die Mitarbeiterliste öffnen</a>.";
-$MESS["BX24_INVITE_DIALOG_EMAIL_ERROR"] = "E-Mail-Format ist nicht korrekt";
 $MESS["BX24_INVITE_DIALOG_ERROR_EMAIL"] = "E-Mail-Format ist nicht korrekt";
 $MESS["BX24_INVITE_DIALOG_ERROR_EMAIL_OR_PHONE"] = "Inkorrektes E-Mail-oder Telefonnummerformat";
 $MESS["BX24_INVITE_DIALOG_ERROR_EXTRANET_NO_SONET_GROUP_ADD"] = "Bitte wählen Sie eine Gruppe, um externe Nutzer hinzuzufügen";

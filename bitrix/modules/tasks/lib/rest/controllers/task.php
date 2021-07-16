@@ -9,11 +9,13 @@ use Bitrix\Main\UI\PageNavigation;
 use Bitrix\Main\UserTable;
 use Bitrix\Pull\MobileCounter;
 use Bitrix\Tasks\AnalyticLogger;
+use Bitrix\Tasks\Comments\Task\CommentPoster;
 use Bitrix\Tasks\Exception;
 use Bitrix\Tasks\Helper\Filter;
 use Bitrix\Tasks\Integration\SocialNetwork;
+use Bitrix\Tasks\Internals\Counter;
 use Bitrix\Tasks\Internals\SearchIndex;
-use Bitrix\Tasks\Internals\Task\SearchIndexTable;
+use Bitrix\Tasks\Scrum\Service\TaskService;
 use Bitrix\Tasks\Internals\UserOption;
 use Bitrix\Tasks\Manager;
 use Bitrix\Tasks\UI;
@@ -199,6 +201,15 @@ final class Task extends Base
 		$row = $this->fillGroupInfo([$row])[0];
 		$row = $this->fillUserInfo([$row])[0];
 		$this->formatDateFieldsForOutput($row);
+
+		if (in_array('NEW_COMMENTS_COUNT', $params['select'], true))
+		{
+			$taskId = $task->getId();
+			$userId = $this->getCurrentUser()->getId();
+
+			$newComments = Counter::getInstance((int)$userId)->getCommentsCount([$taskId]);
+			$row['NEW_COMMENTS_COUNT'] = $newComments[$taskId];
+		}
 
 		$action = $this->getAccessAction($task);
 		$row['action'] = $action['allowedActions'][$this->getCurrentUser()->getId()];
@@ -572,11 +583,24 @@ final class Task extends Base
 
 		if (isset($params['SIFT_THROUGH_FILTER']))
 		{
+			$isSprintKanban = ($params['SIFT_THROUGH_FILTER']['sprintKanban'] === 'Y');
+
 			/** @var Filter $filterInstance */
-			$filterInstance = Filter::getInstance(
-				$params['SIFT_THROUGH_FILTER']['userId'],
-				$params['SIFT_THROUGH_FILTER']['groupId']
-			);
+			if ($isSprintKanban)
+			{
+				$taskService = new TaskService($params['SIFT_THROUGH_FILTER']['userId']);
+				$filterInstance = $taskService->getFilterInstance(
+					$params['SIFT_THROUGH_FILTER']['groupId'],
+					$params['SIFT_THROUGH_FILTER']['isCompletedSprint'] === 'Y'
+				);
+			}
+			else
+			{
+				$filterInstance = Filter::getInstance(
+					$params['SIFT_THROUGH_FILTER']['userId'],
+					$params['SIFT_THROUGH_FILTER']['groupId']
+				);
+			}
 			$filter = array_merge($filter, $filterInstance->process());
 			unset($filter['ONLY_ROOT_TASKS']);
 		}
@@ -948,6 +972,37 @@ final class Task extends Base
 	}
 
 	/**
+	 * @param \CTaskItem $task
+	 * @return bool
+	 */
+	public function pingAction(\CTaskItem $task): bool
+	{
+		if ($taskData = $task->getData(false))
+		{
+			return $this->pingStatusAction($taskData);
+		}
+
+		return false;
+	}
+
+	/**
+	 * @param array $taskData
+	 * @return bool
+	 */
+	private function pingStatusAction(array $taskData): bool
+	{
+		$taskId = (int)$taskData['ID'];
+		$userId = $this->getCurrentUser()->getId();
+
+		$commentPoster = CommentPoster::getInstance($taskId, $userId);
+		$commentPoster && $commentPoster->postCommentsOnTaskStatusPinged($taskData);
+
+		\CTaskNotifications::sendPingStatusMessage($taskData, $userId);
+
+		return true;
+	}
+
+	/**
 	 * Delegate task to another user
 	 *
 	 * @param \CTaskItem $task
@@ -959,9 +1014,17 @@ final class Task extends Base
 	 * @throws Main\SystemException
 	 * @throws TasksException
 	 */
-	public function delegateAction(\CTaskItem $task, $userId, array $params = []): array
+	public function delegateAction(\CTaskItem $task, $userId, array $params = []): ?array
 	{
-		$task->delegate($userId, $params);
+		try
+		{
+			$task->delegate($userId, $params);
+		}
+		catch (TasksException $e)
+		{
+			$this->errorCollection->add([new Error($e->getMessage())]);
+			return null;
+		}
 
 		if ($params['PLATFORM'] === 'mobile')
 		{
@@ -1111,9 +1174,18 @@ final class Task extends Base
 	 * @throws Main\SystemException
 	 * @throws TasksException
 	 */
-	public function completeAction(\CTaskItem $task, array $params = []): array
+	public function completeAction(\CTaskItem $task, array $params = []): ?array
 	{
-		$task->complete($params);
+		try
+		{
+			$task->complete($params);
+		}
+		catch (TasksException $e)
+		{
+			$this->errorCollection->add([new Error($e->getMessage())]);
+			return null;
+		}
+
 		return $this->getAction($task);
 	}
 
@@ -1128,9 +1200,18 @@ final class Task extends Base
 	 * @throws Main\SystemException
 	 * @throws TasksException
 	 */
-	public function deferAction(\CTaskItem $task, array $params = []): array
+	public function deferAction(\CTaskItem $task, array $params = []): ?array
 	{
-		$task->defer($params);
+		try
+		{
+			$task->defer($params);
+		}
+		catch (TasksException $e)
+		{
+			$this->errorCollection->add([new Error($e->getMessage())]);
+			return null;
+		}
+
 		return $this->getAction($task);
 	}
 
@@ -1145,9 +1226,18 @@ final class Task extends Base
 	 * @throws Main\SystemException
 	 * @throws TasksException
 	 */
-	public function renewAction(\CTaskItem $task, array $params = []): array
+	public function renewAction(\CTaskItem $task, array $params = []): ?array
 	{
-		$task->renew($params);
+		try
+		{
+			$task->renew($params);
+		}
+		catch (TasksException $e)
+		{
+			$this->errorCollection->add([new Error($e->getMessage())]);
+			return null;
+		}
+
 		return $this->getAction($task);
 	}
 
@@ -1162,9 +1252,18 @@ final class Task extends Base
 	 * @throws Main\SystemException
 	 * @throws TasksException
 	 */
-	public function approveAction(\CTaskItem $task, array $params = []): array
+	public function approveAction(\CTaskItem $task, array $params = []): ?array
 	{
-		$task->approve($params);
+		try
+		{
+			$task->approve($params);
+		}
+		catch (TasksException $e)
+		{
+			$this->errorCollection->add([new Error($e->getMessage())]);
+			return null;
+		}
+
 		return $this->getAction($task);
 	}
 
@@ -1179,9 +1278,18 @@ final class Task extends Base
 	 * @throws Main\SystemException
 	 * @throws TasksException
 	 */
-	public function disapproveAction(\CTaskItem $task, array $params = []): array
+	public function disapproveAction(\CTaskItem $task, array $params = []): ?array
 	{
-		$task->disapprove($params);
+		try
+		{
+			$task->disapprove($params);
+		}
+		catch (TasksException $e)
+		{
+			$this->errorCollection->add([new Error($e->getMessage())]);
+			return null;
+		}
+
 		return $this->getAction($task);
 	}
 
@@ -1195,9 +1303,18 @@ final class Task extends Base
 	 * @throws Main\SystemException
 	 * @throws TasksException
 	 */
-	public function startWatchAction(\CTaskItem $task): array
+	public function startWatchAction(\CTaskItem $task): ?array
 	{
-		$task->startWatch();
+		try
+		{
+			$task->startWatch();
+		}
+		catch (TasksException $e)
+		{
+			$this->errorCollection->add([new Error($e->getMessage())]);
+			return null;
+		}
+
 		return $this->getAction($task);
 	}
 
@@ -1211,9 +1328,18 @@ final class Task extends Base
 	 * @throws Main\SystemException
 	 * @throws TasksException
 	 */
-	public function stopWatchAction(\CTaskItem $task): array
+	public function stopWatchAction(\CTaskItem $task): ?array
 	{
-		$task->stopWatch();
+		try
+		{
+			$task->stopWatch();
+		}
+		catch (TasksException $e)
+		{
+			$this->errorCollection->add([new Error($e->getMessage())]);
+			return null;
+		}
+
 		return $this->getAction($task);
 	}
 

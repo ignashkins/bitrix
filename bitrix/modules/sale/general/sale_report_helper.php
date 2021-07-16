@@ -56,7 +56,7 @@ abstract class CBaseSaleReportHelper extends CReportHelper
 				$titleMsg = GetMessage('SALE_REPORT_DEFAULT_MOST_EXPECTED_GOODS');
 				if ($title === $titleMsg && is_string($row['SETTINGS']) && $row['SETTINGS'] <> '')
 				{
-					$settings = unserialize($row['SETTINGS']);
+					$settings = unserialize($row['SETTINGS'], ['allowed_classes' => false]);
 					if (is_array($settings))
 					{
 						$needUpdate = false;
@@ -264,15 +264,14 @@ abstract class CBaseSaleReportHelper extends CReportHelper
 
 			// Getting currencies
 			$obj = new CCurrency();
-			$by = ''; $order = '';
-			$result = $obj->GetList($by, $order, LANGUAGE_ID);
+			$result = $obj->GetList('', '', LANGUAGE_ID);
 			while($row = $result->Fetch())
 			{
 				self::$currencies[$row['CURRENCY']] = array(
 					'name' => $row['FULL_NAME']
 				);
 			}
-			unset($row, $result, $obj, $by, $order);
+			unset($row, $result, $obj);
 
 			// Getting types of prices
 			$obj = new CCatalogGroup();

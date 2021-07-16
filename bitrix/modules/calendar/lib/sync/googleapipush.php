@@ -6,7 +6,6 @@ use Bitrix\Main\Type;
 use \Bitrix\Calendar\PushTable;
 use \Bitrix\Main\Loader;
 use Bitrix\Calendar\Internals;
-use phpDocumentor\Reflection\Types\Self_;
 
 final class GoogleApiPush
 {
@@ -26,7 +25,7 @@ final class GoogleApiPush
 	{
 		global $DB;
 		$result =  $DB->query("SELECT * FROM b_calendar_push WHERE " .
-			\CDatabaseMysql::dateFormatToDB(FORMAT_DATETIME, 'EXPIRES') .
+			$DB->dateFormatToDB(FORMAT_DATETIME, 'EXPIRES') .
 			" <= '" .
 			\Bitrix\Main\Type\DateTime::createFromTimestamp(strtotime('+1 day')) .
 			"' ORDER BY EXPIRES ASC LIMIT " . self::RENEW_LIMIT);
@@ -164,7 +163,7 @@ final class GoogleApiPush
 		foreach ($localSections as $section)
 		{
 			//Skip virtual calendars, because they are not pushable.
-			if (self::isVirtualCalendar($section['GAPI_CALENDAR_ID']))
+			if (self::isVirtualCalendar($section['GAPI_CALENDAR_ID'], $section['EXTERNAL_TYPE']))
 			{
 				continue;
 			}
@@ -864,15 +863,18 @@ final class GoogleApiPush
 	}
 
 	/**
-	 * @param $gApiCalendarId
+	 * @param string|null $gApiCalendarId
+	 * @param string|null $externalType
 	 * @return bool
 	 */
-	private static function isVirtualCalendar(string $gApiCalendarId = null): bool
+	private static function isVirtualCalendar(?string $gApiCalendarId, ?string $externalType): bool
 	{
 		if (preg_match('/(holiday.calendar.google.com)/', $gApiCalendarId)
 			|| preg_match('/(group.v.calendar.google.com)/', $gApiCalendarId)
 			|| preg_match('/(group.calendar.google.com)/', $gApiCalendarId)
 			|| preg_match('/(@virtual)/', $gApiCalendarId)
+			|| preg_match('/(_readonly)/', $externalType)
+			|| preg_match('/(_freebusy)/', $externalType)
 		)
 		{
 			return true;

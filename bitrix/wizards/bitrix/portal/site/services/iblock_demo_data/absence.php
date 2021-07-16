@@ -25,7 +25,7 @@ foreach($arAbsenceUsers as $absentUserId)
 	if (!$rsUser->Fetch())
 		continue;
 
-	$date_from = mktime() - (($absentUserId - 200)/10)*60*60*24;
+	$date_from = time() - (($absentUserId - 200)/10)*60*60*24;
 	$date_to = $date_from + 30*60*60*24;
 
 	$arAbsenceUser = Array(
@@ -48,7 +48,7 @@ foreach($arAbsenceUsers as $absentUserId)
 	$el->Add($arAbsenceUser);
 }
 
-// РєРѕРјР°РЅРґРёСЂРѕРІРєР°
+// командировка
 $arAbsenceUsers = Array(11, 122, 210, 213, 250, 272, 389, 399);
 foreach($arAbsenceUsers as $absentUserId)
 {
@@ -56,7 +56,7 @@ foreach($arAbsenceUsers as $absentUserId)
 	if (!$rsUser->Fetch())
 		continue;
 
-	$date_from = mktime() - (($absentUserId - 200)/10)*60*60*24;
+	$date_from = time() - (($absentUserId - 200)/10)*60*60*24;
 	$date_to = $date_from + ($absentUserId%3)*60*60*24;
 
 	$arAbsenceUser = Array(
@@ -79,7 +79,7 @@ foreach($arAbsenceUsers as $absentUserId)
 	$el->Add($arAbsenceUser);
 }
 
-// Р±РѕР»СЊРЅРёС‡РЅС‹Р№
+// больничный
 $arAbsenceUsers = Array(4, 144, 233, 372, 400);
 foreach($arAbsenceUsers as $absentUserId)
 {
@@ -87,7 +87,7 @@ foreach($arAbsenceUsers as $absentUserId)
 	if (!$rsUser->Fetch())
 		continue;
 
-	$date_from = mktime() - (($absentUserId - 200)/10)*60*60*24;
+	$date_from = time() - (($absentUserId - 200)/10)*60*60*24;
 	$date_to = $date_from + ($absentUserId%3+3)*60*60*24;
 
 	$arAbsenceUser = Array(

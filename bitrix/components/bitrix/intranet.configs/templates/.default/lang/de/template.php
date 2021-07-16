@@ -13,7 +13,7 @@ $MESS["CONFIG_ALLOW_INVITE_USERS"] = "Allen Nutzern erlauben, neue Nutzer auf da
 $MESS["CONFIG_ALLOW_NEW_USER_LF"] = "Informationen über Einstellung neuer Mitarbeiter im Activity Stream veröffentlichen";
 $MESS["CONFIG_ALLOW_SELF_REGISTER"] = "Schnellregistrierung erlauben";
 $MESS["CONFIG_ALLOW_TOALL"] = "\"Alle Nutzer\" als Option im Activity Stream erlauben";
-$MESS["CONFIG_BUY_TARIFF_BY_ALL"] = "Aktivieren Sie alle Nutzer, um den aktuellen Bitrix24 Tarif zu upgraden";
+$MESS["CONFIG_BUY_TARIFF_BY_ALL"] = "Allen Nutzern erlauben, den aktuellen Bitrix24 Tarif upzugraden";
 $MESS["CONFIG_CLIENT_LOGO"] = "Unternehmenslogo";
 $MESS["CONFIG_CLIENT_LOGO_DESCR"] = "Ihr Logo muss eine <b>PNG</b>-Datei sein.<br/>Maximale Größe ist 222px x 55px.";
 $MESS["CONFIG_CLIENT_LOGO_DESC_RETINA"] = "Ihr Logo muss eine <b>PNG</b>-Datei sein.<br/>Maximale Größe ist 444px x 110px.";
@@ -110,6 +110,7 @@ $MESS["CONFIG_NAME_CHANGE_ACTION"] = "Ändern";
 $MESS["CONFIG_NAME_CHANGE_INFO"] = "Wichtig: Sie können die Adresse Ihres Bitrix24 nur einmal ändern.";
 $MESS["CONFIG_NAME_CHANGE_SECTION"] = "Adresse Ihres Bitrix24 ändern";
 $MESS["CONFIG_NAME_FILEMAN_GOOGLE_API_KEY"] = "Google Maps Keym der in den Einstellungen des Moduls Site Explorer angegeben ist.";
+$MESS["CONFIG_NAME_FILEMAN_YANDEX_MAP_API_KEY"] = "Yandex Maps Key";
 $MESS["CONFIG_NAME_FORMAT"] = "Namensformat";
 $MESS["CONFIG_NAME_GOOGLE_API_HOST_HINT"] = "Der Schlüssel wurde für die Domain <b>#domain#</b>erhalten. Funktionieren die Google Maps nicht, sollten Sie die Schlüsseleinstellungen ändern oder <a href=\"https://developers.google.com/maps/documentation/javascript/get-api-key\" target=\"_blank\">einen neuen anfordern</a>.";
 $MESS["CONFIG_NAME_GOOGLE_API_KEY"] = "Einstellungen der Integration mit Google API";

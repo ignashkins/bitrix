@@ -13,6 +13,7 @@ use Bitrix\Main\ErrorableImplementation;
 use Bitrix\Main\ErrorCollection;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\UI\Toolbar\Facade\Toolbar;
 
 if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true)
 {
@@ -107,11 +108,25 @@ class CatalogProductVariationDetailsComponent
 
 		foreach ($descriptionFieldNames as $name)
 		{
-			if (isset($fields[$name]))
+			if (isset($fields[$name]) && is_string($fields[$name]))
 			{
+				$fields[$name] = $this->sanitize(htmlspecialchars_decode($fields[$name]));
 				$fields[$name.'_TYPE'] = 'html';
 			}
 		}
+	}
+
+	private function sanitize(string $html): string
+	{
+		static $sanitizer = null;
+
+		if ($sanitizer === null)
+		{
+			$sanitizer = new \CBXSanitizer;
+			$sanitizer->setLevel(\CBXSanitizer::SECURE_LEVEL_LOW);
+		}
+
+		return $sanitizer->sanitizeHtml($html);
 	}
 
 	private function preparePictureFields(&$fields): void
@@ -126,6 +141,24 @@ class CatalogProductVariationDetailsComponent
 				$delete = $fields[$name.'_del'] ?? false;
 				$fields[$name] = \CAllIBlock::makeFileArray($fields[$name], $delete, $description);
 				unset($fields[$name.'_descr'], $fields[$name.'_del']);
+			}
+		}
+	}
+
+	private function prepareFileFields(&$fields): void
+	{
+		$files = $_FILES['data'];
+		if (!empty($files))
+		{
+			CFile::ConvertFilesToPost($files, $fields);
+			foreach ($fields as $key => $field)
+			{
+				if (is_array($field) && array_key_exists('FILE', $field))
+				{
+					$fields[$key] = [
+						$fields[$key],
+					];
+				}
 			}
 		}
 	}
@@ -155,11 +188,25 @@ class CatalogProductVariationDetailsComponent
 					$descriptions = $fields[$name.'_descr'] ?? [];
 					$deleted = $fields[$name.'_del'] ?? [];
 					$field = $this->prepareFilePropertyFromEditor($fields[$name], $descriptions, $deleted);
+					if (empty($field))
+					{
+						$field = '';
+					}
 					unset($fields[$name.'_descr']);
 				}
-				elseif (isset($field['AMOUNT'], $field['CURRENCY']) && Loader::includeModule('currency'))
+				elseif (Loader::includeModule('currency'))
 				{
-					$field = $field['AMOUNT'].IblockMoneyProperty::SEPARATOR.$field['CURRENCY'];
+					if (isset($field['AMOUNT'], $field['CURRENCY']))
+					{
+						$field = IblockMoneyProperty::getUnitedValue($field['AMOUNT'], $field['CURRENCY']);
+					}
+					elseif (isset($field['PRICE']['VALUE'], $field['CURRENCY']['VALUE']))
+					{
+						$field = IblockMoneyProperty::getUnitedValue(
+							$field['PRICE']['VALUE'],
+							$field['CURRENCY']['VALUE']
+						);
+					}
 				}
 
 				$index = mb_substr($name, $prefixLength);
@@ -172,7 +219,7 @@ class CatalogProductVariationDetailsComponent
 		return $propertyFields;
 	}
 
-	private function prepareFilePropertyFromEditor($propertyFields, $descriptions, $deleted): array
+	private function prepareFilePropertyFromEditor($propertyFields, $descriptions, $deleted): ?array
 	{
 		if ($deleted !== null && !is_array($deleted))
 		{
@@ -187,12 +234,39 @@ class CatalogProductVariationDetailsComponent
 			$propertyFields = [$propertyFields];
 		}
 
+		if (!is_array($propertyFields))
+		{
+			$propertyFields = [$propertyFields];
+		}
+
 		if ($deleted)
 		{
 			foreach ($deleted as $key => $value)
 			{
-				unset($propertyFields[$key], $descriptions[$key]);
+				if ($value === 'Y')
+				{
+					unset($propertyFields[$key], $descriptions[$key]);
+				}
+				else
+				{
+					$propertyValueKey = array_search($value, $propertyFields, true);
+					if ($propertyValueKey !== false)
+					{
+						unset($propertyFields[$propertyValueKey]);
+					}
+
+					$propertyDescriptionKey = array_search($value, $descriptions, true);
+					if ($propertyDescriptionKey !== false)
+					{
+						unset($descriptions[$propertyDescriptionKey]);
+					}
+				}
 			}
+		}
+
+		if (empty($propertyFields))
+		{
+			return null;
 		}
 
 		foreach ($propertyFields as $key => $value)
@@ -352,6 +426,8 @@ class CatalogProductVariationDetailsComponent
 	{
 		$fields = $this->request->get('data') ?: [];
 
+		$this->prepareFileFields($fields);
+
 		if (empty($fields))
 		{
 			return null;
@@ -373,6 +449,12 @@ class CatalogProductVariationDetailsComponent
 				{
 					$this->prepareDescriptionFields($fields);
 					$this->preparePictureFields($fields);
+
+					if (isset($fields['PURCHASING_PRICE']) && $fields['PURCHASING_PRICE'] === '')
+					{
+						$fields['PURCHASING_PRICE'] = null;
+					}
+
 					$variation->setFields($fields);
 				}
 
@@ -391,10 +473,15 @@ class CatalogProductVariationDetailsComponent
 					$variation->getMeasureRatioCollection()->setDefault($measureRatioField);
 				}
 
+				global $DB;
+				$DB->StartTransaction();
+
 				$result = $variation->save();
 
 				if ($result->isSuccess())
 				{
+					$DB->Commit();
+
 					$redirect = !$this->hasVariationId();
 					$this->setVariationId($variation->getId());
 
@@ -406,12 +493,12 @@ class CatalogProductVariationDetailsComponent
 
 					if (isset($response['ENTITY_DATA']['MEASURE']))
 					{
-						$response['ENTITY_DATA']['MEASURE'] = (string) $response['ENTITY_DATA']['MEASURE'];
+						$response['ENTITY_DATA']['MEASURE'] = (string)$response['ENTITY_DATA']['MEASURE'];
 					}
 
 					if (isset($response['ENTITY_DATA']['VAT_ID']))
 					{
-						$response['ENTITY_DATA']['VAT_ID'] = (string) $response['ENTITY_DATA']['VAT_ID'];
+						$response['ENTITY_DATA']['VAT_ID'] = (string)$response['ENTITY_DATA']['VAT_ID'];
 					}
 
 					if ($redirect)
@@ -421,6 +508,9 @@ class CatalogProductVariationDetailsComponent
 
 					return $response;
 				}
+
+				$DB->Rollback();
+				$this->errorCollection->add($result->getErrors());
 			}
 		}
 
@@ -569,10 +659,16 @@ class CatalogProductVariationDetailsComponent
 
 		if ($variation === null)
 		{
-			$this->errorCollection[] = new \Bitrix\Main\Error(sprintf(
-				'Variation {%s} for product {%s} not found.',
-				$this->getVariationId(), $this->getProductId()
-			));
+			Toolbar::deleteFavoriteStar();
+
+			global $APPLICATION;
+			$APPLICATION->IncludeComponent(
+				"bitrix:catalog.notfounderror",
+				'',
+				[
+					'ERROR_MESSAGE' => Loc::getMessage('CPVD_NOT_FOUND_ERROR_TITLE'),
+				]
+			);
 		}
 
 		return $variation;
@@ -634,6 +730,29 @@ class CatalogProductVariationDetailsComponent
 		$this->arResult['UI_CREATION_PROPERTY_URL'] = $this->getCreationPropertyUrl();
 		$this->arResult['VARIATION_GRID_ID'] = $this->getForm()->getVariationGridId();
 		$this->arResult['CARD_SETTINGS'] = $this->getForm()->getCardSettings();
+	}
+
+	public function setCardSettingAction(string $settingId, $selected): Bitrix\Main\Engine\Response\AjaxJson
+	{
+		if (!$this->checkModules() || !$this->checkPermissions() || !$this->checkRequiredParameters())
+		{
+			return Bitrix\Main\Engine\Response\AjaxJson::createError($this->errorCollection);
+		}
+
+		$selected = $selected === 'true';
+		$settings = $this->getForm()->getCardSettings();
+
+		foreach ($settings as $item)
+		{
+			if ($item['id'] === $settingId && $item['action'] === 'card' && $item['checked'] !== $selected)
+			{
+				$config = $this->getForm()->getCardUserConfig();
+				$config[$item['id']] = $selected;
+				$this->getForm()->saveCardUserConfig($config);
+			}
+		}
+
+		return Bitrix\Main\Engine\Response\AjaxJson::createSuccess();
 	}
 
 	public function setGridSettingAction(string $settingId, $selected, array $currentHeaders = []): Bitrix\Main\Engine\Response\AjaxJson

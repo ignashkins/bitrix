@@ -853,7 +853,7 @@ HTML;
 				(empty($res["AUTHOR"]["AVATAR"]) ? "N" : "Y"),
 			"#AUTHOR_AVATAR#" => (
 				!empty($res["AUTHOR"]["AVATAR"])
-					? \CHTTP::urnEncode($res["AUTHOR"]["AVATAR"])
+					? $res['AUTHOR']['AVATAR']
 					: (
 						!empty($arParams["AVATAR_DEFAULT"])
 							? \CHTTP::urnEncode($arParams["AVATAR_DEFAULT"])
@@ -862,10 +862,10 @@ HTML;
 			),
 			"#AUTHOR_AVATAR_BG#" => (
 				!empty($res["AUTHOR"]["AVATAR"])
-					? "background-image:url('".\CHTTP::urnEncode($res["AUTHOR"]["AVATAR"])."')"
+					? "background-image:url('" . $res["AUTHOR"]["AVATAR"] . "')"
 					: (
 						!empty($arParams["AVATAR_DEFAULT"])
-							? "background-image:url('".\CHTTP::urnEncode($arParams["AVATAR_DEFAULT"])."')"
+							? "background-image:url('" . $arParams["AVATAR_DEFAULT"] . "')"
 							: ""
 					)
 				),
@@ -1291,11 +1291,13 @@ HTML;
 			}
 
 			$JSResult += array(
+				'warningCode' => ($arParams["WARNING_CODE"] ?? ''),
+				'warningMessage' => ($arParams["~WARNING_MESSAGE"] ?? ''),
 				'errorMessage' => (isset($arParams["~ERROR_MESSAGE"]) ? $arParams["~ERROR_MESSAGE"] : (isset($arParams["ERROR_MESSAGE"]) ? $arParams["ERROR_MESSAGE"] : '')),
 				'okMessage' => (isset($arParams["~OK_MESSAGE"]) ? $arParams["~OK_MESSAGE"] : (isset($arParams["OK_MESSAGE"]) ? $arParams["OK_MESSAGE"] : '')),
 				'status' => "success",
 			);
-			if ($mode == "RECORDS")
+			if ($mode === "RECORDS")
 			{
 				$JSResult["messageList"] = $records;
 			}

@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["CONFIG_CHECKER"] = "Перевірка конфігурації";
 $MESS["CONFIG_CHECKER_TITLE"] = "Перевірити конфігурацію після імпорту галузевого сценарію";
 $MESS["CRM_LEAD_SL_SUBSCRIBE"] = "Стежити";
@@ -39,6 +39,7 @@ $MESS["LEAD_CREATE_ON_BASIS_HINT_TITLE"] = "Створити на підстав
 $MESS["LEAD_CREATE_ON_BASIS_TITLE"] = "Створення контакту, компанії та угоди на підставі ліда";
 $MESS["LEAD_CRM_TYPE"] = "Режим роботи СRM";
 $MESS["LEAD_DEDUPE"] = "Контроль дублікатів";
+$MESS["LEAD_DEDUPE_AUTOSEARCH"] = "Автоматичний пошук дублікатів";
 $MESS["LEAD_DEDUPE_TITLE"] = "Контроль дублікатів";
 $MESS["LEAD_DELETE"] = "Видалити лід";
 $MESS["LEAD_DELETE_DLG_BTNTITLE"] = "Видалити";
@@ -72,4 +73,4 @@ $MESS["LEAD_SHOW"] = "Переглянути";
 $MESS["LEAD_SHOW_TITLE"] = "Переглянути лід";
 $MESS["LEAD_VERTICAL_CRM"] = "Галузеві сценарії";
 $MESS["LEAD_VERTICAL_CRM_TITLE"] = "Галузеві сценарії";
-?>
+$MESS["LEAD_DEDUPE_HELP"] = "Як працювати з дублікатами";

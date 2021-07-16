@@ -8,7 +8,7 @@ use Bitrix\Main\Error;
 
 Loc::loadMessages(__FILE__);
 
-Loader::includeModule("intranet");
+Loader::includeModule('intranet');
 
 class CIntranetUserProfileComponent extends UserProfile
 {
@@ -17,9 +17,9 @@ class CIntranetUserProfileComponent extends UserProfile
 
 	private function checkRequiredParams()
 	{
-		if (intval($this->arParams["ID"]) <= 0)
+		if ((int)$this->arParams['ID'] <= 0)
 		{
-			$this->errorCollection->setError(new Error(Loc::getMessage("INTRANET_USER_PROFILE_NO_USER_ERROR")));
+			$this->errorCollection->setError(new Error(Loc::getMessage('INTRANET_USER_PROFILE_NO_USER_ERROR')));
 			return false;
 		}
 
@@ -37,39 +37,11 @@ class CIntranetUserProfileComponent extends UserProfile
 		}
 
 		$isAdminRights = (
-			Loader::includeModule("bitrix24") && \CBitrix24::IsPortalAdmin(\Bitrix\Main\Engine\CurrentUser::get()->getId())
+			(Loader::includeModule('bitrix24') && \CBitrix24::IsPortalAdmin(\Bitrix\Main\Engine\CurrentUser::get()->getId()))
 			|| \Bitrix\Main\Engine\CurrentUser::get()->isAdmin()
-		)
-			? true : false;
-
-		$this->arResult["IS_CURRENT_USER_ADMIN"] = $isAdminRights;
-
-		$this->userFieldDispatcher = \Bitrix\Main\UserField\Dispatcher::instance();
-
-		$this->arResult["EnablePersonalConfigurationUpdate"] = true;
-		$this->arResult["EnableCommonConfigurationUpdate"] = $isAdminRights;
-		$this->arResult["EnableSettingsForAll"] = \Bitrix\Main\Engine\CurrentUser::get()->canDoOperation('edit_other_settings');
-
-		$this->arResult["Permissions"] = $this->getPermissions();
-
-		$this->arResult["UserFieldEntityId"] = "USER";
-		$this->arResult["UserFieldPrefix"] = "USR";
-
-		$this->arResult["AllowAllUserProfileFields"] = (
-			\Bitrix\Main\ModuleManager::isModuleInstalled('bitrix24')
-			|| (
-				isset($this->arParams["ALLOWALL_USER_PROFILE_FIELDS"])
-				&& $this->arParams["ALLOWALL_USER_PROFILE_FIELDS"] == 'Y'
-			)
 		);
 
-		$this->arResult["EnableUserFieldCreation"] = $this->arResult["EnableCommonConfigurationUpdate"];
-		$this->arResult["UserFieldsAvailable"] = $this->getAvailableFields();
-
-		$this->arResult["UserFieldCreateSignature"] = $this->arResult["EnableCommonConfigurationUpdate"]
-			? $this->userFieldDispatcher->getCreateSignature(array("ENTITY_ID" => $this->arResult["UserFieldEntityId"]))
-			: '';
-		$this->arResult["EnableUserFieldMandatoryControl"] = false;
+		$this->arResult["IS_CURRENT_USER_ADMIN"] = $isAdminRights;
 
 		$this->init();
 
@@ -85,6 +57,35 @@ class CIntranetUserProfileComponent extends UserProfile
 		$this->arResult["CurrentUser"] = [
 			'STATUS' => $this->getCurrentUserStatus()
 		];
+
+		$this->userFieldDispatcher = \Bitrix\Main\UserField\Dispatcher::instance();
+
+		$this->arResult["EnablePersonalConfigurationUpdate"] = true;
+		$this->arResult["EnableCommonConfigurationUpdate"] = $isAdminRights
+			&& $this->arResult["User"]["STATUS"] !== "email";
+		
+		$this->arResult["EnableSettingsForAll"] = \Bitrix\Main\Engine\CurrentUser::get()->canDoOperation('edit_other_settings');
+
+		$this->arResult["Permissions"] = $this->getPermissions();
+
+		$this->arResult["UserFieldEntityId"] = "USER";
+		$this->arResult["UserFieldPrefix"] = "USR";
+
+		$this->arResult["AllowAllUserProfileFields"] = (
+			\Bitrix\Main\ModuleManager::isModuleInstalled('bitrix24')
+			|| (
+				isset($this->arParams["ALLOWALL_USER_PROFILE_FIELDS"])
+				&& $this->arParams["ALLOWALL_USER_PROFILE_FIELDS"] === 'Y'
+			)
+		);
+
+		$this->arResult["EnableUserFieldCreation"] = $this->arResult["EnableCommonConfigurationUpdate"];
+		$this->arResult["UserFieldsAvailable"] = $this->getAvailableFields();
+
+		$this->arResult["UserFieldCreateSignature"] = $this->arResult["EnableCommonConfigurationUpdate"]
+			? $this->userFieldDispatcher->getCreateSignature(array("ENTITY_ID" => $this->arResult["UserFieldEntityId"]))
+			: '';
+		$this->arResult["EnableUserFieldMandatoryControl"] = false;
 
 		if ($this->arResult["User"]["STATUS"] === "email")
 		{
@@ -146,4 +147,3 @@ class CIntranetUserProfileComponent extends UserProfile
 		$this->includeComponentTemplate();
 	}
 }
-?>

@@ -110,7 +110,6 @@ Class mail extends CModule
 					"TASKS_MODULE" => array("main_change_profile"),
 					"TASKS_FILE" => array(
 						Array("fm_folder_access_read", "/bitrix/components/bitrix/"),
-						Array("fm_folder_access_read", "/bitrix/rk.php"),
 						Array("fm_folder_access_read", "/bitrix/tools/"),
 						Array("fm_folder_access_read", "/upload/"),
 						Array("fm_folder_access_read", "/pub/")
@@ -120,8 +119,8 @@ Class mail extends CModule
 				$group = new CGroup;
 
 				$dbResult = CGroup::GetList(
-					$v1="id",
-					$v2="asc",
+					'id',
+					'asc',
 					array(
 						"STRING_ID" => $arGroup["STRING_ID"],
 						"STRING_ID_EXACT_MATCH" => "Y"
@@ -375,8 +374,10 @@ Class mail extends CModule
 			if (CModule::IncludeModule('extranet') && CExtranet::IsExtranetSite($site['LID']))
 				return;
 
-			$mailServicesList = isset($mailServicesByLang[$site['LANGUAGE_ID']])
-				? $mailServicesByLang[$site['LANGUAGE_ID']]
+			$portalZone = \Bitrix\Main\Loader::includeModule('bitrix24') ? \CBitrix24::getPortalZone() : $site['LANGUAGE_ID'];
+
+			$mailServicesList = isset($mailServicesByLang[$portalZone])
+				? $mailServicesByLang[$portalZone]
 				: $mailServicesByLang['en'];
 			foreach ($mailServicesList as $serviceSort => $serviceName)
 			{

@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["CRM_MODULE_NOT_INSTALLED"] = "Модуль CRM не встановлений.";
 $MESS["CRM_ORDER_ERROR_SHIPMENT_SERVICE_RESTRICTED"] = "Служба доставки не підпадає під обмеження";
 $MESS["CRM_ORDER_SD_NOT_CHOSEN"] = "Не вибрано";
@@ -35,6 +35,7 @@ $MESS["CRM_ORDER_SHIPMENT_ORDER_ID"] = "Ідентифікатор замовл�
 $MESS["CRM_ORDER_SHIPMENT_PRICE_DELIVERY_CALCULATED_WITH_CURRENCY"] = "Розрахована вартість доставки";
 $MESS["CRM_ORDER_SHIPMENT_PRICE_DELIVERY_WITH_CURRENCY"] = "Вартість доставки";
 $MESS["CRM_ORDER_SHIPMENT_PRODUCT_LIST"] = "Список товарів";
+$MESS["CRM_ORDER_SHIPMENT_PROPERTIES"] = "Властивості відвантаження";
 $MESS["CRM_ORDER_SHIPMENT_REASON_MARKED"] = "Причина маркування проблемного";
 $MESS["CRM_ORDER_SHIPMENT_REASON_UNDO_DEDUCTED"] = "Причина скасування відвантаження";
 $MESS["CRM_ORDER_SHIPMENT_SUBTITLE_MASK"] = "№ #ID# #DATE_INSERT#";
@@ -48,4 +49,3 @@ $MESS["CRM_ORDER_SHIPMENT_TRACKING_LAST_CHANGE"] = "Остання зміна с
 $MESS["CRM_ORDER_SHIPMENT_TRACKING_LAST_CHECK"] = "Остання перевірка статусу відправки";
 $MESS["CRM_ORDER_SHIPMENT_TRACKING_NUMBER"] = "Ідентифікатор відправлення";
 $MESS["CRM_ORDER_SHIPMENT_TRACKING_STATUS"] = "Статус відправлення";
-?>

@@ -1,4 +1,5 @@
-<?
+<?php
+$MESS["SENDER_DISPATCH_STATE_M"] = "Preparing segment";
 $MESS["SENDER_LETTER_LIST_BTN_ADD"] = "Create campaign";
 $MESS["SENDER_LETTER_LIST_BTN_COPY"] = "Copy";
 $MESS["SENDER_LETTER_LIST_BTN_COPY_TITLE"] = "Copy";
@@ -18,7 +19,7 @@ $MESS["SENDER_LETTER_LIST_RECIPIENTS_SENT"] = "Number of recipients the email me
 $MESS["SENDER_LETTER_LIST_ROW_FROM"] = "of";
 $MESS["SENDER_LETTER_LIST_ROW_RECIPIENT"] = "recipients";
 $MESS["SENDER_LETTER_LIST_ROW_STATS"] = "statistics";
-$MESS["SENDER_LETTER_LIST_ROW_STATS_CLICKS"] = "clicks: #COUNT#";
+$MESS["SENDER_LETTER_LIST_ROW_STATS_CLICKS"] = "clicks: #COUNT# / -#UNSUB#";
 $MESS["SENDER_LETTER_LIST_ROW_STATS_VIEWS"] = "views: #COUNT#";
 $MESS["SENDER_LETTER_LIST_SENDING_LOADER_TITLE"] = "Email campaign is in progress, we're good.";
 $MESS["SENDER_LETTER_LIST_SENDING_TITLE"] = "Email messages have been sent to %count% recipients.";
@@ -35,4 +36,3 @@ $MESS["SENDER_LETTER_LIST_STATE_SEND_TITLE"] = "Start sending email campaign mes
 $MESS["SENDER_LETTER_LIST_STATE_STOP"] = "Cancel";
 $MESS["SENDER_LETTER_LIST_STATE_STOP_TITLE"] = "Stop and finish campaign.";
 $MESS["SENDER_LETTER_LIST_STATE_WILL_SEND"] = "Will be launched";
-?>

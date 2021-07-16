@@ -96,15 +96,15 @@ if ($isErrorOccured)
 	}
 }
 
+use Bitrix\Crm\Format\AddressFormatter;
 use Bitrix\Main;
 use Bitrix\Crm;
 use Bitrix\Crm\Agent\Requisite\ContactAddressConvertAgent;
 use Bitrix\Crm\Agent\Requisite\ContactUfAddressConvertAgent;
 use Bitrix\Crm\Tracking;
 use Bitrix\Crm\EntityAddress;
-use Bitrix\Crm\Format\AddressSeparator;
+use Bitrix\Crm\EntityAddressType;
 use Bitrix\Crm\ContactAddress;
-use Bitrix\Crm\Format\ContactAddressFormatter;
 use Bitrix\Crm\Settings\HistorySettings;
 use Bitrix\Crm\Settings\ContactSettings;
 use Bitrix\Crm\WebForm\Manager as WebFormManager;
@@ -474,7 +474,7 @@ $arResult['HEADERS'] = array_merge(
 		array('id' => 'COMMENTS', 'name' => GetMessage('CRM_COLUMN_COMMENTS'), 'sort' => false /**because of MSSQL**/, 'editable' => false),
 		array('id' => 'SOURCE_ID', 'name' => GetMessage('CRM_COLUMN_SOURCE'), 'sort' => 'source_id', 'type' => 'list', 'editable' => array('items' => CCrmStatus::GetStatusList('SOURCE'))),
 		array('id' => 'SOURCE_DESCRIPTION', 'name' => GetMessage('CRM_COLUMN_SOURCE_DESCRIPTION'), 'sort' => false /**because of MSSQL**/, 'editable' => false),
-		array('id' => 'EXPORT', 'name' => GetMessage('CRM_COLUMN_EXPORT'), 'type' => 'checkbox', 'type' => 'checkbox', 'editable' => true),
+		array('id' => 'EXPORT', 'name' => GetMessage('CRM_COLUMN_EXPORT_NEW'), 'type' => 'checkbox', 'type' => 'checkbox', 'editable' => true),
 		array('id' => 'CREATED_BY', 'name' => GetMessage('CRM_COLUMN_CREATED_BY'), 'sort' => 'created_by', 'editable' => false, 'class' => 'username'),
 		array('id' => 'DATE_CREATE', 'name' => GetMessage('CRM_COLUMN_DATE_CREATE'), 'sort' => 'date_create', 'first_order' => 'desc', 'default' => true, 'class' => 'date'),
 		array('id' => 'MODIFY_BY', 'name' => GetMessage('CRM_COLUMN_MODIFY_BY'), 'sort' => 'modify_by', 'editable' => false, 'class' => 'username'),
@@ -764,17 +764,9 @@ $USER_FIELD_MANAGER->AdminListAddFilter(CCrmContact::$sUFEntityID, $arFilter);
 $searchRestriction = \Bitrix\Crm\Restriction\RestrictionManager::getSearchLimitRestriction();
 if(!$searchRestriction->isExceeded(CCrmOwnerType::Contact))
 {
-	Bitrix\Crm\Search\SearchEnvironment::convertEntityFilterValues(CCrmOwnerType::Contact, $arFilter);
+	$searchRestriction->notifyIfLimitAlmostExceed(CCrmOwnerType::Contact);
 
-	if (
-		($limitWarningValue = $searchRestriction->getLimitWarningValue(CCrmOwnerType::Contact)) > 0
-	)
-	{
-		$searchRestriction->notifyLimitWarning(
-			CCrmOwnerType::Contact,
-			$limitWarningValue
-		);
-	}
+	Bitrix\Crm\Search\SearchEnvironment::convertEntityFilterValues(CCrmOwnerType::Contact, $arFilter);
 }
 else
 {
@@ -1862,7 +1854,7 @@ else
 			);
 
 		$navDbResult = \Bitrix\Crm\ContactAddress::getEntityList(
-			\Bitrix\Crm\EntityAddress::Primary,
+			EntityAddressType::Primary,
 			$addressSort,
 			$arFilter,
 			false,
@@ -2000,10 +1992,6 @@ $bInvoice = !$userPermissions->HavePerm('INVOICE', BX_CRM_PERM_NONE, 'ADD');
 $arResult['PERM_INVOICE'] = $bInvoice;
 
 $enableExportEvent = $isInExportMode && HistorySettings::getCurrent()->isExportEventEnabled();
-
-$addressFormatOptions = $sExportType === 'csv'
-	? array('SEPARATOR' => AddressSeparator::Comma)
-	: array('SEPARATOR' => AddressSeparator::HtmlLineBreak, 'NL2BR' => true);
 
 $now = time() + CTimeZone::GetOffset();
 
@@ -2345,7 +2333,18 @@ foreach($arResult['CONTACT'] as &$arContact)
 
 	if(isset($arSelectMap['FULL_ADDRESS']))
 	{
-		$arContact['FULL_ADDRESS'] = ContactAddressFormatter::format($arContact, $addressFormatOptions);
+		if ($sExportType === 'csv')
+		{
+			$arContact['FULL_ADDRESS'] = AddressFormatter::getSingleInstance()->formatTextComma(
+				ContactAddress::mapEntityFields($arContact)
+			);
+		}
+		else
+		{
+			$arContact['FULL_ADDRESS'] = AddressFormatter::getSingleInstance()->formatHtmlMultiline(
+				ContactAddress::mapEntityFields($arContact)
+			);
+		}
 	}
 
 	$arResult['CONTACT'][$entityID] = $arContact;

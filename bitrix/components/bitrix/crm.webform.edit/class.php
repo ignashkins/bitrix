@@ -363,6 +363,7 @@ class CCrmWebFormEditComponent extends \CBitrixComponent
 			'FORM_SETTINGS' => $this->processPostFormSettings([
 				'DEAL_CATEGORY' => $request->get('DEAL_CATEGORY'),
 				'DEAL_DC_ENABLED' => $request->get('DEAL_DC_ENABLED') == 'Y' ? 'Y' : 'N',
+				'DYNAMIC_CATEGORY' => $request->get('DYNAMIC_CATEGORY'),
 				'NO_BORDERS' => $request->get('NO_BORDERS') == 'Y' ? 'Y' : 'N',
 				'REDIRECT_DELAY' => (int) $request->get('RESULT_REDIRECT_DELAY'),
 				'VIEWS' => is_array($request->get('VIEWS')) ? $request->get('VIEWS') : [],
@@ -673,43 +674,11 @@ class CCrmWebFormEditComponent extends \CBitrixComponent
 			$this->arResult['FORM']['ENTITY_SCHEME']
 			/*,$allowedEntitySchemes*/
 		);
-		/*
-		$this->arResult['ENTITY_SCHEMES'] = Entity::getSchemes();
+	}
 
-		$selectedScheme = null;
-		foreach($this->arResult['ENTITY_SCHEMES'] as $entitySchemeNameCode => $entityScheme)
-		{
-			$entityScheme['DISABLED'] = !in_array($entitySchemeNameCode, $allowedEntitySchemes);
-			if(!$entityScheme['DISABLED'])
-			{
-				$entityScheme['SELECTED'] = ($entitySchemeNameCode == $this->arResult['FORM']['ENTITY_SCHEME']);
-			}
-
-			$this->arResult['ENTITY_SCHEMES'][$entitySchemeNameCode] = $entityScheme;
-
-			if(!$entityScheme['DISABLED'] && $entityScheme['SELECTED'])
-			{
-				$selectedScheme = $entityScheme;
-			}
-		}
-
-		if(!$selectedScheme)
-		{
-			foreach($this->arResult['ENTITY_SCHEMES'] as $entitySchemeNameCode => $entityScheme)
-			{
-				if(!$entityScheme['DISABLED'])
-				{
-					$entityScheme['SELECTED'] = true;
-					$this->arResult['ENTITY_SCHEMES'][$entitySchemeNameCode] = $entityScheme;
-
-					$selectedScheme = $entityScheme;
-					break;
-				}
-			}
-		}
-
-		$this->arResult['ENTITY_SCHEME_DESCRIPTION'] = $selectedScheme['DESCRIPTION'];
-		*/
+	protected function setResultDynamicEntities()
+	{
+		$this->arResult['DYNAMIC_ENTITIES'] = Crm\WebForm\Options\Dictionary::instance()->getDocument()['dynamic'];
 	}
 
 	protected function prepareResultCaptcha()
@@ -1048,6 +1017,9 @@ class CCrmWebFormEditComponent extends \CBitrixComponent
 		/* Set allowed entity schemes */
 		$this->setResultEntitySchemes();
 
+		/* Set dynamic entities */
+		$this->setResultDynamicEntities();
+
 		/* Set assigned user */
 		$this->setResultAssignedBy();
 
@@ -1082,6 +1054,12 @@ class CCrmWebFormEditComponent extends \CBitrixComponent
 
 		/* External analytics data */
 		$this->arResult['EXTERNAL_ANALYTICS_DATA'] = $this->crmWebForm->getExternalAnalyticsData();
+
+		$this->arResult['IS_RU_ZONE'] = Loader::includeModule('bitrix24')
+			? in_array(\CBitrix24::getPortalZone(), ['ru', 'kz', 'by'])
+			: in_array(LANGUAGE_ID, ['ru', 'kz', 'by'])
+		;
+		$this->arResult['IS_UA_ZONE_RU_LANG'] = Loader::includeModule('bitrix24') && LANGUAGE_ID === 'ua';
 
 		$replaceList = array('id' => $id, 'form_id' => $id);
 		$this->arResult['PATH_TO_WEB_FORM_LIST'] = CComponentEngine::makePathFromTemplate($this->arParams['PATH_TO_WEB_FORM_LIST'], $replaceList);

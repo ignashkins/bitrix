@@ -24,9 +24,8 @@
 
 		restoreUploadTasks()
 		{
-			let
-				uploadTasks = [],
-				queue = this.storage.getObject(this.variableId, {});
+			let uploadTasks = [];
+			let queue = this.storage.getObject(this.variableId, {});
 
 			for (let virtualId in queue)
 			{
@@ -74,13 +73,12 @@
 			}
 			else if (data.item.contentType == 'post')
 			{
-				const
-					postId = (
-						data.item.post_id != 'undefined'
-						&& parseInt(data.item.post_id) > 0
-							? parseInt(data.item.post_id)
-							: 0
-					);
+				const postId = (
+					data.item.post_id != 'undefined'
+					&& parseInt(data.item.post_id) > 0
+						? parseInt(data.item.post_id)
+						: 0
+				);
 
 				if (postId > 0)
 				{
@@ -127,10 +125,9 @@
 				return;
 			}
 
-			const
-				queue = this.storage.getObject(this.variableId, {}),
-				postVirtualId = eventData.file.params.postVirtualId,
-				pinnedContext = !!eventData.file.params.pinnedContext;
+			const queue = this.storage.getObject(this.variableId, {});
+			const postVirtualId = eventData.file.params.postVirtualId;
+			const pinnedContext = !!eventData.file.params.pinnedContext;
 
 			if (!queue[postVirtualId])
 			{
@@ -160,11 +157,9 @@
 				}
 				else
 				{
-					let
-						postData = queue[postVirtualId];
+					let postData = queue[postVirtualId];
 
-					const
-						ufCode = (postData.ufCode ? postData.ufCode : (postData.contentType == 'post' ? 'UF_BLOG_POST_FILE' : 'UF_BLOG_COMMENT_FILE'));
+					const ufCode = (postData.ufCode ? postData.ufCode : (postData.contentType == 'post' ? 'UF_BLOG_POST_FILE' : 'UF_BLOG_COMMENT_FILE'));
 
 					if (
 						BX.type.isArray(postData.tasksList)
@@ -197,16 +192,56 @@
 						if (postData.contentType == 'post')
 						{
 							let postFields = {
-								'POST_MESSAGE': postData['POST_MESSAGE'],
-								'DEST': postData['DEST'],
+								POST_MESSAGE: postData.POST_MESSAGE,
+								DEST: postData.DEST,
 							};
 
 							if (
-								BX.type.isNotEmptyString(postData.ufCode)
-								&& BX.type.isArray(postData[postData.ufCode])
+								postData.POST_TITLE
+								&& postData.POST_TITLE.length > 0
 							)
 							{
-								postFields[postData.ufCode] = postData[postData.ufCode];
+								postFields.POST_TITLE = postData.POST_TITLE;
+							}
+
+							if (
+								typeof postData.GRATITUDE_MEDAL !== 'undefined'
+								&& typeof postData.GRATITUDE_EMPLOYEES !== 'undefined'
+							)
+							{
+								postFields.GRATITUDE_MEDAL = postData.GRATITUDE_MEDAL;
+								postFields.GRATITUDE_EMPLOYEES = postData.GRATITUDE_EMPLOYEES;
+							}
+
+							if (typeof postData.IMPORTANT !== 'undefined')
+							{
+								postFields.IMPORTANT = postData.IMPORTANT;
+								if (typeof postData.IMPORTANT_DATE_END !== 'undefined')
+								{
+									postFields.IMPORTANT_DATE_END = postData.IMPORTANT_DATE_END;
+								}
+							}
+
+							if (
+								typeof postData.UF_BLOG_POST_VOTE !== 'undefined'
+								&& typeof postData['UF_BLOG_POST_VOTE_' + postData.UF_BLOG_POST_VOTE + '_DATA'] !== 'undefined'
+							)
+							{
+								postFields.UF_BLOG_POST_VOTE = postData.UF_BLOG_POST_VOTE;
+								postFields['UF_BLOG_POST_VOTE_' + postData.UF_BLOG_POST_VOTE + '_DATA'] = postData['UF_BLOG_POST_VOTE_' + postData.UF_BLOG_POST_VOTE + '_DATA'];
+							}
+
+							if (typeof postData.BACKGROUND_CODE !== 'undefined')
+							{
+								postFields.BACKGROUND_CODE = postData.BACKGROUND_CODE;
+							}
+
+							if (
+								BX.type.isNotEmptyString(ufCode)
+								&& BX.type.isArray(postData[ufCode])
+							)
+							{
+								postFields[ufCode] = postData[ufCode];
 							}
 
 							if (
@@ -243,20 +278,17 @@
 
 		handleFileUploadError(params)
 		{
-			let
-				queue = params.queue;
+			let queue = params.queue;
 
-			const
-				key = params.key,
-				errorText = params.errorText;
+			const key = params.key;
+			const errorText = params.errorText;
 
 			if (!queue[key])
 			{
 				return;
 			}
 
-			let
-				postData = queue[key];
+			let postData = queue[key];
 
 			if (postData.contentType == 'post')
 			{
@@ -295,11 +327,10 @@
 
 		addBlogPost(fields, params)
 		{
-			let
-				context = (params.context ? params.context : ''),
-				key = (params.key ? params.key : null),
-				pageId = (params.pageId ? params.pageId : null),
-				groupId = (params.groupId ? params.groupId : null);
+			let context = (params.context ? params.context : '');
+			let key = (params.key ? params.key : null);
+			let pageId = (params.pageId ? params.pageId : null);
+			let groupId = (params.groupId ? params.groupId : null);
 
 			if (context != 'afterTask')
 			{
@@ -310,7 +341,10 @@
 
 			BX.ajax.runAction('socialnetwork.api.livefeed.blogpost.add', {
 				data: {
-					params: fields
+					params: Object.assign({
+						MOBILE: 'Y',
+						PARSE_PREVIEW: 'Y',
+					}, fields)
 				},
 				analyticsLabel: {
 					b24statAction: 'addLogEntry',
@@ -318,10 +352,12 @@
 				}
 			}).then(response => {
 				let errors = response.errors;
-				if(errors && errors.length > 0)
+				if (errors && errors.length > 0)
 				{
 					BX.postWebEvent('Livefeed.PublicationQueue::afterPostAddError', {
-						errorText: this.getAjaxErrorText(errors),
+						errorText: errors.filter(error => error.customData && error.customData.public === 'Y')
+							.map(error => error.message)
+							.join("\n"),
 						context: context,
 						key: key,
 						postData: fields,
@@ -335,15 +371,17 @@
 						pageId: pageId,
 						context: context,
 						key: key,
-						groupId: groupId
+						groupId: groupId,
+						warningText: (response.data.warnings ? response.data.warnings : []).join("\n"),
 					});
+					analytics.send("addLogEntry", {}, ["fbonly"]);
 				}
 			}).catch(response => {
 				let errors = response.errors;
-				if(errors && errors.length > 0)
+				if (errors && errors.length > 0)
 				{
 					BX.postWebEvent('Livefeed.PublicationQueue::afterPostAddError', {
-						errorText: this.getAjaxErrorText(errors),
+						errorText: false,
 						context: context,
 						key: key,
 						postData: fields,
@@ -355,10 +393,9 @@
 
 		updateBlogPost(postId, fields, params)
 		{
-			let
-				context = (params.context ? params.context : ''),
-				key = (params.key ? params.key : null),
-				pageId = (params.pageId ? params.pageId : null);
+			let context = (params.context ? params.context : '');
+			let key = (params.key ? params.key : null);
+			let pageId = (params.pageId ? params.pageId : null);
 
 			if (context != 'afterTask')
 			{
@@ -370,7 +407,10 @@
 			BX.ajax.runAction('socialnetwork.api.livefeed.blogpost.update', {
 				data: {
 					id: postId,
-					params: fields
+					params: Object.assign({
+						MOBILE: 'Y',
+						PARSE_PREVIEW: 'Y',
+					}, fields)
 				},
 				analyticsLabel: {
 					b24statAction: 'editLogEntry',
@@ -381,7 +421,9 @@
 				if(errors && errors.length > 0)
 				{
 					BX.postWebEvent('Livefeed.PublicationQueue::afterPostUpdateError', {
-						errorText: this.getAjaxErrorText(errors),
+						errorText: errors.filter(error => error.customData && error.customData.public === 'Y')
+							.map(error => error.message)
+							.join("\n"),
 						context: context,
 						key: key,
 						postId: postId,
@@ -397,6 +439,7 @@
 						key: key,
 						pinned: (!!params.pinned)
 					});
+					analytics.send("editLogEntry", {}, ["fbonly"]);
 				}
 
 			}).catch(response => {
@@ -404,7 +447,7 @@
 				if(errors && errors.length > 0)
 				{
 					BX.postWebEvent('Livefeed.PublicationQueue::afterPostUpdateError', {
-						errorText: this.getAjaxErrorText(errors),
+						errorText: false,
 						context: context,
 						key: key,
 						postId: postId,

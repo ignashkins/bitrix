@@ -250,7 +250,9 @@ abstract class BasketBuilder
 				/** @var \Bitrix\Sale\BasketPropertiesCollection $property */
 				$property = $item->getPropertyCollection();
 				if(!$property->isPropertyAlreadyExists($productData["PROPS"]))
+				{
 					$property->setProperty($productData["PROPS"]);
+				}
 			}
 		}
 
@@ -302,12 +304,30 @@ abstract class BasketBuilder
 			}
 
 			$item->setField("NAME", $productData["NAME"]);
+
+			if ($productData['CUSTOM_PRICE'] === 'Y')
+			{
+				$item->markFieldCustom('PRICE');
+			}
+
 			$res = $item->setField("QUANTITY", $productData["QUANTITY"]);
 
 			if(!$res->isSuccess())
 			{
 				$this->getErrorsContainer()->addErrors($res->getErrors());
 				throw new BuildingException();
+			}
+
+			if (isset($productData['VAT_RATE']))
+			{
+				$item->markFieldCustom('VAT_RATE');
+				$item->setField('VAT_RATE', $productData['VAT_RATE']);
+			}
+
+			if (isset($productData['VAT_INCLUDED']))
+			{
+				$item->markFieldCustom('VAT_INCLUDED');
+				$item->setField('VAT_INCLUDED', $productData['VAT_INCLUDED']);
 			}
 
 			if(isset($productData["MODULE"]) && $productData["MODULE"] == "catalog")
@@ -671,7 +691,7 @@ abstract class BasketBuilder
 		return $item;
 	}
 
-	public function getCatalogMeasures()
+	public static function getCatalogMeasures()
 	{
 		static $result = null;
 		$catalogIncluded = null;
@@ -709,7 +729,7 @@ abstract class BasketBuilder
 		if(empty($productData["PROVIDER_DATA"]) || !CheckSerializedData($productData["PROVIDER_DATA"]))
 			return;
 
-		$trustData = unserialize($productData["PROVIDER_DATA"]);
+		$trustData = unserialize($productData["PROVIDER_DATA"], ['allowed_classes' => false]);
 
 		//quantity was changed so data must be changed
 		if(empty($trustData) || $trustData["QUANTITY"] == $productData["QUANTITY"])

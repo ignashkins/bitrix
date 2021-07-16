@@ -1,6 +1,7 @@
 <?php
 $MESS["BPCDA_FIELD_REQUIED"] = "Das '#FIELD#' Feld ist erforderlich.";
 $MESS["BPSA_CHECK_LIST_ITEMS"] = "Checkliste";
+$MESS["BPSA_CREATED_BY_ERROR"] = "Aufgabenersteller ist nicht angegeben.";
 $MESS["BPSA_CYCLING_ERROR"] = "Aufgaben wurde nicht erstellt, weil eine oder mehrere Aktionen eine unendliche Rekursion verursachen kann.";
 $MESS["BPSA_TRACK_CLOSED"] = "Aufgabe abgeschlossen am #DATE#";
 $MESS["BPSA_TRACK_DELETED"] = "Aufgabe wurde gelöscht.";

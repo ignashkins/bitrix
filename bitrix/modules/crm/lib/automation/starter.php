@@ -27,7 +27,7 @@ class Starter
 		$this->entityTypeId = $entityTypeId;
 		$this->entityId = $entityId;
 
-		if ($entityTypeId === \CCrmOwnerType::Lead)
+		if ($entityTypeId === \CCrmOwnerType::Lead || $entityTypeId === \CCrmOwnerType::Quote)
 		{
 			$this->statusFieldKey = 'STATUS_ID';
 		}
@@ -127,7 +127,7 @@ class Starter
 		$diff = [];
 		foreach ($actual as $key => $field)
 		{
-			if ($key !== 'ID' && (!isset($previous[$key]) || $previous[$key] != $field))
+			if ($key !== 'ID' && (!array_key_exists($key, $previous) || $previous[$key] != $field))
 			{
 				$diff[] = $key;
 			}

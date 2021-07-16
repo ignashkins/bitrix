@@ -20,6 +20,7 @@ $isEmpty = true;
 <?php
 foreach($arResult['value'] as $res)
 {
+	$res = (int)$res;
 	if(array_key_exists($res, $arResult['userField']['USER_TYPE']['FIELDS']))
 	{
 		$textRes = $arResult['userField']['USER_TYPE']['FIELDS'][$res];
@@ -52,6 +53,10 @@ foreach($arResult['value'] as $res)
 		?>
 	</span>
 	<?php
+	if (!empty($arParams['additionalParameters']['showInputs']))
+	{
+		print '<input type="hidden" name="'.$arResult['fieldName'].'" value="'.$res.'">';
+	}
 }
 
 if($isEmpty)

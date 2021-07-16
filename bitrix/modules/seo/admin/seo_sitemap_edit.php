@@ -57,7 +57,7 @@ if($mapId > 0)
 			LocalRedirect(BX_ROOT."/admin/seo_sitemap.php?lang=".LANGUAGE_ID);
 		}
 
-		$arSitemap['SETTINGS'] = unserialize($arSitemap['SETTINGS']);
+		$arSitemap['SETTINGS'] = unserialize($arSitemap['SETTINGS'], ['allowed_classes' => false]);
 
 		$arSitemap['SETTINGS']['IBLOCK_AUTO'] = array();
 		$dbRes = SitemapIblockTable::getList(array(
@@ -515,7 +515,8 @@ $tabControl->BeginNextTab();
 <?
 foreach($arSite['DOMAINS'] as $domain):
 	$hd = Converter::getHtmlConverter()->encode($domain);
-	$hdc = Converter::getHtmlConverter()->encode(CBXPunycode::ToUnicode($domain, $e = null));
+	$e = [];
+	$hdc = Converter::getHtmlConverter()->encode(CBXPunycode::ToUnicode($domain, $e));
 ?>
 	<option value="<?=$hd?>"<?=$domain == $arSitemap['SETTINGS']['DOMAIN'] ? ' selected="selected"' : ''?>><?=$hdc?></option>
 <?

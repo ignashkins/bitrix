@@ -2,12 +2,15 @@
 namespace Bitrix\MessageService\Sender;
 
 use Bitrix\Main;
+use Bitrix\Main\Event;
 use Bitrix\MessageService\Internal\Entity\MessageTable;
 use Bitrix\MessageService\Message;
 use Bitrix\MessageService\MessageType;
 
 class SmsManager
 {
+	public const ON_MESSAGE_SUCCESSFULLY_SENT_EVENT = 'OnMessageSuccessfullySent';
+
 	private static $senders;
 
 	/**
@@ -31,6 +34,10 @@ class SmsManager
 			{
 				self::$senders[] = new Sms\Twilio();
 			}
+			if (Sms\Twilio2::isSupported())
+			{
+				self::$senders[] = new Sms\Twilio2();
+			}
 			if (Sms\SmsLineBy::isSupported())
 			{
 				self::$senders[] = new Sms\SmsLineBy();
@@ -42,6 +49,14 @@ class SmsManager
 			if (Sms\Rest::isSupported())
 			{
 				self::$senders[] = new Sms\Rest();
+			}
+			if (Sms\SmscUa::isSupported())
+			{
+				self::$senders[] = new Sms\SmscUa();
+			}
+			if (Sms\ISmsCenter::isSupported())
+			{
+				self::$senders[] = new Sms\ISmsCenter();
 			}
 
 			self::fireSendersEvent();
@@ -191,7 +206,7 @@ class SmsManager
 		$message->setType(MessageType::SMS);
 
 		$sender = $message->getSender();
-		if (!$message->getFrom() && $sender instanceof BaseConfigurable)
+		if ($sender && !$message->getFrom())
 		{
 			$message->setFrom($sender->getDefaultFrom());
 		}
@@ -208,7 +223,22 @@ class SmsManager
 	public static function sendMessage(array $messageFields, Base $sender = null)
 	{
 		$message = static::createMessage($messageFields, $sender);
-		return $message->send();
+
+		$result = $message->send();
+
+		if ($result->isSuccess())
+		{
+			(new Event(
+				'messageservice',
+				static::ON_MESSAGE_SUCCESSFULLY_SENT_EVENT,
+				[
+					'ID' => $result->getId(),
+					'ADDITIONAL_FIELDS' => $messageFields['ADDITIONAL_FIELDS'] ?? [],
+				]
+			))->send();
+		}
+
+		return $result;
 	}
 
 	/**

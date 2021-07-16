@@ -217,7 +217,7 @@ class SubscribeTable extends Entity\DataManager
 			if(!$userId || empty($listProductId))
 				return;
 
-			$user = \CUser::getList($by = 'ID', $order = 'ASC',
+			$user = \CUser::getList('ID', 'ASC',
 				array('ID' => $userId) , array('FIELDS' => array('EMAIL'))
 			)->fetch();
 			if($user['EMAIL'])
@@ -589,7 +589,7 @@ class SubscribeTable extends Entity\DataManager
 		$notifyOption = Option::get('sale', 'subscribe_prod');
 		$notify = array();
 		if($notifyOption <> '')
-			$notify = unserialize($notifyOption);
+			$notify = unserialize($notifyOption, ['allowed_classes' => false]);
 		if(is_array($notify))
 		{
 			$listSiteId = array();

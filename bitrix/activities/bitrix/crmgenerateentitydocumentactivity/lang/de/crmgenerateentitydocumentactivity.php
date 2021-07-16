@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["CRM_GEDA_EMPTY_TEMPLATE_ID"] = "Dokumentvorlage wurde nicht angegeben";
 $MESS["CRM_GEDA_MODULE_DOCGEN_ERROR"] = "Das Modul Dokumentendesigner ist nicht installiert.";
 $MESS["CRM_GEDA_NAME_DELETE"] = "Löschen";
@@ -11,4 +11,4 @@ $MESS["CRM_GEDA_NAME_USE_SUBSCRIPTION"] = "Warten, bis Konvertierung zu PDF abge
 $MESS["CRM_GEDA_NAME_WAIT_FOR_EVENT_LOG"] = "Workflow wartet, bis das Dokument konvertiert wird";
 $MESS["CRM_GEDA_NAME_WAIT_FOR_EVENT_LOG_COMPLETE"] = "Dokument konvertiert";
 $MESS["CRM_GEDA_NAME_WITH_STAMPS"] = "Mit Signatur und Stempel";
-?>
+$MESS["CRM_GEDA_PROVIDER_NOT_FOUND"] = "Handler für diesen Elementtyp kann nicht gefunden werden";

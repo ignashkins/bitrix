@@ -138,3 +138,34 @@ create table if not exists b_intranet_invitation (
 	INDEX ix_intranet_invitation_created (DATE_CREATE),
 	UNIQUE INDEX ix_intranet_invitation_user_originator (USER_ID, ORIGINATOR_ID)
 );
+create table if not exists b_intranet_theme (
+	ID int(11) not null auto_increment,
+	THEME_ID varchar(100) not null,
+	USER_ID int(11) not null,
+	ENTITY_TYPE varchar(50) not null,
+	ENTITY_ID int(11) not null,
+	CONTEXT varchar(100) not null,
+
+	PRIMARY KEY(ID),
+	UNIQUE INDEX ix_intranet_theme_entity_context (ENTITY_TYPE, ENTITY_ID, CONTEXT)
+);
+
+create table if not exists b_intranet_custom_section (
+	`ID` int unsigned not null auto_increment,
+	`CODE` varchar(255) not null,
+	`TITLE` varchar(255) not null,
+	`MODULE_ID` varchar(50) not null,
+	PRIMARY KEY (`ID`),
+	UNIQUE ux_intranet_custom_section_table(`CODE`)
+);
+
+create table if not exists b_intranet_custom_section_page (
+	`ID` int unsigned not null auto_increment,
+	`CUSTOM_SECTION_ID` int unsigned not null,
+	`CODE` varchar(255) not null,
+	`TITLE` varchar(255) not null,
+	`SORT` int not null,
+	`MODULE_ID` varchar(50) not null,
+	`SETTINGS` text not null,
+	PRIMARY KEY (`ID`)
+);

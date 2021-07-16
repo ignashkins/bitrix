@@ -1,6 +1,7 @@
 <?php
 $MESS["BLOG_C_BUTTON_MORE"] = "Ще";
 $MESS["BLOG_C_HIDE"] = "Згорнути коментарі";
+$MESS["BLOG_C_LOADING"] = "Завантаження&hellip;";
 $MESS["BLOG_C_REPLY"] = "Відповісти";
 $MESS["BLOG_C_VIEW"] = "Дивитися попередні коментарі";
 $MESS["BLOG_C_VIEW1"] = "Більше коментарів";

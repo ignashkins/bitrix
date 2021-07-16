@@ -56,9 +56,6 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/components/bitrix/socialnetwork.
 
 Loc::loadLanguageFile(__FILE__, $lng);
 
-if(CModule::IncludeModule("compression"))
-	CCompress::Disable2048Spaces();
-
 if(CModule::IncludeModule("socialnetwork"))
 {
 	$bCurrentUserIsAdmin = CSocNetUser::IsCurrentUserModuleAdmin();
@@ -222,7 +219,7 @@ if(CModule::IncludeModule("socialnetwork"))
 							if ($arLog["PARAMS"] <> '')
 							{
 								$photo_forum_id = 0;
-								$arLogParams = unserialize(htmlspecialcharsback($arLog["PARAMS"]));
+								$arLogParams = unserialize(htmlspecialcharsback($arLog["PARAMS"]), [ 'allowed_classes' => false ]);
 								if (
 									isset($arLogParams["FORUM_ID"])
 									&& intval($arLogParams["FORUM_ID"]) > 0
@@ -674,28 +671,34 @@ if(CModule::IncludeModule("socialnetwork"))
 			}
 		}
 	}
-	elseif ($action == "get_comments")
+	elseif ($action === "get_comments")
 	{
-
 		$arResult["arComments"] = array();
 
 		$log_tmp_id = $_REQUEST["logid"];
 		$log_entity_type = $entity_type;
-		$follow = (isset($_REQUEST["follow"]) && $_REQUEST["follow"] == "Y" ? "Y" : "N");
+		$follow = (isset($_REQUEST["follow"]) && $_REQUEST["follow"] === "Y" ? "Y" : "N");
 		$counterType = (isset($_REQUEST["ct"]) ? $_REQUEST["ct"] : false);
 
 		$arListParams = (
 		mb_strpos($log_entity_type, "CRM") === 0
-			&& $currentUserExternalAuthId != 'email'
+			&& $currentUserExternalAuthId !== 'email'
 			&& IsModuleInstalled("crm")
 				? array("IS_CRM" => "Y", "CHECK_CRM_RIGHTS" => "Y")
 				: array("CHECK_RIGHTS" => "Y", "USE_SUBSCRIBE" => "N")
 		);
 
 		$arLog = [];
-		if (intval($log_tmp_id) > 0)
+		if ((int)$log_tmp_id > 0)
 		{
-			$rsLog = CSocNetLog::GetList(array(), array("ID" => $log_tmp_id), false, false, array("ID", "EVENT_ID", "SOURCE_ID", "RATING_TYPE_ID", "RATING_ENTITY_ID"), $arListParams);
+			$rsLog = \CSocNetLog::getList(
+				[],
+				[ 'ID' => $log_tmp_id ],
+				false,
+				false,
+				[ 'ID', 'EVENT_ID', 'SOURCE_ID', 'RATING_TYPE_ID', 'RATING_ENTITY_ID' ],
+				$arListParams
+			);
 			if ($rsLog)
 			{
 				$arLog = $rsLog->Fetch();
@@ -704,7 +707,7 @@ if(CModule::IncludeModule("socialnetwork"))
 			if (
 				empty($arLog)
 				&& !empty($arListParams['IS_CRM'])
-				&& $arListParams['IS_CRM'] == 'Y'
+				&& $arListParams['IS_CRM'] === 'Y'
 			)
 			{
 				$arListParams = [
@@ -832,15 +835,18 @@ if(CModule::IncludeModule("socialnetwork"))
 					"UF_*"
 				);
 
-				$arUFMeta = __SLGetUFMeta();
+				$arUFMeta = \Bitrix\Socialnetwork\Component\LogEntry::getUserFieldsFMetaData();
 
-				$arAssets = array(
-					"CSS" => array(),
-					"JS" => array()
-				);
+				$arAssets = [
+					"CSS" => [],
+					"JS" => []
+				];
 
 				$dbComments = CSocNetLogComments::GetList(
-					array("LOG_DATE" => "ASC"),
+					[
+						'LOG_DATE' => 'ASC',
+						'ID' => 'ASC'
+					],
 					$arFilter,
 					false,
 					false,
@@ -851,9 +857,14 @@ if(CModule::IncludeModule("socialnetwork"))
 				$commentsList = $commentSourceIdList = array();
 				while($arComments = $dbComments->GetNext())
 				{
+					if (!empty($arComments['SHARE_DEST']))
+					{
+						$arComments['SHARE_DEST'] = htmlspecialcharsback($arComments['SHARE_DEST']);
+					}
+
 					if (defined("BX_COMP_MANAGED_CACHE"))
 					{
-						$CACHE_MANAGER->RegisterTag("USER_NAME_".intval($arComments["USER_ID"]));
+						$CACHE_MANAGER->RegisterTag('USER_NAME_' . (int)$arComments['USER_ID']);
 					}
 
 					$arComments["UF"] = $arUFMeta;
@@ -867,9 +878,9 @@ if(CModule::IncludeModule("socialnetwork"))
 					}
 
 					$commentsList[] = $arComments;
-					if (intval($arComments['SOURCE_ID']) > 0)
+					if ((int)$arComments['SOURCE_ID'] > 0)
 					{
-						$commentSourceIdList[] = intval($arComments['SOURCE_ID']);
+						$commentSourceIdList[] = (int)$arComments['SOURCE_ID'];
 					}
 				}
 
@@ -899,7 +910,7 @@ if(CModule::IncludeModule("socialnetwork"))
 
 				foreach($commentsList as $arComment)
 				{
-					$arResult["arComments"][$arComment["ID"]] = __SLEGetLogCommentRecord($arComment, $arParams, $arAssets);
+					$arResult["arComments"][$arComment["ID"]] = \Bitrix\Socialnetwork\Component\LogEntry::getLogCommentRecord($arComment, $arParams, $arAssets);
 				}
 
 				if (is_object($cache))
@@ -917,20 +928,25 @@ if(CModule::IncludeModule("socialnetwork"))
 			}
 
 			if (
-				intval($_REQUEST["commentID"]) > 0
-				|| intval($_REQUEST["commentTS"]) > 0
+				(int)$_REQUEST["commentID"] > 0
+				|| (int)$_REQUEST["commentTS"] > 0
 			)
 			{
 				foreach($arResult["arComments"] as $key => $res)
 				{
 					if (
 						(
-							intval($_REQUEST["commentTS"]) > 0
-							&& $res["LOG_DATE_TS"] >= $_REQUEST["commentTS"]
+							(int)$_REQUEST["commentTS"] > 0
+							&& (int)$res["LOG_DATE_TS"] > (int)$_REQUEST["commentTS"]
 						)
 						|| (
-							intval($_REQUEST["commentTS"]) <= 0
-							&& $key >= $_REQUEST["commentID"]
+							(int)$_REQUEST["commentTS"] > 0
+							&& (int)$res["LOG_DATE_TS"] === (int)$_REQUEST["commentTS"]
+							&& (int)$key >= (int)$_REQUEST["commentID"]
+						)
+						|| (
+							(int)$_REQUEST["commentTS"] <= 0
+							&& (int)$key >= (int)$_REQUEST["commentID"]
 						)
 					)
 					{
@@ -954,31 +970,34 @@ if(CModule::IncludeModule("socialnetwork"))
 			$offset = CTimeZone::GetOffset();
 
 			$count = 0;
-			while (($arComment = $db_res->fetch()) && $arComment)
+			while (
+				($arComment = $db_res->fetch())
+				&& $arComment
+			)
 			{
 				if (
 					$commentAuxProvider = \Bitrix\Socialnetwork\CommentAux\Base::findProvider(
-						array(
+						[
 							'POST_TEXT' => $arComment['EVENT_FORMATTED']['MESSAGE'],
 							'SHARE_DEST' => $arComment['EVENT']['SHARE_DEST'],
 							'SOURCE_ID' => (int)$arComment['EVENT']['SOURCE_ID'],
 							'EVENT_ID' => $arComment['EVENT']['EVENT_ID'],
 							'RATING_TYPE_ID' => $arComment['EVENT']['RATING_TYPE_ID']
-						),
-						array(
+						],
+						[
 							'eventId' => $arComment['EVENT']['EVENT_ID']
-						)
+						]
 					)
 				)
 				{
-					$commentAuxProvider->setOptions(array(
+					$commentAuxProvider->setOptions([
 						'suffix' => $commentEntitySuffix,
 						'logId' => $log_tmp_id,
 						'cache' => false
-					));
+					]);
 
-					$arComment["EVENT_FORMATTED"]["FULL_MESSAGE_CUT"] = $commentAuxProvider->getText();
-					$arComment["AUX"] = $commentAuxProvider->getType();
+					$arComment['EVENT_FORMATTED']['FULL_MESSAGE_CUT'] = $commentAuxProvider->getText();
+					$arComment['AUX'] = $commentAuxProvider->getType();
 				}
 
 				$commentId = ($arComment["EVENT"]["SOURCE_ID"] ? $arComment["EVENT"]["SOURCE_ID"] : $arComment["EVENT"]["ID"]);
@@ -1133,16 +1152,16 @@ if(CModule::IncludeModule("socialnetwork"))
 			RemoveEventHandler('main', 'system.field.view.file', $eventHandlerID);
 		}
 	}
-	elseif ($action == "change_favorites")
+	elseif ($action === "change_favorites")
 	{
-		$log_id = intval($_REQUEST["log_id"]);
+		$log_id = (int)$_REQUEST["log_id"];
 		if ($arLog = CSocNetLog::GetByID($log_id))
 		{
 			$strRes = CSocNetLogFavorites::Change($currentUserId, $log_id);
 
 			if ($strRes)
 			{
-				if ($strRes == "Y")
+				if ($strRes === "Y")
 				{
 					\Bitrix\Socialnetwork\ComponentHelper::userLogSubscribe(array(
 						'logId' => $log_id,
@@ -1176,7 +1195,7 @@ if(CModule::IncludeModule("socialnetwork"))
 		}
 	}
 	elseif (
-		$action == "delete" 
+		$action === "delete"
 		&& CSocNetUser::IsCurrentUserModuleAdmin(SITE_ID, false)
 	)
 	{
@@ -1388,6 +1407,8 @@ if(CModule::IncludeModule("socialnetwork"))
 			}
 		}
 	}
+
+	$APPLICATION->RestartBuffer();
 
 	header('Content-Type:application/json; charset=UTF-8');
 	?><?=\Bitrix\Main\Web\Json::encode($arResult)?><?

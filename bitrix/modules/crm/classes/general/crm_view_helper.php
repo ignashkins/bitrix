@@ -156,8 +156,8 @@ class CCrmViewHelper
 		}
 
 		$dbUser = CUser::GetList(
-			($by = 'id'),
-			($order = 'asc'),
+			'id',
+			'asc',
 			array('ID'=> $userID),
 			array(
 				'FIELDS' => array(
@@ -1173,7 +1173,7 @@ class CCrmViewHelper
 
 
 		$dbUsers = CUser::GetList(
-			($by = 'id'), ($sort = 'asc'),
+			'id', 'asc',
 			array('ID' => $userID),
 			array('FIELDS' =>  array('ID', 'NAME', 'SECOND_NAME', 'LAST_NAME', 'LOGIN', 'TITLE', 'EMAIL', 'PERSONAL_PHOTO'))
 		);
@@ -1932,7 +1932,7 @@ class CCrmViewHelper
 			'selectorTitle' => GetMessage('CRM_DEAL_STAGE_MANAGER_SELECTOR_TTL'),
 			'checkErrorTitle' => GetMessage('CRM_DEAL_STAGE_MANAGER_CHECK_ERROR_TTL'),
 			'checkErrorHelp' => GetMessage('CRM_STAGE_MANAGER_CHECK_ERROR_HELP'),
-			'checkErrorHelpArticleCode' => '9480255'
+			'checkErrorHelpArticleCode' => '8233923'
 		);
 
 		return '<script type="text/javascript">'
@@ -2024,7 +2024,7 @@ class CCrmViewHelper
 			'selectorTitle' => GetMessage('CRM_LEAD_STATUS_MANAGER_SELECTOR_TTL'),
 			'checkErrorTitle' => GetMessage('CRM_LEAD_STAGE_MANAGER_CHECK_ERROR_TTL'),
 			'checkErrorHelp' => GetMessage('CRM_STAGE_MANAGER_CHECK_ERROR_HELP'),
-			'checkErrorHelpArticleCode' => '9480255',
+			'checkErrorHelpArticleCode' => '8233923',
 			'conversionCancellationTitle' => GetMessage('CRM_CONFIRMATION_DLG_TTL'),
 			'conversionCancellationContent' => GetMessage('CRM_LEAD_STATUS_MANAGER_CONVERSION_CANCEL_CNT')
 		);
@@ -2163,6 +2163,14 @@ class CCrmViewHelper
 		{
 			$cssPostfix = 'seen';
 		}
+		elseif ($stage === Order\OrderStage::PAYMENT_CANCEL)
+		{
+			$cssPostfix = 'cancel';
+		}
+		elseif ($stage === Order\OrderStage::REFUND)
+		{
+			$cssPostfix = 'refund';
+		}
 
 		$stageList = Order\OrderStage::getList();
 
@@ -2172,6 +2180,31 @@ class CCrmViewHelper
 		}
 
 		return '<div class="crm-list-item-status crm-list-item-status-'.$cssPostfix.'">'.$stageList[$stage].'</div>';
+	}
+
+	/**
+	 * @param string $stage
+	 * @return string
+	 */
+	public static function RenderDealDeliveryStageControl($stage)
+	{
+		static $stages;
+
+		if ($stages === null)
+		{
+			$stages = Order\DeliveryStage::getList();
+		}
+
+		if (!isset($stages[$stage]))
+		{
+			return '';
+		}
+
+		$cssPostfix = ($stage === Order\DeliveryStage::SHIPPED)
+			? 'shipped'
+			: 'no-shipped';
+
+		return '<div class="crm-list-item-status crm-list-item-status-'.$cssPostfix.'">'.$stages[$stage].'</div>';
 	}
 
 	public static function RenderDealStageControl($arParams)
@@ -2890,7 +2923,10 @@ class CCrmViewHelper
 		$messages = array(
 			'dialogTitle' => GetMessage('CRM_QUOTE_STATUS_MANAGER_DLG_TTL'),
 			'failureTitle' => GetMessage('CRM_QUOTE_STATUS_MANAGER_FAILURE_TTL'),
-			'selectorTitle' => GetMessage('CRM_QUOTE_STATUS_MANAGER_SELECTOR_TTL')
+			'selectorTitle' => GetMessage('CRM_QUOTE_STATUS_MANAGER_SELECTOR_TTL'),
+			'checkErrorTitle' => GetMessage('CRM_QUOTE_STATUS_MANAGER_CHECK_ERROR_TTL'),
+			'checkErrorHelp' => GetMessage('CRM_STAGE_MANAGER_CHECK_ERROR_HELP'),
+			'checkErrorHelpArticleCode' => '8233923'
 		);
 
 		return '<script type="text/javascript">'

@@ -92,6 +92,7 @@ class CrmProducts extends \Bitrix\Main\UI\Selector\EntityBase
 
 		$productsIdList = array_merge($selectedProductsIdList, $lastProductsIdList);
 		$productsIdList = array_slice($productsIdList, 0, count($selectedProductsIdList) > 50 ? count($selectedProductsIdList) : 50);
+		$productsIdList = array_filter($productsIdList);
 		$productsIdList = array_unique($productsIdList);
 
 		$productsList = [];
@@ -232,7 +233,7 @@ class CrmProducts extends \Bitrix\Main\UI\Selector\EntityBase
 				'ACTIVE' => 'Y'
 			];
 
-			$select = array('ID', 'NAME', 'PRICE', 'CURRENCY_ID');
+			$select = array('ID', 'NAME', 'PRICE', 'CURRENCY_ID', 'DETAIL_PICTURE', 'PREVIEW_PICTURE');
 			$pricesSelect = $vatSelect = [];
 			$select = \CCrmProduct::distributeProductSelect($select, $pricesSelect, $vatSelect);
 			$res = \CCrmProduct::getList(

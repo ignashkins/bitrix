@@ -19,11 +19,9 @@ global $USER;
 CUtil::InitJSCore(['ajax', 'popup']);
 \Bitrix\Main\UI\Extension::load(['sidepanel']);
 
-$userPermissions = CCrmPerms::GetCurrentUserPermissions();
-
 $settings = $arParams['userField']['SETTINGS'];
 $supportedTypes = DataModifiers\Element::getSupportedTypes($settings); // all entity
-$arParams['ENTITY_TYPE'] = DataModifiers\Element::getEntityTypes($supportedTypes, $userPermissions);  // only entity types are allowed for current user
+$arParams['ENTITY_TYPE'] = DataModifiers\Element::getEntityTypes($supportedTypes);  // only entity types are allowed for current user
 // types are defined in settings
 
 $arResult['PERMISSION_DENIED'] = (empty($arParams['ENTITY_TYPE']) ? true : false);
@@ -61,7 +59,7 @@ $arResult['SELECTED_LIST'] = [];
 
 $selectorEntityTypes = [];
 
-$arResult['USE_SYMBOLIC_ID'] = (count($arParams['ENTITY_TYPE']) > 1);
+$arResult['USE_SYMBOLIC_ID'] = (count($supportedTypes) > 1);
 
 $arResult['LIST_PREFIXES'] = array_flip(ElementType::getEntityTypeNames());
 

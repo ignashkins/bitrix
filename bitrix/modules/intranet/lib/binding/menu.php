@@ -67,6 +67,47 @@ class Menu
 		'USER_PROFILE_TOOLBAR' => 'USER_DETAIL@TOP_MENU'
 	];
 
+	private const REST_PLACEMENT_SCOPE = [
+		'crm' => [
+			'CRM_DEAL_LIST_TOOLBAR',
+			'CRM_LEAD_LIST_TOOLBAR',
+			'CRM_CONTACT_LIST_TOOLBAR',
+			'CRM_COMPANY_LIST_TOOLBAR',
+			'CRM_INVOICE_LIST_TOOLBAR',
+			'CRM_QUOTE_LIST_TOOLBAR',
+			'CRM_ORDER_LIST_TOOLBAR',
+			'CRM_DEAL_DETAIL_TOOLBAR',
+			'CRM_LEAD_DETAIL_TOOLBAR',
+			'CRM_CONTACT_DETAIL_TOOLBAR',
+			'CRM_COMPANY_DETAIL_TOOLBAR',
+			'CRM_INVOICE_DETAIL_TOOLBAR',
+			'CRM_QUOTE_DETAIL_TOOLBAR',
+			'CRM_DEAL_DOCUMENTGENERATOR_BUTTON',
+			'CRM_LEAD_DOCUMENTGENERATOR_BUTTON',
+			'CRM_CONTACT_DOCUMENTGENERATOR_BUTTON',
+			'CRM_COMPANY_DOCUMENTGENERATOR_BUTTON',
+			'CRM_INVOICE_DOCUMENTGENERATOR_BUTTON',
+			'CRM_QUOTE_DOCUMENTGENERATOR_BUTTON',
+			'CRM_DEAL_ACTIVITY_TIMELINE_MENU',
+			'CRM_LEAD_ACTIVITY_TIMELINE_MENU',
+			'CRM_LEAD_ROBOT_DESIGNER_TOOLBAR',
+			'CRM_DEAL_ROBOT_DESIGNER_TOOLBAR',
+			'CRM_ANALYTICS_TOOLBAR',
+			'CRM_FUNNELS_TOOLBAR',
+		],
+		'task' => [
+			'TASK_USER_LIST_TOOLBAR',
+			'TASK_GROUP_LIST_TOOLBAR',
+			'TASK_ROBOT_DESIGNER_TOOLBAR',
+		],
+		'user' => [
+			'USER_PROFILE_MENU',
+			'USER_PROFILE_TOOLBAR',
+		],
+		'sonet_group' => [
+			'SONET_GROUP_TOOLBAR',
+		],
+	];
 	/**
 	 * During building menu items will be set to true for specific links.
 	 * @var bool
@@ -169,9 +210,12 @@ class Menu
 	public static function getRestMap(): array
 	{
 		$map = [];
-		foreach (self::REST_PLACEMENT_MAP as $key => $foo)
+		foreach (self::REST_PLACEMENT_SCOPE as $scope => $placementList)
 		{
-			$map[$key] = [];
+			foreach ($placementList as $placement)
+			{
+				$map[$scope][$placement] = [];
+			}
 		}
 
 		return $map;
@@ -553,6 +597,7 @@ class Menu
 	public static function getMenuItems($sectionCode, $menuCode, array $params = [])
 	{
 		static $bindings = [];
+		static $extLoaded = [];
 
 		$inline = (isset($params['inline']) && $params['inline'] === true);
 		$context = (isset($params['context']) && is_array($params['context']))
@@ -560,7 +605,23 @@ class Menu
 
 		if (!$bindings)
 		{
-			$bindings = self::getBindings();
+			$cache = new \CPHPCache;
+			$cacheManager = $GLOBALS['CACHE_MANAGER'];
+			$cacheTag = 'intranet_menu_binding';
+			$cacheDir = '/intranet/menu_binding';
+			if ($cache->initCache(8640000, $cacheTag, $cacheDir))
+			{
+				[$bindings, self::$needProvider] = $cache->getVars();
+			}
+			else
+			{
+				$cache->startDataCache();
+				$cacheManager->startTagCache($cacheDir);
+				$cacheManager->registerTag($cacheTag);
+				$bindings = self::getBindings();
+				$cacheManager->endTagCache();
+				$cache->endDataCache([$bindings, self::$needProvider]);
+			}
 		}
 
 		if (is_string($sectionCode) && is_string($menuCode))
@@ -586,13 +647,23 @@ class Menu
 					else
 					{
 						$returnItems[] = [
-							'text' => Loc::getMessage('INTRANET_BIND_MENU_SECTION_'.mb_strtoupper($globalSectionCode)),
+							'text' => Loc::getMessage('INTRANET_BIND_MENU_SECTION_' . mb_strtoupper($globalSectionCode)),
 							'delimiter' => true
 						];
 					}
 					$existItems = false;
 					foreach ($bindings[$sectionCode]['items'][$menuCode] as $item)
 					{
+						if (isset($item['extension']))
+						{
+							if (!isset($extLoaded[$item['extension']]))
+							{
+								$extLoaded[$item['extension']] = true;
+								\Bitrix\Main\UI\Extension::load(
+									$item['extension']
+								);
+							}
+						}
 						if ($item['sectionCode'] == $globalSectionCode)
 						{
 							$existItems = true;
@@ -610,7 +681,7 @@ class Menu
 					$returnItems = self::setItemsProvider($returnItems, $context);
 				}
 				// marketplace item
-				$marketCode = mb_strtoupper($sectionCode.'@'.$menuCode);
+				$marketCode = mb_strtoupper($sectionCode . '@' . $menuCode);
 				$placementMap = array_flip(self::REST_PLACEMENT_MAP);
 				if (isset($placementMap[$marketCode]))
 				{
@@ -622,7 +693,7 @@ class Menu
 					}
 					$returnItems[] = [
 						'href' => '/marketplace/?placement=' . $placementMap[$marketCode],
-						'text' => Loc::getMessage('INTRANET_BIND_MENU_APPS')
+						'text' => Loc::getMessage('INTRANET_BIND_MENU_APPS_2')
 					];
 				}
 				if ($inline)

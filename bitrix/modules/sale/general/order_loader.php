@@ -1697,7 +1697,7 @@ class CSaleOrderLoader
         }
         else
         {
-            $r = \Bitrix\Sale\Internals\PaySystemActionTable::getList(array(
+            $r = \Bitrix\Sale\PaySystem\Manager::getList(array(
                 'select' => array('ID'),
                 'filter' => array('!ACTION_FILE' => 'inner', 'ACTIVE'=>'Y'),
                 'order' => array('ID'=>'ASC')
@@ -1771,7 +1771,7 @@ class CSaleOrderLoader
 			$dbExport = CSaleExport::GetList(array(), array("PERSON_TYPE_ID" => $this->arPersonTypesIDs));
 			while($arExport = $dbExport->Fetch())
 			{
-				$this->arExportInfo[$arExport["PERSON_TYPE_ID"]] = unserialize($arExport["VARS"]);
+				$this->arExportInfo[$arExport["PERSON_TYPE_ID"]] = unserialize($arExport["VARS"], ['allowed_classes' => false]);
 			}
 		}
 	}
@@ -2697,7 +2697,7 @@ class CSaleOrderLoader
 						$dbExport = CSaleExport::GetList(array(), array("PERSON_TYPE_ID" => $arPersonTypesIDs));
 						while($arExport = $dbExport->Fetch())
 						{
-							$arExportInfo[$arExport["PERSON_TYPE_ID"]] = unserialize($arExport["VARS"]);
+							$arExportInfo[$arExport["PERSON_TYPE_ID"]] = unserialize($arExport["VARS"], ['allowed_classes' => false]);
 						}
 					}
 
@@ -3790,7 +3790,7 @@ class CSaleOrderLoader
 					$dbExport = CSaleExport::GetList(array(), array("PERSON_TYPE_ID" => $arPersonTypesIDs));
 					while($arExport = $dbExport->Fetch())
 					{
-						$arExportInfo[$arExport["PERSON_TYPE_ID"]] = unserialize($arExport["VARS"]);
+						$arExportInfo[$arExport["PERSON_TYPE_ID"]] = unserialize($arExport["VARS"], ['allowed_classes' => false]);
 					}
 				}
 
@@ -3821,7 +3821,7 @@ class CSaleOrderLoader
 						)
 							unset($arAgent[$k]);
 					}
-					
+
 					if(intval($arOrder["USER_ID"]) > 0)
 					{
 						$orderFields = array(

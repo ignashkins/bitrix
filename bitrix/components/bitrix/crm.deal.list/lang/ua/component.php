@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["BIZPROC_MODULE_NOT_INSTALLED"] = "Модуль Бізнес-процеси не встановлений.";
 $MESS["CRM_BPLIST"] = "Бізнес-процеси";
 $MESS["CRM_BP_R_P"] = "Бізнес-процесів";
@@ -26,6 +26,7 @@ $MESS["CRM_COLUMN_CURRENCY_ID"] = "Валюта";
 $MESS["CRM_COLUMN_DATE_CREATE"] = "Дата створення";
 $MESS["CRM_COLUMN_DATE_MODIFY"] = "Дата змінення";
 $MESS["CRM_COLUMN_DEAL"] = "Угода";
+$MESS["CRM_COLUMN_DELIVERY_STAGE"] = "Статус доставки";
 $MESS["CRM_COLUMN_EVENT_DATE"] = "Дата події";
 $MESS["CRM_COLUMN_EVENT_DATE_FILTER"] = "Дата події, що планується";
 $MESS["CRM_COLUMN_EVENT_DESCRIPTION"] = "Опис події";
@@ -82,4 +83,3 @@ $MESS["CRM_SET_STAGE_NOT_COMPLETED_TITLE"] = "Не вдалося перенес
 $MESS["CRM_TASKS"] = "Завдань";
 $MESS["CRM_TASK_TAG"] = "crm";
 $MESS["CRM_TASK_TITLE_PREFIX"] = "CRM:";
-?>

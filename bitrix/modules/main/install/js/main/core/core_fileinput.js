@@ -293,7 +293,7 @@ BX["UI"].FileInput.prototype = {
 				HTML : BX.message("JS_CORE_FILE_UPLOAD") + '<input type="file" id="' + inputID + '"' + ' class="adm-fileinput-area-input" />',
 				GLOBAL_ICON: "adm-menu-upload-pc"});
 		}
-		if (uploadParams['medialib'] || uploadParams['file_dialog'])
+		if (uploadParams['medialib'] || uploadParams['fileDialog'])
 		{
 			menu.push({
 				TEXT: BX.message('JS_CORE_FILE_INSERT_PATH'),
@@ -333,7 +333,7 @@ BX["UI"].FileInput.prototype = {
 			}
 			menu.push({SEPARATOR : true});
 		}
-		else if (uploadParams['medialib'] || uploadParams['file_dialog'] || uploadParams['cloud'])
+		else if (uploadParams['medialib'] || uploadParams['fileDialog'] || uploadParams['cloud'])
 		{
 			menu.push({SEPARATOR : true});
 		}
@@ -575,7 +575,6 @@ BX["UI"].FileInput.prototype = {
 					contentColor : 'white',
 					closeIcon : true,
 					closeByEsc : true,
-					zIndex : getZIndex(1),
 					content : '<span class="adm-photoeditor-popup-frame-wait"><span></span>' + BX.message("JS_CORE_FI_FRAME_IS_LOADING") + '</span>',
 					overlay : {},
 					events : {
@@ -892,7 +891,6 @@ BX["UI"].FileInput.prototype = {
 		if (this.uploadParams["maxCount"] <= 1)
 		{
 			var n = BX.findChild(this.container, {tagName : "INPUT", attr : {name : (input_name)}}, false);
-			console.log('n1: ', n);
 			if (n)
 			{
 				BX.adjust(n, { attrs : { disabled : true }});
@@ -900,7 +898,6 @@ BX["UI"].FileInput.prototype = {
 				if (input_name.indexOf('[') > 0)
 					nDelName = input_name.substr(0, input_name.indexOf('[')) + '_del' + input_name.substr(input_name.indexOf('['));
 				n = BX.findChild(this.container, {tagName : "INPUT", attr : {name : nDelName}}, false);
-				console.log('n2: ', n);
 				if (n)
 					BX.adjust(n, { attrs : { disabled : true } } );
 			}
@@ -1321,7 +1318,6 @@ filePath.prototype = {
 					lightShadow : true,
 					closeIcon : false,
 					closeByEsc : true,
-					zIndex : getZIndex(1),
 					content : editorNode,
 					overlay : {},
 					events : {
@@ -1449,7 +1445,6 @@ FramePreset = function() {
 				offsetLeft: Math.ceil(res.width / 2),
 				autoHide: true,
 				closeByEsc: true,
-				zIndex : getZIndex(30 + BX.PopupWindow.getOption("popupOverlayZindex") - BX.PopupWindow.getOption("popupZindex")),
 				bindOptions: {position: "top"},
 				overlay : false,
 				events : {
@@ -2096,11 +2091,10 @@ FrameMaster.prototype = {
 				null,
 				{
 					className : "bxu-popup" + (this.params["description"] !== false ? "" : " bxu-popup-nondescription"),
-					autoHide : false,
+					autoHide : true,
 					lightShadow : true,
 					closeIcon : false,
 					closeByEsc : true,
-					zIndex : getZIndex(1),
 					content : editorNode,
 					overlay : {},
 					events : {
@@ -2766,7 +2760,6 @@ CanvasMaster.prototype = {
 			offsetLeft: Math.ceil(res.width / 2),
 			autoHide: true,
 			closeByEsc: true,
-			zIndex : BX.PopupWindow.getOption("popupOverlayZindex") + getZIndex(2),
 			bindOptions: {position: "top"},
 			overlay : false,
 			events : {
@@ -2938,7 +2931,6 @@ CanvasMaster.prototype = {
 					lightShadow : true,
 					autoHide: true,
 					closeByEsc: true,
-					zIndex : getZIndex(2),
 					overlay : {},
 					buttons : [
 						new BX.PopupWindowButton( {text : BX.message("JS_CORE_FI_SCALE"), className : "popup-window-button-accept", events : { click : this.onCropTooBigPopupApply } } ),
@@ -3280,12 +3272,12 @@ CanvasCrop.prototype = {
 				},
 				style : {
 					position : "absolute",
-					zIndex :  BX.PopupWindow.getOption("popupOverlayZindex") + getZIndex(10),
 					boxSizing: "border-box",
 					"-webkit-user-select" : "none"
 				}
 			});
 			document.body.appendChild(this.root);
+			BX.ZIndexManager.register(this.root);
 			this.preventer = BX.create('DIV', {
 				attrs : {
 					className : "adm-photoeditor-crop-area"
@@ -3734,6 +3726,7 @@ CanvasCrop.prototype = {
 			height : pos.height + 'px',
 			display : "block"
 		}});
+		BX.ZIndexManager.bringToFront(this.root);
 
 		var projection = { left : 0, top : 0, right : 0, bottom : 0, display : "block" };
 		if (this.canvas.visiblePart.topGap > 0)
@@ -4109,8 +4102,7 @@ var CanvasMapMaster = function(block, params) {
 		this.root = BX.create('DIV', {
 			style : {
 				display : "none",
-				position : "absolute",
-				zIndex :  BX.PopupWindow.getOption("popupOverlayZindex") + getZIndex(20)
+				position : "absolute"
 			},
 			attrs : {
 				id : this.id + 'Root',
@@ -4132,6 +4124,7 @@ var CanvasMapMaster = function(block, params) {
 			].join("").replace(/[\n\t]/gi, '').replace(/>\s</gi, '><')
 		} );
 		document.body.appendChild(this.root);
+		BX.ZIndexManager.register(this.root);
 	}
 	this.moveStart = BX.delegate(this.moveStart, this);
 	this.move = BX.delegate(this.move, this);
@@ -4244,6 +4237,8 @@ CanvasMapMaster.prototype = {
 		this.root.style.height = this.root.pos.height + 'px';
 		this.root.style.display = (this.options.collapsed ? 'none' : 'block');
 		this.collapsedNode.style.display = '';
+
+		BX.ZIndexManager.bringToFront(this.root);
 
 		this.canvasMapBlock.style.top = "-" + (this.canvasMap.height + 1) + 'px';
 		this.canvasMapBlock.style.left = 0;
@@ -4506,6 +4501,9 @@ CanvasMapMaster.prototype = {
 		else
 		{
 			this.root.style.display = 'block';
+
+			BX.ZIndexManager.bringToFront(this.root);
+
 			if (this.collapsedNode)
 				BX.addClass(this.collapsedNode, "disabled");
 			BX.addClass(this.root, "collapse");
@@ -4609,10 +4607,6 @@ CanvasMapMaster.prototype = {
 		}
 	}
 };
-var frameMaster = new FrameMaster(),
-	getZIndex = function(delta)
-	{
-		var res = Math.max(BX.WindowManager.GetZIndex(), BX.PopupWindow.getOption("popupOverlayZindex")) - BX.PopupWindow.getOption("popupOverlayZindex") + delta;
-		return res;
-	};
+var frameMaster = new FrameMaster();
+
 })();

@@ -75,7 +75,7 @@ $MESS["CONFIG_EMAIL_FROM"] = "E-Mail адміністратора сайту <br
 $MESS["CONFIG_FEATURES_CRM"] = "CRM";
 $MESS["CONFIG_FEATURES_EXTRANET"] = "Екстранет";
 $MESS["CONFIG_FEATURES_LISTS"] = "Списки";
-$MESS["CONFIG_FEATURES_MEETING"] = "Зборів і планерки";
+$MESS["CONFIG_FEATURES_MEETING"] = "Збори та наради";
 $MESS["CONFIG_FEATURES_PROCESSES"] = "Процеси";
 $MESS["CONFIG_FEATURES_TIMEMAN"] = "Облік робочого часу та робочі звіти";
 $MESS["CONFIG_FEATURES_TITLE"] = "Сервіси";
@@ -110,7 +110,7 @@ $MESS["CONFIG_LOCATION_DEFAULT_SOURCE"] = "Джерело за замовчув�
 $MESS["CONFIG_LOCATION_SOURCES_SETTINGS"] = "Налаштування джерел для адрес і місцезнаходження";
 $MESS["CONFIG_LOCATION_SOURCE_GOOGLE_API_KEY_BACKEND"] = "Ключ iз правами на Google Places API, Geocoding API для використання на сервері";
 $MESS["CONFIG_LOCATION_SOURCE_GOOGLE_API_KEY_FRONTEND"] = "Ключ iз правами на Google Maps JavaScript API, Places API, Geocoding API для використання в браузері користувача";
-$MESS["CONFIG_LOCATION_SOURCE_GOOGLE_NOTE"] = "Для роботи з картами потрібен ключ Google API. Щоб отримати його,<a href=\"https://developers.google.com/maps/documentation/javascript/get-api-key\" target=\"_blank\">скористайтеся формою</a>.";
+$MESS["CONFIG_LOCATION_SOURCE_GOOGLE_NOTE"] = "Для роботи з картами потрібен ключ Google API. Щоб отримати його, <a href=\"https://developers.google.com/maps/documentation/javascript/get-api-key\" target=\"_blank\">скористайтеся формою</a>.";
 $MESS["CONFIG_LOCATION_SOURCE_GOOGLE_SHOW_PHOTOS_ON_MAP"] = "Показувати фотографії місць під час показу карти (Google може стягувати додаткову плату за використання даної опції)";
 $MESS["CONFIG_LOCATION_SOURCE_GOOGLE_USE_GEOCODING_SERVICE"] = "Показувати карту для нерозпізнаних адрес (Google може стягувати додаткову плату за використання даної опції)";
 $MESS["CONFIG_LOCATION_SOURCE_OSM_SERVICE_URL"] = "Адреса сервісу";
@@ -129,7 +129,7 @@ $MESS["CONFIG_NAME_GOOGLE_API_HOST_HINT"] = "Ключ було отримано 
 $MESS["CONFIG_NAME_GOOGLE_API_KEY"] = "Налаштування інтеграції з Google API";
 $MESS["CONFIG_NAME_GOOGLE_API_KEY_FIELD"] = "Ключ для інтеграції Бітрікс24 з Google Maps API";
 $MESS["CONFIG_NAME_GOOGLE_API_KEY_FIELD2"] = "Ключ iз правами на Google Maps JavaScript API, Places API, Geocoding API для використання в браузері користувача";
-$MESS["CONFIG_NAME_GOOGLE_API_KEY_HINT"] = "Для роботи з картами потрібен ключ Google API. Щоб отримати його,<a href=\"https://developers.google.com/maps/documentation/javascript/get-api-key\" target=\"_blank\">скористайтеся формою</a>.";
+$MESS["CONFIG_NAME_GOOGLE_API_KEY_HINT"] = "Для роботи з картами потрібен ключ Google API. Щоб отримати його, <a href=\"https://developers.google.com/maps/documentation/javascript/get-api-key\" target=\"_blank\">скористайтеся формою</a>.";
 $MESS["CONFIG_NETWORK_AVAILABLE"] = "Дозволити спілкування в глобальній мережі Нетворк всім користувачам мого Бітрікс24";
 $MESS["CONFIG_NETWORK_AVAILABLE_NOT_CONFIRMED"] = "Дана можливість доступна після підтвердження облікового запису адміністратора.";
 $MESS["CONFIG_NETWORK_AVAILABLE_TEXT_NEW"] = "Спілкування в мережі Бітрікс24.Нетворк для всіх користувачів вашого Бітрікс24 доступно тільки на комерційних тарифах.<br/><br/>

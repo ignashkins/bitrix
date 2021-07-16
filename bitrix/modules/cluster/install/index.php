@@ -12,7 +12,7 @@ Class cluster extends CModule
 	var $MODULE_CSS;
 	var $MODULE_GROUP_RIGHTS = "Y";
 
-	function cluster()
+	public function __construct()
 	{
 		$arModuleVersion = array();
 

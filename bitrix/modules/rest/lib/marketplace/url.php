@@ -1,6 +1,11 @@
 <?php
 namespace Bitrix\Rest\Marketplace\Urls
 {
+
+	use Bitrix\Main\Config\Option;
+	use Bitrix\Main\ModuleManager;
+	use Bitrix\Rest\Marketplace\Client;
+
 	class Templates
 	{
 		protected $directory = "marketplace/";
@@ -127,6 +132,30 @@ namespace Bitrix\Rest\Marketplace\Urls
 			return $this->getReplacedId($this->pages["category"], $id);
 		}
 
+		public function getSubscriptionBuyUrl()
+		{
+			$result = '';
+			if (ModuleManager::isModuleInstalled('bitrix24'))
+			{
+				$result = '/settings/license_buy.php?product=subscr';
+			}
+			else
+			{
+				$region = Option::get('main', '~PARAM_CLIENT_LANG', LANGUAGE_ID);
+
+				if ($region === 'ru')
+				{
+					$result = 'https://www.1c-bitrix.ru/buy/products/b24.php?subscr=y';
+				}
+				elseif ($region === 'ua')
+				{
+					$result = 'https://www.bitrix.ua/buy/products/b24.php?subscr=y';
+				}
+			}
+
+			return $result;
+		}
+
 		public function getPlacementUrl($placementId, $params)
 		{
 			$placementId = intval($placementId);
@@ -237,6 +266,7 @@ namespace Bitrix\Rest\Marketplace\Urls
 			'import' => 'import/',
 			'import_app' => 'import/#APP_CODE#/',
 			'import_rollback' => 'import_rollback/#APP#/',
+			'import_zip' => 'import_zip/#ZIP_ID#/',
 			'import_manifest' => 'import_#MANIFEST_CODE#/',
 			'export' => 'export_#MANIFEST_CODE#/',
 			'export_element' => 'export_#MANIFEST_CODE#/#ITEM_CODE#/'
@@ -333,6 +363,18 @@ namespace Bitrix\Rest\Marketplace\Urls
 			];
 
 			return $this->getReplaced($this->pages["import_rollback"], $replace, $subject);
+		}
+
+		public function getImportZip($zipId)
+		{
+			$replace = [
+				'#ZIP_ID#'
+			];
+			$subject = [
+				(int) $zipId
+			];
+
+			return $this->getReplaced($this->pages["import_zip"], $replace, $subject);
 		}
 
 		public function getExport($manifestCode = null)
@@ -470,6 +512,11 @@ namespace Bitrix\Rest\Marketplace
 			return Configuration::getInstance()->getImportRollback($appCode);
 		}
 
+		public static function getConfigurationImportZipUrl($zipId)
+		{
+			return Configuration::getInstance()->getImportZip($zipId);
+		}
+
 		public static function getConfigurationExportUrl($manifestCode = null)
 		{
 			return Configuration::getInstance()->getExport($manifestCode);
@@ -478,6 +525,11 @@ namespace Bitrix\Rest\Marketplace
 		public static function getConfigurationExportElementUrl($manifestCode = null, $itemCode = null)
 		{
 			return Configuration::getInstance()->getExportElement($manifestCode, $itemCode);
+		}
+
+		public static function getSubscriptionBuyUrl() : string
+		{
+			return MarketplaceUrls::getInstance()->getSubscriptionBuyUrl();
 		}
 	}
 }

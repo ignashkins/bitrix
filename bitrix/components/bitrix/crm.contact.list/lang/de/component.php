@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["BIZPROC_MODULE_NOT_INSTALLED"] = "Das Modul Workflows ist nicht installiert.";
 $MESS["CRM_BPLIST"] = "Workflows";
 $MESS["CRM_BP_R_P"] = "Workflows";
@@ -21,7 +21,7 @@ $MESS["CRM_COLUMN_CREATED_BY"] = "Erstellt von";
 $MESS["CRM_COLUMN_DATE_CREATE"] = "Erstellt am";
 $MESS["CRM_COLUMN_DATE_MODIFY"] = "Bearbeitet am";
 $MESS["CRM_COLUMN_EMAIL"] = "E-Mail";
-$MESS["CRM_COLUMN_EXPORT"] = "Export";
+$MESS["CRM_COLUMN_EXPORT_NEW"] = "Im Export eingeschlossen";
 $MESS["CRM_COLUMN_FIND"] = "Suchen";
 $MESS["CRM_COLUMN_HAS_EMAIL"] = "Hat E-Mail";
 $MESS["CRM_COLUMN_HAS_PHONE"] = "Hat Telefon";
@@ -55,4 +55,3 @@ $MESS["CRM_PRESET_MY"] = "Meine Kontakte";
 $MESS["CRM_TASKS"] = "Aufgaben";
 $MESS["CRM_TASK_TAG"] = "crm";
 $MESS["CRM_TASK_TITLE_PREFIX"] = "CRM:";
-?>

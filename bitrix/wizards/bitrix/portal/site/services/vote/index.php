@@ -31,7 +31,7 @@ $arChannelFields = array(
 	"TITLE"				=> "'".$DB->ForSql(GetMessage('VOTE_CHANNEL_COMPANY'))."'",
 	"SYMBOLIC_NAME"		=> "'".$symbolycName."'");
 
-$rsVoteChan = CVoteChannel::GetList($by, $order, Array("SYMBOLIC_NAME" => $symbolycName, 'SYMBOLIC_NAME_EXACT_MATCH' => 'Y'), $is_filtered);
+$rsVoteChan = CVoteChannel::GetList('', '', Array("SYMBOLIC_NAME" => $symbolycName, 'SYMBOLIC_NAME_EXACT_MATCH' => 'Y'));
 if (!$rsVoteChan->Fetch())
 {
 	$ID = (int)$DB->Insert("b_vote_channel", $arChannelFields);
@@ -47,7 +47,7 @@ if (!$rsVoteChan->Fetch())
 	//groups
 	$DB->Query("DELETE FROM b_vote_channel_2_group WHERE CHANNEL_ID='$ID'", false);
 	
-	$rsGroups = CGroup::GetList($by, $order, array());
+	$rsGroups = CGroup::GetList();
 	while ($arGroup = $rsGroups->Fetch())
 	{
 		$arFieldsPerm = array(

@@ -67,7 +67,7 @@ Extension::load([
 								</div>
 								<div class="salescenter-main-header-right-block">
 									<div class="salescenter-main-header-title-container">
-										<div class="ui-title-3" style="margin-bottom: 0;"><?=htmlspecialcharsbx($arResult['handlerDescription']['title'])?></div>
+										<div class="ui-title-3" style="margin-bottom: 0;"><?=Loc::getMessage($arResult['handlerDescription']['title']);?></div>
 										<div class="salescenter-main-header-feedback-container">
 											<?Bitrix\SalesCenter\Integration\Bitrix24Manager::getInstance()->renderFeedbackButton();?>
 										</div>
@@ -84,6 +84,8 @@ Extension::load([
 									<div class="salescenter-button-container">
 										<?php if (mb_strtolower($arResult['handler']) === mb_strtolower('\Bitrix\Sale\Cashbox\CashboxCheckbox')): ?>
 										<a class="ui-link ui-link-dashed" onclick="BX.Salescenter.Manager.openHowToConfigCheckboxCashBox(event);"><?=Loc::getMessage('SC_CASHBOX_LINK_CONNECT')?></a>
+										<?php elseif (mb_strtolower($arResult['handler']) === mb_strtolower('\Bitrix\Sale\Cashbox\CashboxBusinessRu')): ?>
+										<a class="ui-link ui-link-dashed" onclick="BX.Salescenter.Manager.openHowToConfigBusinessRuCashBox(event);"><?=Loc::getMessage('SC_CASHBOX_BUSINESSRU_LINK_CONNECT')?></a>
 										<?php else:?>
 										<a class="ui-link ui-link-dashed" onclick="BX.Salescenter.Manager.openHowToConfigCashBox(event);"><?=Loc::getMessage('SC_CASHBOX_LINK_CONNECT')?></a>
 										<?php endif; ?>

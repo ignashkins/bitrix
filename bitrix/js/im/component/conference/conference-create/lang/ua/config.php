@@ -1,5 +1,7 @@
 <?php
 $MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_ADD_USERS"] = "Додати";
+$MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_BROADCAST_MODE"] = "Режим трансляції";
+$MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_BROADCAST_MODE_HINT"] = "Режим трансляції дозволяє обрати спікерів, які будуть транслювати відео і звук. Усі інші користувачі можуть дивитися трансляцію та спілкуватися в чаті.";
 $MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_BUTTON_CANCEL"] = "Скасувати";
 $MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_BUTTON_START"] = "Почати конференцію";
 $MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_COPY_CONFIRMATION"] = "Посилання скопійоване";
@@ -8,8 +10,10 @@ $MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_LABEL_LINK"] = "Посилання";
 $MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_LABEL_TITLE"] = "Назва конференції";
 $MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_LABEL_USERS"] = "Запросити учасників";
 $MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_LINK_LOADING"] = "Створюємо посилання...";
+$MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_NETWORK_ERROR"] = "Ми не змогли підключитися до вашого Бітрікс24 – можливо, у вас погане інтернет-з'єднання. Спробуйте виконати дію пізніше.";
 $MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_PLACEHOLDER_TITLE"] = "Введіть назву";
 $MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_PLACEHOLDER_TITLE_2"] = "Відеоконференція";
+$MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_PRESENTERS"] = "Спікери";
 $MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_PUSH_ERROR"] = "Для використання конференцій оновіть Push-сервер, який використовується на вашому порталі";
 $MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_USERS_LOADING"] = "Завантаження…";
 $MESS["BX_IM_COMPONENT_CONFERENCE_CREATE_VOXIMPLANT_ERROR"] = "Для використання конференцій на вашому порталі повинен бути встановлений і налаштований модуль телефонії";

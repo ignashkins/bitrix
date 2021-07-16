@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["CRM_DEAL_CREATE_ON_BASIS"] = "Erstellen aus";
 $MESS["CRM_DEAL_SL_SUBSCRIBE"] = "Verfolgen";
 $MESS["CRM_DEAL_SL_SUBSCRIBE_TITLE"] = "Diesem Auftrag folgen (die Ereignisse dieses Auftrags werden in Ihrem Activity Stream sichtbar sein)";
@@ -57,6 +57,7 @@ $MESS["DEAL_LIST"] = "Liste";
 $MESS["DEAL_LIST_TITLE"] = "Alle Aufträge";
 $MESS["DEAL_MIGRATION"] = "Aus einem anderen CRM migrieren";
 $MESS["DEAL_MIGRATION_TITLE"] = "Aus einem anderen CRM migrieren";
+$MESS["DEAL_ORDER_SCENARIO"] = "Modus der Bestellverarbeitung";
 $MESS["DEAL_REGISTER_CALL"] = "Anruf registrieren";
 $MESS["DEAL_REGISTER_CALL_TITLE"] = "Anruf registrieren";
 $MESS["DEAL_SHOW"] = "Anzeigen";
@@ -68,4 +69,3 @@ $MESS["DEAL_VERTICAL_CRM"] = "Lösungspresets";
 $MESS["DEAL_VERTICAL_CRM_TITLE"] = "Lösungspresets";
 $MESS["DOCUMENT_BUTTON_TEXT"] = "Dokument";
 $MESS["DOCUMENT_BUTTON_TITLE"] = "Dokument aus dem Auftrag erstellen";
-?>

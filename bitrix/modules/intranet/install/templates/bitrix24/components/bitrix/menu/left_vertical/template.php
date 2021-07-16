@@ -91,6 +91,11 @@ $groupPopupExists = false;
 
 					$itemId = $item["PARAMS"]["menu_item_id"];
 					$isCustomItem = preg_match("/^[0-9]+$/", $itemId) === 1;
+					$isCustomSection =
+						isset($item['PARAMS']['is_custom_section'])
+							? (bool)$item['PARAMS']['is_custom_section']
+							: false
+					;
 
 					$itemClass = "menu-item-block";
 					if (!$isCustomItem)
@@ -108,7 +113,7 @@ $groupPopupExists = false;
 						$itemClass .= " menu-item-live-feed";
 					}
 
-					if ($item["ITEM_TYPE"] !== "default" || $isCustomItem)
+					if ($item["ITEM_TYPE"] !== "default" || $isCustomItem || $isCustomSection)
 					{
 						$itemClass .= " menu-item-no-icon-state";
 					}
@@ -128,6 +133,9 @@ $groupPopupExists = false;
 							data-top-menu-id="<?=$item["PARAMS"]["top_menu_id"]?>"
 						<?endif ?>
 						data-new-page="<?=(isset($item["OPEN_IN_NEW_PAGE"]) && $item["OPEN_IN_NEW_PAGE"])? "Y" : "N"?>"
+						<? if (array_key_exists("can_be_first_item", $item["PARAMS"]) && !$item["PARAMS"]["can_be_first_item"]) :?>
+						data-disable-first-item="Y"
+						<? endif ?>
 						class="<?=$itemClass?>"
 					><?
 						?><span
@@ -260,7 +268,7 @@ $groupPopupExists = false;
 						<span class="menu-license-all-icon"></span>
 						<span class="menu-license-all-text"></span>
 					</span>
-					<?if ($arResult["IS_DEMO_LICENSE"]):?>
+					<?if ($arResult["IS_DEMO_LICENSE"] && !empty($arResult["DEMO_DAYS"])):?>
 						<span
 							class="menu-license-all menu-license-all-default"
 							onclick="
@@ -365,6 +373,7 @@ $arJSParams = array(
 		MENU_SAVE_BUTTON: '<?=GetMessageJS("MENU_SAVE_BUTTON")?>',
 		MENU_EMPTY_FORM_ERROR: '<?=GetMessageJS("MENU_EMPTY_FORM_ERROR")?>',
 		MENU_SELF_ITEM_FIRST_ERROR: '<?=GetMessageJS("MENU_SELF_ITEM_FIRST_ERROR")?>',
+		MENU_FIRST_ITEM_ERROR: '<?=GetMessageJS("MENU_FIRST_ITEM_ERROR")?>',
 		MENU_COLLAPSE: '<?=GetMessageJS("MENU_COLLAPSE")?>',
 		MENU_EXPAND: '<?=GetMessageJS("MENU_EXPAND")?>',
 		MENU_CONFIRM_BUTTON: '<?=GetMessageJS("MENU_CONFIRM_BUTTON")?>',
@@ -490,7 +499,7 @@ $filter = CUserOptions::GetOption("intranet", "left_menu_group_filter_".SITE_ID,
 			$className = "group-panel-item";
 			$className .= $group["EXTRANET"] ? " group-panel-item-extranet" : " group-panel-item-intranet";
 			$className .= $group["FAVORITE"] ? " group-panel-item-favorite" : "";
-			?><a href="<?=SITE_DIR?>workgroups/group/<?=$group["ID"]?>/" class="<?=$className?>" data-id="<?=$group["ID"]?>"><?
+			?><a href="<?=SITE_DIR?>workgroups/group/<?=$group["ID"]?>/general/" class="<?=$className?>" data-id="<?=$group["ID"]?>"><?
 				?><span
 					class="group-panel-item-text"
 					title="<?=htmlspecialcharsbx($group["NAME"])?>"><?=htmlspecialcharsbx($group["NAME"])?></span><?

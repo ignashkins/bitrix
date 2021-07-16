@@ -51,3 +51,7 @@ $MESS["MOBILE_EXT_LIVEFEED_PUBLICATION_QUEUE_ITEM_TITLE"] = "Публікаці�
 $MESS["MOBILE_EXT_LIVEFEED_PUBLICATION_QUEUE_SUCCESS_TITLE"] = "Опубліковано";
 $MESS["MOBILE_EXT_LIVEFEED_SHARE_TABLE_BUTTON_CANCEL"] = "Скасування";
 $MESS["MOBILE_EXT_LIVEFEED_SHARE_TABLE_BUTTON_OK"] = "Вибрати";
+$MESS["MOBILE_EXT_LIVEFEED_USERS_LIST_TITLE"] = "Користувачі";
+$MESS["MOBILE_EXT_LIVEFEED_RATING_TEXT_LIKE_Y"] = "Мені подобається";
+$MESS["MOBILE_EXT_LIVEFEED_RATING_TEXT_LIKE_N"] = "Більше не подобається";
+$MESS["MOBILE_EXT_LIVEFEED_RATING_TEXT_LIKE_D"] = "Це подобається";

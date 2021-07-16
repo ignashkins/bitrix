@@ -2,6 +2,7 @@
 namespace Bitrix\Calendar;
 
 
+use Bitrix\Calendar\Sync\Util\MsTimezoneConverter;
 use \Bitrix\Main\Loader;
 use Bitrix\Main;
 use Bitrix\Main\Type\Date;
@@ -12,12 +13,18 @@ use Bitrix\Main\Localization\LanguageTable;
 
 class Util
 {
-	const USER_SELECTOR_CONTEXT = "CALENDAR";
-	const LIMIT_NUMBER_BANNER_IMPRESSIONS = 3;
+	public const USER_SELECTOR_CONTEXT = "CALENDAR";
+	public const LIMIT_NUMBER_BANNER_IMPRESSIONS = 3;
+	public const DATETIME_PHP_FORMAT = 'Y-m-d H:i:sP';
 
 	private static $userAccessCodes = array();
 
-	public static function isManagerForUser($managerId, $userId)
+	/**
+	 * @param $managerId
+	 * @param $userId
+	 * @return bool
+	 */
+	public static function isManagerForUser($managerId, $userId): bool
 	{
 		if (!isset(self::$userAccessCodes[$managerId]))
 		{
@@ -33,35 +40,69 @@ class Util
 		return in_array('IU'.$userId, self::$userAccessCodes[$managerId]);
 	}
 
-	public static function isSectionStructureConverted()
+	/**
+	 * @return bool
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 */
+	public static function isSectionStructureConverted(): bool
 	{
 		return \Bitrix\Main\Config\Option::get('calendar', 'sectionStructureConverted', 'N') === 'Y';
 	}
 
+	/**
+	 * @param $date
+	 * @param bool $round
+	 * @param bool $getTime
+	 * @return false|float|int
+	 */
 	public static function getTimestamp($date, $round = true, $getTime = true)
 	{
 		$timestamp = MakeTimeStamp($date, \CSite::getDateFormat($getTime ? "FULL" : "SHORT"));
-		// Get rid of seconds
-		if ($round)
-		{
-			$timestamp = round($timestamp / 60) * 60;
-		}
-		return $timestamp;
+
+		return $round ? (round($timestamp / 60) * 60) : $timestamp;
 	}
 
-	public static function isTimezoneValid(string $timeZone = null): bool
+	/**
+	 * @param string|null $timeZone
+	 * @return bool
+	 */
+	public static function isTimezoneValid(?string $timeZone): bool
 	{
 		return (!is_null($timeZone) && $timeZone !== 'false' && in_array($timeZone, timezone_identifiers_list(), true));
 	}
 
-	public static function prepareTimezone($tz = null): \DateTimeZone
+	/**
+	 * @param string|null $tz
+	 * @return \DateTimeZone
+	 */
+	public static function prepareTimezone(?string $tz): \DateTimeZone
 	{
-		return (self::isTimezoneValid($tz))
-			? new \DateTimeZone($tz)
-			: new \DateTimeZone("UTC")
-		;
+		if (!$tz)
+		{
+			return new \DateTimeZone("UTC");
+		}
+
+		if (self::isTimezoneValid($tz))
+		{
+			return new \DateTimeZone($tz);
+		}
+
+		if ($timezones = MsTimezoneConverter::getValidateTimezones($tz))
+		{
+			return new \DateTimeZone($timezones[0]);
+		}
+
+		return new \DateTimeZone("UTC");
 	}
 
+	/**
+	 * @param string|null $date
+	 * @param bool $fullDay
+	 * @param string $tz
+	 * @return Date
+	 * @throws Main\ObjectException
+	 */
 	public static function getDateObject(string $date = null, $fullDay = true, $tz = 'UTC'): Date
 	{
 		$preparedDate = $date;
@@ -76,101 +117,12 @@ class Util
 			: new DateTime($preparedDate, Date::convertFormatToPhp(FORMAT_DATETIME), Util::prepareTimezone($tz));
 	}
 
-	public static function getUserSelectorContext()
+	/**
+	 * @return string
+	 */
+	public static function getUserSelectorContext(): string
 	{
 		return self::USER_SELECTOR_CONTEXT;
-	}
-
-	public static function getIcalTemplateDate(array $params = null): string
-	{
-		$from = Util::getDateObject($params['DATE_FROM'], false, $params['TZ_FROM']);
-		$to = Util::getDateObject($params['DATE_TO'], false, $params['TZ_TO']);
-		if ($from->format('dmY') !== $to->format('dmY'))
-		{
-			$res = $params['FULL_DAY']
-				? $from->format('d.m.Y') . ' - ' . $to->format('d.m.Y')
-				: $from->format('d.m.Y H:i') . ' - ' . $to->format('d.m.Y H:i');
-		}
-		else
-		{
-			$res = $params['FULL_DAY']
-				? $from->format('d.m.Y')
-				: $from->format('d.m.Y H:i') . ' - ' . $to->format('H:i');
-		}
-
-		return $res;
-	}
-
-	public static function getIcalTemplateRRule(array $rrule = null, array $params = null): string
-	{
-		$res = '';
-		Loc::loadMessages(
-			$_SERVER['DOCUMENT_ROOT'].'bitrix/modules/calendar/general/classes/calendar.php'
-		);
-
-		switch($rrule['FREQ'])
-		{
-			case 'DAILY':
-				if($rrule['INTERVAL'] == 1)
-					$res = GetMessage('EC_RRULE_EVERY_DAY');
-				else
-					$res = GetMessage('EC_RRULE_EVERY_DAY_1', array('#DAY#' => $rrule['INTERVAL']));
-				break;
-			case 'WEEKLY':
-				$daysList = array();
-				foreach($rrule['BYDAY'] as $day)
-					$daysList[] = GetMessage('EC_'.$day);
-				$daysList = implode(', ', $daysList);
-				if($rrule['INTERVAL'] == 1)
-					$res = GetMessage('EC_RRULE_EVERY_WEEK', array('#DAYS_LIST#' => $daysList));
-				else
-					$res = GetMessage('EC_RRULE_EVERY_WEEK_1', array('#WEEK#' => $rrule['INTERVAL'], '#DAYS_LIST#' => $daysList));
-				break;
-			case 'MONTHLY':
-				if($rrule['INTERVAL'] == 1)
-					$res = GetMessage('EC_RRULE_EVERY_MONTH');
-				else
-					$res = GetMessage('EC_RRULE_EVERY_MONTH_1', array('#MONTH#' => $rrule['INTERVAL']));
-				break;
-			case 'YEARLY':
-				$fromTs = \CCalendar::Timestamp($params['DATE_FROM']);
-//					if ($params['FULL_DAY'])
-//					{
-//						$fromTs -= $event['~USER_OFFSET_FROM'];
-//					}
-
-				if($rrule['INTERVAL'] == 1)
-				{
-					$res = GetMessage('EC_RRULE_EVERY_YEAR', [
-						'#DAY#' => FormatDate('j', $fromTs),
-						'#MONTH#' => FormatDate('n', $fromTs)
-					]);
-				}
-				else
-				{
-					$res = GetMessage('EC_RRULE_EVERY_YEAR_1', [
-						'#YEAR#' => $rrule['INTERVAL'],
-						'#DAY#' => FormatDate('j', $fromTs),
-						'#MONTH#' => FormatDate('n', $fromTs)
-					]);
-				}
-				break;
-		}
-
-//		$from = Util::getDateObject($params['DATE_FROM'], false, $params['TZ_FROM']);
-//		$to = Util::getDateObject($params['DATE_TO'], false, $params['TZ_TO']);
-//		$res .= ' ' . $from->format('H:i'). ' - ' . $to->format('H:i');
-
-		if ($rrule['COUNT'])
-		{
-			$res .= ' ' . Loc::getMessage('EC_RRULE_COUNT', ['#COUNT#' => $rrule['COUNT']]);
-		}
-		elseif ($rrule['UNTIL'])
-		{
-			$res .= ' ' . Loc::getMessage('EC_RRULE_UNTIL', ['#UNTIL_DATE#' => $rrule['UNTIL']]);
-		}
-
-		return $res;
 	}
 
 	public static function checkRuZone(): bool
@@ -307,6 +259,14 @@ class Util
 		return $entityList;
 	}
 
+	/**
+	 * @param array|null $codeAttendees
+	 * @param string $stringWrapper
+	 * @return array
+	 * @throws Main\ArgumentException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
 	public static function getAttendees(array $codeAttendees = null, string $stringWrapper = ''): array
 	{
 		if (empty($codeAttendees))
@@ -350,15 +310,22 @@ class Util
 	public static function isShowDailyBanner(): bool
 	{
 		$isInstallMobileApp = (bool)\CUserOptions::GetOption('mobile', 'iOsLastActivityDate', false)
-			|| (bool)\CUserOptions::GetOption('mobile', 'AndroidLastActivityDate', false);
+			|| (bool)\CUserOptions::GetOption('mobile', 'AndroidLastActivityDate', false)
+		;
 		$isSyncCalendar = (bool)\CUserOptions::GetOption('calendar', 'last_sync_iphone', false)
-			|| (bool)\CUserOptions::GetOption('calendar', 'last_sync_android', false);
+			|| (bool)\CUserOptions::GetOption('calendar', 'last_sync_android', false)
+		;
 		if ($isInstallMobileApp && $isSyncCalendar)
 		{
 			return false;
 		}
 
-		$dailySyncBanner = \CUserOptions::GetOption('calendar', 'daily_sync_banner', false);
+		$dailySyncBanner = \CUserOptions::GetOption('calendar', 'daily_sync_banner', []);
+		if (!isset($dailySyncBanner['last_sync_day']) && !isset($dailySyncBanner['count']))
+		{
+			$dailySyncBanner['last_sync_day'] = '';
+			$dailySyncBanner['count'] = 0;
+		}
 		$today = (new Main\Type\Date())->format('Y-m-d');
 		$isShowToday = ($today === $dailySyncBanner['last_sync_day']);
 		$isLimitExceeded = ($dailySyncBanner['count'] >= self::LIMIT_NUMBER_BANNER_IMPRESSIONS);
@@ -377,7 +344,15 @@ class Util
 
 	}
 
-	public static function isExtranetUser(int $userId)
+	/**
+	 * @param int $userId
+	 * @return bool
+	 * @throws Main\ArgumentException
+	 * @throws Main\LoaderException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
+	public static function isExtranetUser(int $userId): bool
 	{
 		if (Loader::includeModule('intranet'))
 		{
@@ -395,5 +370,169 @@ class Util
 		}
 
 		return false;
+	}
+
+	/**
+	 * @param string $accountType
+	 * @return bool
+	 */
+	public static function isGoogleConnection(string $accountType): bool
+	{
+		return in_array($accountType, ['caldav_google_oauth', 'google_api_oauth']);
+	}
+
+	/**
+	 * @param int $eventId
+	 * @return array|null
+	 * @throws Main\ArgumentException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
+	public static function getEventById(int $eventId): ?array
+	{
+		$eventDb = Internals\EventTable::getList([
+			'filter' => [
+				'=ID' => $eventId,
+			],
+		]);
+
+		if ($event = $eventDb->fetch())
+		{
+			return $event;
+		}
+
+		return null;
+	}
+
+	/**
+	 * @param string $command
+	 * @param int $userId
+	 * @param array $params
+	 * @return bool
+	 */
+	public static function addPullEvent(string $command, int $userId, array $params = []): bool
+	{
+		if (Loader::includeModule("pull"))
+		{
+			if (in_array($command, [
+				'edit_event',
+				'delete_event',
+				'set_meeting_status',
+			]))
+			{
+				\CPullWatch::AddToStack(
+					'calendar-planner-'.$userId,
+					[
+						'module_id' => 'calendar',
+						'command' => $command,
+						'params' => $params
+					]
+				);
+			}
+
+			if (in_array($command, [
+				'edit_event',
+				'delete_event',
+				'set_meeting_status',
+			])
+				&& isset($params['fields'])
+				&& isset($params['fields']['SECTION_OWNER_ID'])
+				&& (int)$params['fields']['SECTION_OWNER_ID'] !== $userId
+			)
+			{
+				\Bitrix\Pull\Event::add(
+					(int)$params['fields']['SECTION_OWNER_ID'],
+					[
+						'module_id' => 'calendar',
+						'command' => $command,
+						'params' => $params
+					]
+				);
+			}
+
+			return \Bitrix\Pull\Event::add(
+				$userId,
+				[
+					'module_id' => 'calendar',
+					'command' => $command,
+					'params' => $params
+				]
+			);
+		}
+		else
+		{
+			return false;
+		}
+	}
+
+	/**
+	 * @param int $currentUserId
+	 * @param array $userIdList
+	 *
+	 * @return void
+	 */
+	public static function initPlannerPullWatches(int $currentUserId, array $userIdList = []): void
+	{
+		if (Loader::includeModule("pull"))
+		{
+			foreach($userIdList as $userId)
+			{
+				if ((int)$userId !== $currentUserId)
+				{
+					\CPullWatch::Add($currentUserId, 'calendar-planner-'.$userId);
+				}
+			}
+		}
+	}
+
+	public static function getUserFieldsByEventId(int $eventId): array
+	{
+		global $DB;
+		$result = [];
+		$strSql = "SELECT * from b_uts_calendar_event WHERE VALUE_ID=" . $eventId;
+		$ufDb = $DB->query($strSql);
+
+		while ($uf = $ufDb->fetch())
+		{
+			$result[] = [
+				'crm' => unserialize($uf['UF_CRM_CAL_EVENT'], ['allowed_classes' => false]),
+				'webdav' => unserialize($uf['UF_WEBDAV_CAL_EVENT'], ['allowed_classes' => false]),
+			];
+		}
+
+		return $result;
+	}
+
+	/**
+	 * @return int
+	 */
+	public static function getServerOffsetUTC(): int
+	{
+		return (new \DateTime())->getOffset();
+	}
+
+	/**
+	 * @param string $tz
+	 * @return int
+	 * @throws \Exception
+	 */
+	public static function getTimezoneOffsetFromServer(string $tz = 'UTC', $date = null): int
+	{
+		if ($date instanceof Date)
+		{
+			$timestamp = $date->format(self::DATETIME_PHP_FORMAT);
+		}
+		elseif ($date === null)
+		{
+			$timestamp = 'now';
+		}
+		else
+		{
+			$timestamp = "@".(int)$date;
+		}
+
+		$date = new \DateTime($timestamp, new \DateTimeZone($tz));
+
+		return $date->getOffset() - self::getServerOffsetUTC();
 	}
 }

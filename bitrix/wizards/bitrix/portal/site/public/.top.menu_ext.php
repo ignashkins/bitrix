@@ -45,7 +45,7 @@ if (defined("BX_COMP_MANAGED_CACHE"))
 	global $CACHE_MANAGER;
 	$CACHE_MANAGER->registerTag("bitrix24_left_menu");
 	$CACHE_MANAGER->registerTag("crm_change_role");
-	$CACHE_MANAGER->registerTag("USER_CARD_".intval($userId / TAGGED_user_card_size));
+	$CACHE_MANAGER->registerTag("USER_NAME_".$userId);
 }
 
 global $USER;
@@ -168,6 +168,19 @@ if ($GLOBALS["USER"]->IsAuthorized() && CModule::IncludeModule("socialnetwork"))
 			),
 			""
 		);
+		if ($diskEnabled === "Y" && \Bitrix\Main\Config\Option::get('disk', 'documents_enabled', 'N') === 'Y')
+		{
+			$arMenuB24[] = array(
+				GetMessage("TOP_MENU_DISK_DOCUMENTS"),
+				SITE_DIR."company/personal/user/".$userId."/disk/documents/",
+				[],
+				array(
+					"menu_item_id" => "menu_documents",
+					"my_tools_section" => true,
+				),
+				""
+			);
+		}
 	}
 
 
@@ -204,13 +217,14 @@ if ($GLOBALS["USER"]->IsAuthorized() && CModule::IncludeModule("socialnetwork"))
 
 if (CModule::IncludeModule("crm") && CCrmPerms::IsAccessEnabled())
 {
+	$counterId = CCrmSaleHelper::isWithOrdersMode() ? 'crm_all' : 'crm_all_no_orders';
 	$arMenuB24[] = array(
 		GetMessage("TOP_MENU_CRM"),
 		SITE_DIR."crm/menu/",
 		array(SITE_DIR."crm/"),
 		array(
 			"real_link" => \Bitrix\Crm\Settings\EntityViewSettings::getDefaultPageUrl(),
-			"counter_id" => "crm_all",
+			"counter_id" => $counterId,
 			"menu_item_id" => "menu_crm_favorite",
 			"top_menu_id" => "crm_control_panel_menu"
 		),
@@ -270,20 +284,26 @@ if (CModule::IncludeModule("crm") && CCrmSaleHelper::isShopAccess())
 		);
 	}
 
+	$includeCounter = CCrmSaleHelper::isWithOrdersMode();
+	$parameters = [
+		'real_link' => getLeftMenuItemLink(
+			'store',
+			'/shop/orders/menu/'
+		),
+		'menu_item_id' => 'menu_shop',
+		'top_menu_id' => 'store',
+		'is_beta' => true
+	];
+	if ($includeCounter)
+	{
+		$parameters['counter_id'] = 'shop_all';
+	}
+
 	$arMenuB24[] = array(
 		GetMessage("TOP_MENU_SHOP"),
 		SITE_DIR."shop/menu/",
 		array(SITE_DIR."shop/"),
-		array(
-			"real_link" => getLeftMenuItemLink(
-				"store",
-				SITE_DIR."shop/orders/menu/"
-			),
-			"counter_id" => "shop_all",
-			"menu_item_id" => "menu_shop",
-			"top_menu_id" => "store",
-			"is_beta" => true
-		),
+		$parameters,
 		""
 	);
 }
@@ -346,6 +366,7 @@ if (CModule::IncludeModule("im"))
 			"counter_id" => "im-message",
 			"menu_item_id" => "menu_im_messenger",
 			"my_tools_section" => true,
+			"can_be_first_item" => false
 		),
 		"CBXFeatures::IsFeatureEnabled('WebMessenger')"
 	);
@@ -533,7 +554,7 @@ if (file_exists($_SERVER["DOCUMENT_ROOT"].SITE_DIR."about/"))
 }
 
 $arMenuB24[] = array(
-	GetMessage("TOP_MENU_MARKETPLACE"),
+	GetMessage("TOP_MENU_MARKETPLACE_2"),
 	SITE_DIR."marketplace/",
 	array(SITE_DIR."marketplace/"),
 	array(
@@ -653,7 +674,10 @@ $arMenuB24[] = Array(
 	'$USER->IsAdmin()'
 );
 
-$rsSite = CSite::GetList($by = "sort", $order = "asc", $arFilter = array("ACTIVE" => "Y"));
+$manager = \Bitrix\Main\DI\ServiceLocator::getInstance()->get('intranet.customSection.manager');
+$manager->appendSuperLeftMenuSections($arMenuB24);
+
+$rsSite = CSite::GetList("sort", "asc", $arFilter = array("ACTIVE" => "Y"));
 $exSiteId = COption::GetOptionString("extranet", "extranet_site");
 while ($site = $rsSite->Fetch())
 {

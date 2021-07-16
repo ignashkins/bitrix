@@ -1,113 +1,99 @@
-import {Address, Location, LocationType, AddressType} from 'location.core';
+import {Runtime} from 'main.core';
 
 export default class BaseRequester
 {
 	languageId;
 	serviceUrl;
-	hostName;
-	tokenContainer;
+
+	#responseConverter;
+	#hostName;
+	#tokenContainer;
 
 	constructor(props)
 	{
-		this.languageId = props.languageId;
 		this.serviceUrl = props.serviceUrl;
-		this.hostName = props.hostName;
-		this.tokenContainer = props.tokenContainer;
+		this.languageId = props.languageId;
+		this.#responseConverter = props.responseConverter;
+		this.#hostName = props.hostName;
+		this.#tokenContainer = props.tokenContainer;
 	}
 
+	/**
+	 * @param params
+	 * @return string
+	 */
+	// eslint-disable-next-line no-unused-vars
 	createUrl(params: Object): string
 	{
 		throw new Error('Not implemented');
 	}
 
-	sendRequest(params: Object)
+	/**
+	 *
+	 * @param params
+	 * @return {Promise<Array<Location> | Location | null | * | *[] | void>}
+	 */
+	request(params: {}): Promise<JSON>
 	{
-		return fetch(this.createUrl(params), {
-			method: 'GET',
-			headers: new Headers({
-				'Authorization': `Bearer ${this.tokenContainer.token}`,
-				'Bx-Location-Osm-Host': this.hostName,
-			}),
-		})
-			.then((response) => {
-
-				if(response.status === 200)
-				{
-					return response.json();
-				}
-
-				if(response.status === 401 && !params.isUnAuth)
-				{
-					return this.#processUnauthorizedResponse(params);
-				}
-
-				console.error(`Response status: ${response.status}`);
-				return null;
-			});
-	}
-
-	request(params: Object): Promise<JSON>
-	{
-		return this.sendRequest(params)
-			.then((json) =>
+		return this.#fetch(params)
+			.then((response) =>
 			{
-				return json ? this.jsonToLocation(json) : [];
+				return response ? this.#responseConverter.convertResponse(response, params) : [];
 			})
 			.catch((response) => {
 				console.error(response);
 			});
 	}
 
-	#processUnauthorizedResponse(params)
+	/**
+	 * Sends request to server
+	 * @param {Object} params
+	 * @param {boolean} isUnAuth
+	 * @return {Promise<Object>} Object is response which was converted from json string to object
+	 */
+	#fetch(params: Object, isUnAuth: boolean = false): Promise<Object>
 	{
-		return this.tokenContainer.refreshToken()
-			.then((sourceToken) => {
-				params.isUnAuth = true;
-				return this.sendRequest(params);
+		return fetch(this.createUrl(params), {
+			method: 'GET',
+			headers: new Headers({
+				'Authorization': `Bearer ${this.#tokenContainer.token}`,
+				'Bx-Location-Osm-Host': this.#hostName,
+			}),
+		})
+			.then((response) => {
+
+				if (response.status === 200)
+				{
+					return response.json();
+				}
+
+				if (response.status === 401 && !isUnAuth)
+				{
+					return this.#processUnauthorizedResponse(params);
+				}
+
+				console.error(`Response status: ${response.status}`);
+
+				response.text()
+					.then(
+						(text) => { Runtime.debug(text); }
+					);
+
+				return null;
 			});
 	}
 
-	jsonToLocation(responseJson)
+	/**
+	 * Method process the situation then the token was expired
+	 *
+	 * @param params
+	 * @return {*}
+	 */
+	#processUnauthorizedResponse(params: {})
 	{
-		let result;
-
-		if(Array.isArray(responseJson))
-		{
-			result = [];
-
-			if(responseJson.length > 0)
-			{
-				responseJson.forEach((item) =>
-				{
-					result.push(
-						this.createLocation(item)
-					);
-				});
-			}
-		}
-		else if(typeof responseJson === 'object')
-		{
-			result = this.createLocation(responseJson);
-		}
-
-		return result;
-	}
-
-	createLocation(responseItem)
-	{
-		return new Location({
-			externalId: this.createExternalId(responseItem.osm_type, responseItem.osm_id),
-			latitude: responseItem.lat,
-			longitude: responseItem.lon,
-			type: LocationType.UNKNOWN,
-			name: responseItem.display_name,
-			languageId: this.languageId,
-			sourceCode: 'OSM'
-		});
-	}
-
-	createExternalId(osmType: string, osmId: string)
-	{
-		return osmType.substr(0, 1).toLocaleUpperCase() + osmId;
+		return this.#tokenContainer.refreshToken()
+			.then(() => {
+				return this.#fetch(params, true);
+			});
 	}
 }

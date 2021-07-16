@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["CRM_CONFIGS_AUTOMATION_DEAL"] = "Угоди";
 $MESS["CRM_CONFIGS_AUTOMATION_INVOICE"] = "Рахунки";
 $MESS["CRM_CONFIGS_AUTOMATION_LEAD"] = "Ліди";
@@ -56,7 +56,7 @@ $MESS["CRM_CONFIGS_MIGRATION_OTHER_CRM"] = "Міграція з інших CRM";
 $MESS["CRM_CONFIGS_MYCOMPANY"] = "Реквізити ваших компаній";
 $MESS["CRM_CONFIGS_MYCOMPANY1"] = "Реквізити ваших компаній";
 $MESS["CRM_CONFIGS_NO_ACCESS_ERROR"] = "Немає доступу";
-$MESS["CRM_CONFIGS_NUMERATOR_FOR_DOCUMENT"] = "Для документов";
+$MESS["CRM_CONFIGS_NUMERATOR_FOR_DOCUMENT"] = "Для документів";
 $MESS["CRM_CONFIGS_NUMERATOR_FOR_INVOICE"] = "Для рахунків";
 $MESS["CRM_CONFIGS_NUMERATOR_FOR_QUOTE"] = "Для пропозицій";
 $MESS["CRM_CONFIGS_ORDER_FORM"] = "Форма оформлення замовлення";
@@ -74,7 +74,7 @@ $MESS["CRM_CONFIGS_SMS_LIMITS"] = "Ліміти для SMS";
 $MESS["CRM_CONFIGS_SMS_MARKETPLACE"] = "Застосунки для SMS";
 $MESS["CRM_CONFIGS_SMS_PROVIDER"] = "SMS сповіщення через #PROVIDER#";
 $MESS["CRM_CONFIGS_STATUS"] = "Довідники";
-$MESS["CRM_CONFIGS_TAB_APPS"] = "Застосунки";
+$MESS["CRM_CONFIGS_TAB_APPS_2"] = "Бітрікс24.Маркет";
 $MESS["CRM_CONFIGS_TAB_AUTOMATION"] = "Роботи і Бізнес-процеси";
 $MESS["CRM_CONFIGS_TAB_CREATION_ON_THE_BASIS"] = "Створення на підставі";
 $MESS["CRM_CONFIGS_TAB_INTEGRATION"] = "Інтеграції";
@@ -88,4 +88,3 @@ $MESS["CRM_CONFIGS_TAB_WHERE_TO_BEGIN"] = "З чого почати";
 $MESS["CRM_CONFIGS_TAB_WORK_WITH_MAIL"] = "Робота з поштою";
 $MESS["CRM_CONFIGS_TAX"] = "Податки";
 $MESS["CRM_CONFIGS_VOLUME"] = "Чим зайняте місце";
-?>

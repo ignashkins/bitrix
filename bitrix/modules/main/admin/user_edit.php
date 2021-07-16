@@ -81,7 +81,7 @@ $editable = ($USER->IsAdmin() ||
 if($_REQUEST["action"] == "authorize" && check_bitrix_sessid() && $USER->CanDoOperation('edit_php'))
 {
 	$USER->Logout();
-	$USER->Authorize(intval($_REQUEST["ID"]));
+	$USER->Authorize(intval($_REQUEST["ID"]), false, false, null, false);
 	LocalRedirect("user_edit.php?lang=".LANGUAGE_ID."&ID=".intval($_REQUEST["ID"]));
 }
 
@@ -228,6 +228,7 @@ if(
 			"AUTO_TIME_ZONE" => ($_POST["AUTO_TIME_ZONE"] == "Y" || $_POST["AUTO_TIME_ZONE"] == "N"? $_POST["AUTO_TIME_ZONE"] : ""),
 			"XML_ID" => $_POST["XML_ID"],
 			"PHONE_NUMBER" => $_POST["PHONE_NUMBER"],
+			"PASSWORD_EXPIRED" => $_POST["PASSWORD_EXPIRED"],
 		);
 
 		if(isset($_POST["TIME_ZONE"]))
@@ -683,6 +684,8 @@ document.getElementById('bx_auth_secure').style.display = 'inline-block';
 	</tr>
 <?
 $tabControl->EndCustomField("PASSWORD");
+
+$tabControl->AddCheckBoxField("PASSWORD_EXPIRED", GetMessage("main_user_edit_pass_expired"), false, "Y", ($str_PASSWORD_EXPIRED == "Y"));
 ?>
 <?if($USER->CanDoOperation('view_all_users')):?>
 <?
@@ -773,7 +776,7 @@ if($showGroupTabs):
 			</tr>
 			<?
 			$ind = -1;
-			$dbGroups = CGroup::GetList(($b = "c_sort"), ($o = "asc"), array("ANONYMOUS" => "N"));
+			$dbGroups = CGroup::GetList("c_sort", "asc", array("ANONYMOUS" => "N"));
 			while ($arGroups = $dbGroups->Fetch())
 			{
 				$arGroups["ID"] = intval($arGroups["ID"]);

@@ -9,6 +9,14 @@ use \Bitrix\ImConnector\Library,
 
 class IMessage extends Base
 {
+	//Input
+
+	//END Input
+
+	//Output
+
+	//END Output
+
 	//User
 	/**
 	 * Preparation of new user fields before saving or adding.
@@ -37,7 +45,7 @@ class IMessage extends Base
 	 * @param array $user An array describing the user.
 	 * @return array Given the right format array description user.
 	 */
-	public function preparationUserFields($user): array
+	public function preparationUserFields($user, $userId = 0): array
 	{
 		//The hash of the data
 		return [
@@ -51,8 +59,7 @@ class IMessage extends Base
 	 * Save file
 	 *
 	 * @param $file
-	 * @return bool|int|mixed|string
-	 * @throws \Bitrix\Main\IO\FileNotFoundException
+	 * @return false|int|string
 	 */
 	public function saveFile($file)
 	{
@@ -62,16 +69,22 @@ class IMessage extends Base
 		{
 			$key = $file['key'];
 
-			$file = ReceivingMessage::downloadFile($file);
-
-			if($file)
+			if(
+				!empty($file)
+				&& is_array($file)
+			)
 			{
-				$file = self::getDecryptedFile($file, $key);
+				$file = Library::downloadFile($file);
 
-				$result = \CFile::SaveFile(
-					$file,
-					Library::MODULE_ID
-				);
+				if($file !== false)
+				{
+					$file = self::getDecryptedFile($file, $key);
+
+					$result = \CFile::SaveFile(
+						$file,
+						Library::MODULE_ID
+					);
+				}
 			}
 		}
 

@@ -1,9 +1,11 @@
-<?
+<?php
 $MESS["CRM_MENU_RIGHTS_CATEGORY_ALL_FOR_ALL"] = "Відкрити доступ всім менеджерам";
 $MESS["CRM_MENU_RIGHTS_CATEGORY_COPY_FROM_TUNNELS"] = "Скопіювати права доступу з воронки";
 $MESS["CRM_MENU_RIGHTS_CATEGORY_CUSTOM"] = "Індивідуальні налаштування прав";
 $MESS["CRM_MENU_RIGHTS_CATEGORY_NONE_FOR_ALL"] = "Закрити доступ всім менеджерам";
 $MESS["CRM_MENU_RIGHTS_CATEGORY_OWN_FOR_ALL"] = "Дати доступ тільки на свої угоди";
+$MESS["CRM_ST_ACTION_COPY"] = "копіювати";
+$MESS["CRM_ST_ACTION_MOVE"] = "перемістити";
 $MESS["CRM_ST_ADD_FUNNEL_BUTTON"] = "Додати воронку";
 $MESS["CRM_ST_ADD_NEW_CATEGORY_BUTTON_LABEL"] = "Додати воронку продажів";
 $MESS["CRM_ST_CATEGORY_DRAG_BUTTON"] = "Потягніть щоб відсортувати воронки";
@@ -25,9 +27,12 @@ $MESS["CRM_ST_REMOVE_CATEGORY_CONFIRM_POPUP_DESCRIPTION"] = "Видалення 
 $MESS["CRM_ST_REMOVE_CATEGORY_CONFIRM_POPUP_TITLE"] = "Видалити воронку «#name#»";
 $MESS["CRM_ST_REMOVE_CATEGORY_CONFIRM_REMOVE_BUTTON_LABEL"] = "видалити воронку";
 $MESS["CRM_ST_ROBOTS_HELP_BUTTON"] = "Відкрити статтю про \"Автоматизацію в CRM\"";
+$MESS["CRM_ST_ROBOT_ACTION_COPY"] = "Робот копіювання";
+$MESS["CRM_ST_ROBOT_ACTION_MOVE"] = "Робот переміщення";
 $MESS["CRM_ST_ROBOT_SETTINGS_LINK_LABEL"] = "Налаштувати роботів";
 $MESS["CRM_ST_SAVE_ERROR"] = "При збереженні сталася помилка";
 $MESS["CRM_ST_SETTINGS"] = "Налаштувати";
+$MESS["CRM_ST_STAGES_DISABLED"] = "Стадії відключені";
 $MESS["CRM_ST_STAGES_GROUP_FAIL"] = "Неуспішні";
 $MESS["CRM_ST_STAGES_GROUP_IN_PROGRESS"] = "В роботі";
 $MESS["CRM_ST_STAGES_GROUP_SUCCESS"] = "Успішні";
@@ -35,4 +40,3 @@ $MESS["CRM_ST_TITLE_EDITOR_PLACEHOLDER"] = "Нова воронка";
 $MESS["CRM_ST_TUNNEL_BUTTON_LABEL"] = "Тунель";
 $MESS["CRM_ST_TUNNEL_BUTTON_TITLE"] = "Налаштувати або видалити тунель";
 $MESS["CRM_ST_TUNNEL_EDIT_ACCESS_DENIED"] = "Недостатньо прав на створення тунелю.";
-?>

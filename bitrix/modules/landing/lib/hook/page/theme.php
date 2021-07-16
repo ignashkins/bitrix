@@ -41,7 +41,7 @@ class Theme extends Page
 			]),
 			'COLOR' => new Field\Text('COLOR', [
 				'title' => Loc::getMessage('LANDING_HOOK_THEME_CUSTOM_COLOR')
-			])
+			]),
 		];
 	}
 
@@ -51,14 +51,7 @@ class Theme extends Page
 	 */
 	public static function getColorCodes(): array
 	{
-		static $colors = [];
-
-		if (!empty($colors))
-		{
-			return $colors;
-		}
-
-		$colors = [
+		static $colors = [
 			'2business' => [
 				'color' => '#3949a0',
 				'main' => '#333333',
@@ -207,13 +200,50 @@ class Theme extends Page
 	}
 
 	/**
+	 * Get hex for all colors.
+	 * @return array
+	 */
+	public static function getAllColorCodes(): array
+	{
+		$colors = self::getColorCodes();
+		$allColors = [];
+		foreach ($colors as $colorItem)
+		{
+			if (isset($colorItem['color']))
+			{
+				$allColors[] = $colorItem['color'];
+			}
+		}
+		return $allColors;
+	}
+
+	/**
+	 * Get hex for start colors.
+	 * @return array
+	 */
+	public static function getStartColorCodes(): array
+	{
+		$colors = self::getColorCodes();
+		$startColors = [];
+		foreach ($colors as $colorItem)
+		{
+			if (isset($colorItem['base']) && $colorItem['base'] === true)
+			{
+				$startColors[] = $colorItem['color'];
+			}
+		}
+		return $startColors;
+	}
+
+	/**
 	 * Find theme name (old format) by hex color
 	 * @param string $hexColor (with lead #)
 	 * @return string|null
 	 */
 	protected static function getThemeCodeByColor(string $hexColor): ?string
 	{
-		foreach(self::getColorCodes() as $code => $color)
+		$colors = self::getColorCodes();
+		foreach($colors as $code => $color)
 		{
 			if($color['color'] === $hexColor)
 			{
@@ -357,27 +387,12 @@ class Theme extends Page
 			$colorHex = HtmlFilter::encode(trim($this->fields['COLOR']->getValue()));
 			if (!$colorHex)
 			{
-				$themeCode = HtmlFilter::encode(trim($this->fields['CODE']));
+				$themeCode = HtmlFilter::encode(trim($this->fields['CODE']->getValue()));
 				$colorHex = $themeCode ? $defaultColors[$themeCode]['color'] : self::DEFAULT_COLOR;
 			}
 		}
 
-		if ($colorHex[0] !== '#')
-		{
-			$colorHex = '#'.$colorHex;
-		}
-		if (strlen($colorHex) !== 7)
-		{
-			$colorHex = self::DEFAULT_COLOR;
-		}
-		else
-		{
-			$pattern = '/#[0-9a-f]{6}/i';
-			if (preg_match($pattern, $colorHex) !== 1)
-			{
-				$colorHex = self::DEFAULT_COLOR;
-			}
-		}
+		$colorHex = self::prepareColor($colorHex);
 
 		$restrictionCode = Restriction\Hook::getRestrictionCodeByHookCode('THEME');
 		if (
@@ -393,8 +408,10 @@ class Theme extends Page
 		$rgbTemplate = $rgbColor[0] . ', ' . $rgbColor[1] . ', ' . $rgbColor[2];
 		$hslColor = self::convertRgbToHsl($rgbColor[0], $rgbColor[1], $rgbColor[2]);
 
-		$themeCode = $themeCode ?? self::getThemeCodeByColor($colorHex);
-		if ($themeCode)
+		if (
+			isset($themeCode)
+			|| ($themeCode = self::getThemeCodeByColor($colorHex))
+		)
 		{
 			$colorMain = $defaultColors[$themeCode]['main'];
 			if ($defaultColors[$themeCode]['secondary'])
@@ -409,6 +426,15 @@ class Theme extends Page
 		$colorMain = $colorMain ?? 'hsl('.$hslColor[0].', 20%, 20%)';
 		$colorSecondary = $colorSecondary ?? 'hsl('.$hslColor[0].', 20%, 80%)';
 		$colorTitle = $colorTitle ?? $colorMain;
+
+		if ($hslColor[2] > 60)
+		{
+			$colorStrictInverseFromPrimary = '#000000';
+		}
+		else
+		{
+			$colorStrictInverseFromPrimary = '#ffffff';
+		}
 
 		Asset::getInstance()->addString(
 			'<style type="text/css">
@@ -428,10 +454,36 @@ class Theme extends Page
 					--theme-color-main: ' . $colorMain . ';
 					--theme-color-secondary: ' . $colorSecondary . ';
 					--theme-color-title: ' . $colorTitle . ';
+					--theme-color-strict-inverse: ' . $colorStrictInverseFromPrimary . ';
 				}
 			</style>',
 			false,
 			AssetLocation::BEFORE_CSS
 		);
+	}
+
+	public static function prepareColor(string $color): string
+	{
+		$color = HtmlFilter::encode(trim($color));
+
+		if($color[0] !== '#')
+		{
+			$color = '#' . $color;
+		}
+		if(!self::isHex($color))
+		{
+			return self::DEFAULT_COLOR;
+		}
+		if(mb_strlen($color) === 4)
+		{
+			$color = $color[0] . $color[1] . $color[1] . $color[2] . $color[2] . $color[3] . $color[3];
+		}
+
+		return $color;
+	}
+
+	public static function isHex(string $color): bool
+	{
+		return (bool)preg_match('/^#([\da-f]{3}){1,2}$/i', $color);
 	}
 }

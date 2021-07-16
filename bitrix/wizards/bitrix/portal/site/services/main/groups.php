@@ -123,10 +123,10 @@ if(WIZARD_FIRST_INSTAL !== "Y")
 	$SiteGroup = array();
 	$SiteGroups = array();
 
-	$dbResult = CGroup::GetList($by, $order, Array("STRING_ID" => "RATING_VOTE", "STRING_ID_EXACT_MATCH" => "Y"));
+	$dbResult = CGroup::GetList('', '', Array("STRING_ID" => "RATING_VOTE", "STRING_ID_EXACT_MATCH" => "Y"));
 	if ($arExistsGroup = $dbResult->Fetch())
 		$SiteGroups["RATING_VOTE"] = $arExistsGroup["ID"];
-	$dbResult = CGroup::GetList($by, $order, Array("STRING_ID" => "RATING_VOTE_AUTHORITY", "STRING_ID_EXACT_MATCH" => "Y"));
+	$dbResult = CGroup::GetList('', '', Array("STRING_ID" => "RATING_VOTE_AUTHORITY", "STRING_ID_EXACT_MATCH" => "Y"));
 	if ($arExistsGroup = $dbResult->Fetch())
 		$SiteGroups["RATING_VOTE_AUTHORITY"] = $arExistsGroup["ID"];
 
@@ -135,7 +135,7 @@ if(WIZARD_FIRST_INSTAL !== "Y")
 	{
 
 		//Add Group
-		$dbResult = CGroup::GetList($by, $order, Array("STRING_ID" => $arGroup["STRING_ID"], "STRING_ID_EXACT_MATCH" => "Y"));
+		$dbResult = CGroup::GetList('', '', Array("STRING_ID" => $arGroup["STRING_ID"], "STRING_ID_EXACT_MATCH" => "Y"));
 		if ($arExistsGroup = $dbResult->Fetch())
 			$groupID = $arExistsGroup["ID"];
 		else
@@ -246,7 +246,7 @@ if(WIZARD_FIRST_INSTAL !== "Y")
 	}
 	if (!WIZARD_IS_RERUN === false)
 	{
-		$dbResult = CGroup::GetList($by, $order, Array("STRING_ID" => "EMPLOYEES_".WIZARD_SITE_ID, "STRING_ID_EXACT_MATCH" => "Y"));
+		$dbResult = CGroup::GetList('', '', Array("STRING_ID" => "EMPLOYEES_".WIZARD_SITE_ID, "STRING_ID_EXACT_MATCH" => "Y"));
 		if ($arExistsGroup = $dbResult->Fetch())
 			$groupID = $arExistsGroup["ID"];
 
@@ -278,14 +278,14 @@ if(WIZARD_FIRST_INSTAL !== "Y")
 
 				}
 
-				$rsUsers = CUser::GetList(($by="id"), ($order="asc"), array("UF_DEPARTMENT" => $arSectionUsers));
+				$rsUsers = CUser::GetList("id", "asc", array("UF_DEPARTMENT" => $arSectionUsers));
 				while($arUsers = $rsUsers->Fetch())
 				{
 					CUser::AppendUserGroup($arUsers["ID"], $groupID);
 				}
 			}
 
-			$dbResult = CGroup::GetList($by, $order, Array("STRING_ID" => "PERSONNEL_DEPARTMENT", "STRING_ID_EXACT_MATCH" => "Y"));
+			$dbResult = CGroup::GetList('', '', Array("STRING_ID" => "PERSONNEL_DEPARTMENT", "STRING_ID_EXACT_MATCH" => "Y"));
 			if ($arExistsGroup = $dbResult->Fetch()){
 				$groupID = $arExistsGroup["ID"];
 				$arSubordinateGroups = CGroup::GetSubordinateGroups($groupID);

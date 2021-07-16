@@ -38,7 +38,6 @@ $MESS["MAIN_MAIL_CONFIRM_POST_DELETE_NOT_FULL_LIST_WARN_TITTLE"] = "Warnung";
 $MESS["MAIN_MAIL_CONFIRM_POST_DELETE_SUCCESS"] = "Absender wurden gelöscht";
 $MESS["MAIN_MAIL_CONFIRM_POST_DELETE_SUCCESS_TITLE"] = "Gelöscht";
 $MESS["MAIN_MAIL_CONFIRM_PUBLIC"] = "Verfügbar für alle";
-$MESS["MAIN_MAIL_CONFIRM_PUBLIC_HINT"] = "Diese Adresse wird für alle Mitarbeiter verfügbar sein, die CRM nutzen";
 $MESS["MAIN_MAIL_CONFIRM_PUBLIC_HINT1"] = "Die von Ihnen zugefügte Adresse kann von jedem Mitarbeiter ausgewählt werden";
 $MESS["MAIN_MAIL_CONFIRM_SAVE"] = "Speichern";
 $MESS["MAIN_MAIL_CONFIRM_SMTP_LOGIN"] = "Login";

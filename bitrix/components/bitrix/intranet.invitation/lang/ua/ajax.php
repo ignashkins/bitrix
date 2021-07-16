@@ -1,6 +1,5 @@
 <?php
 $MESS["BX24_INVITE_DIALOG_ADDED"] = "<b>Вітаємо!</b><br><br>Користувачеві із зазначеними даними було надіслано повідомлення про додавання в Бітрікс24.<br><br>Список запрошених користувачів можна побачити у<a style=\"white-space:nowrap;\" href=\"#SITE_DIR#company/?show_user=inactive\">списку співробітників</a>.";
-$MESS["BX24_INVITE_DIALOG_EMAIL_ERROR"] = "Невірний формат email";
 $MESS["BX24_INVITE_DIALOG_ERROR_EMAIL"] = "Неправильний формат email";
 $MESS["BX24_INVITE_DIALOG_ERROR_EMAIL_OR_PHONE"] = "Неправильний формат email або телефону";
 $MESS["BX24_INVITE_DIALOG_ERROR_EXTRANET_NO_SONET_GROUP_ADD"] = "Для додавання зовнішніх користувачів необхідно вказати групу";

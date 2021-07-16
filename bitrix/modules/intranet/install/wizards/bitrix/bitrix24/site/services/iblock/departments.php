@@ -31,7 +31,6 @@ if($iblockID == false)
 			"1" => "X",
 			"2" => "R",
 			WIZARD_PORTAL_ADMINISTRATION_GROUP => "X",
-			WIZARD_PERSONNEL_DEPARTMENT_GROUP => "W",
 		)
 	);
 
@@ -130,7 +129,7 @@ if($iblockID == false)
 			"SETTINGS" => $prop["SETTINGS"],
 		);
 
-		$dbLangs = CLanguage::GetList(($b = ""), ($o = ""), array("ACTIVE" => "Y"));
+		$dbLangs = CLanguage::GetList("", "", array("ACTIVE" => "Y"));
 		while ($arLang = $dbLangs->Fetch())
 		{
 			$messages = IncludeModuleLangFile($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/socialnetwork/install/index.php", $arLang["LID"], true);

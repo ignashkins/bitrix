@@ -15,7 +15,7 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $_POST["action"] <> '' && check_bitrix
 	}
 	else
 	{
-		$dbSite = CSite::GetList($by="sort", $order="desc", array("DEFAULT"=>"Y"));
+		$dbSite = CSite::GetList("sort", "desc", array("DEFAULT"=>"Y"));
 		if ($arSite = $dbSite->Fetch())
 		{
 			$siteID = $arSite["LID"];
@@ -115,7 +115,7 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $_POST["action"] <> '' && check_bitrix
 			{
 				$adminOption = COption::GetOptionString("bitrix24", "admin_menu_items");
 				if ($adminOption)
-					$adminOption = unserialize($adminOption);
+					$adminOption = unserialize($adminOption, ["allowed_classes" => false]);
 				else
 					$adminOption = array();
 				if (is_array($adminOption) && !in_array($menuItemID, $adminOption))
@@ -138,7 +138,7 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $_POST["action"] <> '' && check_bitrix
 			{
 				$adminOption = COption::GetOptionString("bitrix24", "admin_menu_items");
 				if ($adminOption)
-					$adminOption = unserialize($adminOption);
+					$adminOption = unserialize($adminOption, ["allowed_classes" => false]);
 				else
 					$adminOption = array();
 				if (is_array($adminOption) && in_array($menuItemID, $adminOption))

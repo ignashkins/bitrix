@@ -9224,9 +9224,7 @@
 	 * @memberOf BX
 	 */
 
-	var Type =
-	/*#__PURE__*/
-	function () {
+	var Type = /*#__PURE__*/function () {
 	  function Type() {
 	    babelHelpers.classCallCheck(this, Type);
 	  }
@@ -9571,7 +9569,7 @@
 	  }, {
 	    key: "isFile",
 	    value: function isFile(value) {
-	      return Type.isBlob(value) && Type.isObjectLike(value.lastModifiedDate) && Type.isNumber(value.lastModified) && Type.isString(value.name);
+	      return Type.isBlob(value) && Type.isNumber(value.lastModified) && Type.isString(value.name);
 	    }
 	    /**
 	     * Checks that value is FormData
@@ -9592,9 +9590,7 @@
 	 * @memberOf BX
 	 */
 
-	var Reflection =
-	/*#__PURE__*/
-	function () {
+	var Reflection = /*#__PURE__*/function () {
 	  function Reflection() {
 	    babelHelpers.classCallCheck(this, Reflection);
 	  }
@@ -9688,9 +9684,7 @@
 	 * @memberOf BX
 	 */
 
-	var Text =
-	/*#__PURE__*/
-	function () {
+	var Text = /*#__PURE__*/function () {
 	  function Text() {
 	    babelHelpers.classCallCheck(this, Text);
 	  }
@@ -9828,9 +9822,7 @@
 	  fullscreenerror: ['fullscreenerror', 'webkitfullscreenerror', 'mozfullscreenerror', 'MSFullscreenError']
 	};
 
-	var Registry =
-	/*#__PURE__*/
-	function () {
+	var Registry = /*#__PURE__*/function () {
 	  function Registry() {
 	    babelHelpers.classCallCheck(this, Registry);
 	    babelHelpers.defineProperty(this, "registry", new WeakMap());
@@ -10037,9 +10029,7 @@
 	  return [];
 	}
 
-	var Extension =
-	/*#__PURE__*/
-	function () {
+	var Extension = /*#__PURE__*/function () {
 	  function Extension(options) {
 	    babelHelpers.classCallCheck(this, Extension);
 	    this.config = options.config || {};
@@ -10185,9 +10175,9 @@
 	 */
 	function loadExtension(extension) {
 	  var extensions = makeIterable(extension);
-	  var isAllInitialized$1 = isAllInitialized(extensions);
+	  var isAllInitialized$$1 = isAllInitialized(extensions);
 
-	  if (isAllInitialized$1) {
+	  if (isAllInitialized$$1) {
 	    var initializedExtensions = extensions.map(getInitialized);
 	    return loadExtensions(initializedExtensions).then(mergeExports);
 	  }
@@ -10332,9 +10322,7 @@
 	 * @memberOf BX
 	 */
 
-	var Runtime =
-	/*#__PURE__*/
-	function () {
+	var Runtime = /*#__PURE__*/function () {
 	  function Runtime() {
 	    babelHelpers.classCallCheck(this, Runtime);
 	  }
@@ -10407,13 +10395,21 @@
 
 	      if (Type.isDomNode(node)) {
 	        if (params.htmlFirst || !externalJs.length && !externalCss.length) {
-	          node.innerHTML = parsedHtml.HTML;
+	          if (params.useAdjacentHTML) {
+	            node.insertAdjacentHTML('beforeend', parsedHtml.HTML);
+	          } else {
+	            node.innerHTML = parsedHtml.HTML;
+	          }
 	        }
 	      }
 
 	      return Promise.all([loadAll(externalJs), loadAll(externalCss)]).then(function () {
 	        if (Type.isDomNode(node) && (externalJs.length > 0 || externalCss.length > 0)) {
-	          node.innerHTML = parsedHtml.HTML;
+	          if (params.useAdjacentHTML) {
+	            node.insertAdjacentHTML('beforeend', parsedHtml.HTML);
+	          } else {
+	            node.innerHTML = parsedHtml.HTML;
+	          }
 	        } // eslint-disable-next-line
 
 
@@ -10434,7 +10430,7 @@
 
 	  }, {
 	    key: "merge",
-	    value: function merge$1() {
+	    value: function merge$$1() {
 	      for (var _len3 = arguments.length, targets = new Array(_len3), _key3 = 0; _key3 < _len3; _key3++) {
 	        targets[_key3] = arguments[_key3];
 	      }
@@ -10507,9 +10503,7 @@
 	 */
 
 
-	var BaseError =
-	/*#__PURE__*/
-	function () {
+	var BaseError = /*#__PURE__*/function () {
 	  function BaseError(message, code, customData) {
 	    babelHelpers.classCallCheck(this, BaseError);
 	    this[_isError] = true;
@@ -10630,9 +10624,7 @@
 	 * Implements base event object interface
 	 */
 
-	var BaseEvent =
-	/*#__PURE__*/
-	function () {
+	var BaseEvent = /*#__PURE__*/function () {
 	  function BaseEvent() {
 	    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {
 	      data: {}
@@ -10810,9 +10802,7 @@
 	  return BaseEvent;
 	}();
 
-	var EventStore =
-	/*#__PURE__*/
-	function () {
+	var EventStore = /*#__PURE__*/function () {
 	  function EventStore() {
 	    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 	    babelHelpers.classCallCheck(this, EventStore);
@@ -10868,9 +10858,7 @@
 	  return EventStore;
 	}();
 
-	var WarningStore =
-	/*#__PURE__*/
-	function () {
+	var WarningStore = /*#__PURE__*/function () {
 	  function WarningStore() {
 	    babelHelpers.classCallCheck(this, WarningStore);
 	    this.warnings = new Map();
@@ -10902,37 +10890,13 @@
 	  }, {
 	    key: "print",
 	    value: function print() {
-	      var _iteratorNormalCompletion = true;
-	      var _didIteratorError = false;
-	      var _iteratorError = undefined;
-
-	      try {
-	        for (var _iterator = this.warnings[Symbol.iterator](), _step; !(_iteratorNormalCompletion = (_step = _iterator.next()).done); _iteratorNormalCompletion = true) {
-	          var _step$value = babelHelpers.slicedToArray(_step.value, 2),
-	              target = _step$value[0],
-	              warnings = _step$value[1];
-
-	          for (var eventName in warnings) {
-	            console.groupCollapsed('Possible BX.Event.EventEmitter memory leak detected. ' + warnings[eventName].size + ' "' + eventName + '" listeners added. ' + 'Use emitter.setMaxListeners() to increase limit.');
-	            console.dir(warnings[eventName].errors);
-	            console.groupEnd();
-	          }
+	      this.warnings.forEach(function (warnings) {
+	        for (var eventName in warnings) {
+	          console.groupCollapsed('Possible BX.Event.EventEmitter memory leak detected. ' + warnings[eventName].size + ' "' + eventName + '" listeners added. ' + 'Use emitter.setMaxListeners() to increase limit.');
+	          console.dir(warnings[eventName].errors);
+	          console.groupEnd();
 	        }
-	      } catch (err) {
-	        _didIteratorError = true;
-	        _iteratorError = err;
-	      } finally {
-	        try {
-	          if (!_iteratorNormalCompletion && _iterator.return != null) {
-	            _iterator.return();
-	          }
-	        } finally {
-	          if (_didIteratorError) {
-	            throw _iteratorError;
-	          }
-	        }
-	      }
-
+	      });
 	      this.clear();
 	    }
 	  }, {
@@ -10963,13 +10927,9 @@
 	var namespaceProperty = Symbol('namespaceProperty');
 	var targetProperty = Symbol('targetProperty');
 
-	var EventEmitter =
-	/*#__PURE__*/
-	function () {
+	var EventEmitter = /*#__PURE__*/function () {
 	  /** @private */
 	  function EventEmitter() {
-	    var _this = this;
-
 	    babelHelpers.classCallCheck(this, EventEmitter);
 	    this[targetProperty] = null;
 	    this[namespaceProperty] = null;
@@ -10987,11 +10947,6 @@
 	      }
 
 	    this[targetProperty] = target;
-	    setTimeout(function () {
-	      if (_this.getEventNamespace() === null) {
-	        console.warn('The instance of BX.Event.EventEmitter is supposed to have an event namespace. ' + 'Use emitter.setEventNamespace() to make events more unique.');
-	      }
-	    }, 500);
 	  }
 	  /**
 	   * Makes a target observable
@@ -11043,7 +10998,7 @@
 	  }, {
 	    key: "subscribeFromOptions",
 	    value: function subscribeFromOptions(options, aliases, compatMode) {
-	      var _this2 = this;
+	      var _this = this;
 
 	      if (!Type.isPlainObject(options)) {
 	        return;
@@ -11061,11 +11016,11 @@
 
 	        if (aliases[eventName]) {
 	          var actualName = aliases[eventName].eventName;
-	          EventEmitter.subscribe(_this2, actualName, listener, {
+	          EventEmitter.subscribe(_this, actualName, listener, {
 	            compatMode: compatMode !== false
 	          });
 	        } else {
-	          EventEmitter.subscribe(_this2, eventName, listener, {
+	          EventEmitter.subscribe(_this, eventName, listener, {
 	            compatMode: compatMode === true
 	          });
 	        }
@@ -11149,6 +11104,10 @@
 	     * @return {this}
 	     */
 	    value: function emit(eventName, event) {
+	      if (this.getEventNamespace() === null) {
+	        console.warn('The instance of BX.Event.EventEmitter is supposed to have an event namespace. ' + 'Use emitter.setEventNamespace() to make events more unique.');
+	      }
+
 	      EventEmitter.emit(this, eventName, event);
 	      return this;
 	    }
@@ -11176,6 +11135,10 @@
 	     * @return {Promise<Array>}
 	     */
 	    value: function emitAsync(eventName, event) {
+	      if (this.getEventNamespace() === null) {
+	        console.warn('The instance of BX.Event.EventEmitter is supposed to have an event namespace. ' + 'Use emitter.setEventNamespace() to make events more unique.');
+	      }
+
 	      return EventEmitter.emitAsync(this, eventName, event);
 	    }
 	    /**
@@ -11422,7 +11385,7 @@
 	  }, {
 	    key: "subscribeOnce",
 	    value: function subscribeOnce(target, eventName, listener) {
-	      var _this3 = this;
+	      var _this2 = this;
 
 	      if (Type.isString(target)) {
 	        listener = eventName;
@@ -11457,7 +11420,7 @@
 	        console.error("You cannot subscribe the same \"".concat(fullEventName, "\" event listener twice."));
 	      } else {
 	        var once = function once() {
-	          _this3.unsubscribe(target, eventName, once);
+	          _this2.unsubscribe(target, eventName, once);
 
 	          onceListeners.delete(listener);
 	          listener.apply(void 0, arguments);
@@ -11921,7 +11884,7 @@
 	  }, {
 	    key: "mergeEventAliases",
 	    value: function mergeEventAliases(aliases) {
-	      var _this4 = this;
+	      var _this3 = this;
 
 	      var globalEvents = eventStore.get(this.GLOBAL_TARGET);
 
@@ -11931,9 +11894,9 @@
 
 	      Object.keys(aliases).forEach(function (alias) {
 	        var options = aliases[alias];
-	        alias = _this4.normalizeEventName(alias);
+	        alias = _this3.normalizeEventName(alias);
 
-	        var fullEventName = _this4.makeFullEventName(options.namespace, options.eventName);
+	        var fullEventName = _this3.makeFullEventName(options.namespace, options.eventName);
 
 	        var aliasListeners = globalEvents.eventsMap.get(alias);
 
@@ -12063,6 +12026,9 @@
 
 	      exports.isReady = true;
 	      break;
+
+	    default:
+	      break;
 	  }
 	}
 	document.addEventListener('readystatechange', function () {
@@ -12139,9 +12105,7 @@
 	 * @memberOf BX
 	 */
 
-	var Dom =
-	/*#__PURE__*/
-	function () {
+	var Dom = /*#__PURE__*/function () {
 	  function Dom() {
 	    babelHelpers.classCallCheck(this, Dom);
 	  }
@@ -12720,9 +12684,7 @@
 	 * @memberOf BX
 	 */
 
-	var Browser =
-	/*#__PURE__*/
-	function () {
+	var Browser = /*#__PURE__*/function () {
 	  function Browser() {
 	    babelHelpers.classCallCheck(this, Browser);
 	  }
@@ -12835,6 +12797,16 @@
 	      return UA.includes('macintosh');
 	    }
 	  }, {
+	    key: "isWin",
+	    value: function isWin() {
+	      return UA.includes('windows');
+	    }
+	  }, {
+	    key: "isLinux",
+	    value: function isLinux() {
+	      return UA.includes('linux') && !Browser.isAndroid();
+	    }
+	  }, {
 	    key: "isAndroid",
 	    value: function isAndroid() {
 	      return UA.includes('android');
@@ -12842,7 +12814,7 @@
 	  }, {
 	    key: "isIPad",
 	    value: function isIPad() {
-	      return UA.includes('ipad;');
+	      return UA.includes('ipad;') || this.isMac() && this.isTouchDevice();
 	    }
 	  }, {
 	    key: "isIPhone",
@@ -12863,6 +12835,11 @@
 	    key: "isRetina",
 	    value: function isRetina() {
 	      return window.devicePixelRatio && window.devicePixelRatio >= 2;
+	    }
+	  }, {
+	    key: "isTouchDevice",
+	    value: function isTouchDevice() {
+	      return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
 	    }
 	  }, {
 	    key: "isDoctype",
@@ -13011,9 +12988,7 @@
 	  return Browser;
 	}();
 
-	var Cookie =
-	/*#__PURE__*/
-	function () {
+	var Cookie = /*#__PURE__*/function () {
 	  function Cookie() {
 	    babelHelpers.classCallCheck(this, Cookie);
 	  }
@@ -13172,9 +13147,7 @@
 	  return formData;
 	}
 
-	var Data =
-	/*#__PURE__*/
-	function () {
+	var Data = /*#__PURE__*/function () {
 	  function Data() {
 	    babelHelpers.classCallCheck(this, Data);
 	  }
@@ -13240,9 +13213,7 @@
 	 * @memberOf BX
 	 */
 
-	var Loc =
-	/*#__PURE__*/
-	function () {
+	var Loc = /*#__PURE__*/function () {
 	  function Loc() {
 	    babelHelpers.classCallCheck(this, Loc);
 	  }
@@ -13253,10 +13224,28 @@
 	    /**
 	     * Gets message by id
 	     * @param {string} messageId
+	     * @param {object} replacements
 	     * @return {?string}
 	     */
 	    value: function getMessage(messageId) {
-	      return message(messageId);
+	      var replacements = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+	      var mess = message(messageId);
+
+	      if (Type.isString(mess) && Type.isPlainObject(replacements)) {
+	        Object.keys(replacements).forEach(function (replacement) {
+	          var globalRegexp = new RegExp(replacement, 'gi');
+	          mess = mess.replace(globalRegexp, function () {
+	            return Type.isNil(replacements[replacement]) ? '' : String(replacements[replacement]);
+	          });
+	        });
+	      }
+
+	      return mess;
+	    }
+	  }, {
+	    key: "hasMessage",
+	    value: function hasMessage(messageId) {
+	      return Type.isString(messageId) && !Type.isNil(message[messageId]);
 	    }
 	    /**
 	     * Sets message or messages
@@ -13458,9 +13447,7 @@
 	 */
 
 
-	var Tag =
-	/*#__PURE__*/
-	function () {
+	var Tag = /*#__PURE__*/function () {
 	  function Tag() {
 	    babelHelpers.classCallCheck(this, Tag);
 	  }
@@ -13715,9 +13702,7 @@
 	 * @memberOf BX
 	 */
 
-	var Uri =
-	/*#__PURE__*/
-	function () {
+	var Uri = /*#__PURE__*/function () {
 	  babelHelpers.createClass(Uri, null, [{
 	    key: "addParam",
 	    value: function addParam(url) {
@@ -13727,10 +13712,10 @@
 	  }, {
 	    key: "removeParam",
 	    value: function removeParam(url, params) {
-	      var _ref;
+	      var _Uri;
 
 	      var removableParams = Type.isArray(params) ? params : [params];
-	      return (_ref = new Uri(url)).removeQueryParam.apply(_ref, babelHelpers.toConsumableArray(removableParams)).toString();
+	      return (_Uri = new Uri(url)).removeQueryParam.apply(_Uri, babelHelpers.toConsumableArray(removableParams)).toString();
 	    }
 	  }]);
 
@@ -13995,9 +13980,7 @@
 	/**
 	 * @memberOf BX
 	 */
-	var Validation =
-	/*#__PURE__*/
-	function () {
+	var Validation = /*#__PURE__*/function () {
 	  function Validation() {
 	    babelHelpers.classCallCheck(this, Validation);
 	  }
@@ -14018,9 +14001,7 @@
 	  return Validation;
 	}();
 
-	var BaseCache =
-	/*#__PURE__*/
-	function () {
+	var BaseCache = /*#__PURE__*/function () {
 	  function BaseCache() {
 	    babelHelpers.classCallCheck(this, BaseCache);
 	    babelHelpers.defineProperty(this, "storage", new Map());
@@ -14120,9 +14101,7 @@
 	  return BaseCache;
 	}();
 
-	var MemoryCache =
-	/*#__PURE__*/
-	function (_BaseCache) {
+	var MemoryCache = /*#__PURE__*/function (_BaseCache) {
 	  babelHelpers.inherits(MemoryCache, _BaseCache);
 
 	  function MemoryCache() {
@@ -14144,9 +14123,7 @@
 	  return MemoryCache;
 	}(BaseCache);
 
-	var LsStorage =
-	/*#__PURE__*/
-	function () {
+	var LsStorage = /*#__PURE__*/function () {
 	  function LsStorage() {
 	    babelHelpers.classCallCheck(this, LsStorage);
 	    babelHelpers.defineProperty(this, "stackKey", 'BX.Cache.Storage.LsStorage.stack');
@@ -14240,9 +14217,7 @@
 	  return LsStorage;
 	}();
 
-	var LocalStorageCache =
-	/*#__PURE__*/
-	function (_BaseCache) {
+	var LocalStorageCache = /*#__PURE__*/function (_BaseCache) {
 	  babelHelpers.inherits(LocalStorageCache, _BaseCache);
 
 	  function LocalStorageCache() {
@@ -14290,9 +14265,7 @@
 	  return [];
 	}
 
-	var SettingsCollection =
-	/*#__PURE__*/
-	function () {
+	var SettingsCollection = /*#__PURE__*/function () {
 	  function SettingsCollection() {
 	    var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 	    babelHelpers.classCallCheck(this, SettingsCollection);
@@ -14336,9 +14309,7 @@
 
 	var settingsStorage = new Map();
 
-	var Extension$1 =
-	/*#__PURE__*/
-	function () {
+	var Extension$1 = /*#__PURE__*/function () {
 	  function Extension() {
 	    babelHelpers.classCallCheck(this, Extension);
 	  }
@@ -14373,6 +14344,553 @@
 	  }]);
 	  return Extension;
 	}();
+
+	var _Symbol$iterator;
+
+	function _classPrivateMethodGet(receiver, privateSet, fn) { if (!privateSet.has(receiver)) { throw new TypeError("attempted to get private field on non-instance"); } return fn; }
+
+	var _searchIndexToInsert = new WeakSet();
+
+	_Symbol$iterator = Symbol.iterator;
+
+	var OrderedArray = /*#__PURE__*/function () {
+	  function OrderedArray() {
+	    var comparator = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+	    babelHelpers.classCallCheck(this, OrderedArray);
+
+	    _searchIndexToInsert.add(this);
+
+	    babelHelpers.defineProperty(this, "comparator", null);
+	    babelHelpers.defineProperty(this, "items", []);
+	    this.comparator = Type.isFunction(comparator) ? comparator : null;
+	  }
+
+	  babelHelpers.createClass(OrderedArray, [{
+	    key: "add",
+	    value: function add(item) {
+	      var index = -1;
+
+	      if (this.comparator) {
+	        index = _classPrivateMethodGet(this, _searchIndexToInsert, _searchIndexToInsert2).call(this, item);
+	        this.items.splice(index, 0, item);
+	      } else {
+	        this.items.push(item);
+	      }
+
+	      return index;
+	    }
+	  }, {
+	    key: "has",
+	    value: function has(item) {
+	      return this.items.includes(item);
+	    }
+	  }, {
+	    key: "getIndex",
+	    value: function getIndex(item) {
+	      return this.items.indexOf(item);
+	    }
+	  }, {
+	    key: "getByIndex",
+	    value: function getByIndex(index) {
+	      if (Type.isNumber(index) && index >= 0) {
+	        var item = this.items[index];
+	        return Type.isUndefined(item) ? null : item;
+	      }
+
+	      return null;
+	    }
+	  }, {
+	    key: "getFirst",
+	    value: function getFirst() {
+	      var first = this.items[0];
+	      return Type.isUndefined(first) ? null : first;
+	    }
+	  }, {
+	    key: "getLast",
+	    value: function getLast() {
+	      var last = this.items[this.count() - 1];
+	      return Type.isUndefined(last) ? null : last;
+	    }
+	  }, {
+	    key: "count",
+	    value: function count() {
+	      return this.items.length;
+	    }
+	  }, {
+	    key: "delete",
+	    value: function _delete(item) {
+	      var index = this.getIndex(item);
+
+	      if (index !== -1) {
+	        this.items.splice(index, 1);
+	        return true;
+	      }
+
+	      return false;
+	    }
+	  }, {
+	    key: "clear",
+	    value: function clear() {
+	      this.items = [];
+	    }
+	  }, {
+	    key: _Symbol$iterator,
+	    value: function value() {
+	      return this.items[Symbol.iterator]();
+	    }
+	  }, {
+	    key: "forEach",
+	    value: function forEach(callbackfn, thisArg) {
+	      return this.items.forEach(callbackfn, thisArg);
+	    }
+	  }, {
+	    key: "getAll",
+	    value: function getAll() {
+	      return this.items;
+	    }
+	  }, {
+	    key: "getComparator",
+	    value: function getComparator() {
+	      return this.comparator;
+	    }
+	  }, {
+	    key: "sort",
+	    value: function sort() {
+	      var _this = this;
+
+	      var comparator = this.getComparator();
+
+	      if (comparator === null) {
+	        return;
+	      }
+	      /*
+	      Simple implementation
+	      this.items.sort((item1, item2) => {
+	      	return comparator(item1, item2);
+	      });
+	      */
+	      // For stable sorting https://v8.dev/features/stable-sort
+
+
+	      var length = this.items.length;
+	      var indexes = new Array(length);
+
+	      for (var i = 0; i < length; i++) {
+	        indexes[i] = i;
+	      } // If the comparator returns zero, use the original indexes
+
+
+	      indexes.sort(function (index1, index2) {
+	        return comparator(_this.items[index1], _this.items[index2]) || index1 - index2;
+	      });
+
+	      for (var _i = 0; _i < length; _i++) {
+	        indexes[_i] = this.items[indexes[_i]];
+	      }
+
+	      for (var _i2 = 0; _i2 < length; _i2++) {
+	        this.items[_i2] = indexes[_i2];
+	      }
+	    }
+	  }]);
+	  return OrderedArray;
+	}();
+
+	var _searchIndexToInsert2 = function _searchIndexToInsert2(value) {
+	  var low = 0;
+	  var high = this.items.length;
+
+	  while (low < high) {
+	    var mid = Math.floor((low + high) / 2);
+
+	    if (this.comparator(this.items[mid], value) >= 0) {
+	      high = mid;
+	    } else {
+	      low = mid + 1;
+	    }
+	  }
+
+	  return low;
+	};
+
+	var ZIndexComponent = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(ZIndexComponent, _EventEmitter);
+
+	  function ZIndexComponent(element) {
+	    var _this;
+
+	    var componentOptions = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+	    babelHelpers.classCallCheck(this, ZIndexComponent);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(ZIndexComponent).call(this));
+	    babelHelpers.defineProperty(babelHelpers.assertThisInitialized(_this), "sort", 0);
+	    babelHelpers.defineProperty(babelHelpers.assertThisInitialized(_this), "alwaysOnTop", false);
+	    babelHelpers.defineProperty(babelHelpers.assertThisInitialized(_this), "zIndex", 0);
+	    babelHelpers.defineProperty(babelHelpers.assertThisInitialized(_this), "element", null);
+	    babelHelpers.defineProperty(babelHelpers.assertThisInitialized(_this), "overlay", null);
+	    babelHelpers.defineProperty(babelHelpers.assertThisInitialized(_this), "overlayGap", -5);
+	    babelHelpers.defineProperty(babelHelpers.assertThisInitialized(_this), "stack", null);
+
+	    _this.setEventNamespace('BX.Main.ZIndexManager.Component');
+
+	    if (!Type.isElementNode(element)) {
+	      throw new Error('ZIndexManager.Component: The argument \'element\' must be a DOM element.');
+	    }
+
+	    _this.element = element;
+	    var options = Type.isPlainObject(componentOptions) ? componentOptions : {};
+
+	    _this.setAlwaysOnTop(options.alwaysOnTop);
+
+	    _this.setOverlay(options.overlay);
+
+	    _this.setOverlayGap(options.overlayGap);
+
+	    _this.subscribeFromOptions(options.events);
+
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(ZIndexComponent, [{
+	    key: "getSort",
+	    value: function getSort() {
+	      return this.sort;
+	    }
+	    /**
+	     * @internal
+	     * @param sort
+	     */
+
+	  }, {
+	    key: "setSort",
+	    value: function setSort(sort) {
+	      if (Type.isNumber(sort)) {
+	        this.sort = sort;
+	      }
+	    }
+	    /**
+	     * @internal
+	     * @param stack
+	     */
+
+	  }, {
+	    key: "setStack",
+	    value: function setStack(stack) {
+	      this.stack = stack;
+	    }
+	  }, {
+	    key: "getStack",
+	    value: function getStack() {
+	      return this.stack;
+	    }
+	  }, {
+	    key: "getZIndex",
+	    value: function getZIndex() {
+	      return this.zIndex;
+	    }
+	    /**
+	     * @internal
+	     */
+
+	  }, {
+	    key: "setZIndex",
+	    value: function setZIndex(zIndex) {
+	      var changed = this.getZIndex() !== zIndex;
+	      this.getElement().style.setProperty('z-index', zIndex, 'important');
+	      this.zIndex = zIndex;
+
+	      if (this.getOverlay() !== null) {
+	        this.getOverlay().style.setProperty('z-index', zIndex + this.getOverlayGap(), 'important');
+	      }
+
+	      if (changed) {
+	        this.emit('onZIndexChange', {
+	          component: this
+	        });
+	      }
+	    }
+	  }, {
+	    key: "getAlwaysOnTop",
+	    value: function getAlwaysOnTop() {
+	      return this.alwaysOnTop;
+	    }
+	  }, {
+	    key: "setAlwaysOnTop",
+	    value: function setAlwaysOnTop(value) {
+	      if (Type.isNumber(value) || Type.isBoolean(value)) {
+	        this.alwaysOnTop = value;
+	      }
+	    }
+	  }, {
+	    key: "getElement",
+	    value: function getElement() {
+	      return this.element;
+	    }
+	  }, {
+	    key: "setOverlay",
+	    value: function setOverlay(overlay, gap) {
+	      if (Type.isElementNode(overlay) || overlay === null) {
+	        this.overlay = overlay;
+	        this.setOverlayGap(gap);
+
+	        if (this.getStack()) {
+	          this.getStack().sort();
+	        }
+	      }
+	    }
+	  }, {
+	    key: "getOverlay",
+	    value: function getOverlay() {
+	      return this.overlay;
+	    }
+	  }, {
+	    key: "setOverlayGap",
+	    value: function setOverlayGap(gap) {
+	      if (Type.isNumber(gap)) {
+	        this.overlayGap = gap;
+	      }
+	    }
+	  }, {
+	    key: "getOverlayGap",
+	    value: function getOverlayGap() {
+	      return this.overlayGap;
+	    }
+	  }]);
+	  return ZIndexComponent;
+	}(EventEmitter);
+
+	var ZIndexStack = /*#__PURE__*/function () {
+	  function ZIndexStack(container) {
+	    babelHelpers.classCallCheck(this, ZIndexStack);
+	    babelHelpers.defineProperty(this, "container", null);
+	    babelHelpers.defineProperty(this, "components", null);
+	    babelHelpers.defineProperty(this, "elements", new WeakMap());
+	    babelHelpers.defineProperty(this, "baseIndex", 1000);
+	    babelHelpers.defineProperty(this, "baseStep", 50);
+	    babelHelpers.defineProperty(this, "sortCount", 0);
+
+	    if (!Type.isDomNode(container)) {
+	      throw new Error('ZIndexManager.Stack: The \'container\' argument must be a DOM element.');
+	    }
+
+	    this.container = container;
+
+	    var comparator = function comparator(componentA, componentB) {
+	      var result = (componentA.getAlwaysOnTop() || 0) - (componentB.getAlwaysOnTop() || 0);
+
+	      if (!result) {
+	        result = componentA.getSort() - componentB.getSort();
+	      }
+
+	      return result;
+	    };
+
+	    this.components = new OrderedArray(comparator);
+	  }
+
+	  babelHelpers.createClass(ZIndexStack, [{
+	    key: "getBaseIndex",
+	    value: function getBaseIndex() {
+	      return this.baseIndex;
+	    }
+	  }, {
+	    key: "setBaseIndex",
+	    value: function setBaseIndex(index) {
+	      if (Type.isNumber(index) && index >= 0) {
+	        this.baseIndex = index;
+	        this.sort();
+	      }
+	    }
+	  }, {
+	    key: "setBaseStep",
+	    value: function setBaseStep(step) {
+	      if (Type.isNumber(step) && step > 0) {
+	        this.baseStep = step;
+	        this.sort();
+	      }
+	    }
+	  }, {
+	    key: "getBaseStep",
+	    value: function getBaseStep() {
+	      return this.baseStep;
+	    }
+	  }, {
+	    key: "register",
+	    value: function register(element) {
+	      var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+	      if (this.getComponent(element)) {
+	        console.warn('ZIndexManager: You cannot register the element twice.', element);
+	        return this.getComponent(element);
+	      }
+
+	      var component = new ZIndexComponent(element, options);
+	      component.setStack(this);
+	      component.setSort(++this.sortCount);
+	      this.elements.set(element, component);
+	      this.components.add(component);
+	      this.sort();
+	      return component;
+	    }
+	  }, {
+	    key: "unregister",
+	    value: function unregister(element) {
+	      var component = this.elements.get(element);
+	      this.components.delete(component);
+	      this.elements.delete(element);
+	      this.sort();
+	    }
+	  }, {
+	    key: "getComponent",
+	    value: function getComponent(element) {
+	      return this.elements.get(element) || null;
+	    }
+	  }, {
+	    key: "getComponents",
+	    value: function getComponents() {
+	      return this.components.getAll();
+	    }
+	  }, {
+	    key: "getMaxZIndex",
+	    value: function getMaxZIndex() {
+	      var last = this.components.getLast();
+	      return last ? last.getZIndex() : this.baseIndex;
+	    }
+	  }, {
+	    key: "sort",
+	    value: function sort() {
+	      var _this = this;
+
+	      this.components.sort();
+	      var zIndex = this.baseIndex;
+	      this.components.forEach(function (component) {
+	        component.setZIndex(zIndex);
+	        zIndex += _this.baseStep;
+	      });
+	    }
+	  }, {
+	    key: "bringToFront",
+	    value: function bringToFront(element) {
+	      var component = this.getComponent(element);
+
+	      if (!component) {
+	        console.error('ZIndexManager: element was not found in the stack.', element);
+	        return null;
+	      }
+
+	      component.setSort(++this.sortCount);
+	      this.sort();
+	      return component;
+	    }
+	  }]);
+	  return ZIndexStack;
+	}();
+
+	function _classStaticPrivateMethodGet(receiver, classConstructor, method) { if (receiver !== classConstructor) { throw new TypeError("Private static access of wrong provenance"); } return method; }
+
+	/**
+	 * @memberof BX
+	 */
+	var ZIndexManager = /*#__PURE__*/function () {
+	  function ZIndexManager() {
+	    babelHelpers.classCallCheck(this, ZIndexManager);
+	  }
+
+	  babelHelpers.createClass(ZIndexManager, null, [{
+	    key: "register",
+	    value: function register(element) {
+	      var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+	      var parentNode = _classStaticPrivateMethodGet(this, ZIndexManager, _getParentNode).call(this, element);
+
+	      if (!parentNode) {
+	        return null;
+	      }
+
+	      var stack = this.getOrAddStack(parentNode);
+	      return stack.register(element, options);
+	    }
+	  }, {
+	    key: "unregister",
+	    value: function unregister(element) {
+	      var parentNode = _classStaticPrivateMethodGet(this, ZIndexManager, _getParentNode).call(this, element);
+
+	      var stack = this.getStack(parentNode);
+
+	      if (stack) {
+	        stack.unregister(element);
+	      }
+	    }
+	  }, {
+	    key: "addStack",
+	    value: function addStack(container) {
+	      var stack = new ZIndexStack(container);
+	      this.stacks.set(container, stack);
+	      return stack;
+	    }
+	  }, {
+	    key: "getStack",
+	    value: function getStack(container) {
+	      return this.stacks.get(container) || null;
+	    }
+	  }, {
+	    key: "getOrAddStack",
+	    value: function getOrAddStack(container) {
+	      return this.getStack(container) || this.addStack(container);
+	    }
+	  }, {
+	    key: "getComponent",
+	    value: function getComponent(element) {
+	      var parentNode = _classStaticPrivateMethodGet(this, ZIndexManager, _getParentNode).call(this, element, true);
+
+	      if (!parentNode) {
+	        return null;
+	      }
+
+	      var stack = this.getStack(parentNode);
+	      return stack ? stack.getComponent(element) : null;
+	    }
+	  }, {
+	    key: "bringToFront",
+	    value: function bringToFront(element) {
+	      var parentNode = _classStaticPrivateMethodGet(this, ZIndexManager, _getParentNode).call(this, element);
+
+	      var stack = this.getStack(parentNode);
+
+	      if (stack) {
+	        return stack.bringToFront(element);
+	      }
+
+	      return null;
+	    }
+	  }]);
+	  return ZIndexManager;
+	}();
+
+	var _getParentNode = function _getParentNode(element) {
+	  var suppressWarnings = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+
+	  if (!Type.isElementNode(element)) {
+	    if (!suppressWarnings) {
+	      console.error('ZIndexManager: The argument \'element\' must be a DOM element.', element);
+	    }
+
+	    return null;
+	  } else if (!Type.isElementNode(element.parentNode)) {
+	    if (!suppressWarnings) {
+	      console.error('ZIndexManager: The \'element\' doesn\'t have a parent node.', element);
+	    }
+
+	    return null;
+	  }
+
+	  return element.parentNode;
+	};
+
+	babelHelpers.defineProperty(ZIndexManager, "stacks", new WeakMap());
+
+	var collections = {
+	  OrderedArray: OrderedArray
+	};
 
 	function getElement(element) {
 	  if (Type.isString(element)) {
@@ -14696,71 +15214,73 @@
 	  Object.assign(global.window.BX, exports);
 	}
 
-	exports.BaseError = BaseError;
-	exports.Browser = Browser;
-	exports.Cache = Cache;
-	exports.Dom = Dom;
-	exports.Event = Event;
-	exports.Extension = Extension$1;
-	exports.GetContext = GetContext;
-	exports.GetWindowInnerSize = GetWindowInnerSize;
-	exports.GetWindowScrollPos = GetWindowScrollPos;
-	exports.GetWindowScrollSize = GetWindowScrollSize;
-	exports.GetWindowSize = GetWindowSize;
-	exports.Http = Http;
-	exports.Loc = Loc;
-	exports.Reflection = Reflection;
-	exports.Runtime = Runtime;
-	exports.Tag = Tag;
-	exports.Text = Text;
 	exports.Type = Type;
+	exports.Reflection = Reflection;
+	exports.Text = Text;
+	exports.Dom = Dom;
+	exports.Browser = Browser;
+	exports.Event = Event;
+	exports.Http = Http;
+	exports.Runtime = Runtime;
+	exports.Loc = Loc;
+	exports.Tag = Tag;
 	exports.Uri = Uri;
 	exports.Validation = Validation;
-	exports.addClass = addClass;
-	exports.addCustomEvent = addCustomEvent;
-	exports.adjust = adjust;
-	exports.ajax = ajax;
-	exports.append = append;
-	exports.bind = bind$1;
-	exports.bindOnce = bindOnce$1;
-	exports.browser = browser;
-	exports.clean = clean;
-	exports.cleanNode = cleanNode;
-	exports.clone = clone$1;
-	exports.create = create;
-	exports.debounce = debounce;
-	exports.debug = debug$1;
-	exports.debugEnable = debugEnable;
-	exports.debugEnableFlag = debugEnableFlag;
-	exports.debugStatus = debugStatus;
+	exports.Cache = Cache;
+	exports.BaseError = BaseError;
+	exports.Extension = Extension$1;
+	exports.ZIndexManager = ZIndexManager;
+	exports.Collections = collections;
 	exports.getClass = getClass;
-	exports.getCookie = getCookie;
-	exports.hasClass = hasClass;
-	exports.html = html;
-	exports.insertAfter = insertAfter;
-	exports.insertBefore = insertBefore;
-	exports.isShown = isShown;
-	exports.loadExt = loadExt;
-	exports.message = message$1;
 	exports.namespace = namespace;
-	exports.onCustomEvent = onCustomEvent;
-	exports.pos = pos;
-	exports.prepend = prepend;
-	exports.ready = ready$1;
-	exports.remove = remove;
-	exports.removeAllCustomEvents = removeAllCustomEvents;
-	exports.removeClass = removeClass;
-	exports.removeCustomEvent = removeCustomEvent;
+	exports.message = message$1;
 	exports.replace = replace;
-	exports.setCookie = setCookie;
+	exports.remove = remove;
+	exports.clean = clean;
+	exports.insertBefore = insertBefore;
+	exports.insertAfter = insertAfter;
+	exports.append = append;
+	exports.prepend = prepend;
 	exports.style = style;
-	exports.throttle = throttle;
+	exports.adjust = adjust;
+	exports.create = create;
+	exports.isShown = isShown;
+	exports.addClass = addClass;
+	exports.removeClass = removeClass;
+	exports.hasClass = hasClass;
 	exports.toggleClass = toggleClass;
-	exports.type = type;
+	exports.cleanNode = cleanNode;
+	exports.getCookie = getCookie;
+	exports.setCookie = setCookie;
+	exports.bind = bind$1;
 	exports.unbind = unbind$1;
 	exports.unbindAll = unbindAll$1;
+	exports.bindOnce = bindOnce$1;
+	exports.ready = ready$1;
+	exports.debugEnableFlag = debugEnableFlag;
+	exports.debugStatus = debugStatus;
+	exports.debug = debug$1;
+	exports.debugEnable = debugEnable;
+	exports.clone = clone$1;
+	exports.loadExt = loadExt;
+	exports.debounce = debounce;
+	exports.throttle = throttle;
+	exports.html = html;
+	exports.type = type;
+	exports.browser = browser;
+	exports.ajax = ajax;
+	exports.GetWindowScrollSize = GetWindowScrollSize;
+	exports.GetWindowScrollPos = GetWindowScrollPos;
+	exports.GetWindowInnerSize = GetWindowInnerSize;
+	exports.GetWindowSize = GetWindowSize;
+	exports.GetContext = GetContext;
+	exports.pos = pos;
+	exports.addCustomEvent = addCustomEvent;
+	exports.onCustomEvent = onCustomEvent;
+	exports.removeCustomEvent = removeCustomEvent;
+	exports.removeAllCustomEvents = removeAllCustomEvents;
 
-}(this.BX = this.BX || {}));
+}((this.BX = this.BX || {})));
 
 
 
@@ -17034,11 +17554,13 @@
 				fontSize: '11px',
 				padding: '10px 30px 10px 37px',
 				position: 'absolute',
-				zIndex:'10000',
 				textAlign:'center'
 			},
 			text: msg
 		}));
+
+		BX.ZIndexManager.register(obMsg);
+		BX.ZIndexManager.bringToFront(obMsg);
 
 		setTimeout(BX.delegate(_adjustWait, node), 10);
 
@@ -17068,6 +17590,7 @@
 				}
 			}
 
+			BX.ZIndexManager.unregister(obMsg);
 			obMsg.parentNode.removeChild(obMsg);
 			if (node) node.bxmsg = null;
 			BX.cleanNode(obMsg, true);
@@ -18104,6 +18627,12 @@
 
 	BX.CHint = function(params)
 	{
+		if (BX.CHint.cssLoaded === false)
+		{
+			BX.load(['/bitrix/js/main/core/css/core_hint.css']);
+			BX.CHint.cssLoaded = true;
+		}
+
 		this.PARENT = BX(params.parent);
 
 		this.HINT = params.hint;
@@ -18137,6 +18666,8 @@
 			BX.bind(this.PARENT, 'mouseout', BX.proxy(this.Hide, this));
 		}
 	};
+
+	BX.CHint.cssLoaded = false;
 
 	BX.CHint.openHints = new Set();
 
@@ -18237,6 +18768,8 @@
 		if (this.prepareAdjustPos())
 		{
 			this.DIV.style.display = 'block';
+			BX.ZIndexManager.bringToFront(this.DIV);
+
 			this.adjustPos();
 
 			BX.CHint.openHints.add(this);
@@ -18295,12 +18828,12 @@
 	{
 		this.DIV = document.body.appendChild(BX.create('DIV', {
 			props: {className: 'bx-panel-tooltip'},
-			style: {display: 'none'},
+			style: {
+				display: 'none',
+				position: 'absolute',
+				visibility: 'hidden'
+			},
 			children: [
-				BX.create('DIV', {
-					props: {className: 'bx-panel-tooltip-top-border'},
-					html: '<div class="bx-panel-tooltip-corner bx-panel-tooltip-left-corner"></div><div class="bx-panel-tooltip-border"></div><div class="bx-panel-tooltip-corner bx-panel-tooltip-right-corner"></div>'
-				}),
 				(this.CONTENT = BX.create('DIV', {
 					props: {className: 'bx-panel-tooltip-content'},
 					children: [
@@ -18311,14 +18844,11 @@
 							]
 						})
 					]
-				})),
-
-				BX.create('DIV', {
-					props: {className: 'bx-panel-tooltip-bottom-border'},
-					html: '<div class="bx-panel-tooltip-corner bx-panel-tooltip-left-corner"></div><div class="bx-panel-tooltip-border"></div><div class="bx-panel-tooltip-corner bx-panel-tooltip-right-corner"></div>'
-				})
+				}))
 			]
 		}));
+
+		BX.ZIndexManager.register(this.DIV);
 
 		if (this.ID)
 		{
@@ -18326,7 +18856,7 @@
 				attrs: {href: 'javascript:void(0)'},
 				props: {className: 'bx-panel-tooltip-close'},
 				events: {click: BX.delegate(this.Close, this)}
-			}), this.CONTENT.firstChild)
+			}), this.CONTENT.firstChild);
 		}
 
 		if (this.HINT_TITLE)
@@ -18336,7 +18866,7 @@
 					props: {className: 'bx-panel-tooltip-title'},
 					text: this.HINT_TITLE
 				})
-			)
+			);
 		}
 
 		if (this.HINT)
@@ -18480,6 +19010,8 @@
 		{
 			BX.unbind(this.DIV, 'mouseover', BX.proxy(this.Show, this));
 			BX.unbind(this.DIV, 'mouseout', BX.proxy(this.Hide, this));
+
+			BX.ZIndexManager.unregister(this.DIV);
 
 			BX.cleanNode(this.DIV, true);
 		}
@@ -19192,6 +19724,16 @@ BX.ajax = function(config)
 			BX.localStorage.set('ajax-' + config.lsId, 'BXAJAXWAIT', config.lsTimeout);
 		}
 
+		if (BX.Type.isFunction(config.onprogress))
+		{
+			BX.bind(config.xhr, 'progress', config.onprogress);
+		}
+
+		if (BX.Type.isFunction(config.onprogressupload) && config.xhr.upload)
+		{
+			BX.bind(config.xhr.upload, 'progress', config.onprogressupload);
+		}
+
 		config.xhr.open(config.method, config.url, config.async);
 
 		if (!config.skipBxHeader && !BX.ajax.isCrossDomain(config.url))
@@ -19209,11 +19751,6 @@ BX.ajax = function(config)
 				config.xhr.setRequestHeader(config.headers[i].name, config.headers[i].value);
 		}
 
-		if(!!config.onprogress)
-		{
-			BX.bind(config.xhr, 'progress', config.onprogress);
-		}
-
 		var bRequestCompleted = false;
 		var onreadystatechange = config.xhr.onreadystatechange = function(additional)
 		{
@@ -19224,7 +19761,7 @@ BX.ajax = function(config)
 			{
 				if (config.onfailure)
 				{
-					config.onfailure("timeout");
+					config.onfailure('timeout', '', config);
 				}
 
 				BX.onCustomEvent(config.xhr, 'onAjaxFailure', ['timeout', '', config]);
@@ -19255,7 +19792,7 @@ BX.ajax = function(config)
 						{
 							if (config.onfailure)
 							{
-								config.onfailure("auth", config.xhr.status);
+								config.onfailure('auth', config.xhr.status, config);
 							}
 
 							BX.onCustomEvent(config.xhr, 'onAjaxFailure', ['auth', config.xhr.status, config]);
@@ -19276,7 +19813,7 @@ BX.ajax = function(config)
 					{
 						if (config.onfailure)
 						{
-							config.onfailure("status", config.xhr.status);
+							config.onfailure('status', config.xhr.status, config);
 						}
 
 						BX.onCustomEvent(config.xhr, 'onAjaxFailure', ['status', config.xhr.status, config]);
@@ -19727,16 +20264,6 @@ BX.ajax.promise = function(config)
 			data: data
 		});
 	};
-	config.onprogress = function(data)
-	{
-		if (data.position == 0 && data.totalSize == 0)
-		{
-			result.reject({
-				reason: 'progress',
-				data: data
-			});
-		}
-	};
 
 	var xhr = BX.ajax(config);
 	if (xhr)
@@ -19891,6 +20418,13 @@ var prepareAjaxConfig = function(config)
 {
 	config = BX.type.isPlainObject(config) ? config : {};
 
+	config.headers = config.headers || [];
+	config.headers.push({name: 'X-Bitrix-Csrf-Token', value: BX.bitrix_sessid()});
+	if (BX.message.SITE_ID)
+	{
+		config.headers.push({name: 'X-Bitrix-Site-Id', value: BX.message.SITE_ID});
+	}
+
 	if (typeof config.json !== 'undefined')
 	{
 		if (!BX.type.isPlainObject(config.json))
@@ -19898,39 +20432,21 @@ var prepareAjaxConfig = function(config)
 			throw new Error('Wrong `config.json`, plain object expected.')
 		}
 
-		config.headers = config.headers || [];
 		config.headers.push({name: 'Content-Type', value: 'application/json'});
-		config.headers.push({name: 'X-Bitrix-Csrf-Token', value: BX.bitrix_sessid()});
-		if (BX.message.SITE_ID)
-		{
-			config.headers.push({name: 'X-Bitrix-Site-Id', value: BX.message.SITE_ID});
-		}
-
 		config.data = config.json;
 		config.preparePost = false;
 	}
 	else if (config.data instanceof FormData)
 	{
 		config.preparePost = false;
-
-		config.data.append('sessid', BX.bitrix_sessid());
-		if (BX.message.SITE_ID)
-		{
-			config.data.append('SITE_ID', BX.message.SITE_ID);
-		}
 		if (typeof config.signedParameters !== 'undefined')
 		{
 			config.data.append('signedParameters', config.signedParameters);
 		}
 	}
-	else
+	else if (BX.type.isPlainObject(config.data) || BX.Type.isNil(config.data))
 	{
 		config.data = BX.type.isPlainObject(config.data) ? config.data : {};
-		if (BX.message.SITE_ID)
-		{
-			config.data.SITE_ID = BX.message.SITE_ID;
-		}
-		config.data.sessid = BX.bitrix_sessid();
 		if (typeof config.signedParameters !== 'undefined')
 		{
 			config.data.signedParameters = config.signedParameters;
@@ -19978,7 +20494,12 @@ var buildAjaxPromiseToRestoreCsrf = function(config, withoutRestoringCsrf)
 				if (error.code === 'invalid_csrf' && error.customData.csrf)
 				{
 					BX.message({'bitrix_sessid': error.customData.csrf});
-					originalConfig.data.sessid = BX.bitrix_sessid();
+
+					originalConfig.headers = originalConfig.headers || [];
+					originalConfig.headers = originalConfig.headers.filter(function(header) {
+						return header && header.name !== 'X-Bitrix-Csrf-Token';
+					});
+					originalConfig.headers.push({name: 'X-Bitrix-Csrf-Token', value: BX.bitrix_sessid()});
 
 					csrfProblem = true;
 				}
@@ -20055,7 +20576,7 @@ var buildAjaxPromiseToRestoreCsrf = function(config, withoutRestoringCsrf)
 		promise.then(function(){
 			var strings = BX.prop.getArray(assets, "string", []);
 			var stringAsset = strings.join('\n');
-			BX.html(null, stringAsset).then(function(){
+			BX.html(document.head, stringAsset, { useAdjacentHTML: true }).then(function(){
 				assetsLoaded.fulfill(response);
 			});
 		});
@@ -20092,7 +20613,9 @@ BX.ajax.runAction = function(action, config)
 		timeout: config.timeout,
 		preparePost: config.preparePost,
 		headers: config.headers,
-		onrequeststart: config.onrequeststart
+		onrequeststart: config.onrequeststart,
+		onprogress: config.onprogress,
+		onprogressupload: config.onprogressupload
 	});
 };
 
@@ -20130,7 +20653,9 @@ BX.ajax.runComponentAction = function (component, action, config)
 		timeout: config.timeout,
 		preparePost: config.preparePost,
 		headers: config.headers,
-		onrequeststart: (config.onrequeststart ? config.onrequeststart : null)
+		onrequeststart: (config.onrequeststart ? config.onrequeststart : null),
+		onprogress: config.onprogress,
+		onprogressupload: config.onprogressupload
 	});
 };
 
@@ -20550,7 +21075,7 @@ BX.ajax.UpdatePageTitle = function(title)
 	var obTitle = BX('pagetitle');
 	if (obTitle)
 	{
-		obTitle.removeChild(obTitle.firstChild);
+		BX.remove(obTitle.firstChild);
 		if (!obTitle.firstChild)
 			obTitle.appendChild(document.createTextNode(title));
 		else
@@ -21221,9 +21746,7 @@ BX.addCustomEvent('onAjaxFailure', BX.debug);
 (function (exports) {
 	'use strict';
 
-	var ParamBag =
-	/*#__PURE__*/
-	function () {
+	var ParamBag = /*#__PURE__*/function () {
 	  function ParamBag() {
 	    var params = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 	    babelHelpers.classCallCheck(this, ParamBag);

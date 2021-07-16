@@ -5,19 +5,25 @@ namespace Bitrix\SalesCenter\Controller;
 use Bitrix\Main\Config\Option;
 use Bitrix\Main\Error;
 use Bitrix\Main\Loader;
+use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Web\Uri;
 use Bitrix\Sale\Internals\OrderPropsRelationTable;
 use Bitrix\Sale\Delivery;
+use Bitrix\Sale\Repository\ShipmentRepository;
 use Bitrix\SalesCenter\Delivery\Handlers\HandlersRepository;
+use Bitrix\SalesCenter\Delivery\Handlers\IRestHandler;
+
+Loc::loadMessages(__FILE__);
 
 class DeliverySelector extends \Bitrix\Main\Engine\Controller
 {
 	/**
 	 * @param int $personTypeId
 	 * @param int $responsibleId
-	 * @return array
+	 * @param array $excludedServiceIds
+	 * @return array|null
 	 */
-	public function getInitializationDataAction(int $personTypeId, int $responsibleId = 0)
+	public function getInitializationDataAction(int $personTypeId, int $responsibleId = 0, array $excludedServiceIds = [])
 	{
 		if (!Loader::includeModule('sale'))
 		{
@@ -30,44 +36,83 @@ class DeliverySelector extends \Bitrix\Main\Engine\Controller
 			->getCollection()
 			->getInstalledItems();
 
-		$services = [];
+		$flatServices = [];
 		foreach ($installedHandlers as $installedHandler)
 		{
 			foreach ($activeServices as $service)
 			{
-				$deliveryObj = Delivery\Services\Manager::createObject($service);
+				$isChild = false;
+				if ($service['PARENT_ID']
+					&& ($parentServiceFields = Delivery\Services\Manager::getById($service['PARENT_ID']))
+				)
+				{
+					$serviceClassName = $parentServiceFields['CLASS_NAME'];
+					$isChild = true;
+				}
+				else
+				{
+					$serviceClassName = $service['CLASS_NAME'];
+				}
 
-				if ($installedHandler->isRestHandler()
-					&& $service['CLASS_NAME'] === $installedHandler->getProfileClass()
-					&& $installedHandler->getRestHandlerCode() !== $deliveryObj->getParentService()->getHandlerCode()
+				if ($serviceClassName !== $installedHandler->getHandlerClass())
+				{
+					continue;
+				}
+
+				if (!$isChild && $installedHandler instanceof IRestHandler
+					&& $installedHandler->getRestHandlerCode() !== $service['CONFIG']['MAIN']['REST_CODE']
 				)
 				{
 					continue;
 				}
 
-				$className = $installedHandler->getProfileClass() ?: $installedHandler->getHandlerClass();
-				if ($service['CLASS_NAME'] !== $className)
+				if (in_array($service['ID'], $excludedServiceIds))
 				{
 					continue;
 				}
 
-				$name = $service['NAME'];
-				if ($installedHandler->getProfileClass())
-				{
-					$name = $deliveryObj->getNameWithParent();
-				}
-
-				$services[] = [
+				$flatServices[$service['ID']] = [
 					'id' => $service['ID'],
-					'name' => $name,
-					'title' => $installedHandler->getTypeDescription(),
-					'code' => $installedHandler->getCode(),
-					'logo' => $installedHandler->getWorkingImagePath(),
+					'name' => $service['NAME'],
+					'description' => $service['DESCRIPTION'],
+					'title' => $service['ID'] != Delivery\Services\EmptyDeliveryService::getEmptyDeliveryServiceId()
+						? Loc::getMessage('SALESCENTER_CONTROLLER_DELIVERY_SELECTOR_DELIVERY_SERVICE')
+						: '',
+
+					'restrictions' => $this->makeServiceRestrictions($service['CODE']),
+					'code' => $isChild ? $service['CODE'] : $installedHandler->getCode(),
+					'logo' => $isChild
+						? \CFile::getPath($service['LOGOTIP'])
+						: $installedHandler->getWorkingImagePath(),
+					'parentId' => (int)$service['PARENT_ID'],
+					'profiles' => [],
 				];
 			}
 		}
 
-		$deliveryServiceIds = array_column($services, 'id');
+		$deliveryServiceIds = array_keys($flatServices);
+
+		$services = array_filter(
+			$flatServices,
+			function ($service)
+			{
+				return $service['parentId'] === 0;
+			}
+		);
+		foreach ($flatServices as $serviceId => $service)
+		{
+			if ($service['parentId'] === 0)
+			{
+				continue;
+			}
+			if (!isset($services[$service['parentId']]))
+			{
+				continue;
+			}
+			$services[$service['parentId']]['profiles'][] = $service;
+		}
+
+		$services = array_values($services);
 
 		/**
 		 * Related properties
@@ -116,10 +161,86 @@ class DeliverySelector extends \Bitrix\Main\Engine\Controller
 			}
 		}
 
-		/**
-		 * Related extra services
-		 */
-		$extraServices = [];
+		return [
+			'services' => $services,
+			'properties' => array_values($properties),
+			'extraServices' => $this->getExtraServices($deliveryServiceIds),
+			'deliverySettingsUrl' => $this->getDeliverySettingsUrl(),
+			'responsible' => $this->getResponsibleData($responsibleId),
+			'userPageTemplate' => Option::get(
+					'socialnetwork',
+					'user_page',
+					SITE_DIR.'company/personal/',
+					SITE_ID
+				).'user/#user_id#/',
+		];
+	}
+
+	public function getShipmentDataAction(int $id)
+	{
+		if (!Loader::includeModule('sale'))
+		{
+			$this->addError(new Error('sale module is not installed'));
+			return null;
+		}
+
+		$shipment = ShipmentRepository::getInstance()->getById($id);
+		if (!$shipment)
+		{
+			$this->addError(new Error('shipment not found'));
+			return null;
+		}
+
+		$deliveryService = $shipment->getDelivery();
+		if (!$deliveryService)
+		{
+			$this->addError(new Error('delivery service not found'));
+			return null;
+		}
+
+		$parentDeliveryService = $deliveryService->getParentService();
+
+		$extraServiceDisplayValues = [];
+
+		$extraServiceInstances = $shipment->getExtraServicesObjects();
+		foreach ($extraServiceInstances as $extraServiceInstance)
+		{
+			$extraServiceDisplayValues[] = [
+				'name' => $extraServiceInstance->getName(),
+				'value' => $extraServiceInstance->getDisplayValue(),
+			];
+		}
+
+		return [
+			'shipment' => [
+				'deliveryService' => [
+					'name' => $deliveryService->getName(),
+					'logo' => $deliveryService->getLogotipPath(),
+					'parent' => $parentDeliveryService
+						? [
+							'name' => $parentDeliveryService->getName(),
+							'logo' => $parentDeliveryService->getLogotipPath(),
+						]
+						: null,
+				],
+				'priceDelivery' => $shipment->getField('PRICE_DELIVERY'),
+				'basePriceDelivery' => $shipment->getField('BASE_PRICE_DELIVERY'),
+				'currency' => $shipment->getCurrency(),
+				'extraServices' => $extraServiceDisplayValues,
+			],
+		];
+	}
+
+	/**
+	 * @param array $deliveryServiceIds
+	 * @return array
+	 */
+	private function getExtraServices(array $deliveryServiceIds): array
+	{
+		//@TODO extract to API
+
+		$result = [];
+
 		$dbExtraServices = \Bitrix\Sale\Delivery\ExtraServices\Table::getList(
 			[
 				'filter' => ['DELIVERY_ID' => $deliveryServiceIds],
@@ -145,7 +266,7 @@ class DeliverySelector extends \Bitrix\Main\Engine\Controller
 			$type = $knownClassesMap[$extraService['CLASS_NAME']];
 
 			$options = [];
-			if ($type == 'dropdown' && isset($extraService['PARAMS']['PRICES']) && is_array($extraService['PARAMS']['PRICES']))
+			if ($type === 'dropdown' && isset($extraService['PARAMS']['PRICES']) && is_array($extraService['PARAMS']['PRICES']))
 			{
 				foreach ($extraService['PARAMS']['PRICES'] as $id => $paramItem)
 				{
@@ -158,7 +279,7 @@ class DeliverySelector extends \Bitrix\Main\Engine\Controller
 				}
 			}
 
-			$extraServices[] = [
+			$result[] = [
 				'id' => $extraService['ID'],
 				'deliveryServiceCode' => $extraService['DELIVERY_SERVICE_CODE'],
 				'code' => $extraService['CODE'],
@@ -170,19 +291,37 @@ class DeliverySelector extends \Bitrix\Main\Engine\Controller
 			];
 		}
 
-		return [
-			'services' => $services,
-			'properties' => array_values($properties),
-			'extraServices' => $extraServices,
-			'deliverySettingsUrl' => $this->getDeliverySettingsUrl(),
-			'responsible' => $this->getResponsibleData($responsibleId),
-			'userPageTemplate' => Option::get(
-					'socialnetwork',
-					'user_page',
-					SITE_DIR.'company/personal/',
-					SITE_ID
-				).'user/#user_id#/',
-		];
+		return $result;
+	}
+
+	/**
+	 * @param string|null $serviceCode
+	 * @return array
+	 */
+	private function makeServiceRestrictions(?string $serviceCode): array
+	{
+		$restrictions = [];
+
+		$i = 0;
+		do
+		{
+			$restriction = Loc::getMessage(
+				sprintf(
+					'SALESCENTER_CONTROLLER_DELIVERY_SELECTOR_%s_RESTRICTIONS_%s',
+					$serviceCode,
+					$i
+				)
+			);
+			if ($restriction)
+			{
+				$restrictions[] = $restriction;
+			}
+
+			$i++;
+
+		} while($restriction);
+
+		return $restrictions;
 	}
 
 	/**

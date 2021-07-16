@@ -15,7 +15,7 @@ Class webdav extends CModule
 	var $MODULE_CSS;
 	var $MODULE_GROUP_RIGHTS = "Y";
 
-	function webdav()
+	public function __construct()
 	{
 		$arModuleVersion = array();
 

@@ -32,30 +32,9 @@ class CIntranetSearchTitleComponent extends CBitrixComponent
 		$userPageURLTemplate = Option::get('socialnetwork', 'user_page', SITE_DIR.'company/personal/', SITE_ID).'user/#user_id#/';
 
 		$userFilter = array(
-			'ACTIVE' => 'Y'
+			'ACTIVE' => 'Y',
+			'!=EXTERNAL_AUTH_ID' => \Bitrix\Main\UserTable::getExternalUserTypes()
 		);
-
-		$arExternalAuthId = array();
-		if (ModuleManager::isModuleInstalled('replica'))
-		{
-			$arExternalAuthId[] = 'replica';
-		}
-		if (ModuleManager::isModuleInstalled('im'))
-		{
-			$arExternalAuthId[] = 'bot';
-		}
-		if (ModuleManager::isModuleInstalled('imconnector'))
-		{
-			$arExternalAuthId[] = 'imconnector';
-		}
-		if (ModuleManager::isModuleInstalled('mail'))
-		{
-			$arExternalAuthId[] = 'mail';
-		}
-		if (!empty($arExternalAuthId))
-		{
-			$userFilter['!=EXTERNAL_AUTH_ID'] = $arExternalAuthId;
-		}
 
 		$searchByEmail = false;
 		if (!empty($searchString))
@@ -805,7 +784,7 @@ class CIntranetSearchTitleComponent extends CBitrixComponent
 
 	private function prepateGlobalSearchCategories()
 	{
-		global $USER;
+		global $USER, $CACHE_MANAGER;
 
 		$this->arResult["GLOBAL_SEARCH_CATEGORIES"] = array();
 
@@ -818,7 +797,7 @@ class CIntranetSearchTitleComponent extends CBitrixComponent
 		$globalSearchCategories = array(
 			"stream" => array(
 				"url" => ($this->arResult["IS_EXTRANET_SITE"] ? SITE_DIR : SITE_DIR."stream/")."?".(\Bitrix\Main\Composite\Helper::isOn() ? "ncc=1&" : "")."apply_filter=Y&FIND=",
-				"text" => GetMessage("CT_BST_GLOBAL_SEARCH_STREAM")
+				"text" => GetMessage("CT_BST_GLOBAL_SEARCH_NEWS")
 			),
 			"tasks" => array(
 				"url" => ($this->arResult["IS_EXTRANET_SITE"] ? SITE_DIR."contacts/" : SITE_DIR."company/")."personal/user/".$USER->GetID()."/tasks/?apply_filter=Y&with_preset=Y&FIND=",
@@ -834,93 +813,112 @@ class CIntranetSearchTitleComponent extends CBitrixComponent
 			);
 		}
 
+		$globalCrmSearchCategories = [];
+
 		if (Loader::includeModule("crm") && CCrmPerms::IsAccessEnabled())
 		{
-			$isAdmin = CCrmPerms::IsAdmin();
-			$userPermissions = CCrmPerms::GetCurrentUserPermissions();
+			$cache = new \CPHPCache;
+			$cacheId = "CRM_SEARCH_TITLE_".$USER->GetID();
+			$cacheDir = "/crm/search_title_".substr(md5($USER->GetID()), -2)."/".$USER->GetID()."/";
 
-			if (CCrmLead::CheckReadPermission(0, $userPermissions))
+			if($cache->initCache(7200, $cacheId, $cacheDir))
 			{
-				$leadPaths = array(
-					EntityViewSettings::LIST_VIEW => CrmCheckPath('PATH_TO_LEAD_LIST', "", SITE_DIR.'crm/lead/list/'),
-					EntityViewSettings::KANBAN_VIEW => CrmCheckPath('PATH_TO_LEAD_KANBAN', "", SITE_DIR.'crm/lead/kanban/')
-				);
-				$currentView = LeadSettings::getCurrent()->getCurrentListViewID();
-				$leadPath = isset($leadPaths[$currentView]) ? $leadPaths[$currentView] : $leadPaths[EntityViewSettings::LIST_VIEW];
-
-				$globalSearchCategories["lead"] = array(
-					"url" => $leadPath."?apply_filter=Y&with_preset=Y&FIND=",
-					"text" => GetMessage("CT_BST_GLOBAL_SEARCH_CRM_LEAD")
-				);
+				$cacheVars = $cache->getVars();
+				$globalCrmSearchCategories = $cacheVars["CRM_SEARCH_CATEGORIES"];
 			}
-
-			if (CCrmDeal::CheckReadPermission(0, $userPermissions))
+			else
 			{
-				$dealPaths = array(
-					EntityViewSettings::LIST_VIEW => CrmCheckPath('PATH_TO_DEAL_LIST', "", SITE_DIR.'crm/deal/list/'),
-					EntityViewSettings::KANBAN_VIEW => CrmCheckPath('PATH_TO_DEAL_KANBAN', "", SITE_DIR.'crm/deal/kanban/')
-				);
-				$currentView = DealSettings::getCurrent()->getCurrentListViewID();
-				$dealPath = isset($dealPaths[$currentView]) ? $dealPaths[$currentView] : $dealPaths[EntityViewSettings::LIST_VIEW];
+				$cache->startDataCache();
+				$CACHE_MANAGER->StartTagCache($cacheDir);
+				$CACHE_MANAGER->RegisterTag('crm_change_role');
 
-				$globalSearchCategories["deal"] = array(
-					"url" => $dealPath."?apply_filter=Y&with_preset=Y&FIND=",
-					"text" => GetMessage("CT_BST_GLOBAL_SEARCH_CRM_DEAL")
+				$isAdmin = CCrmPerms::IsAdmin();
+				$userPermissions = CCrmPerms::GetCurrentUserPermissions();
+
+				if (CCrmLead::CheckReadPermission(0, $userPermissions)) {
+					$leadPaths = array(
+						EntityViewSettings::LIST_VIEW => CrmCheckPath('PATH_TO_LEAD_LIST', "", SITE_DIR . 'crm/lead/list/'),
+						EntityViewSettings::KANBAN_VIEW => CrmCheckPath('PATH_TO_LEAD_KANBAN', "", SITE_DIR . 'crm/lead/kanban/')
+					);
+					$currentView = LeadSettings::getCurrent()->getCurrentListViewID();
+					$leadPath = isset($leadPaths[$currentView]) ? $leadPaths[$currentView] : $leadPaths[EntityViewSettings::LIST_VIEW];
+
+					$globalCrmSearchCategories["lead"] = array(
+						"url" => $leadPath . "?apply_filter=Y&with_preset=Y&FIND=",
+						"text" => GetMessage("CT_BST_GLOBAL_SEARCH_CRM_LEAD")
+					);
+				}
+
+				if (CCrmDeal::CheckReadPermission(0, $userPermissions)) {
+					$dealPaths = array(
+						EntityViewSettings::LIST_VIEW => CrmCheckPath('PATH_TO_DEAL_LIST', "", SITE_DIR . 'crm/deal/list/'),
+						EntityViewSettings::KANBAN_VIEW => CrmCheckPath('PATH_TO_DEAL_KANBAN', "", SITE_DIR . 'crm/deal/kanban/')
+					);
+					$currentView = DealSettings::getCurrent()->getCurrentListViewID();
+					$dealPath = isset($dealPaths[$currentView]) ? $dealPaths[$currentView] : $dealPaths[EntityViewSettings::LIST_VIEW];
+
+					$globalCrmSearchCategories["deal"] = array(
+						"url" => $dealPath . "?apply_filter=Y&with_preset=Y&FIND=",
+						"text" => GetMessage("CT_BST_GLOBAL_SEARCH_CRM_DEAL")
+					);
+				}
+
+				if ($isAdmin || !$userPermissions->HavePerm('INVOICE', BX_CRM_PERM_NONE, 'READ')) {
+					$invoicePaths = array(
+						EntityViewSettings::LIST_VIEW => CrmCheckPath('PATH_TO_INVOICE_LIST', "", SITE_DIR . 'crm/invoice/list/'),
+						EntityViewSettings::KANBAN_VIEW => CrmCheckPath('PATH_TO_INVOICE_KANBAN', "", SITE_DIR . 'crm/invoice/kanban/')
+					);
+
+					$currentView = InvoiceSettings::getCurrent()->getCurrentListViewID();
+					$invoicePath = isset($invoicePaths[$currentView]) ? $invoicePaths[$currentView] : $invoicePaths[EntityViewSettings::LIST_VIEW];
+
+					$globalCrmSearchCategories["invoice"] = array(
+						"url" => $invoicePath . "?apply_filter=Y&with_preset=Y&FIND=",
+						"text" => GetMessage("CT_BST_GLOBAL_SEARCH_CRM_INVOICE")
+					);
+				}
+
+				if ($isAdmin || CCrmQuote::CheckReadPermission(0, $userPermissions)) {
+					$quotePaths = array(
+						EntityViewSettings::LIST_VIEW => CrmCheckPath('PATH_TO_QUOTE_LIST', "", SITE_DIR . 'crm/quote/list/'),
+						EntityViewSettings::KANBAN_VIEW => CrmCheckPath('PATH_TO_QUOTE_KANBAN', "", SITE_DIR . 'crm/quote/kanban/')
+					);
+					$currentView = QuoteSettings::getCurrent()->getCurrentListViewID();
+					$quotePath = isset($quotePaths[$currentView]) ? $quotePaths[$currentView] : $quotePaths[EntityViewSettings::LIST_VIEW];
+
+					$globalCrmSearchCategories["quote"] = array(
+						"url" => $quotePath . "?apply_filter=Y&with_preset=Y&FIND=",
+						"text" => GetMessage("CT_BST_GLOBAL_SEARCH_CRM_QUOTE")
+					);
+				}
+
+				if ($isAdmin || CCrmContact::CheckReadPermission(0, $userPermissions)) {
+					$globalCrmSearchCategories["contact"] = array(
+						"url" => SITE_DIR . "crm/contact/list/?apply_filter=Y&with_preset=Y&FIND=",
+						"text" => GetMessage("CT_BST_GLOBAL_SEARCH_CRM_CONTACT")
+					);
+				}
+
+				if ($isAdmin || CCrmCompany::CheckReadPermission(0, $userPermissions)) {
+					$globalCrmSearchCategories["company"] = array(
+						"url" => SITE_DIR . "crm/company/list/?apply_filter=Y&with_preset=Y&FIND=",
+						"text" => GetMessage("CT_BST_GLOBAL_SEARCH_CRM_COMPANY")
+					);
+				}
+
+				$globalCrmSearchCategories["activity"] = array(
+					"url" => SITE_DIR . "crm/activity/list/?apply_filter=Y&with_preset=Y&FIND=",
+					"text" => GetMessage("CT_BST_GLOBAL_SEARCH_CRM_ACTIVITY")
 				);
+
+				$CACHE_MANAGER->EndTagCache();
+				$cache->endDataCache(array(
+					"CRM_SEARCH_CATEGORIES" => $globalCrmSearchCategories
+				));
 			}
-
-			if($isAdmin || !$userPermissions->HavePerm('INVOICE', BX_CRM_PERM_NONE, 'READ'))
-			{
-				$invoicePaths = array(
-					EntityViewSettings::LIST_VIEW => CrmCheckPath('PATH_TO_INVOICE_LIST', "", SITE_DIR.'crm/invoice/list/'),
-					EntityViewSettings::KANBAN_VIEW => CrmCheckPath('PATH_TO_INVOICE_KANBAN', "", SITE_DIR.'crm/invoice/kanban/')
-				);
-
-				$currentView = InvoiceSettings::getCurrent()->getCurrentListViewID();
-				$invoicePath = isset($invoicePaths[$currentView]) ? $invoicePaths[$currentView] : $invoicePaths[EntityViewSettings::LIST_VIEW];
-
-				$globalSearchCategories["invoice"] = array(
-					"url" => $invoicePath."?apply_filter=Y&with_preset=Y&FIND=",
-					"text" => GetMessage("CT_BST_GLOBAL_SEARCH_CRM_INVOICE")
-				);
-			}
-
-			if($isAdmin || CCrmQuote::CheckReadPermission(0, $userPermissions))
-			{
-				$quotePaths = array(
-					EntityViewSettings::LIST_VIEW => CrmCheckPath('PATH_TO_QUOTE_LIST', "", SITE_DIR.'crm/quote/list/'),
-					EntityViewSettings::KANBAN_VIEW => CrmCheckPath('PATH_TO_QUOTE_KANBAN', "", SITE_DIR.'crm/quote/kanban/')
-				);
-				$currentView = QuoteSettings::getCurrent()->getCurrentListViewID();
-				$quotePath = isset($quotePaths[$currentView]) ? $quotePaths[$currentView] : $quotePaths[EntityViewSettings::LIST_VIEW];
-
-				$globalSearchCategories["quote"] = array(
-					"url" => $quotePath."?apply_filter=Y&with_preset=Y&FIND=",
-					"text" => GetMessage("CT_BST_GLOBAL_SEARCH_CRM_QUOTE")
-				);
-			}
-
-			if($isAdmin || CCrmContact::CheckReadPermission(0, $userPermissions))
-			{
-				$globalSearchCategories["contact"] = array(
-					"url" => SITE_DIR."crm/contact/list/?apply_filter=Y&with_preset=Y&FIND=",
-					"text" => GetMessage("CT_BST_GLOBAL_SEARCH_CRM_CONTACT")
-				);
-			}
-
-			if($isAdmin || CCrmCompany::CheckReadPermission(0, $userPermissions))
-			{
-				$globalSearchCategories["company"] = array(
-					"url" => SITE_DIR."crm/company/list/?apply_filter=Y&with_preset=Y&FIND=",
-					"text" => GetMessage("CT_BST_GLOBAL_SEARCH_CRM_COMPANY")
-				);
-			}
-
-			$globalSearchCategories["activity"] = array(
-				"url" => SITE_DIR."crm/activity/list/?apply_filter=Y&with_preset=Y&FIND=",
-				"text" => GetMessage("CT_BST_GLOBAL_SEARCH_CRM_ACTIVITY")
-			);
 		}
+
+		$globalSearchCategories = array_merge($globalSearchCategories, $globalCrmSearchCategories);
 
 		if (Loader::includeModule("lists") && CLists::isFeatureEnabled())
 		{

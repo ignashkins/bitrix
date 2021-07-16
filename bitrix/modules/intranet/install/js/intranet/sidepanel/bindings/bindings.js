@@ -108,16 +108,22 @@
 				loader: 'crm-button-view-loader'
 			},
 			{
-				condition: ['/crm/webform/edit/(\\d+)/'],
-				loader: 'crm-webform-view-loader'
-			},
-			{
 				condition: [
 					new RegExp("^/marketplace\/hook/"),
 				],
 				options: {
 					customLeftBoundary: 0,
 					loader: "rest:marketplace"
+				}
+			},
+			{
+				condition: [
+					new RegExp("/marketplace\/view\/quick\/"),
+				],
+				options: {
+					width: 500,
+					allowChangeHistory: false,
+					cacheable: false
 				}
 			},
 			{
@@ -336,7 +342,9 @@
 			{
 				condition: [
 					new RegExp("/report/analytics"),
-					new RegExp("/report/analytics/\\?analyticBoardKey=(\\w+)")
+					new RegExp("/report/analytics/\\?analyticBoardKey=(\\w+)"),
+					new RegExp("/report/telephony"),
+					new RegExp("/report/telephony/\\?analyticBoardKey=(\\w+)")
 				],
 				options: {
 					cacheable: false,
@@ -356,6 +364,32 @@
 					contentClassName: "bitrix24-profile-slider-content",
 					loader: "intranet:profile",
 					width: 1100
+				}
+			},
+			{
+				condition: [
+					new RegExp(siteDir + "workgroups/group/[0-9]+/$", "i")
+				],
+				options: {
+					contentClassName: "bitrix24-group-slider-content",
+					loader: "intranet:livefeed",
+					cacheable: false,
+					customLeftBoundary: 0,
+					newWindowLabel: true,
+					copyLinkLabel: true,
+				}
+			},
+			{
+				condition: [
+					new RegExp(siteDir + "workgroups/group/[0-9]+/tasks/$", "i")
+				],
+				options: {
+					contentClassName: "bitrix24-group-slider-content",
+					loader: "intranet:tasklist",
+					cacheable: false,
+					customLeftBoundary: 0,
+					newWindowLabel: true,
+					copyLinkLabel: true,
 				}
 			},
 			{
@@ -454,13 +488,15 @@
 			},
 			{
 				condition: [
-					new RegExp(siteDir + "company/personal/user/[0-9]+/calendar/\\?EVENT_ID=([a-zA-Z0-9_|]+)", "i")
+					new RegExp(siteDir + "company\\/personal\\/user\\/[0-9]+\\/calendar\\/\\?EVENT_ID=([^&]+)(?:&EVENT_DATE=([^&]+))?", "i")
 				],
 				handler: function(event, link)
 				{
 					if (BX.Calendar && BX.Calendar.SliderLoader)
 					{
-						var slider = new BX.Calendar.SliderLoader(link.matches[1]);
+						var slider = new BX.Calendar.SliderLoader(link.matches[1], {
+							entryDateFrom: BX.parseDate(link.matches[2]),
+						});
 						slider.show();
 						event.preventDefault();
 					}
@@ -483,7 +519,8 @@
 			},
 			{
 				condition: [
-					"/shop/catalog/(\\d+)/product/(\\d+)/variation/(\\d+)/"
+					"/shop/catalog/(\\d+)/product/(\\d+)/variation/(\\d+)/",
+					"/crm/catalog/(\\d+)/product/(\\d+)/variation/(\\d+)/"
 				],
 				options: {
 					cacheable: false,
@@ -494,7 +531,8 @@
 			},
 			{
 				condition: [
-					"/shop/catalog/(\\d+)/product/(\\d+)/"
+					"/shop/catalog/(\\d+)/product/(\\d+)/",
+					"/crm/catalog/(\\d+)/product/(\\d+)/"
 				],
 				options: {
 					cacheable: false,
@@ -531,6 +569,40 @@
 					cacheable: false,
 					allowChangeHistory: false,
 					width: 1028
+				}
+			},
+			{
+				condition: [
+					"/bitrix/services/main/ajax.php\\?action=disk.controller.documentservice.goToPreview"
+				],
+				options: {
+					cacheable: false,
+					width: '100%',
+					customLeftBoundary: 30,
+					allowChangeHistory: false,
+					data: {
+						documentEditor: true
+					}
+				}
+			},
+			{
+				condition: [ new RegExp("/shop/orders/payment/details/[0-9]+/", "i") ],
+				loader: "crm-entity-details-loader",
+				options: {
+					cacheable: false,
+					label: {
+						text: BX.message("INTRANET_BINDINGS_PAYMENT"),
+					}
+				}
+			},
+			{
+				condition: [ new RegExp("/shop/orders/shipment/details/[0-9]+/", "i") ],
+				loader: "crm-entity-details-loader",
+				options: {
+					cacheable: false,
+					label: {
+						text: BX.message("INTRANET_BINDINGS_SHIPMENT"),
+					}
 				}
 			},
 		]

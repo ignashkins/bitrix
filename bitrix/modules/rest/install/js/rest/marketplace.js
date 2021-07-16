@@ -3,7 +3,6 @@ BX.namespace('BX.rest.Marketplace');
 BX.rest.Marketplace = (function(){
 
 	var ajaxPath = "/bitrix/tools/rest.php";
-	var buySubscriptionPath = "/settings/license_buy.php?product=subscr";
 
 	var query = function(action, data, callback)
 	{
@@ -57,7 +56,7 @@ BX.rest.Marketplace = (function(){
 									BX("mp_tos_license") && !BX("mp_tos_license").checked
 								)
 								{
-									BX("mp_detail_error").innerHTML = BX.message("MARKETPLACE_LICENSE_TOS_ERROR");
+									BX("mp_detail_error").innerHTML = BX.message("MARKETPLACE_LICENSE_TOS_ERROR_2");
 									return;
 								}
 
@@ -105,6 +104,10 @@ BX.rest.Marketplace = (function(){
 									{
 										if(!!result.error)
 										{
+											if (!!result.helperCode && result.helperCode !== '')
+											{
+												top.BX.UI.InfoHelper.show(result.helperCode);
+											}
 											BX('mp_error').innerHTML = result.error
 												+ (!!result.error_description
 													? '<br /><br />' + result.error_description
@@ -320,9 +323,17 @@ BX.rest.Marketplace = (function(){
 			{
 				if(!!result.error)
 				{
-					BX.UI.Notification.Center.notify({
-						content: result.error
-					});
+
+					if (!!result.helperCode && result.helperCode !== '')
+					{
+						top.BX.UI.InfoHelper.show(result.helperCode);
+					}
+					else
+					{
+						BX.UI.Notification.Center.notify({
+							content: result.error
+						});
+					}
 				}
 				else if(!!result.redirect)
 				{
@@ -365,31 +376,26 @@ BX.rest.Marketplace = (function(){
 		},
 		buySubscription: function(params)
 		{
-			var oPopup = BX.PopupWindowManager.create('marketplace_buy_subscription', null, {
-				content: [
-'\t\t<div class="rest-marketplace-popup-block">\n' +
-'\t\t\t<div class="rest-marketplace-popup-text-block">\n' +
-'\t\t\t\t<div class="rest-marketplace-popup-text">' + BX.message("REST_MP_SUBSCRIPTION_TEXT1") + '</div>\n' +
-'\t\t\t\t<div class="rest-marketplace-popup-text">' + BX.message("REST_MP_SUBSCRIPTION_TEXT2") + '</div>' +
-'\t\t\t\t<div class="rest-marketplace-popup-text">' + BX.message("REST_MP_SUBSCRIPTION_TEXT3") + '</div>\n' +
-'\t\t\t</div>\n' +
-'\t\t</div>\n'
-				].join(),
-				titleBar: BX.message("REST_MP_SUBSCRIPTION_TITLE"),
-				closeIcon : true,
-				closeByEsc : true,
-				draggable: true,
-				lightShadow: true,
-				overlay: true,
-				className: 'landing-marketplace-popup-wrapper',
-				buttons: [
+			var btn = [];
+			var canBuySubscription = BX.message("CAN_BUY_SUBSCRIPTION");
+			var canActivateDemoSubscription = BX.message("CAN_ACTIVATE_DEMO_SUBSCRIPTION");
+
+			if (!!canBuySubscription && canBuySubscription === 'Y')
+			{
+				btn.push(
 					new BX.PopupWindowButton({
 						text: BX.message("REST_MP_SUBSCRIPTION_BUTTON_TITLE"),
 						className: "popup-window-button-accept",
 						events: {
 							click: this.openBuySubscription
 						}
-					}),
+					})
+				);
+			}
+
+			if (!!canActivateDemoSubscription && canActivateDemoSubscription === "Y")
+			{
+				btn.push(
 					new BX.PopupWindowButtonLink({
 						text: BX.message("REST_MP_SUBSCRIPTION_BUTTON_TITLE2"),
 						className: "popup-window-button-link-cancel",
@@ -400,13 +406,160 @@ BX.rest.Marketplace = (function(){
 							}.bind(this)
 						}
 					})
-				]
+				);
+			}
+
+			var oPopup = BX.PopupWindowManager.create('marketplace_buy_subscription', null, {
+				content: BX.create(
+					'div',
+					{
+						props: {
+							className: 'rest-marketplace-popup-block'
+						},
+						children: [
+							BX.create(
+								'div',
+								{
+									props: {
+										className: 'rest-marketplace-popup-text-block'
+									},
+									children: [
+										BX.create(
+											'div',
+											{
+												props: {
+													className: 'rest-marketplace-popup-text'
+												},
+												text: BX.message("REST_MP_SUBSCRIPTION_TEXT_1")
+											}
+										),
+										BX.create(
+											'div',
+											{
+												props: {
+													className: 'rest-marketplace-popup-text'
+												},
+												text: BX.message("REST_MP_SUBSCRIPTION_TEXT_2")
+											}
+										),
+										BX.create(
+											'div',
+											{
+												props: {
+													className: 'rest-marketplace-popup-text'
+												},
+												children: [
+													BX.create(
+														'div',
+														{
+															props: {
+																className: 'rest-marketplace-popup-text'
+															},
+															html: BX.message("REST_MP_SUBSCRIPTION_TEXT_3").replace(
+																'#ONCLICK#',
+																'BX.rest.Marketplace.open(null,\'subscription\')'
+															)
+														}
+													),
+													BX.create(
+														'ul',
+														{
+															children: [
+																BX.create(
+																	'li',
+																	{
+																		text: BX.message("REST_MP_SUBSCRIPTION_TEXT_3_LI_1")
+																	}
+																),
+																BX.create(
+																	'li',
+																	{
+																		text: BX.message("REST_MP_SUBSCRIPTION_TEXT_3_LI_2")
+																	}
+																),
+																BX.create(
+																	'li',
+																	{
+																		text: BX.message("REST_MP_SUBSCRIPTION_TEXT_3_LI_3")
+																	}
+																),
+																BX.create(
+																	'li',
+																	{
+																		text: BX.message("REST_MP_SUBSCRIPTION_TEXT_3_LI_4")
+																	}
+																),
+																BX.create(
+																	'li',
+																	{
+																		text: BX.message("REST_MP_SUBSCRIPTION_TEXT_3_LI_5")
+																	}
+																),
+																BX.create(
+																	'li',
+																	{
+																		text: BX.message("REST_MP_SUBSCRIPTION_TEXT_3_LI_6")
+																	}
+																),
+															]
+														}
+													),
+												]
+											}
+										),
+										BX.create(
+											'div',
+											{
+												props: {
+													className: 'rest-marketplace-popup-text'
+												},
+												html: BX.message("REST_MP_SUBSCRIPTION_TEXT_4").replace(
+													'#ONCLICK#',
+													'top.BX.Helper.show(\'redirect=detail&code=12154172\');'
+												)
+											}
+										),
+										BX.create(
+											'div',
+											{
+												props: {
+													className: 'rest-marketplace-popup-text'
+												},
+												text: BX.message("REST_MP_SUBSCRIPTION_TEXT_5")
+											}
+										),
+									]
+								}
+							),
+						]
+					}
+				),
+				titleBar: BX.message("REST_MP_SUBSCRIPTION_TITLE"),
+				closeIcon : true,
+				closeByEsc : true,
+				draggable: true,
+				lightShadow: true,
+				overlay: true,
+				className: 'landing-marketplace-popup-wrapper',
+				buttons: btn
 			}).show();
 		},
 
 		openBuySubscription: function()
 		{
-			top.window.location.href = buySubscriptionPath;
+			var url = BX.message('REST_BUY_SUBSCRIPTION_URL');
+			if (url !== '')
+			{
+				top.window.open(url, '_blank');
+			}
+			else
+			{
+				BX.UI.Notification.Center.notify(
+					{
+						content: BX.message('REST_MP_SUBSCRIPTION_ERROR_OPEN_BUY_URL')
+					}
+				);
+			}
 		},
 
 		openDemoSubscription: function(callback)
@@ -488,7 +641,7 @@ BX.rest.Marketplace = (function(){
 												props: {
 													className: 'rest-marketplace-popup-text'
 												},
-												text: BX.message("REST_MP_SUBSCRIPTION_DEMO_TEXT1")
+												text: BX.message("REST_MP_SUBSCRIPTION_DEMO_TITLE")
 											}
 										),
 										BX.create(
@@ -497,7 +650,19 @@ BX.rest.Marketplace = (function(){
 												props: {
 													className: 'rest-marketplace-popup-text'
 												},
-												text: BX.message("REST_MP_SUBSCRIPTION_DEMO_TEXT2")
+												html: BX.message("REST_MP_SUBSCRIPTION_DEMO_TEXT_1").replace(
+													'#ONCLICK#',
+													'BX.rest.Marketplace.open(null,\'subscription\')'
+												)
+											}
+										),
+										BX.create(
+											'div',
+											{
+												props: {
+													className: 'rest-marketplace-popup-text'
+												},
+												text: BX.message("REST_MP_SUBSCRIPTION_DEMO_TEXT_2")
 											}
 										),
 										BX.create(

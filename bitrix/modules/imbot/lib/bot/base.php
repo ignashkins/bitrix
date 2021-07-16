@@ -10,8 +10,6 @@ abstract class Base
 	/** @var \Bitrix\ImBot\Error  */
 	protected static $lastError;
 
-	/** @var \Bitrix\ImBot\Http */
-	protected static $httpClient;
 
 	/**
 	 * Returns registered bot Id.
@@ -45,44 +43,6 @@ abstract class Base
 		}
 
 		\Bitrix\Main\Config\Option::set(self::MODULE_ID, $class::BOT_CODE."_bot_id", $id);
-
-		return true;
-	}
-
-	/**
-	 * Returns per user option value.
-	 *
-	 * @param int $userId
-	 * @param string $name
-	 * @param bool $value
-	 *
-	 * @return bool|mixed
-	 */
-	public static function getBotOption($userId, $name, $value = false)
-	{
-		$class = self::getClassName();
-		if (!$class::BOT_CODE)
-			return false;
-
-		return \CUserOptions::GetOption(self::MODULE_ID, $class::BOT_CODE.'_'.$name, $value, $userId);
-	}
-
-	/**
-	 * Saves option value for certain user.
-	 *
-	 * @param int $userId
-	 * @param string $name
-	 * @param mixed $value
-	 *
-	 * @return bool
-	 */
-	public static function setBotOption($userId, $name, $value)
-	{
-		$class = self::getClassName();
-		if (!$class::BOT_CODE)
-			return false;
-
-		\CUserOptions::SetOption(self::MODULE_ID, $class::BOT_CODE.'_'.$name, $value, false, $userId);
 
 		return true;
 	}
@@ -159,7 +119,7 @@ abstract class Base
 	 *
 	 * @return bool
 	 */
-	public static function onBotDelete($bodId)
+	public static function onBotDelete($bodId = null)
 	{
 		return self::setBotId(0);
 	}
@@ -221,9 +181,9 @@ abstract class Base
 	}
 
 	/**
-	 * @return \Bitrix\ImBot\Bot\Base
+	 * @return \Bitrix\ImBot\Bot\Base|string
 	 */
-	public static function getClassName()
+	protected static function getClassName()
 	{
 		return get_called_class();
 	}
@@ -238,23 +198,5 @@ abstract class Base
 			self::$lastError = new \Bitrix\ImBot\Error(null, '', '');
 		}
 		return self::$lastError;
-	}
-
-
-	/**
-	 * Returns web client.
-	 *
-	 * @param string $botCode Bot code Id.
-	 *
-	 * @return \Bitrix\ImBot\Http
-	 */
-	protected static function instanceHttpClient($botCode)
-	{
-		if (!(self::$httpClient instanceof \Bitrix\ImBot\Http))
-		{
-			self::$httpClient = new \Bitrix\ImBot\Http($botCode);
-		}
-
-		return self::$httpClient;
 	}
 }

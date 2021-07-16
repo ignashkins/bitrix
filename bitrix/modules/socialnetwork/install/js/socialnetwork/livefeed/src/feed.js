@@ -1,17 +1,110 @@
 import {Type, Loc, ajax, Event} from "main.core";
 import {PinnedPanel} from "./pinned";
+import {Post} from "./post";
+import {Informer} from "./informer";
+
+import './css/feed.css';
+import './css/gratitude.css';
+import './css/important.css';
+import './css/warning.css';
 
 class Feed
 {
 	constructor()
 	{
-		this.init();
 		this.entryData = {};
+		this.feedInitialized = false;
 	}
 
 	init()
 	{
+		if (this.feedInitialized)
+		{
+			return;
+		}
 
+		PinnedPanelInstance.init();
+		InformerInstance.init();
+
+		this.feedInitialized = true;
+	}
+
+	changeFollow(params)
+	{
+		const logId = (params.logId ? parseInt(params.logId) : 0);
+		if (!logId)
+		{
+			return false;
+		}
+
+		const followNode = document.getElementById('log_entry_follow_' + logId);
+		const valueOld = (followNode && followNode.getAttribute('data-follow') === 'Y' ? 'Y' : 'N');
+		const valueNew = (valueOld === 'Y' ? 'N' : 'Y');
+
+		this.renderFollow({
+			logId: logId,
+			value: valueNew
+		});
+
+		ajax.runAction('socialnetwork.api.livefeed.changeFollow', {
+			data: {
+				logId: logId,
+				value: valueNew
+			},
+			analyticsLabel: {
+				b24statAction: (valueNew === 'Y' ? 'setFollow' : 'setUnfollow')
+			}
+		}).then((response) => {
+			if (!response.data.success)
+			{
+				this.renderFollow({
+					logId: logId,
+					value: valueOld
+				});
+			}
+		}, () => {
+			this.renderFollow({
+				logId: logId,
+				value: valueOld
+			});
+		});
+
+		return false;
+	}
+
+	renderFollow(params)
+	{
+		const logId = (params.logId ? parseInt(params.logId) : 0);
+		if (!logId)
+		{
+			return;
+		}
+		const followNode = document.getElementById('log_entry_follow_' + logId);
+		const value = (params.value && params.value === 'Y' ? 'Y' : 'N');
+
+		if (followNode)
+		{
+			followNode.setAttribute('data-follow', value);
+		}
+
+		const textNode = (followNode ? followNode.querySelector('a') : null);
+		if (textNode)
+		{
+			textNode.innerHTML = Loc.getMessage('SONET_EXT_LIVEFEED_FOLLOW_TITLE_' + value);
+		}
+
+		const postNode = (followNode ? followNode.closest('.feed-post-block') : null);
+		if (postNode)
+		{
+			if (value === 'N')
+			{
+				postNode.classList.add('feed-post-block-unfollowed');
+			}
+			else if (value === 'Y')
+			{
+				postNode.classList.remove('feed-post-block-unfollowed');
+			}
+		}
 	}
 
 	changeFavorites(params)
@@ -150,14 +243,20 @@ class Feed
 
 let FeedInstance = null;
 let PinnedPanelInstance = null;
+let PostInstance = null;
+let InformerInstance = null;
 
 Event.ready(() =>
 {
 	FeedInstance = new Feed();
 	PinnedPanelInstance = new PinnedPanel();
+	PostInstance = new Post();
+	InformerInstance = new Informer();
 });
 
 export {
 	FeedInstance,
-	PinnedPanelInstance
+	PinnedPanelInstance,
+	PostInstance,
+	InformerInstance,
 };

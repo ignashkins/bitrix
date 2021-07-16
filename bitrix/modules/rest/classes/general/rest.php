@@ -60,10 +60,10 @@ class CRestServer
 	protected $tokenCheck = false;
 	protected $authType = null;
 
-	public function __construct($params)
+	public function __construct($params, $toLowerMethod = true)
 	{
 		$this->class = $params['CLASS'];
-		$this->method = ToLower($params['METHOD']);
+		$this->method = $toLowerMethod ? ToLower($params['METHOD']) : $params['METHOD'];
 		$this->query = $params['QUERY'];
 
 		$this->transport = $params['TRANSPORT'];
@@ -684,6 +684,11 @@ class CRestServer
 			break;
 		}
 
+		$this->sendHeadersAdditional();
+	}
+
+	public function sendHeadersAdditional()
+	{
 		if(\Bitrix\Main\ModuleManager::isModuleInstalled('bitrix24'))
 		{
 			if($this->clientId)
@@ -707,6 +712,11 @@ class CRestServer
 	{
 		\Bitrix\Rest\LogTable::log($this, $data);
 		\Bitrix\Rest\UsageStatTable::finalize();
+
+		if (is_object($data['result']) && $data['result'] instanceof \Bitrix\Main\Engine\Response\BFile)
+		{
+			return $data['result'];
+		}
 
 		switch($this->transport)
 		{

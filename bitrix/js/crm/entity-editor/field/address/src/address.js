@@ -11,6 +11,7 @@ export class EntityEditorAddressField extends BX.Crm.EntityEditorField
 		this._isMultiple = null;
 		this._autocompleteEnabled = false;
 		this._restrictionsCallback = null;
+		this._isMarkedAsChanged = false;
 	}
 
 	initialize(id, settings)
@@ -31,6 +32,8 @@ export class EntityEditorAddressField extends BX.Crm.EntityEditorField
 		settings.enableAutocomplete = this._autocompleteEnabled;
 		settings.hideDefaultAddressType = this._isMultiple; // hide for multiple addresses only
 		settings.showAddressTypeInViewMode = this._isMultiple; //for multiple addresses only
+		settings.addressZoneConfig = BX.prop.getObject(params, "addressZoneConfig", {});
+		settings.countryId = 0;
 		this._field = EntityEditorBaseAddressField.create(id, settings);
 		this._field.setMultiple(this._isMultiple);
 		if (this._isMultiple)
@@ -40,6 +43,7 @@ export class EntityEditorAddressField extends BX.Crm.EntityEditorField
 		EventEmitter.subscribe(this._field, 'onUpdate', this.onAddressListUpdate.bind(this));
 		EventEmitter.subscribe(this._field, 'onStartLoadAddress', this.onStartLoadAddress.bind(this));
 		EventEmitter.subscribe(this._field, 'onAddressLoaded', this.onAddressLoaded.bind(this));
+		EventEmitter.subscribe(this._field, 'onAddressDataInputting', this.onAddressDataInputting.bind(this));
 		EventEmitter.subscribe(this._field, 'onError', this.onError.bind(this));
 
 		this.initializeFromModel();
@@ -62,6 +66,16 @@ export class EntityEditorAddressField extends BX.Crm.EntityEditorField
 		{
 			this.refreshLayout();
 		}
+	}
+
+	getCountryId()
+	{
+		return this._field.getCountryId();
+	}
+
+	setCountryId(countryId)
+	{
+		this._field.setCountryId(countryId);
 	}
 
 	layout(options)
@@ -243,6 +257,20 @@ export class EntityEditorAddressField extends BX.Crm.EntityEditorField
 		if (toolPanel)
 		{
 			toolPanel.setLocked(false);
+		}
+	}
+
+	onAddressDataInputting()
+	{
+			this.markAsChanged();
+	}
+
+	markAsChanged()
+	{
+		if (!this._isMarkedAsChanged)
+		{
+			super.markAsChanged();
+			this._isMarkedAsChanged = true;
 		}
 	}
 

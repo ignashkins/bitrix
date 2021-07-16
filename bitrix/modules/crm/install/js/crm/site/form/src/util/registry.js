@@ -64,10 +64,19 @@ const Conv = {
 	},
 	formatMoney(val: Number, format): String
 	{
-		return (format || '').replace('#', val || 0);
+		console.log('format', format, format.replace('&#', '|||||'))
+		val = this.number(val).toFixed(2) || 0;
+		return (format || '#')
+			.replace('&#', '|||||')
+			.replace('&amp;#', '|-|||-|')
+			.replace('#', val)
+			.replace('|-|||-|', '&amp;#')
+			.replace('|||||', '&#')
+		;
 	},
 	replaceText (text, fields)
 	{
+		text = text + '';
 		fields = fields || {};
 		let holders = text.match(/{{[ -.a-zA-Z]+}}/g);
 		if (!holders || holders.length === 0)

@@ -1,5 +1,7 @@
-<?
+<?php
+
 use Bitrix\Main\Loader;
+use Bitrix\Iblock;
 
 IncludeModuleLangFile(__FILE__);
 
@@ -9,6 +11,36 @@ class CAllIBlockSection
 	protected static $arSectionCodeCache = array();
 	protected static $arSectionPathCache = array();
 	protected static $arSectionNavChainCache = array();
+
+	protected $iblock;
+	protected $iblockLanguage;
+
+	public function __construct()
+	{
+		$this->iblock = null;
+		$this->iblockLanguage = null;
+	}
+
+	public function setIblock(?int $iblockId): void
+	{
+		$iblock = null;
+		$language = null;
+		if ($iblockId !== null)
+		{
+			$iblock = CIBlock::GetArrayByID($iblockId);
+			if (!is_array($iblock))
+			{
+				$iblock = null;
+			}
+			else
+			{
+				$iblock['ID'] = (int)$iblock['ID'];
+				$language = static::getIblockLanguage($iblock['ID']);
+			}
+		}
+		$this->iblock = $iblock;
+		$this->iblockLanguage = $language;
+	}
 
 	public static function GetFilter($arFilter=Array())
 	{
@@ -1173,6 +1205,10 @@ class CAllIBlockSection
 		$err_mess = "FILE: ".__FILE__."<br>LINE: ";
 		global $DB, $APPLICATION, $USER;
 		$ID = (int)$ID;
+		if ($ID <= 0)
+		{
+			return false;
+		}
 
 		$APPLICATION->ResetException();
 		foreach (GetModuleEvents("iblock", "OnBeforeIBlockSectionDelete", true) as $arEvent)
@@ -2031,7 +2067,7 @@ class CAllIBlockSection
 	///////////////////////////////////////////////////////////////////
 	// GetSectionElementsCount($ID, $arFilter=Array())
 	///////////////////////////////////////////////////////////////////
-	function GetSectionElementsCount($ID, $arFilter=Array())
+	public static function GetSectionElementsCount($ID, $arFilter=Array())
 	{
 		global $DB;
 
@@ -2257,7 +2293,7 @@ class CAllIBlockSection
 		return $strResult;
 	}
 
-	function GetCount($arFilter=Array())
+	public static function GetCount($arFilter=Array())
 	{
 		global $DB, $USER;
 
@@ -2294,7 +2330,7 @@ class CAllIBlockSection
 		return (int)$res_cnt["C"];
 	}
 
-	function UserTypeRightsCheck($entity_id)
+	public static function UserTypeRightsCheck($entity_id)
 	{
 		if(preg_match("/^IBLOCK_(\d+)_SECTION$/", $entity_id, $match))
 		{
@@ -2929,4 +2965,194 @@ class CAllIBlockSection
 		}
 	}
 
+	public function generateMnemonicCode(string $name, int $iblockId, array $options = []): ?string
+	{
+		if ($name === '' || $iblockId <= 0)
+		{
+			return null;
+		}
+
+		if ($this->iblock !== null && $this->iblock['ID'] === $iblockId)
+		{
+			$iblock = $this->iblock;
+			$language = $this->iblockLanguage;
+		}
+		else
+		{
+			$iblock = CIBlock::GetArrayByID($iblockId);
+			if (empty($iblock))
+			{
+				$iblock = null;
+				$language = null;
+			}
+			else
+			{
+				$iblock['ID'] = (int)$iblock['ID'];
+				$language = static::getIblockLanguage($iblock['ID']);
+			}
+		}
+
+		if (empty($iblock))
+		{
+			return null;
+		}
+
+		$result = null;
+		if (isset($iblock['FIELDS']['SECTION_CODE']['DEFAULT_VALUE']))
+		{
+			if ($iblock['FIELDS']['SECTION_CODE']['DEFAULT_VALUE']['TRANSLITERATION'] === 'Y'
+				&& $iblock['FIELDS']['SECTION_CODE']['DEFAULT_VALUE']['USE_GOOGLE'] === 'N'
+			)
+			{
+				$config = $iblock['FIELDS']['SECTION_CODE']['DEFAULT_VALUE'];
+				$config['LANGUAGE_ID'] = $language;
+				$config = array_merge($config, $options);
+
+				if ($config['LANGUAGE_ID'] !== null)
+				{
+					$settings = [
+						'max_len' => $config['TRANS_LEN'],
+						'change_case' => $config['TRANS_CASE'],
+						'replace_space' => $config['TRANS_SPACE'],
+						'replace_other' => $config['TRANS_OTHER'],
+						'delete_repeat_replace' => ($config['TRANS_EAT'] == 'Y'),
+					];
+
+					$result = CUtil::translit($name, $config['LANGUAGE_ID'], $settings);
+				}
+			}
+		}
+
+		return $result;
+	}
+
+	public function isExistsMnemonicCode(string $code, ?int $sectionId, int $iblockId): bool
+	{
+		if ($code === '')
+		{
+			return false;
+		}
+		$filter = [
+			'=IBLOCK_ID' => $iblockId,
+			'=CODE' => $code,
+		];
+		if ($sectionId !== null)
+		{
+			$filter['!=ID'] = $sectionId;
+		}
+
+		$row = Iblock\SectionTable::getList([
+			'select' => ['ID'],
+			'filter' => $filter,
+			'limit' => 1,
+		])->fetch();
+
+		return !empty($row);
+	}
+
+	public function createMnemonicCode(array $section, array $options = []): ?string
+	{
+		if (!isset($section['NAME']) || $section['NAME'] === '')
+		{
+			return null;
+		}
+		$iblockId = $section['IBLOCK_ID'] ?? 0;
+		if ($iblockId !== null)
+		{
+			$iblockId = (int)$iblockId;
+		}
+		if ($iblockId <= 0)
+		{
+			return null;
+		}
+
+		if ($this->iblock !== null && $this->iblock['ID'] === $iblockId)
+		{
+			$iblock = $this->iblock;
+		}
+		else
+		{
+			$iblock = CIBlock::GetArrayByID($iblockId);
+		}
+
+		if (empty($iblock))
+		{
+			return null;
+		}
+
+		$code = null;
+		if (isset($iblock['FIELDS']['SECTION_CODE']['DEFAULT_VALUE']))
+		{
+			$code = $this->generateMnemonicCode($section['NAME'], $iblockId, $options);
+			if ($code === null)
+			{
+				return null;
+			}
+
+			if ($iblock['FIELDS']['SECTION_CODE']['DEFAULT_VALUE']['TRANSLITERATION'] === 'Y'
+				&& (
+					$iblock['FIELDS']['SECTION_CODE']['DEFAULT_VALUE']['UNIQUE'] === 'Y'
+					|| (isset($options['CHECK_UNIQUE']) || $options['CHECK_UNIQUE'] === 'Y')
+				)
+			)
+			{
+				$id = (int)$section['ID'] ?? null;
+				if (!$this->isExistsMnemonicCode($code, $id, $iblockId))
+				{
+					return $code;
+				}
+
+				$checkSimilar = (isset($options['CHECK_SIMILAR']) && $options['CHECK_SIMILAR'] === 'Y');
+
+				$list = [];
+				$iterator = Iblock\SectionTable::getList([
+					'select' => ['ID', 'CODE'],
+					'filter' => [
+						'=IBLOCK_ID' => $iblockId,
+						'%=CODE' => $code . '%',
+					],
+				]);
+				while ($row = $iterator->fetch())
+				{
+					if ($checkSimilar && $id === (int)$row['ID'])
+					{
+						return null;
+					}
+					$list[$row['CODE']] = true;
+				}
+				unset($iterator, $row);
+
+				if (isset($list[$code]))
+				{
+					$code .= '_';
+					$i = 1;
+					while (isset($list[$code . $i]))
+					{
+						$i++;
+					}
+
+					$code .= $i;
+				}
+				unset($list);
+			}
+		}
+
+		return $code;
+	}
+
+	protected static function getIblockLanguage(int $iblockId): ?string
+	{
+		$result = [];
+		$iterator = Iblock\IblockSiteTable::getList([
+			'select' => ['LANGUAGE_ID' => 'SITE.LANGUAGE_ID'],
+			'filter' => ['=IBLOCK_ID' => $iblockId]
+		]);
+		while ($row = $iterator->fetch())
+		{
+			$result[$row['LANGUAGE_ID']] = true;
+		}
+		unset($iterator, $row);
+
+		return count($result) === 1 ? key($result) : null;
+	}
 }

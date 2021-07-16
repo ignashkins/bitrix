@@ -17,6 +17,7 @@ if(!defined('REST_MARKETPLACE_URL'))
 class Transport
 {
 	const SERVICE_URL = REST_MARKETPLACE_URL;
+	protected const VERSION = 1;
 
 	const SOCKET_TIMEOUT = 10;
 	const STREAM_TIMEOUT = 10;
@@ -27,6 +28,7 @@ class Transport
 	const METHOD_GET_SALE_OUT = 'get_sale_out';
 	const METHOD_GET_BUY = 'get_buy';
 	const METHOD_GET_UPDATES = 'get_updates';
+	const METHOD_GET_IMMUNE = 'get_immune';
 	const METHOD_GET_CATEGORIES = 'get_categories';
 	const METHOD_GET_CATEGORY = 'get_category';
 	const METHOD_GET_TAG = 'get_tag';
@@ -97,10 +99,14 @@ class Transport
 		}
 
 		$fields['action'] = $method;
+		if (Client::isSubscriptionAccess())
+		{
+			$fields['queryVersion'] = static::VERSION;
+		}
 		$fields['lang'] = LANGUAGE_ID;
 		$fields['bsm'] = ModuleManager::isModuleInstalled('intranet') ? '0' : '1';
 
-		if(Loader::includeModule('bitrix24'))
+		if(Loader::includeModule('bitrix24') && defined('BX24_HOST_NAME'))
 		{
 			$fields['tariff'] = \CBitrix24::getLicensePrefix();
 			$fields['host_name'] = BX24_HOST_NAME;

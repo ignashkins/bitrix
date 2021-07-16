@@ -6,7 +6,7 @@ if(!CModule::IncludeModule("forum"))
 	return;
 
 $arLanguages = Array();
-$rsLanguage = CLanguage::GetList($by, $order, array());
+$rsLanguage = CLanguage::GetList();
 while($arLanguage = $rsLanguage->Fetch())
 	$arLanguages[] = $arLanguage["LID"];
 

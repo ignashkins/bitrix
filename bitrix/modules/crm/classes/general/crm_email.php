@@ -51,8 +51,8 @@ class CCrmEMail
 		}
 
 		$dbUsers = CUser::GetList(
-			($by='ID'),
-			($order='ASC'),
+			'ID',
+			'ASC',
 			array('=EMAIL' => $email),
 			array(
 				'FIELDS' => array('ID'),
@@ -389,7 +389,7 @@ class CCrmEMail
 			$adminList = array();
 
 			$res = \CUser::getList(
-				$by, $order,
+				'', '',
 				array('GROUPS_ID' => 1),
 				array('FIELDS' => array('ID', 'ACTIVE'))
 			);
@@ -1357,8 +1357,8 @@ class CCrmEMail
 		}
 
 		$eventText  = '<b>'.getMessage('CRM_EMAIL_SUBJECT').'</b>: '.$subject.PHP_EOL;
-		$eventText .= '<b>'.getMessage('CRM_EMAIL_FROM').'</b>: '.join($sender, ', ').PHP_EOL;
-		$eventText .= '<b>'.getMessage('CRM_EMAIL_TO').'</b>: '.join($rcpt, ', ').PHP_EOL;
+		$eventText .= '<b>'.getMessage('CRM_EMAIL_FROM').'</b>: '.join(', ', $sender).PHP_EOL;
+		$eventText .= '<b>'.getMessage('CRM_EMAIL_TO').'</b>: '.join(', ', $rcpt).PHP_EOL;
 
 		if (!empty($bannedAttachments))
 		{
@@ -1469,17 +1469,22 @@ class CCrmEMail
 			$datetime = $msgFields['FIELD_DATE'];
 		}
 
-		$deadline = convertTimeStamp(strtotime('tomorrow') + $currentUserOffset - $userOffset, 'FULL', $siteId);
+		$deadlineTimestamp = strtotime('tomorrow') + $currentUserOffset - $userOffset;
+		$deadline = convertTimeStamp($deadlineTimestamp, 'FULL', $siteId);
 		if (CModule::includeModule('calendar'))
 		{
 			$calendarSettings = \CCalendar::getSettings();
 
+			$workTimeEndHour = $calendarSettings['work_time_end'] > 0 ? $calendarSettings['work_time_end'] : 19;
 			$dummyDeadline = new \Bitrix\Main\Type\DateTime();
 			$dummyDeadline->setTime(
-				$calendarSettings['work_time_end'] > 0 ? $calendarSettings['work_time_end'] : 19,
+				$workTimeEndHour,
 				0,
 				$currentUserOffset - $userOffset
 			);
+			$deadlineTimestamp += $workTimeEndHour * 60 * 60; // work time end in tomorrow
+			$deadline = convertTimeStamp($deadlineTimestamp, 'FULL', $siteId);
+
 			if ($dummyDeadline->getTimestamp() > $nowTimestamp + $currentUserOffset)
 			{
 				$deadline = $dummyDeadline->format(\Bitrix\Main\Type\DateTime::convertFormatToPhp(FORMAT_DATETIME));
@@ -1493,14 +1498,14 @@ class CCrmEMail
 			'TYPE_ID'              => \CCrmActivityType::Email,
 			'ASSOCIATED_ENTITY_ID' => 0,
 			'PARENT_ID'            => $parentId,
-			'SUBJECT'              => $subject,
+			'SUBJECT'              => \Bitrix\Main\Text\Emoji::encode($subject),
 			'START_TIME'           => (string) $datetime,
 			'END_TIME'             => (string) $deadline,
 			'COMPLETED'            => $completed,
 			'AUTHOR_ID'            => $mailbox['USER_ID'],
 			'RESPONSIBLE_ID'       => $userId,
 			'PRIORITY'             => \CCrmActivityPriority::Medium,
-			'DESCRIPTION'          => $descr,
+			'DESCRIPTION'          => \Bitrix\Main\Text\Emoji::encode($descr),
 			'DESCRIPTION_TYPE'     => \CCrmContentType::Html,
 			'DIRECTION'            => $direction,
 			'LOCATION'             => '',
@@ -2392,7 +2397,7 @@ class CCrmEMail
 		$eventText  = '';
 		$eventText .= '<b>'.GetMessage('CRM_EMAIL_SUBJECT').'</b>: '.$subject.PHP_EOL;
 		$eventText .= '<b>'.GetMessage('CRM_EMAIL_FROM').'</b>: '.$addresserInfo['EMAIL'].PHP_EOL;
-		$eventText .= '<b>'.GetMessage('CRM_EMAIL_TO').'</b>: '.implode($addresseeEmails, '; ').PHP_EOL;
+		$eventText .= '<b>'.GetMessage('CRM_EMAIL_TO').'</b>: '.implode('; ', $addresseeEmails).PHP_EOL;
 		if(!empty($arBannedAttachments))
 		{
 			$eventText .= '<b>'.GetMessage('CRM_EMAIL_BANNENED_ATTACHMENTS', array('%MAX_SIZE%' => $attachmentMaxSizeMb)).'</b>: ';
@@ -3177,4 +3182,3 @@ class CCrmEMailCodeAllocation
 		return self::IsDefined($value) ? $value : self::Body;
 	}
 }
-?>

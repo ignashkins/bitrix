@@ -630,11 +630,9 @@ final class CWebDavTools
 		{
 			return false;
 		}
-		$o = "ID";
-		$b = '';
 		$queryUser = CUser::GetList(
-			$o,
-			$b,
+			'id',
+			'asc',
 			array(
 				"ID_EQUAL_EXACT" => $userId,
 			),

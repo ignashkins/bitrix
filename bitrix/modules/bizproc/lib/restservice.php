@@ -1,13 +1,15 @@
 <?php
+
 namespace Bitrix\Bizproc;
 
 use Bitrix\Bizproc\Workflow\Entity\WorkflowInstanceTable;
-use \Bitrix\Main\Loader;
-use \Bitrix\Rest\AppLangTable;
-use \Bitrix\Rest\AppTable;
+use Bitrix\Main\Loader;
+use Bitrix\Rest\AppLangTable;
+use Bitrix\Rest\AppTable;
+use Bitrix\Rest\HandlerHelper;
 use Bitrix\Rest\PlacementTable;
-use \Bitrix\Rest\RestException;
-use \Bitrix\Rest\AccessException;
+use Bitrix\Rest\RestException;
+use Bitrix\Rest\AccessException;
 
 Loader::includeModule('rest');
 
@@ -17,11 +19,8 @@ class RestService extends \IRestService
 	public const PLACEMENT_ACTIVITY_PROPERTIES_DIALOG = 'BIZPROC_ACTIVITY_PROPERTIES_DIALOG';
 
 	protected static $app;
-	private static $allowedOperations = array('', '!', '<', '<=', '>', '>=');//, '><', '!><', '?', '=', '!=', '%', '!%', ''); May be later?
-
-	const ERROR_UNSUPPORTED_PROTOCOL = 'ERROR_UNSUPPORTED_PROTOCOL';
-	const ERROR_WRONG_HANDLER_URL = 'ERROR_WRONG_HANDLER_URL';
-	const ERROR_HANDLER_URL_MATCH = 'ERROR_HANDLER_URL_MATCH';
+	private static $allowedOperations = ['', '!', '<', '<=', '>', '>='];
+	//, '><', '!><', '?', '=', '!=', '%', '!%', ''); May be later?
 
 	const ERROR_ACTIVITY_ALREADY_INSTALLED = 'ERROR_ACTIVITY_ALREADY_INSTALLED';
 	const ERROR_ACTIVITY_ADD_FAILURE = 'ERROR_ACTIVITY_ADD_FAILURE';
@@ -29,7 +28,6 @@ class RestService extends \IRestService
 	const ERROR_ACTIVITY_NOT_FOUND = 'ERROR_ACTIVITY_NOT_FOUND';
 	const ERROR_EMPTY_LOG_MESSAGE = 'ERROR_EMPTY_LOG_MESSAGE';
 	const ERROR_WRONG_WORKFLOW_ID = 'ERROR_WRONG_WORKFLOW_ID';
-	const ERROR_WRONG_ACTIVITY_NAME = 'ERROR_WRONG_ACTIVITY_NAME';
 
 	const ERROR_TEMPLATE_VALIDATION_FAILURE = 'ERROR_TEMPLATE_VALIDATION_FAILURE';
 
@@ -69,6 +67,7 @@ class RestService extends \IRestService
 
 				//workflow
 				'bizproc.workflow.terminate' => [__CLASS__, 'terminateWorkflow'],
+				'bizproc.workflow.kill' => [__CLASS__, 'killWorkflow'],
 				'bizproc.workflow.start' => [__CLASS__, 'startWorkflow'],
 
 				//workflow.instance
@@ -688,6 +687,35 @@ class RestService extends \IRestService
 	 * @param array $params Input params.
 	 * @param int $n Offset.
 	 * @param \CRestServer $server Rest server instance.
+	 * @return bool True on success.
+	 * @throws AccessException
+	 * @throws RestException
+	 */
+	public static function killWorkflow($params, $n, $server)
+	{
+		self::checkAdminPermissions();
+		$params = array_change_key_case($params, CASE_UPPER);
+
+		if (empty($params['ID']))
+		{
+			throw new RestException('Empty workflow instance ID', self::ERROR_WRONG_WORKFLOW_ID);
+		}
+
+		$id = $params['ID'];
+		$errors = \CBPDocument::killWorkflow($id);
+
+		if ($errors)
+		{
+			throw new RestException($errors[0]['message']);
+		}
+
+		return true;
+	}
+
+	/**
+	 * @param array $params Input params.
+	 * @param int $n Offset.
+	 * @param \CRestServer $server Rest server instance.
 	 * @return string Workflow ID.
 	 * @throws AccessException
 	 * @throws RestException
@@ -700,9 +728,32 @@ class RestService extends \IRestService
 		{
 			throw new RestException('Empty TEMPLATE_ID', self::ERROR_WRONG_WORKFLOW_ID);
 		}
-
-		$documentId = self::validateDocumentId($params['DOCUMENT_ID']);
 		$templateId = (int)$params['TEMPLATE_ID'];
+		$tplDocumentType = self::getTemplateDocumentType($templateId);
+
+		if (!$tplDocumentType)
+		{
+			throw new RestException('Template not found', self::ERROR_WRONG_WORKFLOW_ID);
+		}
+
+		$documentId = self::getDocumentId($params['DOCUMENT_ID']);
+
+		if (!$documentId)
+		{
+			throw new RestException('Wrong DOCUMENT_ID!');
+		}
+
+		$documentType = self::getDocumentType($documentId);
+
+		if (!$documentType)
+		{
+			throw new RestException('Incorrect document type!');
+		}
+		if (!self::isEqualDocumentType($tplDocumentType, $documentType))
+		{
+			throw new RestException('Template type and DOCUMENT_ID mismatch!');
+		}
+
 		self::checkStartWorkflowPermissions($documentId, $templateId);
 
 		$workflowParameters = isset($params['PARAMETERS']) && is_array($params['PARAMETERS']) ? $params['PARAMETERS'] : [];
@@ -1560,56 +1611,7 @@ class RestService extends \IRestService
 
 	private static function validateActivityHandler($handler, $server)
 	{
-		$handlerData = parse_url($handler);
-
-		if (is_array($handlerData)
-			&& $handlerData['host'] <> ''
-			&& mb_strpos($handlerData['host'], '.') > 0
-		)
-		{
-			if ($handlerData['scheme'] == 'http' || $handlerData['scheme'] == 'https')
-			{
-				$host = $handlerData['host'];
-				$app = self::getApp($server);
-				if ($app['URL'] <> '')
-				{
-					$urls = array($app['URL']);
-
-					if ($app['URL_DEMO'] <> '')
-					{
-						$urls[] = $app['URL_DEMO'];
-					}
-					if ($app['URL_INSTALL'] <> '')
-					{
-						$urls[] = $app['URL_INSTALL'];
-					}
-
-					$found = false;
-					foreach($urls as $url)
-					{
-						$a = parse_url($url);
-						if ($host == $a['host'] || $a['host'] == 'localhost')
-						{
-							$found = true;
-							break;
-						}
-					}
-
-					if(!$found)
-					{
-						throw new RestException('Handler URL host doesn\'t match application url', self::ERROR_HANDLER_URL_MATCH);
-					}
-				}
-			}
-			else
-			{
-				throw new RestException('Unsupported event handler protocol', self::ERROR_UNSUPPORTED_PROTOCOL);
-			}
-		}
-		else
-		{
-			throw new RestException('Wrong handler URL', self::ERROR_WRONG_HANDLER_URL);
-		}
+		HandlerHelper::checkCallback($handler);
 	}
 
 	private static function validateActivityProperties($properties)
@@ -1642,29 +1644,51 @@ class RestService extends \IRestService
 		}
 	}
 
-	private static function validateDocumentId($documentId)
+	private static function getDocumentId($documentId): ?array
 	{
-		$type = null;
-		if ($documentId && is_array($documentId))
+		if (is_array($documentId))
 		{
-			try
-			{
-				$runtime = \CBPRuntime::getRuntime();
-				$runtime->startRuntime();
-				/** @var \CBPDocumentService $documentService */
-				$documentService = $runtime->getService('DocumentService');
-				$documentId = $documentService->normalizeDocumentId($documentId);
-				$type = $documentService->getDocumentType($documentId);
-			}
-			catch (\CBPArgumentNullException $e) {}
+			$runtime = \CBPRuntime::getRuntime(true);
+			$documentService = $runtime->getDocumentService();
+			return $documentService->normalizeDocumentId($documentId);
 		}
+		return null;
+	}
 
-		if (!$type)
+	private static function getDocumentType(array $documentId): ?array
+	{
+		try
 		{
-			throw new RestException('Wrong DOCUMENT_ID!');
+			$runtime = \CBPRuntime::getRuntime(true);
+			$documentService = $runtime->getDocumentService();
+			return $documentService->getDocumentType($documentId);
 		}
+		catch (\CBPArgumentNullException $e) {}
 
-		return $documentId;
+		return null;
+	}
+
+	private static function getTemplateDocumentType(int $id): ?array
+	{
+		$tpl = WorkflowTemplateTable::getList([
+			'select' => ['MODULE_ID', 'ENTITY', 'DOCUMENT_TYPE'],
+			'filter' => ['=ID' => $id],
+		])->fetch();
+
+		if ($tpl)
+		{
+			return [$tpl['MODULE_ID'], $tpl['ENTITY'], $tpl['DOCUMENT_TYPE']];
+		}
+		return null;
+	}
+
+	private static function isEqualDocumentType(array $a, array $b)
+	{
+		return (
+			(string)$a[0] === (string)$b[0]
+			&& (string)$a[1] === (string)$b[1]
+			&& (string)$a[2] === (string)$b[2]
+		);
 	}
 
 	private static function validateTemplateName($name)

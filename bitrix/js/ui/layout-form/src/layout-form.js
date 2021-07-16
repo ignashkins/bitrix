@@ -1,4 +1,5 @@
 import {Event, Dom} from "main.core";
+import 'ui.forms';
 
 export class LayoutForm
 {
@@ -16,12 +17,25 @@ export class LayoutForm
 
 		for (let i = 0; i < this.nodes.length; i++) {
 			Event.bind(this.nodes[i], "click", this.onClick.bind(this));
+			this.nodes[i].querySelector('.ui-ctl-element[type="checkbox"]').style.pointerEvents = 'none';
+			this.checkInitialBlockVisibility(this.nodes[i]);
+		}
+	}
+
+	checkInitialBlockVisibility(hiddenRow)
+	{
+		let checkbox = hiddenRow.querySelector('.ui-ctl-element[type="checkbox"]');
+		if (checkbox.checked)
+		{
+			let hiddenBlock = hiddenRow.nextElementSibling;
+			hiddenBlock.style.height = hiddenBlock.scrollHeight + 'px';
+			Dom.addClass(hiddenBlock, 'ui-form-row-hidden-show');
 		}
 	}
 
 	onClick(event)
 	{
-		event.preventDefault();
+		// event.preventDefault();
 
 		let checkbox = event.currentTarget.querySelector('.ui-ctl-element[type="checkbox"]');
 		let hiddenBlock = event.currentTarget.nextElementSibling;

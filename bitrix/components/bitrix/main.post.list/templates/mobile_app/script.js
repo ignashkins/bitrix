@@ -200,11 +200,34 @@
 							this.showNote([entityId, id], data['okMessage']);
 						}
 					}
-				}, this)
+				}, this),
+				OnUploadQueueError : function(params)
+				{
+					if (!repo["list"][params.entityId])
+					{
+						return;
+					}
+
+					var container = repo["list"][params.entityId].getCommentNode(document.getElementById(params.commentData.commentNodeId).getAttribute('bx-mpl-entity-id'));
+					if (container)
+					{
+						this.showError({
+							node: container,
+							attachments: [
+								{
+									fieldValue: 'do not bind click',
+								}
+							],
+						}, params.errorText);
+					}
+
+
+				}.bind(this),
 			};
 
 			BX.addCustomEvent(window, 'OnUCReply', this.windowEvents.OnUCReply);
 			BX.addCustomEvent(window, 'OnUCAfterRecordEdit', this.windowEvents.OnUCAfterRecordEdit);
+			BX.addCustomEvent(window, 'OnUploadQueueError', this.windowEvents.OnUploadQueueError);
 		},
 		reboot : function(id, oldObj, newObj) {
 			for (var ii in this.handlerEvents)
@@ -364,6 +387,18 @@
 					{
 						this.showError(comment, data['errorMessage']);
 					}
+					else if (data['warningCode'] && data['warningCode'] === 'COMMENT_DUPLICATED')
+					{
+						var container = repo["list"][data.messageId[0]].getCommentNode(data.messageId[1]);
+						if (container)
+						{
+							this.showError(comment, data['warningMessage']);
+						}
+						else
+						{
+							BX.onCustomEvent(window, 'OnUCAfterRecordAdd', [comment.id[0], data, comment]);
+						}
+					}
 					else
 					{
 						BX.onCustomEvent(window, 'OnUCAfterRecordAdd', [comment.id[0], data, comment]);
@@ -475,9 +510,10 @@
 			&& e.target
 			&& e.target.tagName
 			&& (
-				e.target.tagName.toUpperCase() == 'A'
+				e.target.tagName.toUpperCase() === 'A'
+				|| e.target.tagName.toUpperCase() === 'VIDEO'
 				|| (
-					e.target.tagName.toUpperCase() == 'IMG'
+					e.target.tagName.toUpperCase() === 'IMG'
 					&& (BX.type.isNotEmptyString(e.target.getAttribute('data-bx-image'))) // inline or attached image
 				)
 			)
@@ -745,36 +781,21 @@
 		BX.MPL.prototype.sendPagenavigation = function() {
 			if (BX(this.node.navigation))
 			{
-				var waiter = BX.findChild(this.node.navigation, { className: 'post-comments-button-waiter'});
+				var waiter = this.node.navigationLoader;
 				if (waiter)
 				{
-					BX.addClass(waiter, "post-comments-button-waiter-active");
+					BX.adjust(this.node.navigationLoader, {style : {"display" : "flex"}});
 				}
 			}
 			BX.MPL.superclass.sendPagenavigation.apply(this, arguments);
 		};
-		BX.MPL.prototype.buildPagenavigation = function() {
-			if (BX(this.node.navigation))
-			{
-				var waiter = BX.findChild(this.node.navigation, { className: 'post-comments-button-waiter'});
-				if (waiter)
-				{
-					BX.removeClass(waiter, "post-comments-button-waiter-active");
-				}
-			}
+		BX.MPL.prototype.buildPagenavigation = function()
+		{
 			if (window["BitrixMobile"] && window["BitrixMobile"]["LazyLoad"])
 				setTimeout(function() { window.BitrixMobile.LazyLoad.showImages(); }, 1000);
 			BX.MPL.superclass.buildPagenavigation.apply(this, arguments);
 		};
 		BX.MPL.prototype.completePagenavigation = function() {
-			if (BX(this.node.navigation))
-			{
-				var waiter = BX.findChild(this.node.navigation, { className: 'post-comments-button-waiter'});
-				if (waiter)
-				{
-					BX.removeClass(waiter, "post-comments-button-waiter-active");
-				}
-			}
 			BX.MPL.superclass.completePagenavigation.apply(this, arguments);
 		};
 		BX.MPL.prototype.showWait = function(id) {

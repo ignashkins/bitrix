@@ -87,6 +87,16 @@ if($action === 'SAVE')
 		__CrmCompanyDetailsEndJsonResonse(array('ERROR'=>'PERMISSION DENIED!'));
 	}
 
+	$diskQuotaRestriction = \Bitrix\Crm\Restriction\RestrictionManager::getDiskQuotaRestriction();
+	if (!$diskQuotaRestriction->hasPermission())
+	{
+		__CrmCompanyDetailsEndJsonResonse([
+			'ERROR' => $diskQuotaRestriction->getErrorMessage(),
+			'RESTRICTION' => true,
+			'RESTRICTION_ACTION' => $diskQuotaRestriction->prepareInfoHelperScript()
+		]);
+	}
+
 	$params = isset($_POST['PARAMS']) && is_array($_POST['PARAMS']) ? $_POST['PARAMS'] : array();
 	$sourceEntityID =  isset($params['COMPANY_ID']) ? (int)$params['COMPANY_ID'] : 0;
 
@@ -546,14 +556,8 @@ if($action === 'SAVE')
 	$component = new CCrmCompanyDetailsComponent();
 	$component->initializeParams($params);
 	$component->setEntityID($ID);
-	$component->prepareEntityData();
-	$component->prepareFieldInfos();
-	$component->prepareEntityFieldAttributes();
-	$result = array(
-		'ENTITY_ID' => $ID,
-		'ENTITY_DATA' => $component->prepareEntityData(),
-		'ENTITY_INFO' => $component->prepareEntityInfo()
-	);
+	$component->initializeData();
+	$result = $component->getEntityEditorData();
 
 	if($isNew)
 	{
@@ -578,6 +582,29 @@ if($action === 'SAVE')
 			array('ENABLE_SLIDER' => true)
 		);
 	}
+
+	__CrmCompanyDetailsEndJsonResonse($result);
+}
+elseif($action === 'LOAD')
+{
+	$ID = isset($_POST['ACTION_ENTITY_ID']) ? max((int)$_POST['ACTION_ENTITY_ID'], 0) : 0;
+	$params = isset($_POST['PARAMS']) && is_array($_POST['PARAMS']) ? $_POST['PARAMS'] : [];
+
+	if ($ID <=0)
+	{
+		__CrmCompanyDetailsEndJsonResonse(['ERROR'=>'ENTITY ID IS NOT FOUND!']);
+	}
+	if(!\CCrmCompany::CheckReadPermission($ID, $currentUserPermissions))
+	{
+		__CrmCompanyDetailsEndJsonResonse(['ERROR'=>'PERMISSION DENIED!']);
+	}
+
+	CBitrixComponent::includeComponentClass('bitrix:crm.company.details');
+	$component = new CCrmCompanyDetailsComponent();
+	$component->initializeParams($params);
+	$component->setEntityID($ID);
+	$component->initializeData();
+	$result = $component->getEntityEditorData();
 
 	__CrmCompanyDetailsEndJsonResonse($result);
 }
@@ -731,9 +758,7 @@ elseif($action === 'PREPARE_EDITOR_HTML')
 	}
 	$context['PARAMS'] = array_merge($params, $context['PARAMS']);
 
-	$component->prepareEntityData();
-	$component->prepareFieldInfos();
-	$component->prepareEntityFieldAttributes();
+	$component->initializeData();
 
 	if(empty($fieldNames))
 	{

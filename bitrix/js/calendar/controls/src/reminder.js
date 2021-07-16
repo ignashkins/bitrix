@@ -1,7 +1,7 @@
 import {Loc, Type, Dom, Tag, Event} from "main.core";
 import {EventEmitter, BaseEvent} from 'main.core.events';
 import {MenuManager, Popup} from 'main.popup';
-import {Util} from "calendar.util";
+import {Util} from 'calendar.util';
 
 export class Reminder extends EventEmitter
 {
@@ -13,6 +13,7 @@ export class Reminder extends EventEmitter
 	controlList = {};
 	viewMode = false;
 	DOM = {};
+	changedByUser = false;
 
 	constructor(params)
 	{
@@ -137,11 +138,15 @@ export class Reminder extends EventEmitter
 		return values;
 	}
 
-	setValue(reminderList, emitChanges = true)
+	setValue(reminderList, emitChanges = true, changedByUser = true)
 	{
+		this.selectedValues.forEach((value) => {
+			this.removeValue(value, emitChanges);
+		});
+
 		if (Type.isArray(reminderList))
 		{
-			reminderList.forEach((value) => {this.addValue(value, emitChanges)}, this);
+			reminderList.forEach((value) => {this.addValue(value, emitChanges, changedByUser)}, this);
 		}
 	}
 
@@ -169,11 +174,10 @@ export class Reminder extends EventEmitter
 		}
 	}
 
-	showPopup()
+	showPopup(params = {})
 	{
-		let
-			_this = this,
-			menuItems = [];
+		const _this = this;
+		const menuItems = [];
 
 		this.values.forEach((item) => {
 			if (item.mode === 'time-menu'
@@ -194,7 +198,7 @@ export class Reminder extends EventEmitter
 						value: this.defaultReminderTime
 					}, item.dataset);
 
-					menuItem.items = this.getSubmenuTimeValues(menuItem, item.label);
+					menuItem.items = this.getSubmenuTimeValues(menuItem, item.label, params);
 
 					menuItem.onclick = (function ()
 					{
@@ -206,6 +210,10 @@ export class Reminder extends EventEmitter
 							});
 
 							BX.defer(function(){_this.reminderMenu.close();}, _this)();
+							if (Type.isFunction(params.addValueCallback))
+							{
+								params.addValueCallback();
+							}
 						}
 					})();
 				}
@@ -223,6 +231,10 @@ export class Reminder extends EventEmitter
 						return () => {
 							_this.addValue(value);
 							_this.reminderMenu.close();
+							if (Type.isFunction(params.addValueCallback))
+							{
+								params.addValueCallback();
+							}
 						}
 					})(item.value, item.mode);
 				}
@@ -233,7 +245,7 @@ export class Reminder extends EventEmitter
 
 		this.reminderMenu = MenuManager.create(
 			this.id,
-			this.DOM.addButton,
+			params.bindTarget || this.DOM.addButton,
 			menuItems,
 			{
 				closeByEsc : true,
@@ -258,7 +270,7 @@ export class Reminder extends EventEmitter
 		this.reminderMenu.show();
 	}
 
-	getSubmenuTimeValues(parentItem, parentItemMessage)
+	getSubmenuTimeValues(parentItem, parentItemMessage, params)
 	{
 		let menuItems = [];
 		Reminder.getTimeValueList(60).forEach(function(menuItem)
@@ -285,6 +297,10 @@ export class Reminder extends EventEmitter
 					});
 
 					BX.defer(function(){this.reminderMenu.close();}, this)();
+					if (Type.isFunction(params.addValueCallback))
+					{
+						params.addValueCallback();
+					}
 
 				}.bind(this)
 			});
@@ -292,15 +308,19 @@ export class Reminder extends EventEmitter
 		return menuItems;
 	}
 
-	addValue(value, emitChanges = true)
+	addValue(value, emitChanges = true, changedByUser = true)
 	{
-		let
-			i, item,
-			formattedValue = Reminder.formatValue(value);
+		let item;
+		const formattedValue = Reminder.formatValue(value);
+
+		if (Type.isPlainObject(value) && value.count)
+		{
+			value = parseInt(formattedValue);
+		}
 
 		if (Type.isPlainObject(value) && !this.selectedValues.includes(formattedValue))
 		{
-			if (Type.isInteger(value.before) && Type.isInteger(value.time))
+			if (Type.isInteger(parseInt(value.before)) && Type.isInteger(parseInt(value.time)))
 			{
 				item = this.DOM.wrap.appendChild(Tag.render`
 					<span class="calendar-reminder-item">
@@ -332,11 +352,11 @@ export class Reminder extends EventEmitter
 			this.controlList[formattedValue] = item;
 			this.rawValuesMap.set(formattedValue, value);
 		}
-		else if (value >= 0 && !this.selectedValues.includes(formattedValue))
+		else if (parseInt(value) >= 0 && !this.selectedValues.includes(formattedValue))
 		{
-			for (i = 0; i < this.values.length; i++)
+			for (let i = 0; i < this.values.length; i++)
 			{
-				if (this.values[i].value === value)
+				if (this.values[i].value === parseInt(value))
 				{
 					item = this.DOM.wrap.appendChild(Tag.render`
 					<span class="calendar-reminder-item">
@@ -387,6 +407,7 @@ export class Reminder extends EventEmitter
 		{
 			this.emit('onChange', new BaseEvent({data: {values: this.selectedValues}}));
 		}
+		this.changedByUser = emitChanges && changedByUser;
 
 		if (Type.isElementNode(this.DOM.addButton))
 		{
@@ -394,32 +415,7 @@ export class Reminder extends EventEmitter
 		}
 	}
 
-	static getText(value)
-	{
-		let
-			tempValue = value,
-			dividers = [60, 24], //list of time dividers
-			messageCodes = ['EC_REMIND1_MIN_COUNT', 'EC_REMIND1_HOUR_COUNT', 'EC_REMIND1_DAY_COUNT'],
-			result = '';
-
-		for (let i = 0; i < messageCodes.length; i++)
-		{
-			if (tempValue < dividers[i] || i === dividers.length)
-			{
-				result = Loc.getMessage(messageCodes[i]).toString();
-				result = result.replace('\#COUNT\#', tempValue.toString());
-				break;
-			}
-			else
-			{
-				tempValue = Math.ceil(tempValue / dividers[i]);
-			}
-		}
-
-		return result;
-	}
-
-	removeValue(value)
+	removeValue(value, emitChanges = true)
 	{
 		if (this.controlList[value] && Type.isDomNode(this.controlList[value]))
 		{
@@ -432,7 +428,11 @@ export class Reminder extends EventEmitter
 			this.changeCallack(this.selectedValues);
 		}
 
-		this.emit('onChange', new BaseEvent({data: {values: this.selectedValues}}));
+		if (emitChanges)
+		{
+			this.emit('onChange', new BaseEvent({data: {values: this.selectedValues}}));
+			this.changedByUser = true;
+		}
 	}
 
 	static getTimeValueList(mode = 30)
@@ -453,27 +453,30 @@ export class Reminder extends EventEmitter
 		return Reminder.timeValueList;
 	}
 
-	static formatValue(remindValue)
-	{
-		if (Type.isPlainObject(remindValue) && Type.isInteger(remindValue.before) && Type.isInteger(remindValue.time))
-		{
-			return 'daybefore|' + remindValue.before + '|' + remindValue.time;
-		}
-		else if (Type.isPlainObject(remindValue) && Type.isDate(remindValue.value))
-		{
-			return 'date|' + Util.formatDateTime(remindValue.value);
-		}
-		return remindValue.toString();
-	}
-
 	handleClick(e)
 	{
 		let target = e.target || e.srcElement;
 		let remValue = target.getAttribute('data-bxc-value');
 
-		if (this.selectedValues.includes(remValue))
+		if (!Type.isNull(remValue) && this.selectedValues.includes(remValue))
 		{
 			this.removeValue(remValue);
+		}
+
+		if (Dom.hasClass(target, 'calendar-reminder-item-title'))
+		{
+			this.showPopup({
+
+				bindTarget: target,
+				addValueCallback: ()=>{
+					const removeIcon = target.parentNode.querySelector('.calendar-reminder-clear-icon');
+					if (Type.isElementNode(removeIcon)
+						&& !Type.isNull(removeIcon.getAttribute('data-bxc-value')))
+					{
+						this.removeValue(removeIcon.getAttribute('data-bxc-value'));
+					}
+				}
+			});
 		}
 	}
 
@@ -485,6 +488,8 @@ export class Reminder extends EventEmitter
 	static getReminderLabel(value)
 	{
 		let label = '';
+		value.before = parseInt(value.before);
+		value.time = parseInt(value.time);
 		if (Type.isInteger(value.before) && Type.isInteger(value.time) && [0, 1, 2].includes(value.before))
 		{
 			let time = Util.getTimeByInt(value.time);
@@ -621,5 +626,66 @@ export class Reminder extends EventEmitter
 		{
 			Dom.removeClass(this.DOM.wrap, 'calendar-reminder-readonly');
 		}
+	}
+
+	wasChangedByUser()
+	{
+		return this.changedByUser;
+	}
+
+	static getText(value)
+	{
+		let
+			tempValue = value,
+			dividers = [60, 24], //list of time dividers
+			messageCodes = ['EC_REMIND1_MIN_COUNT', 'EC_REMIND1_HOUR_COUNT', 'EC_REMIND1_DAY_COUNT'],
+			result = '';
+
+		for (let i = 0; i < messageCodes.length; i++)
+		{
+			if (tempValue < dividers[i] || i === dividers.length)
+			{
+				result = Loc.getMessage(messageCodes[i]).toString();
+				result = result.replace('\#COUNT\#', tempValue.toString());
+				break;
+			}
+			else
+			{
+				tempValue = Math.ceil(tempValue / dividers[i]);
+			}
+		}
+
+		return result;
+	}
+
+	static formatValue(remindValue)
+	{
+		if (Type.isPlainObject(remindValue)
+			&& Type.isInteger(parseInt(remindValue.before))
+			&& Type.isInteger(parseInt(remindValue.time)))
+		{
+			return 'daybefore|' + remindValue.before + '|' + remindValue.time;
+		}
+		else if (Type.isPlainObject(remindValue) && Type.isDate(remindValue.value))
+		{
+			return 'date|' + Util.formatDateTime(remindValue.value);
+		}
+		else if (Type.isPlainObject(remindValue) && remindValue.type)
+		{
+			if (remindValue.type === 'min')
+			{
+				return remindValue.count.toString();
+			}
+			if (remindValue.type === 'hour')
+			{
+				return (parseInt(remindValue.count) * 60).toString();
+			}
+			if (remindValue.type === 'day')
+			{
+				return (parseInt(remindValue.count) * 60 * 24).toString();
+			}
+		}
+
+		return remindValue.toString();
 	}
 }

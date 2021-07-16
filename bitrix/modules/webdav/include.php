@@ -2,6 +2,7 @@
 CModule::IncludeModule("iblock");
 //IncludeModuleLangFile(__FILE__);
 
+
 $GLOBALS["WEBDAV"] = array(
 	"FORBIDDEN_SYMBOLS" => array(
 		"/", "\\", ":", "*", "?", "\"", "'", "<", ">", "|", "#", "{", "}", "%", "&", "~", "+"),
@@ -289,7 +290,7 @@ function WDUnpackCookie()
 		{
 			$res = file_get_contents($GLOBALS["WEBDAV"]["PATH"]."cookie".$id);
 			if (!empty($res))
-				$_SESSION["WEBDAV_DATA"] = @unserialize($res, false);
+				$_SESSION["WEBDAV_DATA"] = @unserialize($res, ['allowed_classes' => false]);
 		}
 	}
 	elseif ($_SESSION["WEBDAV_DATA_PACKED"] == "Y")

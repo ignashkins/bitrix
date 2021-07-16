@@ -25,9 +25,8 @@ function deleteAccessRow(link)
 	 */
 	BX.Landing.ColorPalette = function(params)
 	{
-		this.themesPalete = document.querySelector(".landing-template-preview-themes");
-		this.themesSiteCustomColorNode = document.querySelector(".landing-template-preview-site-custom-color");
-
+		this.themesPalete = document.querySelector(".landing-template-themes");
+		this.themesSiteCustomColorNode = document.querySelector(".landing-template-custom-color");
 		this.init();
 
 		return this;
@@ -294,9 +293,9 @@ function deleteAccessRow(link)
 			{
 				if (event.currentTarget.hasAttribute('data-value'))
 				{
-				removeClass(this.getActiveColorNode(), "active");
-				addClass(event.currentTarget, "active");
-				this.setColor(data(event.currentTarget, 'data-value'));
+					removeClass(this.getActiveColorNode(), "active");
+					addClass(event.currentTarget, "active");
+					this.setColor(data(event.currentTarget, 'data-value'));
 				}
 			}
 		},
@@ -523,38 +522,64 @@ function deleteAccessRow(link)
 			colors: this.setColors()
 		});
 
-		this.colorPickerNode = node;
+		this.input = node;
+		this.colorPickerNode = node.parentElement;
+		BX.addClass(this.colorPickerNode, 'ui-colorpicker');
 
-		this.colorIcon = node.querySelector('.ui-colorpicker-color-js');
-		this.clearBtn = node.querySelector('.ui-colorpicker-clear');
-		this.input = node.querySelector('.landing-colorpicker-inp-js');
+		this.colorIcon = BX.create('span', {
+			props: {
+				className: 'ui-colorpicker-color'
+			}
+		});
+		BX.insertBefore(this.colorIcon, this.input);
+
+		this.colorValue = node.value;
+		if (this.colorValue)
+		{
+			BX.adjust(this.colorIcon, {
+				attrs: {
+					style: 'background-color:' + this.colorValue
+				}
+			});
+
+			BX.addClass(this.colorPickerNode, 'ui-colorpicker-selected');
+		}
+
+		this.clearBtn = BX.create('span', {
+			props: {
+				className: 'ui-colorpicker-clear'
+			}
+		});
+		BX.insertAfter(this.clearBtn, this.input);
 
 		BX.bind(this.colorPickerNode, 'click', this.show.bind(this));
 		BX.bind(this.clearBtn, 'click', this.clear.bind(this));
 
 	};
-	BX.Landing.ColorPicker.prototype =
-	{
-		onColorSelected : function (color)
+	BX.Landing.ColorPicker.prototype = {
+		onColorSelected: function(color)
 		{
 			this.colorPickerNode.classList.add('ui-colorpicker-selected');
 			this.colorIcon.style.backgroundColor = color;
 			this.input.value = color;
 		},
-		show : function (event)
+		show: function(event)
 		{
-			if(event.target == this.clearBtn)
+			if (event.target == this.clearBtn)
+			{
 				return;
+			}
 
 			this.picker.open();
 		},
-		clear : function ()
+		clear: function()
 		{
 			this.colorPickerNode.classList.remove('ui-colorpicker-selected');
 			this.input.value = '';
 			this.picker.setSelectedColor(null);
 		},
-		setColors :function () {
+		setColors: function()
+		{
 			return [
 				["#f5f5f5", "#eeeeee", "#e0e0e0", "#9e9e9e", "#757575", "#616161", "#212121"],
 				["#cfd8dc", "#b0bec5", "#90a4ae", "#607d8b", "#546e7a", "#455a64", "#263238"],
@@ -575,104 +600,15 @@ function deleteAccessRow(link)
 				["#e1bee7", "#ce93d8", "#ba68c8", "#9c27b0", "#8e24aa", "#7b1fa2", "#4a148c"],
 				["#f8bbd0", "#f48fb1", "#f06292", "#e91e63", "#d81b60", "#c2185b", "#880e4f"],
 				["#ffcdd2", "#ef9a9a", "#e57373", "#f44336", "#e53935", "#d32f2f", "#b71c1c"]
-			].map(function(item, index, arr) {
-				return arr.map(function(row) {
+			].map(function(item, index, arr)
+			{
+				return arr.map(function(row)
+				{
 					return row[index];
 				});
 			})
 		}
 	};
-
-	/**
-	 * Colorpicker for Theme site.
-	 */
-	BX.Landing.ColorPickerTheme = function(node)
-	{
-		var elementColorpicker = document.getElementById("landing-form-colorpicker-theme");
-		var defaultColor = elementColorpicker.getAttribute("data-value");
-		if (defaultColor[0] !== '#')
-		{
-			defaultColor = '#' + defaultColor;
-		}
-		this.picker = new BX.ColorPicker({
-			bindElement: node,
-			popupOptions: {angle: false, offsetTop: 5},
-			onColorSelected: this.onColorSelected.bind(this),
-			colors: this.setColors(),
-			selectedColor: defaultColor,
-		});
-
-		this.colorPickerNode = node;
-
-		this.colorIcon = node.querySelector('.ui-colorpicker-color-js');
-		this.clearBtn = node.querySelector('.ui-colorpicker-clear');
-		this.input = node.querySelector('.landing-colorpicker-inp-js');
-
-		BX.bind(this.colorPickerNode, 'click', this.show.bind(this));
-		BX.bind(this.clearBtn, 'click', this.clear.bind(this));
-
-	};
-	BX.Landing.ColorPickerTheme.prototype =
-		{
-			onColorSelected : function (color)
-			{
-				this.colorPickerNode.classList.add('ui-colorpicker-selected');
-				this.colorIcon.style.backgroundColor = color;
-				this.input.value = color;
-
-				var customColor = document.getElementById('landing-form-colorpicker-theme');
-				if(customColor)
-				{
-					customColor.setAttribute('data-value', this.input.value.substr(1));
-					customColor.setAttribute('style', 'background-color:' + this.input.value);
-				}
-
-				BX.onCustomEvent('BX.Landing:onSelectColor');
-				BX.Landing.Utils.AnalyticLabel('Color::CustomSet', this.input.value.substr(1));
-			},
-			show : function (event)
-			{
-				if(event.target == this.clearBtn)
-					return;
-
-				this.picker.open();
-			},
-			clear : function ()
-			{
-				this.colorPickerNode.classList.remove('ui-colorpicker-selected');
-				this.input.value = '';
-				this.picker.setSelectedColor(null);
-			},
-			setColors :function () {
-				return [
-					["#f4f5fb", "#d2d6ef", "#b0b8e3", "#8f99d6", "#6d7bca", "#4b5cbe", "#3e4fac"],
-					["#eaecfb", "#d5daf6", "#c0c7f2", "#abb5ed", "#96a2e9", "#8190e4", "#7888e2"],
-					["#e8f4fc", "#d1e9fa", "#badef7", "#a3d3f5", "#8cc8f2", "#75bdf0", "#6cb8ef"],
-					["#e7fbfd", "#cff7fc", "#b7f4fa", "#9ff0f9", "#87ecf7", "#74e9f6", "#66e7f5"],
-					["#ebfaf8", "#caf1ed", "#aeeae3", "#9ae5dc", "#85e0d5", "#71dace", "#5dd5c7"],
-					["#eafbf9", "#c8f4f0", "#aaeee8", "#90e9e2", "#5ddfd4", "#2ad5c7", "#26c0b3"],
-					["#ebfaf0", "#d6f5e2", "#c2f0d3", "#adebc5", "#99e6b6", "#85e0a8", "#70db99"],
-					["#f6f9eb", "#e8efcc", "#dbe7b1", "#d1e09a", "#c4d77e", "#b8cf63", "#a9c544"],
-					["#fafee6", "#f3febe", "#edfd9b", "#e8fc82", "#d0e859", "#b5d31d", "#a7c804"],
-					["#fefee6", "#fdfcce", "#fcfbb6", "#fbf993", "#f9f771", "#f7f445", "#f6f223"],
-					["#fef8e6", "#fdf1ce", "#fdeab5", "#fce092", "#fbd570", "#f9c943", "#f8bc16"],
-					["#fde9e8", "#fbd3d0", "#f9bdb9", "#f7a7a1", "#f5918a", "#f27269", "#ee463a"],
-					["#f9ebeb", "#f4d7d7", "#eec4c4", "#e8b0b0", "#e29c9c", "#d77575", "#ca4949"],
-					["#fceae8", "#f9d6d2", "#f7c1bb", "#f4aca4", "#f1978e", "#ee8377", "#e75140"],
-					["#ffe6e6", "#ffd1d2", "#ffc2c3", "#ffa9aa", "#fe9496", "#fe8082", "#fe6769"],
-					["#fee8e7", "#fdd2ce", "#fcbbb6", "#fba59d", "#fa8e85", "#f9786c", "#f75445"],
-					["#ffe5e5", "#ffcccc", "#ffb3b3", "#ff9999", "#ff8080", "#ff6666", "#ff0a0a"],
-					["#fee7ea", "#fdced6", "#fcb6c1", "#fb9dad", "#fa8598", "#f96c84", "#f73b5a"],
-					["#fde7ef", "#fbd0df", "#f9b8cf", "#f7a1bf", "#f580a9", "#f25a8f", "#ec135f"],
-					["#faeaef", "#f5d6de", "#f0c1ce", "#ebadbd", "#e698ad", "#e1849d", "#d75b7c"],
-					["#f2f2f2", "#dedede", "#cccccc", "#b3b3b3", "#999999", "#666666", "#404040"],
-				].map(function(item, index, arr) {
-					return arr.map(function(row) {
-						return row[index];
-					});
-				})
-			}
-		};
 
 	/**
 	 * Some additional JS.
@@ -1075,7 +1011,7 @@ function deleteAccessRow(link)
 	 * GA metrika.
 	 */
 
-	BX.Landing.Metrika = function()
+	BX.Landing.ExternalMetrika = function()
 	{
 		if (!BX('field-gacounter_counter-use'))
 		{
@@ -1129,7 +1065,6 @@ function deleteAccessRow(link)
 	/**
 	 * Change iblock select.
 	 */
-
 	BX.Landing.IblockSelect = function()
 	{
 		this.section = BX("row_section_id");
@@ -1277,4 +1212,30 @@ function deleteAccessRow(link)
 
 	}
 
+	BX.Landing.B24ButtonColor = function(typeControl, valueControl)
+	{
+		this.colorCustomType = 'custom';
+
+		this.typeControl = typeControl;
+		this.valueControl = valueControl;
+		this.valueControlWrap = BX.findParent(valueControl, {class:'ui-control-wrap'});
+
+		bind(typeControl, "change", BX.delegate(this.checkVisibility, this));
+
+		this.checkVisibility();
+	};
+
+	BX.Landing.B24ButtonColor.prototype = {
+		checkVisibility: function()
+		{
+			if(this.typeControl.value === 'custom')
+			{
+				this.valueControlWrap.hidden = false;
+			}
+			else
+			{
+				this.valueControlWrap.hidden = true;
+			}
+		}
+	};
 })();

@@ -15,7 +15,7 @@ use Bitrix\Sale\Internals;
 use Bitrix\Sale\PropertyBase;
 use Bitrix\Sale\Registry;
 
-class Order extends ProductsDataProvider implements Nameable
+class Order extends ProductsDataProvider
 {
 	protected static $properties;
 
@@ -205,11 +205,6 @@ class Order extends ProductsDataProvider implements Nameable
 		return \CCrmOwnerType::Order;
 	}
 
-	protected function getCrmProductOwnerType()
-	{
-		return 'O';
-	}
-
 	protected function getPersonTypeID()
 	{
 		return $this->getValue('PERSON_TYPE_ID');
@@ -338,6 +333,7 @@ class Order extends ProductsDataProvider implements Nameable
 			while($product = $dbRes->fetch())
 			{
 				$result[] = [
+					'ID' => $product['ID'],
 					'OWNER_ID' => $this->source,
 					'OWNER_TYPE' => $this->getCrmProductOwnerType(),
 					'PRODUCT_ID' => $product['PRODUCT_ID'] ?? 0,

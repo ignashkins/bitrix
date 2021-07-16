@@ -34,6 +34,7 @@ if(typeof BX.UI.EntityEditor === "undefined")
 
 		this._formElement = null;
 		this._ajaxForm = null;
+		this._reloadAjaxForm = null;
 		this._formSubmitHandler = BX.delegate(this.onFormSubmit, this);
 
 		this._controllers = null;
@@ -83,6 +84,8 @@ if(typeof BX.UI.EntityEditor === "undefined")
 		this._enableCloseConfirmation = true;
 		this._closeConfirmationHandler = BX.delegate(this.onCloseConfirmButtonClick, this);
 		this._cancelConfirmationHandler = BX.delegate(this.onCancelConfirmButtonClick, this);
+
+		this._windowResizeHandler = BX.debounce(BX.delegate(this.onResize, this), 50);
 
 		this._sliderOpenHandler = BX.delegate(this.onSliderOpen, this);
 		this._sliderCloseHandler = BX.delegate(this.onSliderClose, this);
@@ -375,13 +378,15 @@ if(typeof BX.UI.EntityEditor === "undefined")
 		},
 		attachToEvents: function()
 		{
-			BX.bind(window, "resize", BX.debounce(BX.delegate(this.onResize, this), 50));
+			BX.bind(window, "resize", this._windowResizeHandler);
 
 			BX.addCustomEvent("SidePanel.Slider:onOpenComplete", this._sliderOpenHandler);
 			BX.addCustomEvent("SidePanel.Slider:onClose", this._sliderCloseHandler);
 		},
 		deattachFromEvents: function()
 		{
+			BX.unbind(window, "resize", this._windowResizeHandler);
+
 			BX.removeCustomEvent("SidePanel.Slider:onOpenComplete", this._sliderOpenHandler);
 			BX.removeCustomEvent("SidePanel.Slider:onClose", this._sliderCloseHandler);
 		},
@@ -395,6 +400,7 @@ if(typeof BX.UI.EntityEditor === "undefined")
 			this.deattachFromEvents();
 
 			this.releaseAjaxForm();
+			this.releaseReloadAjaxForm();
 			this._container = BX.remove(this._container);
 
 			this._isReleased = true;
@@ -487,6 +493,33 @@ if(typeof BX.UI.EntityEditor === "undefined")
 			var ajaxData = BX.prop.getObject(this._settings, "ajaxData", {});
 			var actionName = BX.prop.getString(ajaxData, "ACTION_NAME", "");
 			var componentName = BX.prop.getString(ajaxData, "COMPONENT_NAME", "");
+			var signedParameters = BX.prop.getString(ajaxData, "SIGNED_PARAMETERS", "");
+
+			this._ajaxForm = this.createAjaxForm(
+				{
+					componentName: componentName,
+					actionName: actionName,
+					elementNode: this._formElement,
+					signedParameters: signedParameters,
+					enableRequiredUserFieldCheck: this._enableRequiredUserFieldCheck
+				},
+				{
+					onSuccess: this.onSaveSuccess.bind(this),
+					onFailure: this.onSaveFailure.bind(this)
+				}
+			);
+
+			//Disable submit action by pressing Enter key (if there is only one input on the form)
+			this._formElement.setAttribute("onsubmit", "return false;");
+
+			BX.addCustomEvent(this._ajaxForm, "onAfterSubmit", this._formSubmitHandler);
+		},
+		createAjaxForm: function(options, callbacks)
+		{
+			var componentName = BX.prop.getString(options, "componentName", "");
+			var actionName = BX.prop.getString(options, "actionName", "");
+			var elementNode = BX.prop.getElementNode(options, "elementNode", null);
+			var formData = BX.prop.getObject(options, "formData", null);
 
 			if(componentName !== "")
 			{
@@ -495,17 +528,18 @@ if(typeof BX.UI.EntityEditor === "undefined")
 					actionName = "save";
 				}
 
-				this._ajaxForm = BX.UI.ComponentAjax.create(
+				return BX.UI.ComponentAjax.create(
 					this._id,
 					{
-						elementNode: this._formElement,
+						elementNode: elementNode,
+						formData: formData,
 						className: componentName,
-						signedParameters: BX.prop.getString(ajaxData, "SIGNED_PARAMETERS", null),
+						signedParameters: BX.prop.getString(options, "signedParameters", null),
 						actionName: actionName,
 						callbacks:
 							{
-								onSuccess: BX.delegate(this.onSaveSuccess, this),
-								onFailure: BX.delegate(this.onSaveFailure, this)
+								onSuccess: (callbacks ? callbacks.onSuccess : null),
+								onFailure: (callbacks ? callbacks.onFailure : null)
 							}
 					}
 				);
@@ -517,32 +551,28 @@ if(typeof BX.UI.EntityEditor === "undefined")
 					actionName = "SAVE";
 				}
 
-				this._ajaxForm = BX.UI.AjaxForm.create(
+				return BX.UI.AjaxForm.create(
 					this._id,
 					{
-						elementNode: this._formElement,
+						elementNode: elementNode,
+						formData: formData,
 						config:
 							{
 								url: this._serviceUrl,
 								method: "POST",
 								dataType: "json",
 								processData : true,
-								onsuccess: BX.delegate(this.onSaveSuccess, this),
+								onsuccess: (callbacks ? callbacks.onSuccess : null),
 								data:
 									{
 										"ACTION": actionName,
 										"ACTION_ENTITY_TYPE": this._entityTypeName,
-										"ENABLE_REQUIRED_USER_FIELD_CHECK": this._enableRequiredUserFieldCheck ? 'Y' : 'N'
+										"ENABLE_REQUIRED_USER_FIELD_CHECK": BX.prop.getBoolean(options, "enableRequiredUserFieldCheck", false) ? 'Y' : 'N'
 									}
 							}
 					}
 				);
 			}
-
-			//Disable submit action by pressing Enter key (if there is only one input on the form)
-			this._formElement.setAttribute("onsubmit", "return false;");
-
-			BX.addCustomEvent(this._ajaxForm, "onAfterSubmit", this._formSubmitHandler);
 		},
 		releaseAjaxForm: function()
 		{
@@ -553,6 +583,15 @@ if(typeof BX.UI.EntityEditor === "undefined")
 
 			BX.removeCustomEvent(this._ajaxForm, "onAfterSubmit", this._formSubmitHandler);
 			this._ajaxForm = null;
+		},
+		releaseReloadAjaxForm: function()
+		{
+			if(!this._reloadAjaxForm)
+			{
+				return;
+			}
+
+			this._reloadAjaxForm = null;
 		},
 		getId: function()
 		{
@@ -1389,6 +1428,37 @@ if(typeof BX.UI.EntityEditor === "undefined")
 
 			BX.onCustomEvent(window, this.eventsNamespace + ":onRefreshLayout", [ this ]);
 		},
+		refreshViewModeLayout: function(options)
+		{
+			var userFieldLoader = BX.UI.EntityUserFieldLayoutLoader.create(
+				this._id,
+				{ mode: BX.UI.EntityEditorMode.view, enableBatchMode: true, owner: this }
+			);
+
+			if(!BX.type.isPlainObject(options))
+			{
+				options = {};
+			}
+
+			for(var i = 0, length = this._controls.length; i < length; i++)
+			{
+				var control = this._controls[i];
+
+				var layoutOptions = BX.mergeEx(
+					options,
+					{
+						userFieldLoader: userFieldLoader,
+						enableFocusGain: false,
+						isRefreshViewModeLayout: true
+					}
+				);
+				control.refreshViewModeLayout(layoutOptions);
+			}
+
+			userFieldLoader.runBatch();
+
+			BX.onCustomEvent(window, this.eventsNamespace + ":onRefreshViewModeLayout", [ this ]);
+		},
 		//endregion
 		switchControlMode: function(control, mode, options)
 		{
@@ -1674,7 +1744,10 @@ if(typeof BX.UI.EntityEditor === "undefined")
 			}
 			for(var i = 0, length = this._controllers.length; i < length; i++)
 			{
-				data = this._controllers[i].onBeforesSaveControl(data);
+				if (BX.Type.isFunction(this._controllers[i].onBeforesSaveControl))
+				{
+					data = this._controllers[i].onBeforesSaveControl(data);
+				}
 			}
 			return data;
 		},
@@ -1870,6 +1943,54 @@ if(typeof BX.UI.EntityEditor === "undefined")
 					onsuccess: BX.delegate(this.onSaveSuccess, this)
 				}
 			);
+		},
+		reload: function()
+		{
+			if(this._isRequestRunning)
+			{
+				return;
+			}
+			if(this._entityId <= 0 && this._model.isIdentifiable())
+			{
+				return;
+			}
+			var eventArgs = this.getActionEventArguments();
+
+			BX.onCustomEvent(window, this.eventsNamespace + ':onEntityStartReload', [ this, eventArgs ]);
+
+			if(eventArgs["cancel"])
+			{
+				return;
+			}
+
+			var ajaxData = BX.prop.getObject(this._settings, 'ajaxData', {});
+			var componentName = BX.prop.getString(ajaxData, 'COMPONENT_NAME', '');
+			var signedParameters = BX.prop.getString(ajaxData, 'SIGNED_PARAMETERS', '');
+			var reloadActionFormData = BX.prop.getObject(ajaxData,'RELOAD_FORM_DATA', {});
+			var reloadActionName = BX.prop.getString(ajaxData, "RELOAD_ACTION_NAME", '');
+			if (reloadActionName === '')
+			{
+				console.warn("Can't reload entity editor because RELOAD_ACTION_NAME is not defined");
+				return;
+			}
+
+			this._reloadAjaxForm = this.createAjaxForm(
+				{
+					componentName: componentName,
+					actionName: reloadActionName,
+					signedParameters: signedParameters,
+					formData: reloadActionFormData,
+					enableRequiredUserFieldCheck: false
+				},
+				{
+					onSuccess: this.onReloadSuccess.bind(this)
+				}
+			);
+
+			if(this._reloadAjaxForm)
+			{
+				this._reloadAjaxForm.submit();
+			}
 		},
 		validate: function(result)
 		{
@@ -2144,6 +2265,7 @@ if(typeof BX.UI.EntityEditor === "undefined")
 			var result = this._config.save(false);
 			if(result)
 			{
+				this._areAvailableSchemeElementsChanged = false;
 				this.processSchemeChange();
 			}
 			return result;
@@ -2374,6 +2496,56 @@ if(typeof BX.UI.EntityEditor === "undefined")
 				{
 					this._toolPanel.addError(errors[i]);
 				}
+			}
+		},
+		onReloadSuccess: function(result)
+		{
+			var eventParams = BX.prop.getObject(result, "EVENT_PARAMS", {});
+			eventParams["entityId"] = this._entityId;
+			eventParams["entityTypeName"] = this._entityTypeName;
+
+			var checkErrors = BX.prop.getObject(result, "CHECK_ERRORS", null);
+			var error = BX.prop.getString(result, "ERROR", "");
+			if(checkErrors || error !== "")
+			{
+				eventParams["checkErrors"] = checkErrors;
+				eventParams["error"] = error;
+
+				BX.onCustomEvent(window, this.eventsNamespace + ":onEntityReloadError", [eventParams]);
+				return;
+			}
+			var entityData = BX.prop.getObject(result, "ENTITY_DATA", null);
+
+			eventParams["entityData"] = entityData;
+			eventParams["sender"] = this;
+			eventParams["entityId"] = this._entityId;
+			BX.onCustomEvent(window, this.eventsNamespace + ":onEntityReload", [eventParams]);
+
+			if(BX.type.isPlainObject(entityData))
+			{
+				var previousModel = Object.create(this._model); // clone model object
+				previousModel.setData(  // copy model data
+					BX.clone(this._model.getData()),
+					{
+						enableNotification: false
+					}
+				);
+
+				//Notification event is disabled because we will call "refreshViewModeLayout" for all controls at the end.
+				this._model.setData(entityData, {enableNotification: false});
+
+				this.adjustTitle();
+				this.adjustSize();
+
+				for(var i = 0, length = this._controllers.length; i < length; i++)
+				{
+					this._controllers[i].onReload();
+				}
+
+				this.refreshViewModeLayout({
+					previousModel: previousModel,
+					reset: true
+				});
 			}
 		},
 		formatMoney: function(sum, currencyId, callback)
@@ -2954,7 +3126,7 @@ if(typeof BX.UI.EntityEditor === "undefined")
 		{
 			var hasContent = field.hasContentToDisplay();
 			var result = { isNeedToDisplay: (hasContent || this._showEmptyFields) };
-			if(this._enableExternalLayoutResolvers)
+			if(this.isExternalLayoutResolversEnabled())
 			{
 				var eventArgs =
 					{
@@ -2972,6 +3144,10 @@ if(typeof BX.UI.EntityEditor === "undefined")
 				);
 			}
 			return result;
+		},
+		isExternalLayoutResolversEnabled: function()
+		{
+			return !!this._enableExternalLayoutResolvers;
 		}
 	};
 	BX.UI.EntityEditor.defaultInstance = null;

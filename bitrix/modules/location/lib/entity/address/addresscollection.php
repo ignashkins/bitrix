@@ -3,32 +3,51 @@
 namespace Bitrix\Location\Entity\Address;
 
 use Bitrix\Location\Entity\Address;
-use Bitrix\Main\ArgumentOutOfRangeException;
+use Bitrix\Main\ArgumentTypeException;
 
 /**
- * Class Collection
+ * Class AddressCollection
  * @package Bitrix\Location\Entity\Address
+ * @internal
  */
-class AddressCollection extends \Bitrix\Location\Entity\Generic\Collection
+final class AddressCollection extends \Bitrix\Location\Entity\Generic\Collection
 {
 	/** @var Address[]  */
 	protected $items = [];
 
 	/**
-	 * Collection constructor.
-	 * @param Address[] $addresses
+	 * Add Address to Collection
+	 *
+	 * @param Address $address
+	 * @return int
+	 * @throws ArgumentTypeException
 	 */
-	public function  __construct(array  $addresses = [])
+	public function addItem($address): int
 	{
-
-		foreach($addresses as $address)
+		if(!($address instanceof Address))
 		{
-			if(!($addresses instanceof Address))
+			throw new ArgumentTypeException('address must be the instance of Address');
+		}
+
+		return parent::addItem($address);
+	}
+
+	/**
+	 * Returns address by address id.
+	 *
+	 * @param int $addressId
+	 * @return Address|null
+	 */
+	public function getAddressById(int $addressId): ?Address
+	{
+		foreach ($this->items as $item)
+		{
+			if ($item->getId() === $addressId)
 			{
-				throw new ArgumentOutOfRangeException('address');
+				return $item;
 			}
 		}
 
-		parent::__construct($addresses);
+		return null;
 	}
 }

@@ -180,7 +180,8 @@ class CSocServBitrix24Net extends CSocServAuth
 							$arFields["SITE_ID"] = SITE_ID;
 						}
 
-						$authError = $this->AuthorizeUser($arFields);
+						$bSaveNetworkAuth = COption::GetOptionString("main", "allow_external_auth_stored_hash", "N") == "Y";
+						$authError = $this->AuthorizeUser($arFields, $bSaveNetworkAuth);
 					}
 				}
 
@@ -197,6 +198,11 @@ class CSocServBitrix24Net extends CSocServAuth
 		}
 
 		$bSuccess = $authError === true;
+
+		if ($bSuccess)
+		{
+			CSocServAuthManager::SetAuthorizedServiceId(self::ID);
+		}
 
 		// hack to update option used for visualization in module options
 		if($bSuccess && !self::GetOption("bitrix24net_domain"))

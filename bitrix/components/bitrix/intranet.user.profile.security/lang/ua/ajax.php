@@ -1,5 +1,6 @@
-<?
+<?php
 $MESS["INTRANET_USER_PROFILE_AUTH_TITLE_2"] = "Авторизація";
+$MESS["INTRANET_USER_PROFILE_MAILING_TITLE"] = "Згода на розсилки";
 $MESS["INTRANET_USER_PROFILE_PASSWORD_TITLE"] = "Зміна пароля";
 $MESS["INTRANET_USER_PROFILE_RECOVERY_CODES_TITLE"] = "Резервні коди";
 $MESS["INTRANET_USER_PROFILE_SECURITY_OTP_TITLE"] = "Налаштування додаткового захисту";
@@ -7,4 +8,3 @@ $MESS["INTRANET_USER_PROFILE_SECURITY_PASSWORDS_TITLE"] = "Паролі заст
 $MESS["INTRANET_USER_PROFILE_SOCNET_EMAIL_TITLE"] = "Пересилання повідомлень в свій Бітрікс24";
 $MESS["INTRANET_USER_PROFILE_SOCSERV_TITLE"] = "Соціальні сервіси";
 $MESS["INTRANET_USER_PROFILE_SYNCHRONIZE_TITLE"] = "Синхронізація";
-?>

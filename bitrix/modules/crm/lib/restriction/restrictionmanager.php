@@ -49,7 +49,12 @@ class RestrictionManager
 	private static $addressSearchRestriction;
 	/** @var Bitrix24AccessRestriction|null  */
 	private static $ufAccessRightsRestriction;
-
+	/** @var Bitrix24AccessRestriction|null  */
+	private static $diskQuotaRestriction;
+	/** @var Bitrix24AccessRestriction|null  */
+	private static $callTrackerRestriction;
+	/** @var DynamicTypesLimit  */
+	private static $dynamicTypesLimit;
 	/**
 	* @return SqlRestriction
 	*/
@@ -238,12 +243,39 @@ class RestrictionManager
 	}
 
 	/**
+	 * @return AccessRestriction
+	 */
+	public static function getDiskQuotaRestriction()
+	{
+		self::initializeDiskQuotaRestriction();
+		return self::$diskQuotaRestriction;
+	}
+
+	/**
+	 * @return AccessRestriction
+	 */
+	public static function getCallTrackerRestriction()
+	{
+		self::initialize();
+		return self::$callTrackerRestriction;
+	}
+
+	/**
+	 * @return bool
+	 */
+	public static function isCallTrackerPermitted()
+	{
+		return self::getCallTrackerRestriction()->hasPermission();
+	}
+
+	/**
 	* @return void
 	*/
 	public static function reset()
 	{
 		self::initialize();
 		self::initializeAddressRestriction();
+		self::initializeDiskQuotaRestriction();
 
 		self::$sqlRestriction->reset();
 		self::$conversionRestriction->reset();
@@ -265,6 +297,7 @@ class RestrictionManager
 		self::$callListRestriction->reset();
 		self::$addressSearchRestriction->reset();
 		self::$ufAccessRightsRestriction->reset();
+		self::$diskQuotaRestriction->reset();
 
 		self::$sqlRestriction = null;
 		self::$conversionRestriction = null;
@@ -286,6 +319,7 @@ class RestrictionManager
 		self::$callListRestriction = null;
 		self::$addressSearchRestriction = null;
 		self::$ufAccessRightsRestriction = null;
+		self::$diskQuotaRestriction = null;
 
 		self::$isInitialized = false;
 	}
@@ -625,6 +659,23 @@ class RestrictionManager
 
 		self::$callListRestriction = new Bitrix24AccessRestriction('call-list-limit-popup', false, [], ['ID' => 'limit_crm_dialer']);
 
+		self::$callTrackerRestriction = new Bitrix24AccessRestriction(
+			'crm_phone_tracker',
+			false,
+			[],
+			[
+				'ID' => 'crm_phone_tracker',
+				'TITLE' => '',
+				'CONTENT' => ''
+			]
+		);
+		if(!self::$callTrackerRestriction->load())
+		{
+			self::$callTrackerRestriction->permit(
+				Bitrix24Manager::isFeatureEnabled("crm_phone_tracker")
+			);
+		}
+
 		self::$isInitialized = true;
 	}
 
@@ -650,6 +701,37 @@ class RestrictionManager
 		}
 	}
 
+	private static function initializeDiskQuotaRestriction()
+	{
+		if (self::$diskQuotaRestriction === null)
+		{
+			//region Disk quota
+			self::$diskQuotaRestriction = new Bitrix24AccessRestriction(
+				'crm_disk_quota',
+				false,
+				null,
+				['ID' => 'limit_office_storage']
+			);
+			if(!self::$diskQuotaRestriction->load())
+			{
+				$permitted = !Main\Loader::includeModule('bitrix24') ||
+					((int)Main\Config\Option::get("main", "disk_space", 0) <= 0);
+
+				if (!$permitted)
+				{
+					$quota = new \CDiskQuota();
+					$permitted = $quota->checkDiskQuota(['size' => 0]);
+					if (!$permitted)
+					{
+						self::$diskQuotaRestriction->setErrorMessage((string)$quota->LAST_ERROR);
+					}
+				}
+				self::$diskQuotaRestriction->permit($permitted);
+			}
+			//endregion
+		}
+	}
+
 	public static function onDealCategoryLimitChange(Main\Event $event)
 	{
 		DealCategory::applyMaximumLimitRestrictions(Bitrix24Manager::getDealCategoryCount());
@@ -659,5 +741,15 @@ class RestrictionManager
 	{
 		Main\Config\Option::delete('crm', array('name' => 'crm_enable_permission_control'));
 		Main\Config\Option::delete('crm', array('name' => 'recurring_deal_enabled'));
+	}
+
+	public static function getDynamicTypesLimitRestriction(): DynamicTypesLimit
+	{
+		if (!static::$dynamicTypesLimit)
+		{
+			static::$dynamicTypesLimit = new DynamicTypesLimit();
+		}
+
+		return static::$dynamicTypesLimit;
 	}
 }

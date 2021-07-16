@@ -153,7 +153,7 @@ class File extends Base
 		$pubLink = static::formatValuePublicLink($fieldType, $value);
 		if ($pubLink)
 		{
-			return Main\Engine\UrlManager::getHostUrl().\CBXShortUri::getShortUri($pubLink);
+			return Main\Engine\UrlManager::getInstance()->getHostUrl().\CBXShortUri::getShortUri($pubLink);
 		}
 		return '';
 	}
@@ -211,6 +211,15 @@ class File extends Base
 	}
 
 	/**
+	 * @param int $renderMode Control render mode.
+	 * @return bool
+	 */
+	public static function canRenderControl($renderMode)
+	{
+		return true;
+	}
+
+	/**
 	 * @param FieldType $fieldType
 	 * @param array $field
 	 * @param mixed $value
@@ -264,20 +273,12 @@ HTML;
 			return self::renderPublicSelectableControlSingle($fieldType, $field, $value);
 		}
 
+		if ($renderMode & FieldType::RENDER_MODE_MOBILE)
+		{
+			return self::renderMobileControl($fieldType, $field, $value);
+		}
+
 		return parent::renderControlSingle($fieldType, $field, $value, $allowSelection, $renderMode);
-	}
-
-	private static function renderPublicSelectableControlSingle(FieldType $fieldType, array $field, $value)
-	{
-		$name = static::generateControlName($field);
-		$className = static::generateControlClassName($fieldType, $field);
-		$className = str_replace('file', 'file-selectable', $className);
-
-		return '<input type="text" class="'.htmlspecialcharsbx($className)
-			.'" name="'.htmlspecialcharsbx($name).'" value="'.htmlspecialcharsbx((string) $value)
-			.'" placeholder="'.htmlspecialcharsbx($fieldType->getDescription()).'" value="'.htmlspecialcharsbx((string) $value).'"'
-			.' data-role="inline-selector-target" data-selector-type="file"'
-			.'/>';
 	}
 
 	/**
@@ -298,6 +299,11 @@ HTML;
 		if ($allowSelection && $renderMode & FieldType::RENDER_MODE_PUBLIC)
 		{
 			return self::renderPublicSelectableControlMultiple($fieldType, $field, $value);
+		}
+
+		if ($renderMode & FieldType::RENDER_MODE_MOBILE)
+		{
+			return self::renderMobileControl($fieldType, $field, $value);
 		}
 
 		if ($renderMode & FieldType::RENDER_MODE_DESIGNER)
@@ -326,6 +332,22 @@ HTML;
 		}
 
 		return parent::renderControlMultiple($fieldType, $field, $value, $allowSelection, $renderMode);
+	}
+
+	private static function renderPublicSelectableControlSingle(FieldType $fieldType, array $field, $value)
+	{
+		$name = static::generateControlName($field);
+		$className = static::generateControlClassName($fieldType, $field);
+		$className = str_replace('file', 'file-selectable', $className);
+
+		return sprintf(
+			'<input type="text" class="%s" name="%s" value="%s" placeholder="%s" data-role="inline-selector-target" data-selector-type="file" data-property="%s"/>',
+			htmlspecialcharsbx($className),
+			htmlspecialcharsbx($name),
+			htmlspecialcharsbx((string)$value),
+			htmlspecialcharsbx($fieldType->getDescription()),
+			htmlspecialcharsbx(Main\Web\Json::encode($fieldType->getProperty()))
+		);
 	}
 
 	private static function renderPublicSelectableControlMultiple(FieldType $fieldType, array $field, $value)
@@ -357,6 +379,27 @@ HTML;
 		return static::renderPublicMultipleWrapper($fieldType, $field, $controls);
 	}
 
+	private static function renderMobileControl(FieldType $fieldType, array $field, $value)
+	{
+		/** @var \CMain */
+		global $APPLICATION;
+		ob_start();
+		$APPLICATION->IncludeComponent(
+			'bitrix:main.file.input',
+			'mobile',
+			[
+				'MODULE_ID' => 'bizproc',
+				'CONTROL_ID' => static::generateControlId($field),
+				'ALLOW_UPLOAD' => 'A',
+				'INPUT_NAME' => static::generateControlName($field),
+				'INPUT_VALUE' => $value,
+				'MULTIPLE' => $fieldType->isMultiple() ? 'Y' : 'N'
+			]
+		);
+
+		return ob_get_clean();
+	}
+
 	/**
 	 * @param FieldType $fieldType
 	 * @param array $field
@@ -383,7 +426,7 @@ HTML;
 				if (!array_key_exists('MODULE_ID', $value) || $value['MODULE_ID'] == '')
 					$value['MODULE_ID'] = 'bizproc';
 
-				$value = \CFile::saveFile($value, 'bizproc_wf', true);
+				$value = \CFile::saveFile($value, 'bizproc_wf');
 				if (!$value)
 				{
 					$value = null;
@@ -398,6 +441,14 @@ HTML;
 		elseif (\CBPActivity::isExpression($value))
 		{
 			//It`s OK
+		}
+		elseif (is_numeric($value) && defined('BX_MOBILE'))
+		{
+			$file = \CFile::getById($value)->fetch();
+			if (!$file || $file['MODULE_ID'] !== 'bizproc')
+			{
+				$value = null;
+			}
 		}
 		else
 		{
@@ -426,7 +477,7 @@ HTML;
 			if ($fileFields)
 			{
 				$fileFields['MODULE_ID'] = 'bizproc';
-				return (int) \CFile::saveFile($fileFields, 'bizproc_rest', true);
+				return (int) \CFile::saveFile($fileFields, 'bizproc_rest');
 			}
 		}
 

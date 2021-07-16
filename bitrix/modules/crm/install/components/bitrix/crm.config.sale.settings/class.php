@@ -52,6 +52,11 @@ class CCrmConfigSaleSettings extends \CBitrixComponent implements Controllerable
 		{
 			$this->checkRequiredParams();
 
+			if (!CCrmSaleHelper::isShopAccess('admin'))
+			{
+				throw new SystemException('Access denied');
+			}
+
 			$this->checkPostRequest();
 
 			$this->formatResult();
@@ -78,6 +83,13 @@ class CCrmConfigSaleSettings extends \CBitrixComponent implements Controllerable
 
 	public function saveCommonSettingsAction()
 	{
+		$this->checkRequiredParams();
+
+		if (!CCrmSaleHelper::isShopAccess('admin'))
+		{
+			return;
+		}
+
 		$request = Context::getCurrent()->getRequest();
 		if ($request->isAjaxRequest() && $request->get("common_sale_settings") === "Y")
 		{
@@ -99,8 +111,13 @@ class CCrmConfigSaleSettings extends \CBitrixComponent implements Controllerable
 					$fieldName = $this->optionPrefix.$field;
 					$optionName = $field;
 
-					if (!isset($post[$fieldName]) || ((is_array($post[$fieldName]) && empty($post[$fieldName]))
-						|| (is_string($post[$fieldName]) && $post[$fieldName] == '')))
+					if (
+						!isset($post[$fieldName])
+						|| (
+							is_array($post[$fieldName])
+							&& empty($post[$fieldName])
+						)
+					)
 					{
 						continue;
 					}
@@ -125,7 +142,7 @@ class CCrmConfigSaleSettings extends \CBitrixComponent implements Controllerable
 							$subscribeProd = COption::GetOptionString("sale", "subscribe_prod", "");
 							if ($subscribeProd <> '')
 							{
-								$subscribeProdList = unserialize($subscribeProd);
+								$subscribeProdList = unserialize($subscribeProd, ['allowed_classes' => false]);
 							}
 							foreach ($subscribeProdList as $siteLid => $subscribeProdValue)
 							{
@@ -276,6 +293,13 @@ class CCrmConfigSaleSettings extends \CBitrixComponent implements Controllerable
 
 	protected function checkPostRequest()
 	{
+		$this->checkRequiredParams();
+
+		if (!CCrmSaleHelper::isShopAccess('admin'))
+		{
+			return;
+		}
+
 		$request = Context::getCurrent()->getRequest();
 		if ($request->isPost() && check_bitrix_sessid() && $this->arParams['TYPE_SETTINGS'] !== 'fields')
 		{
@@ -737,7 +761,7 @@ class CCrmConfigSaleSettings extends \CBitrixComponent implements Controllerable
 		$subscribeProd = COption::GetOptionString("sale", "subscribe_prod", "");
 		if ($subscribeProd <> '')
 		{
-			$subscribeProdList = unserialize($subscribeProd);
+			$subscribeProdList = unserialize($subscribeProd, ['allowed_classes' => false]);
 		}
 		$subscribeProdValues = array();
 		foreach ($subscribeProdList as $siteLid => $subscribeProdValue)
@@ -822,7 +846,6 @@ class CCrmConfigSaleSettings extends \CBitrixComponent implements Controllerable
 			"type" => "checkbox",
 			"value" => Option::get("sale", "tracking_check_switch", "N")
 		);
-
 		/* Check section */
 		$options[] = array(
 			"id" => "sale_advance_check_section",
@@ -977,7 +1000,7 @@ class CCrmConfigSaleSettings extends \CBitrixComponent implements Controllerable
 			[
 				"ID" => "order_default_responsible_id",
 				"INPUT_NAME" => $this->optionPrefix."order_default_responsible_id",
-				"LIST" => [Option::get("crm", "order_default_responsible_id", 1)]
+				"LIST" => [Option::get("crm", "order_default_responsible_id")]
 			]
 		);
 		$content = ob_get_contents();
@@ -1252,7 +1275,7 @@ class CCrmConfigSaleSettings extends \CBitrixComponent implements Controllerable
 			"DELETION_CONFIRMATION" => Loc::getMessage("CRM_STATUS_DELETION_CONFIRMATION_STATUS"),
 		);
 
-		$colorData = unserialize(COption::getOptionString("crm", "CONFIG_STATUS_".Order\OrderStatus::NAME));
+		$colorData = unserialize(COption::getOptionString("crm", "CONFIG_STATUS_".Order\OrderStatus::NAME), ['allowed_classes' => false]);
 
 		$data = [];
 
@@ -1311,7 +1334,7 @@ class CCrmConfigSaleSettings extends \CBitrixComponent implements Controllerable
 			"DELETION_CONFIRMATION" => Loc::getMessage("CRM_STATUS_DELETION_CONFIRMATION_STATUS"),
 		);
 
-		$colorData = unserialize(COption::getOptionString("crm", "CONFIG_STATUS_".Order\DeliveryStatus::NAME));
+		$colorData = unserialize(COption::getOptionString("crm", "CONFIG_STATUS_".Order\DeliveryStatus::NAME), ['allowed_classes' => false]);
 
 		$data = [];
 

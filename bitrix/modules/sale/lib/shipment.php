@@ -9,6 +9,7 @@ use Bitrix\Main\Localization\Loc;
 use Bitrix\Sale\Delivery;
 use Bitrix\Sale\Internals;
 use \Bitrix\Sale\Delivery\Requests;
+use Bitrix\Sale\ShipmentPropertyValueCollection;
 
 Loc::loadMessages(__FILE__);
 
@@ -32,6 +33,9 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 	protected $internalId = 0;
 
 	protected static $idShipment = 0;
+
+	/** @var ShipmentPropertyValueCollection */
+	protected $propertyCollection;
 
 	/**
 	 * @return string|void
@@ -85,7 +89,6 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 			"STATUS_ID",
 			"BASE_PRICE_DELIVERY",
 			"PRICE_DELIVERY",
-			"EXPECTED_PRICE_DELIVERY",
 			"ALLOW_DELIVERY",
 			"DATE_ALLOW_DELIVERY",
 			"EMP_ALLOW_DELIVERY_ID",
@@ -317,39 +320,20 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 		/** @var ShipmentItemCollection $sourceItemCollection */
 		$sourceItemCollection = $sourceItem->getCollection();
 		if ($this !== $sourceItemCollection->getShipment())
+		{
 			throw new Main\ArgumentException("item");
+		}
 
 		$quantity = floatval($quantity);
 
-		/** @var ShipmentCollection $shipmentCollection */
-		if (!$shipmentCollection = $this->getCollection())
-		{
-			throw new Main\ObjectNotFoundException('Entity "ShipmentCollection" not found');
-		}
-
 		/** @var Shipment $systemShipment */
-		if (!$systemShipment = $shipmentCollection->getSystemShipment())
-		{
-			throw new Main\ObjectNotFoundException('Entity "Shipment" not found');
-		}
+		$systemShipment = $this->getCollection()->getSystemShipment();
 
 		/** @var BasketItem $basketItem */
-		if (!$basketItem = $sourceItem->getBasketItem())
-		{
-			throw new Main\ObjectNotFoundException('Entity "BasketItem" not found');
-		}
-
-		/** @var Basket $basket */
-		if (!$basket = $basketItem->getCollection())
-		{
-			throw new Main\ObjectNotFoundException('Entity "Basket" not found');
-		}
+		$basketItem = $sourceItem->getBasketItem();
 
 		/** @var Order $order */
-		if (!$order = $basket->getOrder())
-		{
-			throw new Main\ObjectNotFoundException('Entity "Order" not found');
-		}
+		$order = $basketItem->getCollection()->getOrder();
 
 		$shipmentItemCode = $sourceItem->getBasketCode();
 
@@ -357,14 +341,13 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 			return new Result();
 
 		/** @var ShipmentItemCollection $systemShipmentItemCollection */
-		if (!$systemShipmentItemCollection = $systemShipment->getShipmentItemCollection())
-		{
-			throw new Main\ObjectNotFoundException('Entity "System ShipmentItemCollection" not found');
-		}
+		$systemShipmentItemCollection = $systemShipment->getShipmentItemCollection();
 
 		$systemShipmentItem = $systemShipmentItemCollection->getItemByBasketCode($shipmentItemCode);
 		if (is_null($systemShipmentItem))
+		{
 			$systemShipmentItem = $systemShipmentItemCollection->createItem($basketItem);
+		}
 
 		$newSystemShipmentItemQuantity = $systemShipmentItem->getQuantity() + $quantity;
 		if ($newSystemShipmentItemQuantity < 0)
@@ -384,7 +367,7 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 		}
 
 		$systemShipmentItem->setFieldNoDemand('QUANTITY', $newSystemShipmentItemQuantity);
-		if ($newSystemShipmentItemQuantity === 0)
+		if ($newSystemShipmentItemQuantity <= 1e-10)
 		{
 			$systemShipmentItem->delete();
 		}
@@ -706,14 +689,15 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 
 		while ($shipment = $shipmentDataList->fetch())
 		{
-			$r = static::deleteInternal($shipment['ID']);
-			if ($r -> isSuccess())
+			$res = static::deleteInternal($shipment['ID']);
+
+			if ($res -> isSuccess())
 			{
 				Internals\ShipmentExtraServiceTable::deleteByShipmentId($shipment['ID']);
 			}
 			else
 			{
-				$result->addErrors($r->getErrors());
+				$result->addErrors($res->getErrors());
 			}
 		}
 
@@ -750,6 +734,7 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 			$this->disallowDelivery();
 		}
 
+		$this->getPropertyCollection()->deleteNoDemand($this->getId());
 		$this->deleteDeliveryRequest();
 
 		$this->getShipmentItemCollection()->clearCollection();
@@ -999,6 +984,16 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 			/** @var OrderHistory $orderHistory */
 			$orderHistory = $registry->getOrderHistoryClassName();
 			$orderHistory::collectEntityFields('SHIPMENT', $this->getParentOrderId(), $id);
+		}
+
+		/** @var ShipmentPropertyValueCollection $propertyCollection */
+		$propertyCollection = $this->getPropertyCollection();
+
+		/** @var Result $res */
+		$res = $propertyCollection->save();
+		if (!$res->isSuccess())
+		{
+			$result->addWarnings($res->getErrors());
 		}
 
 		$this->onAfterSave($isNew);
@@ -1708,7 +1703,7 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 			}
 			elseif ($name === 'PRICE')
 			{
-				if (!$this->isMarkedFieldCustom('BASE_PRICE_DELIVERY'))
+				if (!$this->isCustomPrice())
 				{
 					if ($this->getShipmentItemCollection()->isExistBasketItem($basketItem))
 					{
@@ -1738,7 +1733,8 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 	 * @throws Main\ArgumentNullException
 	 * @throws Main\ArgumentOutOfRangeException
 	 * @throws Main\NotSupportedException
-	 * @throws Main\ObjectException
+	 * @throws Main\ObjectNotFoundException
+	 * @throws Main\SystemException
 	 */
 	protected function onFieldModify($name, $oldValue, $value)
 	{
@@ -1746,7 +1742,28 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 
 		$result = new Result();
 
-		if ($name === "MARKED")
+		if ($name === 'DELIVERY_ID')
+		{
+			if (
+				$value > 0
+				&& (
+					$this->service === null
+					|| $this->service->getId() !== (int)$value
+				)
+			)
+			{
+				$service = Delivery\Services\Manager::getObjectById($value);
+				if ($service)
+				{
+					$this->service = $service;
+
+					$this->setField('DELIVERY_NAME', $this->service->getName());
+				}
+			}
+
+			$this->getPropertyCollection()->refreshRelated();
+		}
+		elseif ($name === "MARKED")
 		{
 			if ($oldValue != "Y")
 			{
@@ -1779,7 +1796,10 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 				/** @var DeliveryStatus $deliveryStatus */
 				$deliveryStatusClassName = $registry->getDeliveryStatusClassName();
 
-				if (strval($shipmentStatus) != '' && $this->getField('STATUS_ID') != $deliveryStatusClassName::getFinalStatus())
+				if (
+					$shipmentStatus !== ''
+					&& $this->getField('STATUS_ID') != $deliveryStatusClassName::getFinalStatus()
+				)
 				{
 					$r = $this->setStatus($shipmentStatus);
 					if (!$r->isSuccess())
@@ -1901,11 +1921,24 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 			}
 		}
 
-
 		$r = parent::onFieldModify($name, $oldValue, $value);
 		if (!$r->isSuccess())
 		{
-			$result->addErrors($r->getErrors());
+			return $result->addErrors($r->getErrors());
+		}
+
+		if (
+			$name == 'BASE_PRICE_DELIVERY'
+			&& !$this->isMarkedFieldCustom('PRICE_DELIVERY')
+		)
+		{
+			$value -= $this->getField('DISCOUNT_PRICE');
+
+			$r = $this->setField('PRICE_DELIVERY', $value);
+			if (!$r->isSuccess())
+			{
+				$result->addErrors($r->getErrors());
+			}
 		}
 
 		if ($r->hasWarnings())
@@ -1913,10 +1946,7 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 			$result->addWarnings($r->getWarnings());
 		}
 
-		if (($resultData = $r->getData()) && !empty($resultData))
-		{
-			$result->addData($resultData);
-		}
+		$result->addData($r->getData());
 
 		return $result;
 	}
@@ -2080,6 +2110,18 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 	public function setExtraServices(array $extraServices)
 	{
 		$this->extraServices = $extraServices;
+	}
+
+	/**
+	 * @return Delivery\ExtraServices\Base[]
+	 */
+	public function getExtraServicesObjects()
+	{
+		return Delivery\ExtraServices\Manager::getObjectsForShipment(
+			$this->getId(),
+			$this->getDeliveryId(),
+			$this->getCurrency()
+		);
 	}
 
 	/**
@@ -2819,6 +2861,25 @@ class Shipment extends Internals\CollectableEntity implements IBusinessValueProv
 		$result['ITEMS'] = $this->getShipmentItemCollection()->toArray();
 
 		return $result;
+	}
+
+	public function getPropertyCollection(): ShipmentPropertyValueCollection
+	{
+		if(empty($this->propertyCollection))
+		{
+			$this->propertyCollection = $this->loadPropertyCollection();
+		}
+
+		return $this->propertyCollection;
+	}
+
+	public function loadPropertyCollection(): ShipmentPropertyValueCollection
+	{
+		$registry = Registry::getInstance(static::getRegistryType());
+		/** @var ShipmentPropertyValueCollection $propertyCollectionClassName */
+		$propertyCollectionClassName = $registry->getShipmentPropertyValueCollectionClassName();
+
+		return $propertyCollectionClassName::load($this);
 	}
 
 	/**

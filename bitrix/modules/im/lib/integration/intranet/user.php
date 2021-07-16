@@ -1,7 +1,11 @@
 <?php
 namespace Bitrix\Im\Integration\Intranet;
 
+use Bitrix\Main\Config\Option;
+use Bitrix\Main\Entity\ExpressionField;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\Type\DateTime;
+use Bitrix\Main\UserTable;
 
 class User
 {
@@ -9,6 +13,15 @@ class User
 
 	const INVITE_MAX_USER_NOTIFY = 50;
 
+	public static function canInvite(): bool
+	{
+		if (!\Bitrix\Main\ModuleManager::isModuleInstalled('intranet'))
+		{
+			return false;
+		}
+
+		return \Bitrix\Intranet\Invitation::canListDelete();
+	}
 	public static function onInviteLinkCopied(\Bitrix\Main\Event $event): bool
 	{
 		if (!\Bitrix\Main\ModuleManager::isModuleInstalled('intranet'))
@@ -46,14 +59,20 @@ class User
 			'filter' => [
 				'=ID' => $users
 			],
-			'select' => ['ID', 'USER_TYPE']
+			'select' => ['ID', 'USER_TYPE', 'EMAIL']
 
 		]);
 		while ($row = $result->fetch())
 		{
 			if ($row['USER_TYPE'] === 'employee')
 			{
-				$userForSend[] = $row['ID'];
+				$userForSend[] = [
+					'ID' => $row['ID'],
+					'INVITED' => [
+						'originator_id' => $originatorId,
+						'can_resend' => !empty($row['EMAIL'])
+					]
+				];
 			}
 		}
 
@@ -62,10 +81,10 @@ class User
 			return false;
 		}
 
-		self::sendInviteEvent($userForSend, ['originator_id' => $originatorId]);
+		self::sendInviteEvent($userForSend);
 
-		$userForSend = array_map(function($userId) {
-			return self::getUserBlock($userId);
+		$userForSend = array_map(function($user) {
+			return self::getUserBlock($user['ID']);
 		}, $userForSend);
 
 		return self::sendMessageToGeneralChat($originatorId, [
@@ -74,7 +93,6 @@ class User
 				'#USERS#' => implode(', ', $userForSend)
 			]),
 			'SYSTEM' => 'Y',
-			'INCREMENT_COUNTER' => 'N',
 			'PUSH' => 'N'
 		]);
 	}
@@ -94,7 +112,29 @@ class User
 			return false;
 		}
 
-		self::sendInviteEvent($users, ['originator_id' => $originatorId]);
+		$userForSend = [];
+		$result = \Bitrix\Intranet\UserTable::getList([
+			'filter' => [
+				'=ID' => $users
+			],
+			'select' => ['ID', 'USER_TYPE', 'EMAIL']
+
+		]);
+		while ($row = $result->fetch())
+		{
+			if ($row['USER_TYPE'] === 'employee')
+			{
+				$userForSend[] = [
+					'ID' => $row['ID'],
+					'INVITED' => [
+						'originator_id' => $originatorId,
+						'can_resend' => !empty($row['EMAIL'])
+					]
+				];
+			}
+		}
+
+		self::sendInviteEvent($userForSend);
 
 		$users = array_map(function($userId) {
 			return self::getUserBlock($userId);
@@ -106,7 +146,6 @@ class User
 				'#USERS#' => implode(', ', $users)
 			]),
 			'SYSTEM' => 'Y',
-			'INCREMENT_COUNTER' => 'N',
 			'PUSH' => 'N'
 		]);
 	}
@@ -134,7 +173,7 @@ class User
 		$originatorGender = 'M';
 		if ($originatorId > 0)
 		{
-			$dbUser = \CUser::GetList(($sort_by = false), ($dummy=''), ['ID' => $originatorId], array('FIELDS' => ['PERSONAL_GENDER']));
+			$dbUser = \CUser::GetList('', '', ['ID_EQUAL_EXACT' => $originatorId], array('FIELDS' => ['PERSONAL_GENDER']));
 			if ($user = $dbUser->Fetch())
 			{
 				$originatorGender = $user["PERSONAL_GENDER"] == 'F'? 'F': 'M';
@@ -210,10 +249,13 @@ class User
 
 		\CIMContactList::SetRecent(Array('ENTITY_ID' => $userId));
 
-		$userCount = \CAllUser::GetActiveUsersCount();
+		$userCount = \Bitrix\Main\UserTable::getActiveUsersCount();
 		if ($userCount > self::INVITE_MAX_USER_NOTIFY)
 		{
-			self::sendInviteEvent([$userId], false);
+			self::sendInviteEvent([
+				'ID' => $userId,
+				'INVITED' => false
+			]);
 
 			if (!\CIMChat::GetGeneralChatAutoMessageStatus(\CIMChat::GENERAL_MESSAGE_TYPE_JOIN))
 			{
@@ -221,9 +263,17 @@ class User
 			}
 
 			return self::sendMessageToGeneralChat($userId, [
-				'MESSAGE' => Loc::getMessage('IM_INT_USR_JOIN_GENERAL_2')
+				"MESSAGE" => Loc::getMessage('IM_INT_USR_JOIN_GENERAL_2'),
+				"PARAMS" => [
+					"CODE" => 'USER_JOIN_GENERAL',
+				]
 			]);
 		}
+
+		self::sendInviteEvent([
+			'ID' => $userId,
+			'INVITED' => false
+		]);
 
 		$orm = \Bitrix\Main\UserTable::getList([
 			'select' => ['ID'],
@@ -236,7 +286,15 @@ class User
 		while($row = $orm->fetch())
 		{
 			if ($row['ID'] == $userId)
+			{
 				continue;
+			}
+
+			$viewCommonUsers = (bool)\CIMSettings::GetSetting(\CIMSettings::SETTINGS, 'viewCommonUsers', $row['ID']);
+			if (!$viewCommonUsers)
+			{
+				continue;
+			}
 
 			\CIMMessage::Add([
 				"TO_USER_ID" => $row['ID'],
@@ -244,13 +302,16 @@ class User
 				"MESSAGE" => Loc::getMessage('IM_INT_USR_JOIN_2'),
 				"SYSTEM" => 'Y',
 				"RECENT_SKIP_AUTHOR" => 'Y',
+				"PARAMS" => [
+					"CODE" => 'USER_JOIN',
+				],
 			]);
 		}
 
 		return true;
 	}
 
-	private static function sendInviteEvent(array $users, $invited): bool
+	private static function sendInviteEvent(array $users): bool
 	{
 		if (!\Bitrix\Main\Loader::includeModule('pull'))
 		{
@@ -263,17 +324,16 @@ class User
 		}
 
 		$onlineUsers = \Bitrix\Im\Helper::getOnlineIntranetUsers();
-
-		foreach ($users as $userId)
+		foreach ($users as $user)
 		{
 			\Bitrix\Pull\Event::add($onlineUsers, [
 				'module_id' => 'im',
 				'command' => 'userInvite',
 				'expiry' => 3600,
 				'params' => [
-					'userId' => $userId,
-					'invited' => $invited,
-					'user' => \Bitrix\Im\User::getInstance($userId)->getFields()
+					'userId' => $user['ID'],
+					'invited' => $user['INVITED'],
+					'user' => \Bitrix\Im\User::getInstance($user['ID'])->getFields()
 				],
 				'extra' => \Bitrix\Im\Common::getPullExtra()
 			]);
@@ -326,6 +386,70 @@ class User
 		self::$isEmployee[$userId] = $result['USER_TYPE'] === 'employee';
 
 		return self::$isEmployee[$userId];
+	}
+
+	public static function getBirthdayForToday()
+	{
+		if (!IsModuleInstalled('intranet'))
+		{
+			return [];
+		}
+
+		$option = Option::get('im', 'contact_list_birthday');
+		if ($option === 'none' || \Bitrix\Im\User::getInstance()->isExtranet())
+		{
+			return [];
+		}
+
+		global $USER;
+
+		$today = (new DateTime())->format('m-d');
+		if ($option === 'department')
+		{
+			$cacheId = 'birthday_'.$today.'_'.$USER->GetID();
+		}
+		else
+		{
+			$cacheId = 'birthday_'.$today;
+		}
+
+		$cache = \Bitrix\Main\Data\Cache::createInstance();
+		if($cache->initCache(86400, $cacheId, '/bx/im/birthday/'))
+		{
+			return $cache->getVars();
+		}
+
+		$user = \CUser::getById($USER->GetId())->Fetch();
+
+		$filter = [
+			'=BIRTHDAY_DATE' => $today,
+			'=IS_REAL_USER' => true,
+		];
+		if ($option === 'department')
+		{
+			$filter['=UF_DEPARTMENT'] = $user['UF_DEPARTMENT'];
+		}
+
+		$result = [];
+		$users = UserTable::getList([
+			'filter' => $filter,
+			'select' => ['ID'],
+			'runtime' => [
+				new ExpressionField('BIRTHDAY_DATE', "DATE_FORMAT(%s, '%%m-%%d')", 'PERSONAL_BIRTHDAY')
+			],
+			'limit' => 100,
+		])->fetchAll();
+
+		foreach ($users as $user)
+		{
+			$result[] = \Bitrix\Im\User::getInstance($user['ID'])->getArray(['SKIP_ONLINE' => 'Y', 'JSON' => 'Y']);
+		}
+
+		$cache->forceRewriting(true);
+		$cache->startDataCache();
+		$cache->endDataCache($result);
+
+		return $result;
 	}
 
 	public static function registerEventHandler()

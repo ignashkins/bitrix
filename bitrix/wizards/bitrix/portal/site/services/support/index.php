@@ -39,7 +39,7 @@ foreach ($arCategories as $arCategory)
 	$newCategoryID[] = $categoryID;
 }
 
-$dbCategory = CTicketDictionary::GetList($by = "s_id", $order = "asc", Array("TYPE" => "C", "TYPE_EXACT_MATCH" => "Y"), $is_filtered);
+$dbCategory = CTicketDictionary::GetList("s_id", "asc", Array("TYPE" => "C", "TYPE_EXACT_MATCH" => "Y"));
 while ($arCategory = $dbCategory->Fetch())
 {
 	if (!in_array($arCategory["ID"], $newCategoryID))

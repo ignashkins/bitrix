@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["CRM_MODULE_NOT_INSTALLED"] = "Das Modul CRM ist nicht installiert.";
 $MESS["CRM_ORDER_ERROR_SHIPMENT_SERVICE_RESTRICTED"] = "Lieferservice stimmt mit Einschränkungen nicht überein";
 $MESS["CRM_ORDER_SD_NOT_CHOSEN"] = "Nicht ausgewählt";
@@ -35,6 +35,7 @@ $MESS["CRM_ORDER_SHIPMENT_ORDER_ID"] = "ID der Bestellung";
 $MESS["CRM_ORDER_SHIPMENT_PRICE_DELIVERY_CALCULATED_WITH_CURRENCY"] = "Berechnete Lieferkosten";
 $MESS["CRM_ORDER_SHIPMENT_PRICE_DELIVERY_WITH_CURRENCY"] = "Lieferkosten";
 $MESS["CRM_ORDER_SHIPMENT_PRODUCT_LIST"] = "Produkte";
+$MESS["CRM_ORDER_SHIPMENT_PROPERTIES"] = "Eigenschaften der Auslieferung";
 $MESS["CRM_ORDER_SHIPMENT_REASON_MARKED"] = "Problembeschreibung";
 $MESS["CRM_ORDER_SHIPMENT_REASON_UNDO_DEDUCTED"] = "Grund der Auslieferungsstornierung";
 $MESS["CRM_ORDER_SHIPMENT_SUBTITLE_MASK"] = "##ID# - #DATE_INSERT#";
@@ -48,4 +49,3 @@ $MESS["CRM_ORDER_SHIPMENT_TRACKING_LAST_CHANGE"] = "Aktueller Lieferstatus";
 $MESS["CRM_ORDER_SHIPMENT_TRACKING_LAST_CHECK"] = "Lieferstatus zuletzt geprüft am";
 $MESS["CRM_ORDER_SHIPMENT_TRACKING_NUMBER"] = "Nummer zum Verfolgen";
 $MESS["CRM_ORDER_SHIPMENT_TRACKING_STATUS"] = "Lieferstatus";
-?>

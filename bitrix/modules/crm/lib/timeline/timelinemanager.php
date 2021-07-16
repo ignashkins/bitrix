@@ -115,6 +115,14 @@ class TimelineManager
 		{
 			return ScoringController::getInstance();
 		}
+		elseif(\CCrmOwnerType::isPossibleDynamicTypeId($assocEntityTypeID))
+		{
+			return DynamicController::getInstance($assocEntityTypeID);
+		}
+		elseif ($assocEntityTypeID === \CCrmOwnerType::Quote)
+		{
+			return QuoteController::getInstance();
+		}
 
 		return null;
 	}
@@ -203,7 +211,7 @@ class TimelineManager
 					false,
 					false,
 					array(
-						'ID', 'OWNER_ID', 'OWNER_TYPE_ID', 'TYPE_ID', 'RESPONSIBLE_ID',
+						'ID', 'OWNER_ID', 'OWNER_TYPE_ID', 'TYPE_ID', 'RESPONSIBLE_ID',  'CREATED',
 						'PROVIDER_ID', 'PROVIDER_TYPE_ID', 'PROVIDER_PARAMS',
 						'ASSOCIATED_ENTITY_ID', 'DIRECTION', 'SUBJECT', 'STATUS', 'DEADLINE',
 						'DESCRIPTION', 'DESCRIPTION_TYPE', 'ASSOCIATED_ENTITY_ID',

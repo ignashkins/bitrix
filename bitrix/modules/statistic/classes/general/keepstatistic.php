@@ -1,4 +1,5 @@
-<?
+<?php
+
 class CKeepStatistics
 {
 	static $HIT_ID = 0;
@@ -374,7 +375,7 @@ class CKeepStatistics
 					if($_SESSION["SESS_SESSION_ID"] <= 0)
 					{
 						$SESSION_NEW = "Y";
-
+						$sessionId = \Bitrix\Main\Application::getInstance()->getKernelSession()->getId();
 						// save session data
 						$arFields = Array(
 							"GUEST_ID"		=> intval($_SESSION["SESS_GUEST_ID"]),
@@ -394,7 +395,7 @@ class CKeepStatistics
 							"IP_FIRST_NUMBER"	=> "'".$DB->ForSql($REMOTE_ADDR_NUMBER)."'",
 							"IP_LAST"		=> "'".$DB->ForSql($_SERVER["REMOTE_ADDR"],15)."'",
 							"IP_LAST_NUMBER"	=> "'".$DB->ForSql($REMOTE_ADDR_NUMBER)."'",
-							"PHPSESSID"		=> "'".$DB->ForSql(session_id(),255)."'",
+							"PHPSESSID"		=> "'".$DB->ForSql($sessionId,255)."'",
 							"STOP_LIST_ID"		=> "'".$DB->ForSql($STOP_LIST_ID)."'",
 							"COUNTRY_ID"		=> "'".$DB->ForSql($_SESSION["SESS_COUNTRY_ID"],2)."'",
 							"CITY_ID"		=> $_SESSION["SESS_CITY_ID"] > 0? intval($_SESSION["SESS_CITY_ID"]): "null",
@@ -652,9 +653,6 @@ class CKeepStatistics
 									{
 										$var = trim($var);
 										$phrase = $arr[$var];
-
-										if (get_magic_quotes_gpc())
-											$phrase = stripslashes($phrase);
 
 										if($bIsUTF8)
 										{
@@ -1108,7 +1106,7 @@ echo '<html>
 					$z = CStatistics::GetSessionDataByMD5(get_guest_md5());
 					if($zr = $z->Fetch())
 					{
-						$arrSESSION_DATA = unserialize($zr["SESSION_DATA"]);
+						$arrSESSION_DATA = unserialize($zr["SESSION_DATA"], ['allowed_classes' => false]);
 						if(is_array($arrSESSION_DATA))
 						{
 							foreach($arrSESSION_DATA as $key => $value)
@@ -1728,4 +1726,3 @@ echo '<html>
 		return $REFERER_LIST_ID;
 	}
 }
-?>

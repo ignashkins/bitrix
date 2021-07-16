@@ -1,4 +1,9 @@
 <?
+
+use Bitrix\Crm\CompanyAddress;
+use Bitrix\Crm\EntityAddressType;
+use Bitrix\Crm\Format\AddressFormatter;
+
 if (!CModule::IncludeModule('bizproc'))
 	return;
 
@@ -505,10 +510,25 @@ class CCrmDocumentCompany extends CCrmDocument
 				{
 					//Issue #40380. Secure URLs and file IDs are allowed.
 					$file = false;
-					CCrmFileProxy::TryResolveFile($value, $file, $arFileOptions);
+					if (\CCrmFileProxy::TryResolveFile($value, $file, $arFileOptions))
+					{
+						global $USER_FIELD_MANAGER;
+						if ($USER_FIELD_MANAGER instanceof \CUserTypeManager)
+						{
+							$prevValue = $USER_FIELD_MANAGER->GetUserFieldValue(
+								\CCrmOwnerType::ResolveUserFieldEntityID(\CCrmOwnerType::Company),
+								$key,
+								$arDocumentID['ID']
+							);
+							if ($prevValue)
+							{
+								$file['old_id'] = $prevValue;
+							}
+						}
+					}
 					$value = $file;
 				}
-				unset($value);
+				unset($value, $prevValue);
 			}
 			elseif ($fieldType == "S:HTML")
 			{
@@ -606,24 +626,16 @@ class CCrmDocumentCompany extends CCrmDocument
 
 	static public function PrepareDocument(array &$arFields)
 	{
-		$arFields['ADDRESS'] = \Bitrix\Crm\Format\CompanyAddressFormatter::format(
-			$arFields,
-			array(
-				'SEPARATOR' => \Bitrix\Crm\Format\AddressSeparator::Comma,
-				'TYPE_ID' => \Bitrix\Crm\EntityAddressType::Delivery
-			)
+		$arFields['ADDRESS'] = AddressFormatter::getSingleInstance()->formatTextComma(
+			CompanyAddress::mapEntityFields($arFields, ['TYPE' => EntityAddressType::Delivery])
 		);
-		$arFields['ADDRESS_LEGAL'] = \Bitrix\Crm\Format\CompanyAddressFormatter::format(
-			$arFields,
-			array(
-				'SEPARATOR' => \Bitrix\Crm\Format\AddressSeparator::Comma,
-				'TYPE_ID' => \Bitrix\Crm\EntityAddressType::Registered
-			)
+		$arFields['ADDRESS_LEGAL'] = AddressFormatter::getSingleInstance()->formatTextComma(
+			CompanyAddress::mapEntityFields($arFields, ['TYPE' => EntityAddressType::Registered])
 		);
 		$arFields['CONTACT_ID'] = \Bitrix\Crm\Binding\ContactCompanyTable::getCompanyContactIDs($arFields['ID']);
 	}
 
-	public function getDocumentName($documentId)
+	public static function getDocumentName($documentId)
 	{
 		$arDocumentID = self::GetDocumentInfo($documentId);
 		$dbRes = CCrmCompany::GetListEx([], ['=ID' => $arDocumentID['ID'], 'CHECK_PERMISSIONS' => 'N'],

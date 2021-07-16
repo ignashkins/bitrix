@@ -1,5 +1,6 @@
 <?php
 $MESS["BLOG_C_HIDE"] = "Згорнути коментарі";
+$MESS["BLOG_C_LOADING"] = "Завантаження";
 $MESS["BLOG_C_REPLY"] = "Відповісти";
 $MESS["BLOG_C_VIEW"] = "Дивитися коментарі";
 $MESS["BPC_MES_COPYLINK"] = "Скопіювати посилання";

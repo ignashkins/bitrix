@@ -1,5 +1,7 @@
 <?php
 
+use Bitrix\Main;
+
 if (!defined('CACHED_b_field_multi')) define('CACHED_b_field_multi', 360000);
 
 IncludeModuleLangFile(__FILE__);
@@ -565,10 +567,10 @@ class CCrmFieldMulti
 		{
 			$val = $arFilter[$filter_keys[$i]];
 
-			if (!is_array($val) && $val == '' || $val=="NOT_REF")
+			if (!is_array($val) && (string)$val == '' || (string)$val=="NOT_REF")
 				continue;
 
-			$key = mb_strtoupper($filter_keys[$i]);
+			$key = strtoupper($filter_keys[$i]);
 			$operationInfo = CSqlUtil::GetFilterOperation($key);
 			$operation = $operationInfo['OPERATION'];
 			// Process only like operation
@@ -1177,6 +1179,55 @@ class CCrmFieldMulti
 		}
 
 		return $result;
+	}
+
+	/**
+	 * @param $entityID
+	 * @param $elementID
+	 * @param $typeID
+	 * @param false $bIgnoreEmpty
+	 * @param bool $bFullName
+	 * @return array|null
+	 */
+	public static function GetEntityFirstField(
+		$entityID,
+		$elementID,
+		$typeID,
+		$bIgnoreEmpty = false,
+		$bFullName = true
+	): ?array
+	{
+		$entityFields = \CCrmFieldMulti::GetEntityFields($entityID, $elementID, $typeID, $bIgnoreEmpty, $bFullName);
+		foreach ($entityFields as $entityField)
+		{
+			return $entityField;
+		}
+
+		return null;
+	}
+
+	/**
+	 * @param $entityID
+	 * @param $elementID
+	 * @param $typeID
+	 * @param false $bIgnoreEmpty
+	 * @param bool $bFullName
+	 * @return Main\PhoneNumber\PhoneNumber|null
+	 */
+	public static function GetEntityFirstPhone(
+		$entityID,
+		$elementID,
+		$bIgnoreEmpty = false,
+		$bFullName = true
+	)
+	{
+		$field = self::GetEntityFirstField($entityID, $elementID, self::PHONE, $bIgnoreEmpty, $bFullName);
+		if (!$field)
+		{
+			return null;
+		}
+
+		return Main\PhoneNumber\Parser::getInstance()->parse($field['VALUE']);
 	}
 
 	public static function ExtractValues(&$fields, $typeName)

@@ -22,7 +22,7 @@ $menufilename = "";
 $io = CBXVirtualIo::GetInstance();
 
 $path = $io->CombinePath("/", $path);
-$dbSitesList = CSite::GetList($b = "lendir", $o = "desc");
+$dbSitesList = CSite::GetList("lendir", "desc");
 $multiSite = false;
 $docRoot = $dbSitesList->Fetch();
 $docRoot = $docRoot['DOC_ROOT'];
@@ -227,7 +227,7 @@ else
 			if(COption::GetOptionString($module_id, "log_menu", "Y")=="Y")
 			{
 				$mt = COption::GetOptionString("fileman", "menutypes", $default_value, $site);
-				$mt = unserialize(str_replace("\\", "", $mt));
+				$mt = unserialize(str_replace("\\", "", $mt), ['allowed_classes' => false]);
 				$res_log['menu_name'] = $mt[$name];
 				$res_log['path'] = mb_substr($path, 1);
 				if ($new == '')

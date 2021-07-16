@@ -140,7 +140,9 @@ if (WIZARD_INSTALL_DEMO_DATA || WIZARD_FIRST_INSTAL !== "Y")
 		$pathToImages = WIZARD_SERVICE_ABSOLUTE_PATH."/images/";
 
 		$arGroupsId = array();
+
 		$arGroups = array(
+/*
 			0 => array(
 				"SITE_ID" => WIZARD_SITE_ID,
 				"NAME" => GetMessage("SONET_GROUP_NAME_0"),
@@ -392,6 +394,7 @@ if (WIZARD_INSTALL_DEMO_DATA || WIZARD_FIRST_INSTAL !== "Y")
 				"SPAM_PERMS" => "N",
 				"=DATE_ACTIVITY" => $GLOBALS["DB"]->CurrentTimeFunction(),
 			),
+*/
 		);
 
 		foreach ($arGroups as $ind => $arGroup)

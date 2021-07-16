@@ -14,7 +14,7 @@ class rest extends CModule
 
 	private $errors = false;
 
-	function rest()
+	public function __construct()
 	{
 		$arModuleVersion = array();
 
@@ -85,7 +85,7 @@ class rest extends CModule
 				'SORT' => 1000,
 				'LANG' => array(
 					LANGUAGE_ID => array(
-						'NAME' => GetMessage('REST_IBLOCK_NAME'),
+						'NAME' => GetMessage('REST_IBLOCK_NAME_2'),
 						'SECTION_NAME' => GetMessage('REST_IBLOCK_SECTION_NAME'),
 						'ELEMENT_NAME' => GetMessage('REST_IBLOCK_ELEMENT_NAME'),
 					)
@@ -107,6 +107,20 @@ class rest extends CModule
 
 		$eventManager->registerEventHandler("rest", "onRestCheckAuth", "rest", "\\Bitrix\\Rest\\APAuth\\Auth", "onRestCheckAuth");
 		$eventManager->registerEventHandler("rest", "onRestCheckAuth", "rest", "\\Bitrix\\Rest\\SessionAuth\\Auth", "onRestCheckAuth");
+		$eventManager->registerEventHandler(
+			'main',
+			'OnAfterRegisterModule',
+			'rest',
+			'\Bitrix\Rest\Engine\ScopeManager',
+			'onChangeRegisterModule'
+		);
+		$eventManager->registerEventHandler(
+			'main',
+			'OnAfterUnRegisterModule',
+			'rest',
+			'\Bitrix\Rest\Engine\ScopeManager',
+			'onChangeRegisterModule'
+		);
 
 		\CAgent::AddAgent("Bitrix\\Rest\\Marketplace\\Client::getNumUpdates();", "rest", "N", 86400);
 		\CAgent::AddAgent("Bitrix\\Rest\\EventOfflineTable::cleanProcessAgent();", "rest", "N", 86400);
@@ -114,6 +128,8 @@ class rest extends CModule
 		\CAgent::AddAgent('\Bitrix\Rest\Configuration\Helper::sendStatisticAgent();', "rest", "N",86400);
 		\CAgent::AddAgent('\\Bitrix\\Rest\\UsageStatTable::sendAgent();', "rest", "N", 3600);
 		\CAgent::AddAgent('\\Bitrix\\Rest\\UsageStatTable::cleanUpAgent();', "rest", "N", 3600);
+		\CAgent::AddAgent('\Bitrix\Rest\Marketplace\Notification::checkAgent();', "rest", "N", 86400);
+		\CAgent::AddAgent('\Bitrix\Rest\Marketplace\Immune::load();', "rest", "N", 86400);
 
 		return true;
 	}
@@ -158,7 +174,20 @@ class rest extends CModule
 		$eventManager->unRegisterEventHandler('rest', 'OnRestApplicationConfigurationClear', 'rest', '\Bitrix\Rest\Configuration\AppConfiguration', 'onEventClearController');
 		$eventManager->unRegisterEventHandler('rest', 'OnRestApplicationConfigurationEntity', 'rest', '\Bitrix\Rest\Configuration\AppConfiguration', 'getEntityList');
 		$eventManager->unRegisterEventHandler('rest', 'OnRestApplicationConfigurationGetManifest', 'rest', '\Bitrix\Rest\Configuration\AppConfiguration', 'getManifestList');
-
+		$eventManager->unRegisterEventHandler(
+			'main',
+			'OnAfterRegisterModule',
+			'rest',
+			'\Bitrix\Rest\Engine\ScopeManager',
+			'onChangeRegisterModule'
+		);
+		$eventManager->unRegisterEventHandler(
+			'main',
+			'OnAfterUnRegisterModule',
+			'rest',
+			'\Bitrix\Rest\Engine\ScopeManager',
+			'onChangeRegisterModule'
+		);
 
 		CAgent::RemoveModuleAgents("rest");
 
@@ -308,7 +337,7 @@ class rest extends CModule
 		}
 	}
 
-	function OnGetTableSchema()
+	public static function OnGetTableSchema()
 	{
 		return array(
 			"rest" => array(

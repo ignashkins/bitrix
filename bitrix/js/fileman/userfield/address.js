@@ -583,6 +583,8 @@
 
 		this.adjustNode(this.bindNode);
 
+		BX.ZIndexManager.bringToFront(this.getNode());
+
 		if(this.animation !== null)
 		{
 			this.animation.stop(true);
@@ -700,7 +702,7 @@
 			}
 		});
 
-		this.point.setContent(this.infoWindowContent);
+		// this.point.setContent(this.infoWindowContent);
 
 		if(!this.hoverMode)
 		{
@@ -803,7 +805,14 @@
 		this.getNode().style.top = Math.min(pos.top, windowHeight - 500, windowScrollBottom - 500) + 'px';
 		this.getNode().style.left = (pos.left + pos.width + 2) + 'px';
 
+		var firstCall = this.getNode().parentNode === null;
+
 		document.body.appendChild(this.getNode());
+
+		if (firstCall)
+		{
+			BX.ZIndexManager.register(this.getNode());
+		}
 	};
 
 	BX.Fileman.UserField.AddressRestriction = function()

@@ -997,7 +997,7 @@ class CWebDavStorageCore extends CWebDavAbstractStorage
 
 				$result['path'] =
 					'/' .
-					trim(implode($this->getPathArrayForSection($section['ID']), '/'), '/') .
+					trim(implode('/', $this->getPathArrayForSection($section['ID'])), '/') .
 					'/'
 				;
 			}
@@ -1076,7 +1076,7 @@ class CWebDavStorageCore extends CWebDavAbstractStorage
 
 				$result['path'] =
 					'/' .
-					trim(implode($this->getPathArrayForSection($file['IBLOCK_SECTION_ID']), '/'), '/') .
+					trim(implode('/', $this->getPathArrayForSection($file['IBLOCK_SECTION_ID'])), '/') .
 					'/' .
 					$file['NAME']
 				;

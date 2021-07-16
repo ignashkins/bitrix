@@ -361,6 +361,11 @@ class CCrmDocumentDeal extends CCrmDocument
 				'Type' => 'bool',
 				'Editable' => false,
 			),
+			"ORDER_IDS" => array(
+				"Name" => GetMessage("CRM_FIELD_ORDER_IDS"),
+				"Type" => "int",
+				"Multiple" => true,
+			),
 		);
 
 		$arResult += static::getCommunicationFields();
@@ -387,6 +392,16 @@ class CCrmDocumentDeal extends CCrmDocument
 		$arFields['STAGE_ID_PRINTABLE'] = DealCategory::getStageName($stageID, $categoryID);
 
 		$arFields['CONTACT_IDS'] = Crm\Binding\DealContactTable::getDealContactIDs($arFields['ID']);
+
+		$orderIds = Crm\Binding\OrderDealTable::getList([
+			'select' => ['ORDER_ID'],
+			'filter' => [
+				'=DEAL_ID' => $arFields['ID'],
+			],
+			'order' => ['ORDER_ID' => 'DESC']
+		])->fetchAll();
+
+		$arFields['ORDER_IDS'] = array_column($orderIds, 'ORDER_ID');
 
 		if ($arFields['COMPANY_ID'] <= 0)
 		{
@@ -656,10 +671,25 @@ class CCrmDocumentDeal extends CCrmDocument
 				{
 					//Issue #40380. Secure URLs and file IDs are allowed.
 					$file = false;
-					CCrmFileProxy::TryResolveFile($value, $file, $arFileOptions);
+					if (\CCrmFileProxy::TryResolveFile($value, $file, $arFileOptions))
+					{
+						global $USER_FIELD_MANAGER;
+						if ($USER_FIELD_MANAGER instanceof \CUserTypeManager)
+						{
+							$prevValue = $USER_FIELD_MANAGER->GetUserFieldValue(
+								\CCrmOwnerType::ResolveUserFieldEntityID(\CCrmOwnerType::Deal),
+								$key,
+								$arDocumentID['ID']
+							);
+							if ($prevValue)
+							{
+								$file['old_id'] = $prevValue;
+							}
+						}
+					}
 					$value = $file;
 				}
-				unset($value);
+				unset($value, $prevValue);
 			}
 			elseif ($arDocumentFields[$key]["Type"] == "S:HTML")
 			{
@@ -797,7 +827,7 @@ class CCrmDocumentDeal extends CCrmDocument
 		}
 	}
 
-	public function getDocumentName($documentId)
+	public static function getDocumentName($documentId)
 	{
 		$arDocumentID = self::GetDocumentInfo($documentId);
 		$dbRes = CCrmDeal::GetListEx([], ['=ID' => $arDocumentID['ID'], 'CHECK_PERMISSIONS' => 'N'],

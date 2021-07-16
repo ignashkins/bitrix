@@ -96,6 +96,8 @@ class Access
 			$this->canViewRc()
 			||
 			$this->canViewSegments()
+			||
+			$this->canViewTemplates()
 		);
 	}
 
@@ -201,6 +203,30 @@ class Access
 			|| AccessController::can($this->user->getId(), ActionDictionary::ACTION_MAILING_SMS_EDIT)
 			|| AccessController::can($this->user->getId(), ActionDictionary::ACTION_MAILING_MESSENGER_EDIT)
 			;
+	}
+
+	/**
+	 * Return can user start stop or pause
+	 *
+	 * @param string $letterClass
+	 *
+	 * @return bool
+	 */
+	public function canStopStartPause(string $letterClass)
+	{
+		$letterType = explode("\\", $letterClass);
+
+		switch ($letterType[count($letterType) - 1])
+		{
+			case 'Rc':
+				return AccessController::can($this->user->getId(), ActionDictionary::ACTION_RC_PAUSE_START_STOP);
+				break;
+			case 'Ad':
+				return AccessController::can($this->user->getId(), ActionDictionary::ACTION_ADS_PAUSE_START_STOP);
+				break;
+			default:
+				return AccessController::can($this->user->getId(), ActionDictionary::ACTION_MAILING_PAUSE_START_STOP);
+		}
 	}
 
 	/**

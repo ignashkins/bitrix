@@ -8,6 +8,12 @@ type EnumString = {
 	name: string;
 };
 
+type DescEnumString = {
+	id: string;
+	name: string;
+	desc: string;
+};
+
 type Language = EnumString;
 
 type Views = {
@@ -39,7 +45,21 @@ type DocumentScheme = {
 	id: number;
 	name: string;
 	entities: Array<string>;
+	mainEntity: number;
+	hasInvoice: boolean;
+	dynamic: boolean;
 	description: string;
+};
+
+type DocumentDynamicCategory = {
+	id: number;
+	name: string;
+	stages: Array<EnumInt>;
+};
+type DocumentDynamic = {
+	id: number;
+	name: string;
+	categories: Array<DocumentDynamicCategory>;
 };
 
 type Document = {
@@ -47,6 +67,7 @@ type Document = {
 	duplicateModes: Array<EnumString>;
 	deal: DocumentDeal;
 	lead: DocumentLead;
+	dynamic: Array<DocumentDynamic>;
 };
 
 type Callback = {
@@ -62,16 +83,26 @@ type Personalization = {
 	list: Array<EnumString>;
 };
 
+type Properties = {
+	list: Array<DescEnumString>;
+};
+
 type DepGroup = {
 	types: Array<EnumInt>;
 };
 type DepField = {
+	disallowed: Array<string>;
 	types: Array<string>;
+};
+type DepConditionOperation = {
+	id: string;
+	name: string;
+	fieldTypes: Array<string>;
 };
 
 type DepCondition = {
 	events: Array<EnumString>;
-	operations: Array<EnumString>;
+	operations: Array<DepConditionOperation>;
 };
 
 type DepAction = {
@@ -104,6 +135,7 @@ export type FormDictionary = {
 	captcha: Captcha;
 	templates: Array<string>;
 	personalization: Personalization;
+	properties: Properties;
 	deps: Deps;
 	restriction: Restriction;
 	product: Product;

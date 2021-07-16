@@ -8,8 +8,11 @@ use Bitrix\Crm\Attribute\FieldAttributeType;
 use Bitrix\Crm\Category\DealCategory;
 use Bitrix\Crm\Recurring;
 use Bitrix\Crm\Tracking;
+use Bitrix\Currency;
 use Bitrix\Main;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\Component\ParameterSigner;
+use Bitrix\Sale;
 
 if(!Main\Loader::includeModule('crm'))
 {
@@ -75,6 +78,8 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 	private $enableSearchHistory = true;
 	/** @var array */
 	private $defaultEntityData = [];
+	/** @var bool */
+	private $isLocationModuleIncluded = false;
 
 	public function __construct($component = null)
 	{
@@ -92,6 +97,8 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 	}
 	public function initializeParams(array $params)
 	{
+		$this->isLocationModuleIncluded = Main\Loader::includeModule('location');
+
 		foreach($params as $k => $v)
 		{
 			if($k === 'INITIAL_DATA' && is_array($v))
@@ -145,7 +152,6 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 					array('name' => 'OPPORTUNITY_WITH_CURRENCY'),
 					array('name' => 'STAGE_ID'),
 					array('name' => 'CLOSEDATE'),
-					array('name' => 'COMPANY'),
 					array('name' => 'CLIENT'),
 				)
 			),
@@ -195,6 +201,13 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 		/** @global \CMain $APPLICATION */
 		global $APPLICATION;
 
+		$this->isLocationModuleIncluded = Main\Loader::includeModule('location');
+
+		$useNewProductList =
+			Main\Loader::includeModule('catalog')
+			&& \Bitrix\Catalog\Config\Feature::isCommonProductProcessingEnabled()
+		;
+
 		//region Params
 		$this->arResult['ENTITY_ID'] = isset($this->arParams['~ENTITY_ID']) ? (int)$this->arParams['~ENTITY_ID'] : 0;
 		$extras = isset($this->arParams['~EXTRAS']) && is_array($this->arParams['~EXTRAS'])
@@ -202,6 +215,20 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 
 		$this->arResult['PATH_TO_USER_PROFILE'] = $this->arParams['PATH_TO_USER_PROFILE'] =
 			CrmCheckPath('PATH_TO_USER_PROFILE', $this->arParams['PATH_TO_USER_PROFILE'], '/company/personal/user/#user_id#/');
+
+		$this->arResult['PATH_TO_ORDER_PAYMENT_DETAILS'] = $this->arParams['PATH_TO_ORDER_PAYMENT_DETAILS'] =
+			CrmCheckPath(
+				'PATH_TO_ORDER_PAYMENT_DETAILS',
+				$this->arParams['PATH_TO_ORDER_PAYMENT_DETAILS'],
+				'/shop/orders/payment/details/#payment_id#/'
+			);
+
+		$this->arResult['PATH_TO_ORDER_SHIPMENT_DETAILS'] = $this->arParams['PATH_TO_ORDER_SHIPMENT_DETAILS'] =
+			CrmCheckPath(
+				'PATH_TO_ORDER_SHIPMENT_DETAILS',
+				$this->arParams['PATH_TO_ORDER_SHIPMENT_DETAILS'],
+				'/shop/orders/shipment/details/#shipment_id#/'
+			);
 
 		$this->arResult['NAME_TEMPLATE'] = empty($this->arParams['NAME_TEMPLATE'])
 			? CSite::GetNameFormat(false)
@@ -235,8 +262,7 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 			$APPLICATION->GetCurPage().'?product_id=#product_id#&edit'
 		);
 
-		// ToDo fix it with existing PATH_TO_PRODUCT_SHOW everywhere
-		if (Main\Loader::includeModule('catalog') && \Bitrix\Catalog\Config\State::isProductCardSliderEnabled())
+		if ($useNewProductList && \Bitrix\Catalog\Config\State::isProductCardSliderEnabled())
 		{
 			$catalogId = CCrmCatalog::EnsureDefaultExists();
 			$this->arResult['PATH_TO_PRODUCT_SHOW'] = "/shop/catalog/{$catalogId}/product/#product_id#/";
@@ -539,12 +565,9 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 		$this->prepareEntityUserFields();
 		$this->prepareEntityUserFieldInfos();
 
-		$this->prepareEntityData();
-		$this->prepareFieldInfos();
+		$this->initializeData();
 
-		$this->prepareEntityFieldAttributes();
-
-		$this->arResult['ENTITY_FIELDS'] = $this->entityFieldInfos;
+		$this->arResult['ENTITY_FIELDS'] = $this->prepareFieldInfos();
 		//region GUID
 		$this->guid = $this->arResult['GUID'] = isset($this->arParams['GUID'])
 			? $this->arParams['GUID'] : $this->getDefaultGuid();
@@ -559,8 +582,10 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 			'ENTITY_ID' => $this->entityID,
 			'ENTITY_TYPE_ID' => $this->entityData['IS_RECURRING'] !== "Y" ? CCrmOwnerType::Deal : CCrmOwnerType::DealRecurring,
 			'ENTITY_TYPE_NAME' =>  $this->entityData['IS_RECURRING'] !== "Y" ? CCrmOwnerType::DealName : CCrmOwnerType::DealRecurringName,
+			'ENTITY_TYPE_CODE' => CCrmOwnerTypeAbbr::Deal,
 			'TITLE' => isset($this->entityData['TITLE']) ? $this->entityData['TITLE'] : '',
 			'SHOW_URL' => CCrmOwnerType::GetEntityShowPath(CCrmOwnerType::Deal, $this->entityID, false),
+			'ORDER_LIST' => $this->entityData['ORDER_LIST'],
 		);
 		//endregion
 
@@ -601,14 +626,63 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 		$this->prepareConfiguration();
 		//endregion
 
+		$currencyID = CCrmCurrency::GetBaseCurrencyID();
+		if(isset($this->entityData['CURRENCY_ID']) && $this->entityData['CURRENCY_ID'] !== '')
+		{
+			$currencyID = $this->entityData['CURRENCY_ID'];
+		}
+
 		//region CONTROLLERS
-		$this->arResult['ENTITY_CONTROLLERS'] = array(
-			array(
-				"name" => "PRODUCT_ROW_PROXY",
-				"type" => "product_row_proxy",
-				"config" => array("editorId" => $this->arResult['PRODUCT_EDITOR_ID'])
-			),
-		);
+		$this->arResult['ENTITY_CONTROLLERS'] = [];
+
+		if ($useNewProductList)
+		{
+			$currencyList = [];
+			// TODO: remove to api
+			if (Main\Loader::includeModule('currency'))
+			{
+				$currencyIterator = Currency\CurrencyTable::getList([
+					'select' => ['CURRENCY']
+				]);
+				while ($currency = $currencyIterator->fetch())
+				{
+					$currencyFormat = \CCurrencyLang::GetFormatDescription($currency['CURRENCY']);
+					$currencyList[] = [
+						'CURRENCY' => $currency['CURRENCY'],
+						'FORMAT' => [
+							'FORMAT_STRING' => $currencyFormat['FORMAT_STRING'],
+							'DEC_POINT' => $currencyFormat['DEC_POINT'],
+							'THOUSANDS_SEP' => $currencyFormat['THOUSANDS_SEP'],
+							'DECIMALS' => $currencyFormat['DECIMALS'],
+							'THOUSANDS_VARIANT' => $currencyFormat['THOUSANDS_VARIANT'],
+							'HIDE_ZERO' => $currencyFormat['HIDE_ZERO']
+						]
+					];
+				}
+				unset($currencyFormat, $currency, $currencyIterator);
+			}
+
+			$this->arResult['ENTITY_CONTROLLERS'][] = [
+				'name' => 'PRODUCT_LIST',
+				'type' => 'product_list',
+				'config' => [
+					'productListId' => $this->arResult['PRODUCT_EDITOR_ID'],
+					'currencyList' => $currencyList,
+					'currencyId' => $currencyID
+				]
+			];
+			unset($currencyList);
+		}
+		else
+		{
+			$this->arResult['ENTITY_CONTROLLERS'][] = [
+				'name' => 'PRODUCT_ROW_PROXY',
+				'type' => 'product_row_proxy',
+				'config' => [
+					'editorId' => $this->arResult['PRODUCT_EDITOR_ID']
+				]
+			];
+		}
 		//endregion
 
 		//region Validators
@@ -617,17 +691,63 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 
 		//region TABS
 		$this->arResult['TABS'] = array();
+		ob_start();
 
-		$currencyID = CCrmCurrency::GetBaseCurrencyID();
-		if(isset($this->entityData['CURRENCY_ID']) && $this->entityData['CURRENCY_ID'] !== '')
+		if ($useNewProductList)
 		{
-			$currencyID = $this->entityData['CURRENCY_ID'];
-		}
+			$APPLICATION->IncludeComponent(
+				'bitrix:crm.entity.product.list',
+				'.default',
+				[
+					'INTERNAL_FILTER' => [
+						'OWNER_ID' => $this->arResult['ENTITY_INFO']['ENTITY_ID'],
+						'OWNER_TYPE' => $this->arResult['ENTITY_INFO']['ENTITY_TYPE_CODE']
+					],
+					'PATH_TO_ENTITY_PRODUCT_LIST' => Crm\Component\EntityDetails\ProductList::getComponentUrl(
+						['site' => $this->getSiteId()],
+						bitrix_sessid_get()
+					),
+					'ACTION_URL' => Crm\Component\EntityDetails\ProductList::getLoaderUrl(
+						['site' => $this->getSiteId()],
+						bitrix_sessid_get()
+					),
+					'ENTITY_ID' => $this->arResult['ENTITY_INFO']['ENTITY_ID'],
+					'ENTITY_TYPE_NAME' => $this->arResult['ENTITY_INFO']['ENTITY_TYPE_NAME'],
+					'ENTITY_TITLE' => $this->arResult['ENTITY_INFO']['TITLE'],
+					'CUSTOM_SITE_ID' => $this->getSiteId(),
+					'CUSTOM_LANGUAGE_ID' => $this->getLanguageId(),
+					'ALLOW_EDIT' => (!$this->arResult['READ_ONLY'] ? 'Y' : 'N'),
+					'ALLOW_ADD_PRODUCT' => (!$this->arResult['READ_ONLY'] ? 'Y' : 'N'),
+					//'ALLOW_CREATE_NEW_PRODUCT' => (!$this->arResult['READ_ONLY'] ? 'Y' : 'N'),
 
-			ob_start();
-			$APPLICATION->IncludeComponent('bitrix:crm.product_row.list',
+					'ID' => $this->arResult['PRODUCT_EDITOR_ID'],
+					'PREFIX' => $this->arResult['PRODUCT_EDITOR_ID'],
+
+					'FORM_ID' => '',
+
+					'PERMISSION_TYPE' => $this->arResult['READ_ONLY'] ? 'READ' : 'WRITE',
+					'PERMISSION_ENTITY_TYPE' => $this->arResult['PERMISSION_ENTITY_TYPE'],
+					'PERSON_TYPE_ID' => $this->resolvePersonTypeID($this->entityData),
+					'CURRENCY_ID' => $currencyID,
+					'LOCATION_ID' => $this->isTaxMode && isset($this->entityData['LOCATION_ID']) ? $this->entityData['LOCATION_ID'] : '',
+					'CLIENT_SELECTOR_ID' => '', //TODO: Add Client Selector
+					'PRODUCTS' => isset($this->entityData['PRODUCT_ROWS']) ? $this->entityData['PRODUCT_ROWS'] : null,
+					'PRODUCT_DATA_FIELD_NAME' => $this->arResult['PRODUCT_DATA_FIELD_NAME'],
+					'BUILDER_CONTEXT' => Crm\Product\Url\ProductBuilder::TYPE_ID,
+				],
+				false,
+				[
+					'HIDE_ICONS' => 'Y',
+					'ACTIVE_COMPONENT' => 'Y',
+				]
+			);
+		}
+		else
+		{
+			$APPLICATION->IncludeComponent(
+				'bitrix:crm.product_row.list',
 				'',
-				array(
+				[
 					'ID' => $this->arResult['PRODUCT_EDITOR_ID'],
 					'PREFIX' => $this->arResult['PRODUCT_EDITOR_ID'],
 					'FORM_ID' => '',
@@ -649,19 +769,32 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 					'INIT_LAYOUT' => 'N',
 					'INIT_EDITABLE' => $this->arResult['READ_ONLY'] ? 'N' : 'Y',
 					'ENABLE_MODE_CHANGE' => 'N',
-				'USE_ASYNC_ADD_PRODUCT' => 'Y'
-				),
+					'USE_ASYNC_ADD_PRODUCT' => 'Y',
+					'BUILDER_CONTEXT' => Crm\Product\Url\ProductBuilder::TYPE_ID,
+				],
 				false,
-			array('HIDE_ICONS' => 'Y', 'ACTIVE_COMPONENT'=>'Y')
+				[
+					'HIDE_ICONS' => 'Y',
+					'ACTIVE_COMPONENT' => 'Y',
+				]
 			);
-			$html = ob_get_contents();
-			ob_end_clean();
+		}
 
-			$this->arResult['TABS'][] = array(
-				'id' => 'tab_products',
-				'name' => Loc::getMessage('CRM_DEAL_TAB_PRODUCTS'),
-				'html' => $html
-			);
+		$this->arResult['TABS'][] = array(
+			'id' => 'tab_products',
+			'name' => Loc::getMessage('CRM_DEAL_TAB_PRODUCTS'),
+			'html' => ob_get_clean()
+		);
+
+		$relationManager = Crm\Service\Container::getInstance()->getRelationManager();
+		$this->arResult['TABS'] = array_merge(
+			$this->arResult['TABS'],
+			$relationManager->getRelationTabsForDynamicChildren(
+				\CCrmOwnerType::Deal,
+				$this->entityID,
+				($this->entityID === 0)
+			)
+		);
 
 		if ($this->entityData['IS_RECURRING'] !== "Y")
 		{
@@ -748,7 +881,11 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 						)
 					)
 				);
-				if (CModule::IncludeModule('sale') && Main\Config\Option::get("crm", "crm_shop_enabled") === "Y")
+				if (
+					CModule::IncludeModule('sale')
+					&& Main\Config\Option::get("crm", "crm_shop_enabled") === "Y"
+					&& CCrmSaleHelper::isWithOrdersMode()
+				)
 				{
 					$this->arResult['TABS'][] = array(
 						'id' => 'tab_order',
@@ -772,6 +909,7 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 									'NAME_TEMPLATE' => $this->arResult['NAME_TEMPLATE'],
 //									'ENABLE_TOOLBAR' => 'N',
 									'PRESERVE_HISTORY' => true,
+									'BUILDER_CONTEXT' => Crm\Product\Url\ProductBuilder::TYPE_ID
 								)
 							)
 						)
@@ -1252,7 +1390,7 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 			array(
 				'name' => 'OPPORTUNITY_WITH_CURRENCY',
 				'title' => Loc::getMessage('CRM_DEAL_FIELD_OPPORTUNITY_WITH_CURRENCY'),
-				'type' => (IsModuleInstalled('salescenter')) ? 'moneyPay' : 'money',
+				'type' => (Main\Loader::includeModule('salescenter')) ? 'moneyPay' : 'money',
 				'editable' => true,
 				'mergeable' => false,
 				'data' => array(
@@ -1263,7 +1401,8 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 					),
 					'amount' => 'OPPORTUNITY',
 					'formatted' => 'FORMATTED_OPPORTUNITY',
-					'formattedWithCurrency' => 'FORMATTED_OPPORTUNITY_WITH_CURRENCY'
+					'formattedWithCurrency' => 'FORMATTED_OPPORTUNITY_WITH_CURRENCY',
+					'isDeliveryAvailable' => Crm\Integration\SalesCenterManager::getInstance()->hasInstallableDeliveryItems(),
 				)
 			),
 			array(
@@ -1346,16 +1485,7 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 							)
 						)
 					),
-					'clientEditorFieldsParams' => [
-						CCrmOwnerType::ContactName => [
-							'REQUISITES' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Contact, 'requisite'),
-							'ADDRESS' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Contact,'requisite_address'),
-						],
-						CCrmOwnerType::CompanyName => [
-							'REQUISITES' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Company, 'requisite'),
-							'ADDRESS' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Company,'requisite_address'),
-						]
-					],
+					'clientEditorFieldsParams' => $this->prepareClientEditorFieldsParams(),
 					'useExternalRequisiteBinding' => true
 				)
 			),
@@ -1459,6 +1589,19 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 
 		return $this->entityFieldInfos;
 	}
+
+	protected function getOrderList() : array
+	{
+		$data = Crm\Order\DealBinding::getList([
+			'select' => ['ORDER_ID'],
+			'filter' => [
+				'=DEAL_ID' => $this->getEntityID()
+			]
+		])->fetchAll();
+
+		return $data ?? [];
+	}
+
 	public function prepareEntityDataScheme()
 	{
 		if($this->entityDataScheme === null)
@@ -1743,7 +1886,6 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 					$this->entityData['TYPE_ID'] = $this->defaultEntityData['TYPE_ID'];
 				}
 			}
-			unset($by, $order);
 
 			if(isset($this->arResult['INITIAL_DATA']) && !empty($this->arResult['INITIAL_DATA']))
 			{
@@ -1763,7 +1905,7 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 
 			if(isset($this->entityData['COMPANY_ID']) && !isset($this->entityData['CONTACT_ID']))
 			{
-				$contactIDs = Crm\Component\EntityDetails\BaseComponent::prepareLastBoundEntityIDs(
+				$contactIDs = static::prepareLastBoundEntityIDs(
 					CCrmOwnerType::Contact,
 					CCrmOwnerType::Deal,
 					array(
@@ -1828,6 +1970,8 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 			{
 				$this->entityData['CURRENCY_ID'] = \CCrmCurrency::GetBaseCurrencyID();
 			}
+
+			$this->entityData['ORDER_LIST'] = $this->getOrderList();
 
 			//region UTM
 			ob_start();
@@ -1902,10 +2046,9 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 		//region Responsible
 		if(isset($this->entityData['ASSIGNED_BY_ID']) && $this->entityData['ASSIGNED_BY_ID'] > 0)
 		{
-			$by = 'ID';
-			$order = 'ASC';
 			$dbUsers = \CUser::GetList(
-				$by, $order,
+				'ID',
+				'ASC',
 				array('ID' => $this->entityData['ASSIGNED_BY_ID']),
 				array(
 					'FIELDS' => array(
@@ -1914,7 +2057,6 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 					)
 				)
 			);
-			unset($by, $order);
 			$user = is_object($dbUsers) ? $dbUsers->Fetch() : null;
 			if(is_array($user))
 			{
@@ -2037,14 +2179,12 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 		{
 			$this->entityData['OBSERVER_INFOS'] = array();
 
-			$by = 'ID';
-			$order = 'ASC';
 			$userDbResult = \CUser::GetList(
-				$by, $order,
+				'ID',
+				'ASC',
 				array('ID' => implode('||', $this->entityData['OBSERVER_IDS'])),
 				array('FIELDS' => array('ID', 'PERSONAL_PHOTO', 'WORK_POSITION', 'NAME', 'SECOND_NAME', 'LAST_NAME'))
 			);
-			unset($by, $order);
 
 			$observerMap = array();
 			while($userData = $userDbResult->Fetch())
@@ -2415,6 +2555,8 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 			$this->entityData = array_merge($this->entityData, $recurringParams);
 		}
 		//endregion
+
+		$this->entityData['MODE_WITH_ORDERS'] = \CCrmSaleHelper::isWithOrdersMode();
 
 		Tracking\UI\Details::prepareEntityData(
 			\CCrmOwnerType::Deal,
@@ -3145,5 +3287,105 @@ class CCrmDealDetailsComponent extends CBitrixComponent
 	protected function getFileUrlTemplate(): string
 	{
 		return '/bitrix/components/bitrix/crm.deal.show/show_file.php?ownerId=#owner_id#&fieldName=#field_name#&fileId=#file_id#';
+	}
+
+	public static function prepareLastBoundEntityIDs(int $entityTypeID, int $ownerEntityTypeID, array $params = null): array
+	{
+		if($params === null)
+		{
+			$params = array();
+		}
+
+		$userID = (isset($params['userID']) && $params['userID'] > 0)
+			? (int)$params['userID'] : \CCrmSecurityHelper::GetCurrentUserID();
+		$userPermissions = $params['userPermissions'] ?? \CCrmPerms::GetCurrentUserPermissions();
+
+		$results = array();
+		if($ownerEntityTypeID === \CCrmOwnerType::Deal && \CCrmDeal::CheckReadPermission(0, $userPermissions))
+		{
+			if($entityTypeID === \CCrmOwnerType::Contact)
+			{
+				$companyID = isset($params['companyID']) ? (int)$params['companyID'] : 0;
+				if($companyID > 0)
+				{
+					$dbResult = \CCrmDeal::GetListEx(
+						array('ID' => 'DESC'),
+						array(
+							'=COMPANY_ID' => $companyID,
+							'=ASSIGNED_BY_ID' => $userID,
+							'CHECK_PERMISSIONS' => 'N'
+						),
+						false,
+						array('nTopCount' => 5),
+						array('ID')
+					);
+
+					$ownerIDs = array();
+					while($ary = $dbResult->Fetch())
+					{
+						$ownerIDs[] = (int)$ary['ID'];
+					}
+
+					$dealsContacts = Crm\Binding\DealContactTable::getDealsContactIds($ownerIDs);
+					foreach ($ownerIDs as $dealId)
+					{
+						$contactIds = $dealsContacts[$dealId] ?? [];
+						foreach ($contactIds as $contactId)
+						{
+							if(\CCrmContact::CheckReadPermission($contactId, $userPermissions))
+							{
+								$results[] = $contactId;
+							}
+						}
+
+						if(!empty($results))
+						{
+							break;
+						}
+					}
+
+					if(empty($results))
+					{
+						$results = Crm\Binding\ContactCompanyTable::getCompanyContactIDs($companyID);
+					}
+				}
+			}
+		}
+
+		return $results;
+	}
+
+	protected function prepareClientEditorFieldsParams(): array
+	{
+		$result = [
+			CCrmOwnerType::ContactName => [
+				'REQUISITES' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Contact, 'requisite')
+			],
+			CCrmOwnerType::CompanyName => [
+				'REQUISITES' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Company, 'requisite')
+			]
+		];
+		if ($this->isLocationModuleIncluded)
+		{
+			$result[CCrmOwnerType::ContactName]['ADDRESS'] = \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Contact,'requisite_address');
+			$result[CCrmOwnerType::CompanyName]['ADDRESS'] = \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Company,'requisite_address');
+		}
+
+		return $result;
+	}
+
+	public function initializeData()
+	{
+		$this->prepareEntityData();
+		$this->prepareFieldInfos();
+		$this->prepareEntityFieldAttributes();
+	}
+
+	public function getEntityEditorData(): array
+	{
+		return [
+			'ENTITY_ID' => $this->getEntityID(),
+			'ENTITY_DATA' => $this->prepareEntityData()
+		];
 	}
 }

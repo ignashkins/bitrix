@@ -176,7 +176,7 @@
 					"MANDATORY" => "N", 
 					"SETTINGS" => array("DEFAULT_VALUE" => "Y"));
 				$arFieldName = array();
-				$rsLanguage = CLanguage::GetList($by, $order, array());
+				$rsLanguage = CLanguage::GetList();
 				while($arLanguage = $rsLanguage->Fetch())
 				{
 					$dir = str_replace(array("\\", "//"), "/", dirname(__FILE__)); 

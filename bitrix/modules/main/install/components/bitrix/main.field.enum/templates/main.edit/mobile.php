@@ -22,9 +22,16 @@ $nodes = [$arResult['userField']['~id']];
 	name="<?= $arResult['fieldName'] ?>"
 	id="<?= $arResult['userField']['~id'] ?>"
 	class="mobile-grid-data-select"
+	data-is-inline-edit="false"
 	<?= ($arResult['userField']['MULTIPLE'] === 'Y' ? ' multiple' : '') ?>
 >
 	<?php
+	if ($arResult['userField']['MULTIPLE'] !== 'Y')
+	{
+		?>
+		<option value=""><?= Loc::getMessage('USER_TYPE_ENUM_NO_VALUE') ?></option>
+		<?php
+	}
 	foreach($arResult['userField']['USER_TYPE']['FIELDS'] as $optionValue => $optionName)
 	{
 		if ($optionValue)
@@ -44,11 +51,7 @@ $nodes = [$arResult['userField']['~id']];
 	id="<?= $arResult['userField']['~id'] ?>_select"
 >
 	<?php
-	if(
-		is_array($arResult['userField']['VALUE'])
-		&&
-		!count($arResult['userField']['VALUE'])
-	)
+	if(!$arResult['userField']['VALUE'])
 	{
 		print EnumType::getEmptyCaption($arResult['userField']);
 	}

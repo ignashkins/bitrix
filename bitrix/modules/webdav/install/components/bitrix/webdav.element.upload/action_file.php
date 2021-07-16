@@ -26,7 +26,7 @@ if (empty($_POST))
 	{
 		require_once($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/classes/".mb_strtolower($GLOBALS["DB"]->type)."/favorites.php");
 		$arUserSettings = CUserOptions::GetOption("webdav", "upload_settings", '');
-		$arUserSettings = @unserialize($arUserSettings, false);
+		$arUserSettings = @unserialize($arUserSettings, ['allowed_classes' => false]);
 		$arUserSettings = (is_array($arUserSettings) ? $arUserSettings : array());
 		$view_mode = $arUserSettings["view_mode"];
 	}
@@ -186,7 +186,7 @@ if ($_REQUEST["AJAX_CALL"] == "Y" && $_REQUEST['SIMPLE_UPLOAD'] != 'Y' && file_e
 	$arSavedData = file_get_contents($sTmpPath);
 
 	if (is_string($arSavedData))
-		$arSavedData = unserialize($arSavedData, false);
+		$arSavedData = unserialize($arSavedData, ['allowed_classes' => false]);
 	else
 		$arSavedData = array();
 

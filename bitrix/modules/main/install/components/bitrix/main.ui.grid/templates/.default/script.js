@@ -1,4 +1,4 @@
-(function (exports,main_core,main_core_events) {
+(function (exports,main_core_events,ui_cnt,main_core) {
 	'use strict';
 
 	(function () {
@@ -1401,6 +1401,7 @@
 	      var currentValue = this.getValue();
 
 	      function prepareItems(items) {
+	        var isHtmlEntity = self.dropdown.dataset['htmlEntity'] === 'true';
 	        return items.map(function (item) {
 	          attrs = {};
 	          attrs['data-' + self.dataValue] = item.VALUE;
@@ -1411,7 +1412,8 @@
 	                className: self.dropdownItemClass
 	              },
 	              attrs: attrs,
-	              text: item.NAME
+	              html: isHtmlEntity ? item.NAME : null,
+	              text: isHtmlEntity ? null : item.NAME
 	            })]
 	          });
 	          return {
@@ -1471,6 +1473,11 @@
 	    refresh: function refresh(item) {
 	      var subItem = this.getSubItem(item);
 	      var value = BX.data(subItem, this.dataValue);
+
+	      if (BX.Type.isUndefined(value)) {
+	        value = '';
+	      }
+
 	      BX.firstChild(this.dropdown).innerText = subItem.innerText;
 	      this.dropdown.dataset[this.dataValue] = value;
 	    },
@@ -1725,7 +1732,9 @@
 	      this.stopScroll();
 	    },
 	    _onHeaderUpdated: function _onHeaderUpdated() {
-	      this.fixedTable = this.parent.getPinHeader().getFixedTable();
+	      if (this.parent.getParam('ALLOW_PIN_HEADER')) {
+	        this.fixedTable = this.parent.getPinHeader().getFixedTable();
+	      }
 	    },
 	    _onMouseoverLeft: function _onMouseoverLeft(event) {
 	      this.parent.isTouch() && event.preventDefault();
@@ -2230,6 +2239,26 @@
 	  };
 	})();
 
+	function _templateObject2() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t<div \n\t\t\t\t\tclass=\"main-grid-editor main-ui-control main-ui-multi-select\"\n\t\t\t\t\tname=\"", "\"\n\t\t\t\t\tid=\"", "\"\n\t\t\t\t>\n\t\t\t\t\t<span class=\"main-ui-square-container\">", "</span>\n\t\t\t\t\t<span class=\"main-ui-hide main-ui-control-value-delete\">\n\t\t\t\t\t\t<span class=\"main-ui-control-value-delete-item\"></span>\n\t\t\t\t\t</span>\n\t\t\t\t\t<span class=\"main-ui-square-search\">\n\t\t\t\t\t\t<input type=\"text\" class=\"main-ui-square-search-item\">\n\t\t\t\t\t</span>\t\n\t\t\t\t</div>\n\t\t\t"]);
+
+	  _templateObject2 = function _templateObject2() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t<span class=\"main-ui-square\">\n\t\t\t\t\t\t\t\t<span class=\"main-ui-square-item\">", "</span>\n\t\t\t\t\t\t\t\t<span class=\"main-ui-item-icon main-ui-square-delete\"></span>\n\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t"]);
+
+	  _templateObject = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
 	(function () {
 
 	  BX.namespace('BX.Grid');
@@ -2243,6 +2272,7 @@
 	  BX.Grid.InlineEditor = function (parent, types) {
 	    this.parent = null;
 	    this.types = null;
+	    this.isDropdownChangeEventSubscribed = false;
 	    this.init(parent, types);
 	  };
 
@@ -2343,16 +2373,21 @@
 	      var value = editObject.VALUE;
 	      var fieldChildren = [];
 	      var priceObject = value.PRICE || {};
+	      priceObject.PLACEHOLDER = editObject.PLACEHOLDER || '';
 	      fieldChildren.push(this.createMoneyPrice(priceObject));
-	      var currencyObject = value.CURRENCY || {};
-	      currencyObject.DATA = {
-	        ITEMS: editObject.CURRENCY_LIST
-	      };
-	      fieldChildren.push(this.createMoneyCurrency(currencyObject));
+
+	      if (BX.type.isArray(editObject.CURRENCY_LIST) && editObject.CURRENCY_LIST.length > 0) {
+	        var currencyObject = value.CURRENCY || {};
+	        currencyObject.DATA = {
+	          ITEMS: editObject.CURRENCY_LIST
+	        };
+	        currencyObject.HTML_ENTITY = editObject.HTML_ENTITY || false;
+	        fieldChildren.push(this.createMoneyCurrency(currencyObject));
+	      }
 
 	      if (BX.type.isNotEmptyObject(value.HIDDEN)) {
 	        for (var fieldName in value.HIDDEN) {
-	          if (BX.type.isNotEmptyString(fieldName)) {
+	          if (value.HIDDEN.hasOwnProperty(fieldName) && BX.type.isNotEmptyString(fieldName)) {
 	            var hidden = this.createInput({
 	              NAME: fieldName,
 	              VALUE: value['HIDDEN'][fieldName],
@@ -2378,7 +2413,6 @@
 	    },
 	    createMoneyPrice: function createMoneyPrice(priceObject) {
 	      priceObject.TYPE = this.types.NUMBER;
-	      priceObject.PLACEHOLDER = "0";
 	      var priceInput = this.createInput(priceObject);
 	      priceInput.classList.add('main-grid-editor-money-price');
 	      main_core.Event.bind(priceInput, 'change', function (event) {
@@ -2406,30 +2440,34 @@
 	        currencyBlock.dataset.disabled = true;
 	      }
 
-	      main_core_events.EventEmitter.subscribe('Dropdown::change', function (event) {
-	        var _event$getData = event.getData(),
-	            _event$getData2 = babelHelpers.slicedToArray(_event$getData, 1),
-	            controlId = _event$getData2[0];
+	      if (!this.isDropdownChangeEventSubscribed) {
+	        this.isDropdownChangeEventSubscribed = true;
+	        main_core_events.EventEmitter.subscribe('Dropdown::change', function (event) {
+	          var _event$getData = event.getData(),
+	              _event$getData2 = babelHelpers.slicedToArray(_event$getData, 1),
+	              controlId = _event$getData2[0];
 
-	        if (!BX.type.isNotEmptyString(controlId)) {
-	          return;
-	        }
+	          if (!BX.type.isNotEmptyString(controlId)) {
+	            return;
+	          }
 
-	        var dropdownObject = BX.Main.dropdownManager.getById(controlId);
+	          var dropdownObject = BX.Main.dropdownManager.getById(controlId);
 
-	        if (dropdownObject.dropdown && dropdownObject.dropdown.classList.contains('main-grid-editor-money-currency')) {
-	          var fieldNode = dropdownObject.dropdown.parentNode;
-	          var priceField = fieldNode.querySelector('.main-grid-editor-money-price');
-	          var eventData = {
-	            field: fieldNode,
-	            values: {
-	              price: priceField.value || '',
-	              currency: dropdownObject.dropdown.dataset.value || ''
-	            }
-	          };
-	          main_core_events.EventEmitter.emit('Grid.MoneyField::change', eventData);
-	        }
-	      });
+	          if (dropdownObject.dropdown && dropdownObject.dropdown.classList.contains('main-grid-editor-money-currency')) {
+	            var fieldNode = dropdownObject.dropdown.parentNode;
+	            var priceField = fieldNode.querySelector('.main-grid-editor-money-price');
+	            var eventData = {
+	              field: fieldNode,
+	              values: {
+	                price: priceField.value || '',
+	                currency: dropdownObject.dropdown.dataset.value || ''
+	              }
+	            };
+	            main_core_events.EventEmitter.emit('Grid.MoneyField::change', eventData);
+	          }
+	        });
+	      }
+
 	      return currencyBlock;
 	    },
 	    createOutput: function createOutput(editObject) {
@@ -2451,6 +2489,7 @@
 	    },
 	    createDropdown: function createDropdown(editObject) {
 	      var valueItem = this.getDropdownValueItemByValue(editObject.DATA.ITEMS, editObject.VALUE);
+	      var isHtmlEntity = 'HTML_ENTITY' in editObject && editObject.HTML_ENTITY === true;
 	      return BX.create('div', {
 	        props: {
 	          className: [this.parent.settings.get('classEditor'), 'main-dropdown main-grid-editor-dropdown'].join(' '),
@@ -2460,15 +2499,50 @@
 	          name: editObject.NAME,
 	          tabindex: '0',
 	          'data-items': JSON.stringify(editObject.DATA.ITEMS),
-	          'data-value': valueItem.VALUE
+	          'data-value': valueItem.VALUE,
+	          'data-html-entity': editObject.HTML_ENTITY
 	        },
 	        children: [BX.create('span', {
 	          props: {
 	            className: 'main-dropdown-inner'
 	          },
-	          text: valueItem.NAME
+	          html: isHtmlEntity ? valueItem.NAME : null,
+	          text: isHtmlEntity ? null : valueItem.NAME
 	        })]
 	      });
+	    },
+	    createMultiselect: function createMultiselect(editObject) {
+	      var _this = this;
+
+	      var selectedValues = [];
+
+	      var squares = function () {
+	        if (BX.Type.isArrayFilled(editObject.VALUE)) {
+	          return editObject.VALUE.map(function (value) {
+	            var _item$HTML;
+
+	            var item = _this.getDropdownValueItemByValue(editObject.DATA.ITEMS, value);
+
+	            selectedValues.push(item);
+	            var itemName = (_item$HTML = item.HTML) !== null && _item$HTML !== void 0 ? _item$HTML : BX.util.htmlspecialchars(item.NAME);
+	            var renderedItem = BX.Tag.render(_templateObject(), itemName);
+	            BX.Dom.attr(renderedItem, 'data-item', item);
+	            return renderedItem;
+	          });
+	        }
+
+	        return [];
+	      }();
+
+	      var layout = BX.Tag.render(_templateObject2(), BX.Text.encode(editObject.NAME), "".concat(BX.Text.encode(editObject.NAME), "_control"), squares);
+	      BX.Dom.attr(layout, {
+	        'data-params': {
+	          isMulti: true
+	        },
+	        'data-items': editObject.DATA.ITEMS,
+	        'data-value': selectedValues
+	      });
+	      return layout;
 	    },
 	    validateEditObject: function validateEditObject(editObject) {
 	      return BX.type.isPlainObject(editObject) && 'TYPE' in editObject && 'NAME' in editObject && 'VALUE' in editObject && (!('items' in editObject) || BX.type.isArray(editObject.items) && editObject.items.length);
@@ -2580,6 +2654,12 @@
 	              break;
 	            }
 
+	          case this.types.MULTISELECT:
+	            {
+	              control = this.createMultiselect(editObject);
+	              break;
+	            }
+
 	          case this.types.IMAGE:
 	            {
 	              control = this.createImageEditor(editObject);
@@ -2634,7 +2714,6 @@
 	    },
 	    _onControlKeydown: function _onControlKeydown(event) {
 	      if (event.code === 'Enter') {
-	        event.stopPropagation();
 	        event.preventDefault();
 	        var saveButton = BX.Grid.Utils.getBySelector(this.parent.getContainer(), '#grid_save_button > button', true);
 
@@ -3610,6 +3689,7 @@
 	          item.style.width = x + 'px';
 	          item.style.minWidth = x + 'px';
 	          item.style.maxWidth = x + 'px';
+	          BX.Dom.style(item.firstElementChild, 'width', x + 'px');
 	        }); // Resize false columns
 
 	        if (column[0].classList.contains('main-grid-fixed-column')) {
@@ -3638,6 +3718,14 @@
 	    },
 	    _onDragEnd: function _onDragEnd() {
 	      this.saveSizes();
+	      var cell = BX.findParent(jsDD.current_node, {
+	        className: this.parent.settings.get('classHeadCell')
+	      });
+	      var overlay = cell.querySelector('.main-grid-cell-overlay');
+
+	      if (overlay) {
+	        BX.Dom.remove(overlay);
+	      }
 	    },
 	    getColumnSizes: function getColumnSizes() {
 	      var cells = this.parent.getRows().getHeadFirstChild().getCells();
@@ -3657,6 +3745,156 @@
 	    }
 	  };
 	})();
+
+	function _templateObject15() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t\t<span class=\"ui-counter-inner\"></span>\n\t\t\t\t\t\t\t"]);
+
+	  _templateObject15 = function _templateObject15() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject14() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t\t<span class=\"ui-counter\"></span>\n\t\t\t\t\t\t\t"]);
+
+	  _templateObject14 = function _templateObject14() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject13() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t\t<span class=\"main-grid-cell-counter\"></span>\n\t\t\t\t\t\t\t"]);
+
+	  _templateObject13 = function _templateObject13() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject12() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t\t\t<span class=\"main-grid-cell-content-action ", "\"></span>\n\t\t\t\t\t\t\t\t"]);
+
+	  _templateObject12 = function _templateObject12() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject11() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t\t<div class=\"main-grid-cell-content-actions\"></div>\n\t\t\t\t\t\t\t"]);
+
+	  _templateObject11 = function _templateObject11() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject10() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t<span class=\"main-grid-tag-add\"></span>\n\t\t\t\t\t\t"]);
+
+	  _templateObject10 = function _templateObject10() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject9() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t<span class=\"main-grid-tags\">", "</span>\n\t\t\t\t\t\t"]);
+
+	  _templateObject9 = function _templateObject9() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject8() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t\t\t<span class=\"main-grid-tag-remove\"></span>\n\t\t\t\t\t\t\t\t"]);
+
+	  _templateObject8 = function _templateObject8() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject7() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t\t<span class=\"main-grid-tag-inner\">", "</span>\n\t\t\t\t\t\t\t"]);
+
+	  _templateObject7 = function _templateObject7() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject6() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t\t<span class=\"main-grid-tag\"></span>\n\t\t\t\t\t\t\t"]);
+
+	  _templateObject6 = function _templateObject6() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject5() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t<div class=\"main-grid-labels\">", "</div>\n\t\t\t\t\t\t"]);
+
+	  _templateObject5 = function _templateObject5() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject4() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t\t\t\t<span class=\"main-grid-label-remove-button ", "\"></span>\t\n\t\t\t\t\t\t\t\t\t"]);
+
+	  _templateObject4 = function _templateObject4() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject3() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t\t\t\t\t<span class=\"ui-label-icon\"></span>\t\n\t\t\t\t\t\t\t\t\t\t"]);
+
+	  _templateObject3 = function _templateObject3() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject2$1() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t\t<span class=\"ui-label-inner\">", "</span>\n\t\t\t\t\t\t\t"]);
+
+	  _templateObject2$1 = function _templateObject2() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject$1() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t\t<span class=\"ui-label ", "\"></span>\n\t\t\t\t\t\t\t"]);
+
+	  _templateObject$1 = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
 
 	(function () {
 
@@ -3681,7 +3919,9 @@
 	    this.parentId = null;
 	    this.editData = null;
 	    this.custom = null;
+	    this.onElementClick = this.onElementClick.bind(this);
 	    this.init(parent, node);
+	    this.initElementsEvents();
 	  }; //noinspection JSUnusedGlobalSymbols,JSUnusedGlobalSymbols
 
 
@@ -3789,6 +4029,8 @@
 	          result = this.getCustomValue(editor);
 	        } else if (BX.hasClass(editor, 'main-grid-editor-money')) {
 	          result = this.getMoneyValue(editor);
+	        } else if (BX.hasClass(editor, 'main-ui-multi-select')) {
+	          result = this.getMultiSelectValues(editor);
 	        } else {
 	          result = this.getImageValue(editor);
 	        }
@@ -3813,21 +4055,15 @@
 	      return BX.hasClass(this.getNode(), this.parent.settings.get('classNotCount'));
 	    },
 	    getContentContainer: function getContentContainer(target) {
-	      var result = null;
+	      if (BX.Type.isDomNode(target)) {
+	        var cell = target.closest('.main-grid-cell');
 
-	      if (!BX.hasClass(target, this.parent.settings.get('classCellContainer'))) {
-	        if (target.nodeName === 'TD' || target.nodeName === 'TR') {
-	          result = BX.Grid.Utils.getByClass(target, this.parent.settings.get('classCellContainer'), true);
-	        } else {
-	          result = BX.findParent(target, {
-	            className: this.parent.settings.get('classCellContainer')
-	          }, true, false);
+	        if (BX.Type.isDomNode(cell)) {
+	          return cell.querySelector('.main-grid-cell-content');
 	        }
-	      } else {
-	        result = target;
 	      }
 
-	      return result;
+	      return target;
 	    },
 	    getContent: function getContent(cell) {
 	      var container = this.getContentContainer(cell);
@@ -3993,6 +4229,13 @@
 	      }
 
 	      return result;
+	    },
+	    getMultiSelectValues: function getMultiSelectValues(editor) {
+	      var value = JSON.parse(BX.data(editor, 'value'));
+	      return {
+	        'NAME': editor.getAttribute('name'),
+	        'VALUE': main_core.Type.isArrayFilled(value) ? value : ''
+	      };
 	    },
 
 	    /**
@@ -4335,6 +4578,12 @@
 	    getCellNameByCellIndex: function getCellNameByCellIndex(index) {
 	      return BX.data(this.getCellByIndex(index), 'name');
 	    },
+	    resetEditData: function resetEditData() {
+	      this.editData = null;
+	    },
+	    setEditData: function setEditData(editData) {
+	      this.editData = editData;
+	    },
 	    getEditData: function getEditData() {
 	      if (this.editData === null) {
 	        var editableData = this.parent.getParam('EDITABLE_DATA');
@@ -4410,7 +4659,7 @@
 	      return this.getNode().rowIndex;
 	    },
 	    getId: function getId() {
-	      return BX.data(this.getNode(), 'id').toString();
+	      return String(BX.data(this.getNode(), 'id'));
 	    },
 	    getGroupId: function getGroupId() {
 	      return BX.data(this.getNode(), 'group-id').toString();
@@ -4483,6 +4732,7 @@
 	        var popupWindow = this.actionsMenu.getPopupWindow();
 	        var pos = BX.pos(this.getActionsButton());
 	        BX.style(popupWindow.getPopupContainer(), 'top', pos.top - 20 + 'px');
+	        BX.style(popupWindow.getPopupContainer(), 'left', pos.left + 25 + 'px');
 	      }
 	    },
 	    closeActionsMenu: function closeActionsMenu() {
@@ -4585,6 +4835,9 @@
 	    prependTo: function prependTo(target) {
 	      BX.Dom.prepend(this.getNode(), target);
 	    },
+	    appendTo: function appendTo(target) {
+	      BX.Dom.append(this.getNode(), target);
+	    },
 	    setId: function setId(id) {
 	      BX.Dom.attr(this.getNode(), 'data-id', id);
 	    },
@@ -4623,18 +4876,132 @@
 	    makeNotCountable: function makeNotCountable() {
 	      BX.Dom.addClass(this.getNode(), 'main-grid-not-count');
 	    },
+	    getColumnOptions: function getColumnOptions(columnId) {
+	      var columns = this.parent.getParam('COLUMNS_ALL');
+
+	      if (BX.Type.isPlainObject(columns) && Reflect.has(columns, columnId)) {
+	        return columns[columnId];
+	      }
+
+	      return null;
+	    },
 	    setCellsContent: function setCellsContent(content) {
 	      var _this = this;
 
 	      var headRow = this.parent.getRows().getHeadFirstChild();
 	      babelHelpers.toConsumableArray(this.getCells()).forEach(function (cell, cellIndex) {
 	        var cellName = headRow.getCellNameByCellIndex(cellIndex);
-	        var cellContent = content[cellName];
 
-	        if (cellContent) {
+	        if (Reflect.has(content, cellName)) {
+	          var columnOptions = _this.getColumnOptions(cellName);
+
 	          var container = _this.getContentContainer(cell);
 
-	          BX.Runtime.html(container, cellContent);
+	          var cellContent = content[cellName];
+
+	          if (columnOptions.type === 'labels' && BX.Type.isArray(cellContent)) {
+	            var labels = cellContent.map(function (labelOptions) {
+	              var label = BX.Tag.render(_templateObject$1(), labelOptions.color);
+
+	              if (labelOptions.light !== true) {
+	                BX.Dom.addClass(label, 'ui-label-fill');
+	              }
+
+	              if (BX.Type.isPlainObject(labelOptions.events)) {
+	                if (Reflect.has(labelOptions.events, 'click')) {
+	                  BX.Dom.addClass(label, 'ui-label-link');
+	                }
+
+	                _this.bindOnEvents(label, labelOptions.events);
+	              }
+
+	              var labelContent = function () {
+	                if (BX.Type.isStringFilled(labelOptions.html)) {
+	                  return labelOptions.html;
+	                }
+
+	                return labelOptions.text;
+	              }();
+
+	              var inner = BX.Tag.render(_templateObject2$1(), labelContent);
+	              BX.Dom.append(inner, label);
+
+	              if (BX.Type.isPlainObject(labelOptions.removeButton)) {
+	                var button = function () {
+	                  if (labelOptions.removeButton.type === BX.Grid.Label.RemoveButtonType.INSIDE) {
+	                    return BX.Tag.render(_templateObject3());
+	                  }
+
+	                  return BX.Tag.render(_templateObject4(), labelOptions.removeButton.type);
+	                }();
+
+	                if (BX.Type.isPlainObject(labelOptions.removeButton.events)) {
+	                  _this.bindOnEvents(button, labelOptions.removeButton.events);
+	                }
+
+	                BX.Dom.append(button, label);
+	              }
+
+	              return label;
+	            });
+	            var labelsContainer = BX.Tag.render(_templateObject5(), labels);
+	            var oldLabelsContainer = container.querySelector('.main-grid-labels');
+
+	            if (BX.Type.isDomNode(oldLabelsContainer)) {
+	              BX.Dom.replace(oldLabelsContainer, labelsContainer);
+	            } else {
+	              BX.Dom.append(labelsContainer, container);
+	            }
+	          } else if (columnOptions.type === 'tags' && BX.Type.isPlainObject(cellContent)) {
+	            var tags = cellContent.items.map(function (tagOptions) {
+	              var tag = BX.Tag.render(_templateObject6());
+
+	              _this.bindOnEvents(tag, tagOptions.events);
+
+	              if (tagOptions.active === true) {
+	                BX.Dom.addClass(tag, 'main-grid-tag-active');
+	              }
+
+	              var tagContent = function () {
+	                if (BX.Type.isStringFilled(tagOptions.html)) {
+	                  return tagOptions.html;
+	                }
+
+	                return BX.Text.encode(tagOptions.text);
+	              }();
+
+	              var tagInner = BX.Tag.render(_templateObject7(), tagContent);
+	              BX.Dom.append(tagInner, tag);
+
+	              if (tagOptions.active === true) {
+	                var removeButton = BX.Tag.render(_templateObject8());
+	                BX.Dom.append(removeButton, tag);
+
+	                if (BX.Type.isPlainObject(tagOptions.removeButton)) {
+	                  _this.bindOnEvents(removeButton, tagOptions.removeButton.events);
+	                }
+	              }
+
+	              return tag;
+	            });
+	            var tagsContainer = BX.Tag.render(_templateObject9(), tags);
+	            var addButton = BX.Tag.render(_templateObject10());
+
+	            if (BX.Type.isPlainObject(cellContent.addButton)) {
+	              _this.bindOnEvents(addButton, cellContent.addButton.events);
+	            }
+
+	            BX.Dom.append(addButton, tagsContainer);
+	            var oldTagsContainer = container.querySelector('.main-grid-tags');
+
+	            if (BX.Type.isDomNode(oldTagsContainer)) {
+	              BX.Dom.replace(oldTagsContainer, tagsContainer);
+	            } else {
+	              BX.Dom.append(tagsContainer, container);
+	            }
+	          } else {
+	            BX.Runtime.html(container, cellContent);
+	          }
 	        }
 	      });
 	    },
@@ -4646,6 +5013,269 @@
 	    },
 	    isTemplate: function isTemplate() {
 	      return this.isBodyChild() && /^template_[0-9]$/.test(this.getId());
+	    },
+	    enableAbsolutePosition: function enableAbsolutePosition() {
+	      var headCells = babelHelpers.toConsumableArray(this.parent.getRows().getHeadFirstChild().getCells());
+	      var cellsWidth = headCells.map(function (cell) {
+	        return BX.Dom.style(cell, 'width');
+	      });
+	      var cells = this.getCells();
+	      cellsWidth.forEach(function (width, index) {
+	        BX.Dom.style(cells[index], 'width', width);
+	      });
+	      BX.Dom.style(this.getNode(), 'position', 'absolute');
+	    },
+	    disableAbsolutePosition: function disableAbsolutePosition() {
+	      BX.Dom.style(this.getNode(), 'position', null);
+	    },
+	    getHeight: function getHeight() {
+	      return BX.Text.toNumber(BX.Dom.style(this.getNode(), 'height'));
+	    },
+	    setCellActions: function setCellActions(cellActions) {
+	      var _this2 = this;
+
+	      Object.entries(cellActions).forEach(function (_ref) {
+	        var _ref2 = babelHelpers.slicedToArray(_ref, 2),
+	            cellId = _ref2[0],
+	            actions = _ref2[1];
+
+	        var cell = _this2.getCellById(cellId);
+
+	        if (cell) {
+	          var inner = cell.querySelector('.main-grid-cell-inner');
+
+	          if (inner) {
+	            var container = function () {
+	              var currentContainer = inner.querySelector('.main-grid-cell-content-actions');
+
+	              if (currentContainer) {
+	                BX.Dom.clean(currentContainer);
+	                return currentContainer;
+	              }
+
+	              var newContainer = BX.Tag.render(_templateObject11());
+	              BX.Dom.append(newContainer, inner);
+	              return newContainer;
+	            }();
+
+	            if (BX.Type.isArrayFilled(actions)) {
+	              actions.forEach(function (action) {
+	                var actionClass = function () {
+	                  if (BX.Type.isArrayFilled(action.class)) {
+	                    return action.class.join(' ');
+	                  }
+
+	                  return action.class;
+	                }();
+
+	                var button = BX.Tag.render(_templateObject12(), actionClass);
+
+	                if (BX.Type.isPlainObject(action.events)) {
+	                  _this2.bindOnEvents(button, action.events);
+	                }
+
+	                if (BX.Type.isPlainObject(action.attributes)) {
+	                  BX.Dom.attr(button, action.attributes);
+	                }
+
+	                BX.Dom.append(button, container);
+	              });
+	            }
+	          }
+	        }
+	      });
+	    },
+
+	    /**
+	     * @private
+	     */
+	    initElementsEvents: function initElementsEvents() {
+	      var _this3 = this;
+
+	      var buttons = babelHelpers.toConsumableArray(this.getNode().querySelectorAll('.main-grid-cell [data-events]'));
+
+	      if (BX.Type.isArrayFilled(buttons)) {
+	        buttons.forEach(function (button) {
+	          var events = eval(BX.Dom.attr(button, 'data-events'));
+
+	          if (BX.Type.isPlainObject(events)) {
+	            BX.Dom.attr(button, 'data-events', null);
+
+	            _this3.bindOnEvents(button, events);
+	          }
+	        });
+	      }
+	    },
+
+	    /**
+	     * @private
+	     * @param event
+	     */
+	    onElementClick: function onElementClick(event) {
+	      event.stopPropagation();
+	    },
+
+	    /**
+	     * @private
+	     */
+	    bindOnEvents: function bindOnEvents(button, events) {
+	      if (BX.Type.isDomNode(button) && BX.Type.isPlainObject(events)) {
+	        BX.Event.bind(button, 'click', this.onElementClick.bind(this));
+
+	        var target = function () {
+	          var selector = BX.Dom.attr(button, 'data-target');
+
+	          if (selector) {
+	            return button.closest(selector);
+	          }
+
+	          return button;
+	        }();
+
+	        var event = new BX.Event.BaseEvent({
+	          data: {
+	            button: button,
+	            target: target,
+	            row: this
+	          }
+	        });
+	        event.setTarget(target);
+	        Object.entries(events).forEach(function (_ref3) {
+	          var _ref4 = babelHelpers.slicedToArray(_ref3, 2),
+	              eventName = _ref4[0],
+	              handler = _ref4[1];
+
+	          var preparedHandler = eval(handler);
+	          BX.Event.bind(button, eventName, preparedHandler.bind(null, event));
+	        });
+	      }
+	    },
+	    setCounters: function setCounters(counters) {
+	      var _this4 = this;
+
+	      if (BX.Type.isPlainObject(counters)) {
+	        Object.entries(counters).forEach(function (_ref5) {
+	          var _ref6 = babelHelpers.slicedToArray(_ref5, 2),
+	              columnId = _ref6[0],
+	              counter = _ref6[1];
+
+	          var cell = _this4.getCellById(columnId);
+
+	          if (BX.Type.isDomNode(cell)) {
+	            var cellInner = cell.querySelector('.main-grid-cell-inner');
+
+	            var counterContainer = function () {
+	              var container = cell.querySelector('.main-grid-cell-counter');
+
+	              if (BX.Type.isDomNode(container)) {
+	                return container;
+	              }
+
+	              return BX.Tag.render(_templateObject13());
+	            }();
+
+	            var uiCounter = function () {
+	              var currentCounter = counterContainer.querySelector('.ui-counter');
+
+	              if (BX.Type.isDomNode(currentCounter)) {
+	                return currentCounter;
+	              }
+
+	              var newCounter = BX.Tag.render(_templateObject14());
+	              BX.Dom.append(newCounter, counterContainer);
+	              return newCounter;
+	            }();
+
+	            if (BX.Type.isPlainObject(counter.events)) {
+	              _this4.bindOnEvents(uiCounter, counter.events);
+	            }
+
+	            var counterInner = function () {
+	              var currentInner = uiCounter.querySelector('.ui-counter-inner');
+
+	              if (BX.Type.isDomNode(currentInner)) {
+	                return currentInner;
+	              }
+
+	              var newInner = BX.Tag.render(_templateObject15());
+	              BX.Dom.append(newInner, uiCounter);
+	              return newInner;
+	            }();
+
+	            if (BX.Type.isStringFilled(counter.type)) {
+	              Object.values(BX.Grid.Counters.Type).forEach(function (type) {
+	                BX.Dom.removeClass(counterContainer, "main-grid-cell-counter-".concat(type));
+	              });
+	              BX.Dom.addClass(counterContainer, "main-grid-cell-counter-".concat(counter.type));
+	            }
+
+	            if (BX.Type.isStringFilled(counter.color)) {
+	              Object.values(BX.Grid.Counters.Color).forEach(function (color) {
+	                BX.Dom.removeClass(uiCounter, color);
+	              });
+	              BX.Dom.addClass(uiCounter, counter.color);
+	            }
+
+	            if (BX.Type.isStringFilled(counter.size)) {
+	              Object.values(BX.Grid.Counters.Size).forEach(function (size) {
+	                BX.Dom.removeClass(uiCounter, size);
+	              });
+	              BX.Dom.addClass(uiCounter, counter.size);
+	            }
+
+	            if (BX.Type.isStringFilled(counter.class)) {
+	              BX.Dom.addClass(uiCounter, counter.class);
+	            }
+
+	            if (BX.Type.isStringFilled(counter.value) || BX.Type.isNumber(counter.value)) {
+	              var currentValue = BX.Text.toNumber(counterInner.innerText);
+	              var value = BX.Text.toNumber(counter.value);
+
+	              if (value > 0) {
+	                if (value < 100) {
+	                  counterInner.innerText = counter.value;
+	                } else {
+	                  counterInner.innerText = '99+';
+	                }
+
+	                if (counter.animation !== false) {
+	                  if (value !== currentValue) {
+	                    if (value > currentValue) {
+	                      BX.Dom.addClass(counterInner, 'ui-counter-plus');
+	                    } else {
+	                      BX.Dom.addClass(counterInner, 'ui-counter-minus');
+	                    }
+	                  }
+
+	                  BX.Event.bindOnce(counterInner, 'animationend', function (event) {
+	                    if (event.animationName === 'uiCounterPlus' || event.animationName === 'uiCounterMinus') {
+	                      BX.Dom.removeClass(counterInner, ['ui-counter-plus', 'ui-counter-minus']);
+	                    }
+	                  });
+	                }
+	              }
+	            }
+
+	            if (BX.Text.toNumber(counter.value) > 0) {
+	              var align = counter.type === BX.Grid.Counters.Type.RIGHT ? 'right' : 'left';
+
+	              if (align === 'left') {
+	                BX.Dom.prepend(counterContainer, cellInner);
+	              } else if (align === 'right') {
+	                BX.Dom.append(counterContainer, cellInner);
+	              }
+	            } else {
+	              var leftAlignedClass = "main-grid-cell-counter-".concat(BX.Grid.Counters.Type.LEFT_ALIGNED);
+
+	              if (BX.Dom.hasClass(counterContainer, leftAlignedClass)) {
+	                BX.remove(uiCounter);
+	              } else {
+	                BX.remove(counterContainer);
+	              }
+	            }
+	          }
+	        });
+	      }
 	    }
 	  };
 	})();
@@ -4839,12 +5469,9 @@
 	     * @return {?BX.Grid.Row}
 	     */
 	    getById: function getById(id) {
-	      id = id.toString();
-	      var rows = this.getBodyChild();
-	      var row = rows.filter(function (current) {
-	        return current.getId() === id;
-	      });
-	      return row.length === 1 ? row[0] : null;
+	      return this.getBodyChild().find(function (current) {
+	        return String(current.getId()) === String(id);
+	      }) || null;
 	    },
 
 	    /**
@@ -4853,21 +5480,21 @@
 	     * @return {?BX.Grid.Row}
 	     */
 	    get: function get(node) {
-	      var result = null;
-	      var filter;
+	      if (BX.Type.isDomNode(node)) {
+	        var rowNode = node.closest('.main-grid-row');
 
-	      if (BX.type.isDomNode(node)) {
-	        node = this.normalizeNode(node);
-	        filter = this.getRows().filter(function (current) {
-	          return node === current.getNode();
-	        });
+	        if (BX.Type.isDomNode(rowNode)) {
+	          var rowInstance = this.getRows().find(function (row) {
+	            return row.getNode() === rowNode;
+	          });
 
-	        if (filter.length) {
-	          result = filter[0];
+	          if (rowInstance) {
+	            return rowInstance;
+	          }
 	        }
 	      }
 
-	      return result;
+	      return null;
 	    },
 
 	    /** @static @method getLast */
@@ -5142,16 +5769,23 @@
 	      if (!this.inited) {
 	        this.inited = true;
 	        this.onscrollDebounceHandler = BX.debounce(this._onWindowScroll, 300, this);
-	        BX.addCustomEvent('Grid::thereEditedRows', BX.proxy(this.disable, this));
-	        BX.addCustomEvent('Grid::noEditedRows', BX.proxy(this.enable, this));
+
+	        if (!this.parent.getParam('ALLOW_ROWS_SORT_IN_EDIT_MODE', false)) {
+	          BX.addCustomEvent('Grid::thereEditedRows', BX.proxy(this.disable, this));
+	          BX.addCustomEvent('Grid::noEditedRows', BX.proxy(this.enable, this));
+	        }
+
 	        document.addEventListener('scroll', this.onscrollDebounceHandler, BX.Grid.Utils.listenerParams({
 	          passive: true
 	        }));
 	      }
 	    },
 	    destroy: function destroy() {
-	      BX.removeCustomEvent('Grid::thereEditedRows', BX.proxy(this.disable, this));
-	      BX.removeCustomEvent('Grid::noEditedRows', BX.proxy(this.enable, this));
+	      if (!this.parent.getParam('ALLOW_ROWS_SORT_IN_EDIT_MODE', false)) {
+	        BX.removeCustomEvent('Grid::thereEditedRows', BX.proxy(this.disable, this));
+	        BX.removeCustomEvent('Grid::noEditedRows', BX.proxy(this.enable, this));
+	      }
+
 	      document.removeEventListener('scroll', this.onscrollDebounceHandler, BX.Grid.Utils.listenerParams({
 	        passive: true
 	      }));
@@ -5445,7 +6079,7 @@
 	        if (!result && currentIndex > index) {
 	          var row = Rows.get(item);
 
-	          if (row.isShown()) {
+	          if (row && row.isShown()) {
 	            result = item;
 	          }
 	        }
@@ -5502,7 +6136,11 @@
 	        var ids = this.parent.getRows().getBodyChild().map(function (row) {
 	          return row.getId();
 	        });
-	        this.saveRowsSort(ids);
+
+	        if (this.parent.getParam('ALLOW_ROWS_SORT_INSTANT_SAVE', true)) {
+	          this.saveRowsSort(ids);
+	        }
+
 	        BX.onCustomEvent(window, 'Grid::rowMoved', [ids, dragItem, this.parent]);
 	      } else {
 	        this.resetDragProperties();
@@ -6159,12 +6797,20 @@
 	     * @return {string}
 	     */
 	    createTitle: function createTitle() {
+	      var tmpDiv = BX.create('div');
+	      var customSettingsTitle = this.parent.getParam('SETTINGS_WINDOW_TITLE');
+
+	      if (customSettingsTitle !== "") {
+	        customSettingsTitle = '&laquo;' + customSettingsTitle + '&raquo;';
+	        tmpDiv.innerHTML = '<span>' + this.parent.getParam('SETTINGS_TITLE') + ' ' + customSettingsTitle + '</span>';
+	        return tmpDiv.firstChild.innerText;
+	      }
+
 	      var gridsCount = BX.Main.gridManager.data.length;
 
 	      if (gridsCount === 1) {
-	        var tmpDiv = BX.create('div');
 	        var pageTitleNode = BX('pagetitle');
-	        var pageTitle = !!pageTitleNode ? '&laquo;' + pageTitleNode.innerHTML + '&raquo;' : '';
+	        var pageTitle = BX.Type.isDomNode(pageTitleNode) && BX.Type.isStringFilled(pageTitleNode.innerText) ? '&laquo;' + BX.Text.encode(pageTitleNode.innerText) + '&raquo;' : '';
 	        tmpDiv.innerHTML = '<span>' + this.parent.getParam('SETTINGS_TITLE') + ' ' + pageTitle + '</span>';
 	        return tmpDiv.firstChild.innerText;
 	      }
@@ -7035,6 +7681,319 @@
 	  };
 	})();
 
+	function _templateObject5$1() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"main-grid-empty-block\">\n\t\t\t\t<div class=\"main-grid-empty-inner\">\n\t\t\t\t\t", "\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject5$1 = function _templateObject5() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject4$1() {
+	  var data = babelHelpers.taggedTemplateLiteral(["<div class=\"main-grid-empty-text\">", "</div>"]);
+
+	  _templateObject4$1 = function _templateObject4() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject3$1() {
+	  var data = babelHelpers.taggedTemplateLiteral(["<div class=\"main-grid-empty-image\"></div>"]);
+
+	  _templateObject3$1 = function _templateObject3() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject2$2() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t<div class=\"main-grid-empty-block-description\">\n\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t"]);
+
+	  _templateObject2$2 = function _templateObject2() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject$2() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t<div class=\"main-grid-empty-block-title\">\n\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t"]);
+
+	  _templateObject$2 = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	/**
+	 * @memberOf BX.Grid
+	 */
+	var Realtime = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(Realtime, _EventEmitter);
+
+	  function Realtime(options) {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, Realtime);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Realtime).call(this));
+
+	    _this.setEventNamespace('BX.Grid.Realtime');
+
+	    _this.options = babelHelpers.objectSpread({}, options);
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(Realtime, [{
+	    key: "addRow",
+	    value: function addRow(options) {
+	      var grid = this.options.grid;
+	      var row = grid.getTemplateRow();
+	      row.makeCountable();
+	      grid.hideEmptyStub();
+
+	      if (main_core.Type.isNumber(options.id) || main_core.Type.isStringFilled(options.id)) {
+	        row.setId(options.id);
+	      } else {
+	        throw new ReferenceError('id is not number or string');
+	      }
+
+	      if (main_core.Type.isArrayFilled(options.actions)) {
+	        row.setActions(options.actions);
+	      }
+
+	      if (main_core.Type.isPlainObject(options.columns)) {
+	        row.setCellsContent(options.columns);
+	      }
+
+	      if (main_core.Type.isPlainObject(options.cellActions)) {
+	        row.setCellActions(options.cellActions);
+	      }
+
+	      if (main_core.Type.isPlainObject(options.counters)) {
+	        var preparedCounters = Object.entries(options.counters).reduce(function (acc, _ref) {
+	          var _ref2 = babelHelpers.slicedToArray(_ref, 2),
+	              columnId = _ref2[0],
+	              counter = _ref2[1];
+
+	          if (main_core.Type.isPlainObject(counter)) {
+	            acc[columnId] = babelHelpers.objectSpread({}, counter, {
+	              animation: main_core.Text.toBoolean(counter.animation)
+	            });
+	          }
+
+	          return acc;
+	        }, {});
+	        row.setCounters(preparedCounters);
+	      }
+
+	      if (options.prepend === true) {
+	        row.prependTo(grid.getBody());
+	      } else if (options.append === true) {
+	        row.appendTo(grid.getBody());
+	      } else if (main_core.Type.isNumber(options.insertBefore) || main_core.Type.isStringFilled(options.insertBefore)) {
+	        var targetRow = grid.getRows().getById(options.insertBefore);
+
+	        if (targetRow) {
+	          BX.Dom.insertBefore(row.getNode(), targetRow.getNode());
+	        }
+	      } else if (main_core.Type.isNumber(options.insertAfter) || main_core.Type.isStringFilled(options.insertAfter)) {
+	        var _targetRow = grid.getRows().getById(options.insertAfter);
+
+	        if (_targetRow) {
+	          BX.Dom.insertAfter(row.getNode(), _targetRow.getNode());
+	        }
+	      } else {
+	        throw new ReferenceError('prepend, append, insertBefore or insertAfter not filled');
+	      }
+
+	      row.show();
+
+	      if (options.animation !== false) {
+	        row.enableAbsolutePosition();
+	        var movedElements = grid.getRows().getSourceBodyChild().filter(function (currentRow) {
+	          return currentRow.rowIndex > row.getIndex();
+	        });
+	        var fakeRowNode = document.createElement('tr');
+	        main_core.Dom.style(fakeRowNode, {
+	          height: '0px',
+	          transition: '200ms height linear'
+	        });
+	        main_core.Dom.append(fakeRowNode, grid.getBody());
+	        var offset = row.getHeight();
+	        main_core.Dom.style(fakeRowNode, 'height', "".concat(offset, "px"));
+	        movedElements.forEach(function (element) {
+	          main_core.Dom.style(element, {
+	            transition: '200ms transform linear',
+	            transform: "translateY(".concat(offset, "px) translateZ(0)")
+	          });
+	        });
+	        main_core.Dom.addClass(row.getNode(), 'main-ui-grid-show-new-row');
+	        main_core.Event.bind(row.getNode(), 'animationend', function (event) {
+	          if (event.animationName === 'showNewRow') {
+	            movedElements.forEach(function (element) {
+	              main_core.Dom.style(element, {
+	                transition: null,
+	                transform: null
+	              });
+	            });
+	            main_core.Dom.remove(fakeRowNode);
+	            row.disableAbsolutePosition();
+	            main_core.Dom.removeClass(row.getNode(), 'main-ui-grid-show-new-row');
+	          }
+	        });
+	      }
+
+	      grid.getRows().reset();
+	      grid.bindOnRowEvents();
+	      grid.updateCounterDisplayed();
+	      grid.updateCounterSelected();
+
+	      if (grid.getParam('ALLOW_ROWS_SORT')) {
+	        grid.rowsSortable.reinit();
+	      }
+
+	      if (grid.getParam('ALLOW_COLUMNS_SORT')) {
+	        grid.colsSortable.reinit();
+	      }
+	    }
+	  }, {
+	    key: "showStub",
+	    value: function showStub() {
+	      var _this2 = this;
+
+	      var options = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
+	      var tr = document.createElement('tr');
+	      main_core.Dom.addClass(tr, 'main-grid-row main-grid-row-empty main-grid-row-body');
+	      var td = document.createElement('td');
+	      main_core.Dom.addClass(td, 'main-grid-cell main-grid-cell-center');
+	      var colspan = this.options.grid.getRows().getHeadFirstChild().getCells().length;
+	      main_core.Dom.attr(td, 'colspan', colspan);
+
+	      var content = function () {
+	        if (main_core.Type.isPlainObject(options.content)) {
+	          var result = [];
+
+	          if (main_core.Type.isStringFilled(options.content.title)) {
+	            result.push(main_core.Tag.render(_templateObject$2(), options.content.title));
+	          }
+
+	          if (main_core.Type.isStringFilled(options.content.description)) {
+	            result.push(main_core.Tag.render(_templateObject2$2(), options.content.description));
+	          }
+
+	          return result;
+	        }
+
+	        if (main_core.Type.isStringFilled(options.content) || main_core.Type.isDomNode(options.content)) {
+	          return options.content;
+	        }
+
+	        return [main_core.Tag.render(_templateObject3$1()), main_core.Tag.render(_templateObject4$1(), _this2.options.grid.getParam('EMPTY_STUB_TEXT'))];
+	      }();
+
+	      var container = main_core.Tag.render(_templateObject5$1(), content);
+	      main_core.Dom.append(container, td);
+	      main_core.Dom.append(td, tr);
+	      var oldStub = this.options.grid.getBody().querySelector('.main-grid-row-empty');
+
+	      if (oldStub) {
+	        main_core.Dom.remove(oldStub);
+	      }
+
+	      main_core.Dom.append(tr, this.options.grid.getBody());
+	      this.options.grid.getRows().getBodyChild().forEach(function (row) {
+	        row.hide();
+	      });
+	      this.options.grid.adjustEmptyTable(this.options.grid.getRows().getSourceBodyChild());
+	    }
+	  }]);
+	  return Realtime;
+	}(main_core_events.EventEmitter);
+	var namespace = main_core.Reflection.namespace('BX.Grid');
+	namespace.Realtime = Realtime;
+
+	/**
+	 * @memberOf BX.Grid
+	 */
+
+	var CellActions = function CellActions() {
+	  babelHelpers.classCallCheck(this, CellActions);
+	};
+	babelHelpers.defineProperty(CellActions, "PIN", 'main-grid-cell-content-action-pin');
+	babelHelpers.defineProperty(CellActions, "MUTE", 'main-grid-cell-content-action-mute');
+	var namespace$1 = main_core.Reflection.namespace('BX.Grid');
+	namespace$1.CellActions = CellActions;
+
+	/**
+	 * @memberOf BX.Grid
+	 */
+
+	var CellActionState = function CellActionState() {
+	  babelHelpers.classCallCheck(this, CellActionState);
+	};
+	babelHelpers.defineProperty(CellActionState, "SHOW_BY_HOVER", 'main-grid-cell-content-action-by-hover');
+	babelHelpers.defineProperty(CellActionState, "ACTIVE", 'main-grid-cell-content-action-active');
+	var namespace$2 = main_core.Reflection.namespace('BX.Grid');
+	namespace$2.CellActionState = CellActionState;
+
+	/**
+	 * @memberOf BX.Grid
+	 */
+
+	var Counters = function Counters() {
+	  babelHelpers.classCallCheck(this, Counters);
+	};
+	babelHelpers.defineProperty(Counters, "Type", {
+	  LEFT: 'left',
+	  LEFT_ALIGNED: 'left-aligned',
+	  RIGHT: 'right'
+	});
+	babelHelpers.defineProperty(Counters, "Color", {
+	  DANGER: 'ui-counter-danger',
+	  SUCCESS: 'ui-counter-success',
+	  PRIMARY: 'ui-counter-primary',
+	  GRAY: 'ui-counter-gray',
+	  LIGHT: 'ui-counter-light',
+	  DARK: 'ui-counter-dark'
+	});
+	babelHelpers.defineProperty(Counters, "Size", {
+	  LARGE: 'ui-counter-lg',
+	  MEDIUM: 'ui-counter-md'
+	});
+	var namespace$3 = main_core.Reflection.namespace('BX.Grid');
+	namespace$3.Counters = Counters;
+
+	/**
+	 * @memberOf BX.Grid
+	 */
+
+	var Label = function Label() {
+	  babelHelpers.classCallCheck(this, Label);
+	};
+	babelHelpers.defineProperty(Label, "Color", {
+	  DEFAULT: 'ui-label-default',
+	  DANGER: 'ui-label-danger',
+	  SUCCESS: 'ui-label-success',
+	  WARNING: 'ui-label-warning',
+	  PRIMARY: 'ui-label-primary',
+	  SECONDARY: 'ui-label-secondary',
+	  LIGHTGREEN: 'ui-label-lightgreen',
+	  LIGHTBLUE: 'ui-label-lightblue',
+	  LIGHT: 'ui-label-light'
+	});
+	babelHelpers.defineProperty(Label, "RemoveButtonType", {
+	  INSIDE: 'main-grid-tag-remove-inside',
+	  OUTSIDE: 'main-grid-tag-remove-outside'
+	});
+	var namespace$4 = main_core.Reflection.namespace('BX.Grid');
+	namespace$4.Label = Label;
+
 	(function () {
 
 	  BX.namespace('BX.Main');
@@ -7140,6 +8099,7 @@
 	      this.userOptions = new BX.Grid.UserOptions(this, userOptions, userOptionsActions, userOptionsHandlerUrl);
 	      this.gridSettings = new BX.Grid.SettingsWindow(this);
 	      this.messages = new BX.Grid.Message(this, messageTypes);
+	      this.cache = new BX.Cache.MemoryCache();
 
 	      if (this.getParam('ALLOW_PIN_HEADER')) {
 	        this.pinHeader = new BX.Grid.PinHeader(this);
@@ -7616,63 +8576,59 @@
 	      return BX.Grid.Utils.getByClass(this.getContainer(), this.settings.get('classEmptyBlock'), true);
 	    },
 	    adjustEmptyTable: function adjustEmptyTable(rows) {
-	      requestAnimationFrame(function () {
-	        function adjustEmptyBlockPosition(event) {
-	          var target = event.currentTarget;
-	          BX.Grid.Utils.requestAnimationFrame(function () {
-	            BX.style(emptyBlock, 'transform', 'translate3d(' + BX.scrollLeft(target) + 'px, 0px, 0');
-	          });
+	      function adjustEmptyBlockPosition(event) {
+	        var target = event.currentTarget;
+	        BX.style(emptyBlock, 'transform', 'translate3d(' + BX.scrollLeft(target) + 'px, 0px, 0');
+	      }
+
+	      var filteredRows = rows.filter(function (row) {
+	        return BX.Dom.attr(row, 'data-id') !== 'template_0' && !BX.Dom.hasClass(row, 'main-grid-hide');
+	      });
+
+	      if (!BX.hasClass(document.documentElement, 'bx-ie') && filteredRows.length === 1 && BX.hasClass(filteredRows[0], this.settings.get('classEmptyRows'))) {
+	        var gridRect = BX.pos(this.getContainer());
+	        var scrollBottom = BX.scrollTop(window) + BX.height(window);
+	        var diff = gridRect.bottom - scrollBottom;
+	        var panelsHeight = BX.height(this.getPanels());
+	        var emptyBlock = this.getEmptyBlock();
+	        var containerWidth = BX.width(this.getContainer());
+
+	        if (containerWidth) {
+	          BX.width(emptyBlock, containerWidth);
 	        }
 
-	        var filteredRows = rows.filter(function (row) {
-	          return BX.Dom.attr(row, 'data-id') !== 'template_0';
-	        });
+	        BX.style(emptyBlock, 'transform', 'translate3d(' + BX.scrollLeft(this.getScrollContainer()) + 'px, 0px, 0');
+	        BX.unbind(this.getScrollContainer(), 'scroll', adjustEmptyBlockPosition);
+	        BX.bind(this.getScrollContainer(), 'scroll', adjustEmptyBlockPosition);
+	        var parent = this.getContainer();
+	        var paddingOffset = 0;
 
-	        if (!BX.hasClass(document.documentElement, 'bx-ie') && BX.type.isArray(rows) && filteredRows.length === 1 && BX.hasClass(rows[0], this.settings.get('classEmptyRows'))) {
-	          var gridRect = BX.pos(this.getContainer());
-	          var scrollBottom = BX.scrollTop(window) + BX.height(window);
-	          var diff = gridRect.bottom - scrollBottom;
-	          var panelsHeight = BX.height(this.getPanels());
-	          var emptyBlock = this.getEmptyBlock();
-	          var containerWidth = BX.width(this.getContainer());
+	        while (parent = parent.parentElement) {
+	          var parentPaddingTop = parseFloat(BX.style(parent, "padding-top"));
+	          var parentPaddingBottom = parseFloat(BX.style(parent, "padding-bottom"));
 
-	          if (containerWidth) {
-	            BX.width(emptyBlock, containerWidth);
+	          if (!isNaN(parentPaddingTop)) {
+	            paddingOffset += parentPaddingTop;
 	          }
 
-	          BX.style(emptyBlock, 'transform', 'translate3d(' + BX.scrollLeft(this.getScrollContainer()) + 'px, 0px, 0');
-	          BX.unbind(this.getScrollContainer(), 'scroll', adjustEmptyBlockPosition);
-	          BX.bind(this.getScrollContainer(), 'scroll', adjustEmptyBlockPosition);
-	          var parent = this.getContainer();
-	          var paddingOffset = 0;
-
-	          while (parent = parent.parentElement) {
-	            var parentPaddingTop = parseFloat(BX.style(parent, "padding-top"));
-	            var parentPaddingBottom = parseFloat(BX.style(parent, "padding-bottom"));
-
-	            if (!isNaN(parentPaddingTop)) {
-	              paddingOffset += parentPaddingTop;
-	            }
-
-	            if (!isNaN(parentPaddingBottom)) {
-	              paddingOffset += parentPaddingBottom;
-	            }
+	          if (!isNaN(parentPaddingBottom)) {
+	            paddingOffset += parentPaddingBottom;
 	          }
+	        }
 
-	          if (diff > 0) {
-	            BX.style(this.getTable(), 'min-height', gridRect.height - diff - panelsHeight - paddingOffset + 'px');
-	          } else {
-	            BX.style(this.getTable(), 'min-height', gridRect.height + Math.abs(diff) - panelsHeight - paddingOffset + 'px');
-	          }
+	        if (diff > 0) {
+	          BX.style(this.getTable(), 'min-height', gridRect.height - diff - panelsHeight - paddingOffset + 'px');
 	        } else {
-	          BX.style(this.getTable(), 'min-height', ''); // Chrome hack for 0116845 bug. @todo refactoring
-
-	          BX.style(this.getTable(), 'height', '1px');
-	          requestAnimationFrame(function () {
-	            BX.style(this.getTable(), 'height', '1px');
-	          }.bind(this));
+	          BX.style(this.getTable(), 'min-height', gridRect.height + Math.abs(diff) - panelsHeight - paddingOffset + 'px');
 	        }
-	      }.bind(this));
+	      } else {
+	        BX.style(this.getTable(), 'min-height', ''); // Chrome hack for 0116845 bug. @todo refactoring
+
+	        BX.style(this.getTable(), 'height', '1px');
+	        requestAnimationFrame(function () {
+	          BX.style(this.getTable(), 'height', '1px');
+	        }.bind(this));
+	      }
 	    },
 	    reloadTable: function reloadTable(method, data, callback, url) {
 	      var bodyRows;
@@ -7693,6 +8649,7 @@
 	      }
 
 	      this.getData().request(url, method, data, '', function () {
+	        BX.onCustomEvent(window, 'BX.Main.Grid:onBeforeReload', [self]);
 	        self.getRows().reset();
 	        bodyRows = this.getBodyRows();
 	        self.getUpdater().updateHeadRows(this.getHeadRows());
@@ -8255,74 +9212,77 @@
 
 	        if (event.target.nodeName !== 'A' && event.target.nodeName !== 'INPUT') {
 	          row = this.getRows().get(event.target);
-	          contentContainer = row.getContentContainer(event.target);
 
-	          if (BX.type.isDomNode(contentContainer) && event.target.nodeName !== 'TD' && event.target !== contentContainer) {
-	            isPrevent = BX.data(contentContainer, 'prevent-default') === 'true';
-	          }
+	          if (row) {
+	            contentContainer = row.getContentContainer(event.target);
 
-	          if (isPrevent) {
-	            if (row.getCheckbox()) {
-	              rows = [];
-	              this.currentIndex = 0;
-	              this.getRows().getRows().forEach(function (currentRow, index) {
-	                if (currentRow === row) {
-	                  this.currentIndex = index;
-	                }
-	              }, this);
-	              this.lastIndex = this.lastIndex || this.currentIndex;
-
-	              if (!event.shiftKey) {
-	                if (!row.isSelected()) {
-	                  this.lastRowAction = 'select';
-	                  row.select();
-	                  BX.onCustomEvent(window, 'Grid::selectRow', [row, this]);
-	                } else {
-	                  this.lastRowAction = 'unselect';
-	                  row.unselect();
-	                  BX.onCustomEvent(window, 'Grid::unselectRow', [row, this]);
-	                }
-	              } else {
-	                min = Math.min(this.currentIndex, this.lastIndex);
-	                max = Math.max(this.currentIndex, this.lastIndex);
-
-	                while (min <= max) {
-	                  rows.push(this.getRows().getRows()[min]);
-	                  min++;
-	                }
-
-	                containsNotSelected = rows.some(function (current) {
-	                  return !current.isSelected();
-	                });
-
-	                if (containsNotSelected) {
-	                  rows.forEach(function (current) {
-	                    current.select();
-	                  });
-	                  this.lastRowAction = 'select';
-	                  BX.onCustomEvent(window, 'Grid::selectRows', [rows, this]);
-	                } else {
-	                  rows.forEach(function (current) {
-	                    current.unselect();
-	                  });
-	                  this.lastRowAction = 'unselect';
-	                  BX.onCustomEvent(window, 'Grid::unselectRows', [rows, this]);
-	                }
-	              }
-
-	              this.updateCounterSelected();
-	              this.lastIndex = this.currentIndex;
+	            if (BX.type.isDomNode(contentContainer) && event.target.nodeName !== 'TD' && event.target !== contentContainer) {
+	              isPrevent = BX.data(contentContainer, 'prevent-default') === 'true';
 	            }
 
-	            this.adjustRows();
-	            this.adjustCheckAllCheckboxes();
+	            if (isPrevent) {
+	              if (row.getCheckbox()) {
+	                rows = [];
+	                this.currentIndex = 0;
+	                this.getRows().getRows().forEach(function (currentRow, index) {
+	                  if (currentRow === row) {
+	                    this.currentIndex = index;
+	                  }
+	                }, this);
+	                this.lastIndex = this.lastIndex || this.currentIndex;
+
+	                if (!event.shiftKey) {
+	                  if (!row.isSelected()) {
+	                    this.lastRowAction = 'select';
+	                    row.select();
+	                    BX.onCustomEvent(window, 'Grid::selectRow', [row, this]);
+	                  } else {
+	                    this.lastRowAction = 'unselect';
+	                    row.unselect();
+	                    BX.onCustomEvent(window, 'Grid::unselectRow', [row, this]);
+	                  }
+	                } else {
+	                  min = Math.min(this.currentIndex, this.lastIndex);
+	                  max = Math.max(this.currentIndex, this.lastIndex);
+
+	                  while (min <= max) {
+	                    rows.push(this.getRows().getRows()[min]);
+	                    min++;
+	                  }
+
+	                  containsNotSelected = rows.some(function (current) {
+	                    return !current.isSelected();
+	                  });
+
+	                  if (containsNotSelected) {
+	                    rows.forEach(function (current) {
+	                      current.select();
+	                    });
+	                    this.lastRowAction = 'select';
+	                    BX.onCustomEvent(window, 'Grid::selectRows', [rows, this]);
+	                  } else {
+	                    rows.forEach(function (current) {
+	                      current.unselect();
+	                    });
+	                    this.lastRowAction = 'unselect';
+	                    BX.onCustomEvent(window, 'Grid::unselectRows', [rows, this]);
+	                  }
+	                }
+
+	                this.updateCounterSelected();
+	                this.lastIndex = this.currentIndex;
+	              }
+
+	              this.adjustRows();
+	              this.adjustCheckAllCheckboxes();
+	            }
 	          }
 	        }
 	      }
 	    },
 	    adjustRows: function adjustRows() {
 	      if (this.getRows().isSelected()) {
-	        BX.onCustomEvent(window, 'Grid::thereSelectedRows', []);
+	        BX.onCustomEvent(window, 'Grid::thereSelectedRows', [this]);
 	        this.enableActionsPanel();
 	      } else {
 	        BX.onCustomEvent(window, 'Grid::noSelectedRows', []);
@@ -8720,11 +9680,11 @@
 
 	      if (stub) {
 	        BX.Dom.attr(stub, 'hidden', true);
+	        BX.Dom.style(this.getTable(), 'min-height', null);
 	      }
 	    },
 
 	    /**
-	     * @private
 	     * @return {BX.Grid.Row}
 	     */
 	    getTemplateRow: function getTemplateRow() {
@@ -8809,13 +9769,44 @@
 	     * @return {BX.Grid.Row}
 	     */
 	    prependRowEditor: function prependRowEditor() {
+	      return this.addRowEditor('prepend');
+	    },
+
+	    /**
+	     * @return {BX.Grid.Row}
+	     */
+	    appendRowEditor: function appendRowEditor() {
+	      return this.addRowEditor('append');
+	    },
+
+	    /**
+	     * @return {BX.Grid.Row}
+	     */
+	    addRowEditor: function addRowEditor() {
+	      var direction = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 'prepend';
 	      BX.Dom.style(this.getTable(), 'min-height', null);
 	      var templateRow = this.getTemplateRow();
 	      this.editableRows.push(templateRow);
-	      templateRow.prependTo(this.getBody());
+
+	      if (direction === 'prepend') {
+	        templateRow.prependTo(this.getBody());
+	      } else {
+	        templateRow.appendTo(this.getBody());
+	      }
+
 	      templateRow.show();
 	      templateRow.select();
 	      templateRow.edit();
+	      this.getRows().reset();
+
+	      if (this.getParam('ALLOW_ROWS_SORT')) {
+	        this.rowsSortable.reinit();
+	      }
+
+	      if (this.getParam('ALLOW_COLUMNS_SORT')) {
+	        this.colsSortable.reinit();
+	      }
+
 	      this.hideEmptyStub();
 	      return templateRow;
 	    },
@@ -8853,9 +9844,18 @@
 
 	        _this.editableRows = [];
 	      });
+	    },
+	    getRealtime: function getRealtime() {
+	      var _this2 = this;
+
+	      return this.cache.remember('realtime', function () {
+	        return new BX.Grid.Realtime({
+	          grid: _this2
+	        });
+	      });
 	    }
 	  };
 	})();
 
-}((this.window = this.window || {}),BX,BX.Event));
+}((this.window = this.window || {}),BX.Event,BX,BX));
 //# sourceMappingURL=script.js.map

@@ -76,6 +76,7 @@
 
 			function prepareItems(items)
 			{
+				var isHtmlEntity = self.dropdown.dataset['htmlEntity'] === 'true';
 				return items.map(function(item) {
 					attrs = {};
 					attrs['data-'+self.dataValue] = item.VALUE;
@@ -87,7 +88,8 @@
 								className: self.dropdownItemClass
 							},
 							attrs: attrs,
-							text: item.NAME
+							html: isHtmlEntity ? item.NAME: null,
+							text: isHtmlEntity ? null: item.NAME
 						})
 					]});
 
@@ -168,7 +170,10 @@
 		{
 			var subItem = this.getSubItem(item);
 			var value = BX.data(subItem, this.dataValue);
-
+			if (BX.Type.isUndefined(value))
+			{
+				value = '';
+			}
 			BX.firstChild(this.dropdown).innerText = subItem.innerText;
 			this.dropdown.dataset[this.dataValue] = value;
 		},

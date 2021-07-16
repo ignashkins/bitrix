@@ -30,12 +30,13 @@ if(typeof BX.Crm.EntityDetailManager === "undefined")
 			this._serviceUrl = BX.prop.getString(this._settings, "serviceUrl", "");
 
 			this._container = BX(BX.prop.get(this._settings, "containerId"));
+
 			this._tabManager = BX.Crm.EntityDetailTabManager.create(
 				this._id,
 				{
-						container: BX(BX.prop.get(this._settings, "tabContainerId")),
-						menuContainer: BX(BX.prop.get(this._settings, "tabMenuContainerId")),
-						data: BX.prop.getArray(this._settings, "tabs")
+					container: BX(BX.prop.get(this._settings, "tabContainerId")),
+					menuId: BX.prop.get(this._settings, "tabMenuContainerId"),
+					data: BX.prop.getArray(this._settings, "tabs")
 				}
 			);
 
@@ -63,6 +64,9 @@ if(typeof BX.Crm.EntityDetailManager === "undefined")
 
 			this._externalEventHandler = BX.delegate(this.onExternalEvent, this);
 			BX.addCustomEvent(window, "onLocalStorageSet", this._externalEventHandler);
+
+			BX.addCustomEvent(window, "BX.Crm.EntityEditor:onFailedValidation", this.onFailedValidation.bind(this));
+
 			this.doInitialize();
 		},
 		doInitialize: function()
@@ -457,6 +461,35 @@ if(typeof BX.Crm.EntityDetailManager === "undefined")
 			}
 
 			return tracker.prepareEntityActionParams(action, this._entityTypeId, params);
+		},
+		onFailedValidation: function(sender, eventArgs)
+		{
+			if (
+				typeof BX.Crm.EntityEditor === "undefined"
+				|| !(sender instanceof BX.Crm.EntityEditor)
+				|| sender.getEntityId() !== this.getEntityId()
+			)
+			{
+				return;
+			}
+
+			var main = this._tabManager._items[0];
+			if (main instanceof BX.Crm.EntityDetailTab && !main.isActive())
+			{
+				main.setActive(true);
+
+				for(var i = 1, length = this._tabManager._items.length; i < length; i++)
+				{
+					var currentItem = this._tabManager._items[i];
+					currentItem.setActive(false);
+				}
+
+				var field = eventArgs.getTopmostField();
+				if(field)
+				{
+					setTimeout(function(){field.focus()}, 350);
+				}
+			}
 		}
 	};
 	BX.Crm.EntityDetailManager.items = {};
@@ -760,7 +793,6 @@ if(typeof BX.Crm.OrderDetailManager === "undefined")
 	{
 		BX.addCustomEvent(window, "Crm.EntityProgress.Saved", BX.delegate(this.onProgressSave, this));
 		BX.addCustomEvent(window, "Crm.EntityProgress.onSaveBefore", BX.delegate(this.onProgressSaveBefore, this));
-		BX.addCustomEvent(window, "BX.Crm.EntityEditor:onFailedValidation", BX.delegate(this.onFailedValidation, this));
 		this._cancelReason = "";
 	};
 	BX.Crm.OrderDetailManager.prototype.onProgressSave = function(sender, eventArgs)
@@ -822,35 +854,6 @@ if(typeof BX.Crm.OrderDetailManager === "undefined")
 
 		eventArgs['STATE_SUCCESS'] = self.isSuccess ? "Y" : "N";
 	};
-	BX.Crm.OrderDetailManager.prototype.onFailedValidation = function(sender, eventArgs)
-	{
-		if (typeof BX.Crm.EntityEditor === "undefined"
-			|| !(sender instanceof BX.Crm.EntityEditor)
-			|| sender.getEntityTypeId() !== BX.CrmEntityType.enumeration.order
-			|| sender.getEntityId() !== this.getEntityId()
-		)
-		{
-			return;
-		}
-
-		var main = this._tabManager._items[0];
-		if (main instanceof BX.Crm.EntityDetailTab && !main.isActive())
-		{
-			main.setActive(true);
-
-			for(var i = 1, length = this._tabManager._items.length; i < length; i++)
-			{
-				var currentItem = this._tabManager._items[i];
-				currentItem.setActive(false);
-			}
-
-			var field = eventArgs.getTopmostField();
-			if(field)
-			{
-				setTimeout(function(){field.focus()}, 350);
-			}
-		}
-	};
 	BX.Crm.OrderDetailManager.prototype.getMessage = function(name)
 	{
 		var m = BX.Crm.OrderDetailManager.messages;
@@ -900,7 +903,7 @@ if(typeof BX.Crm.EntityDetailFactory === "undefined")
 			{
 				return BX.Crm.OrderDetailManager.create(id, settings);
 			}
-			
+
 			return BX.Crm.EntityDetailManager.create(id, settings);
 		}
 	}
@@ -913,9 +916,7 @@ if(typeof BX.Crm.EntityDetailTabManager === "undefined")
 	BX.Crm.EntityDetailTabManager = function()
 	{
 		this._id = "";
-		this._settings = {};
 		this._container = null;
-		this._menuContainer = null;
 		this._items = null;
 	};
 	BX.Crm.EntityDetailTabManager.prototype =
@@ -923,27 +924,54 @@ if(typeof BX.Crm.EntityDetailTabManager === "undefined")
 		initialize: function(id, settings)
 		{
 			this._id = BX.type.isNotEmptyString(id) ? id : BX.util.getRandomString(4);
-			this._settings = settings ? settings : {};
+			settings = settings ? settings : {};
 
-			this._container = BX.prop.getElementNode(this._settings, "container");
-			this._menuContainer = BX.prop.getElementNode(this._settings, "menuContainer");
+			this._container = BX.prop.getElementNode(settings, "container");
 
+			var tabsById = {};
+			BX.prop.getArray(settings, "data").forEach(function(itemData) {
+				if (!tabsById[itemData['id']])
+				{
+					tabsById[itemData['id']] = itemData;
+				}
+			}.bind(this));
+
+			var menuManager = BX.Main.interfaceButtonsManager.getById(
+				BX.prop.getString(settings, "menuId")
+			);
+			var firstItem = null;
 			this._items = [];
-			var data = BX.prop.getArray(this._settings, "data");
-			for(var i = 0, l = data.length; i < l; i++)
-			{
-				var itemData = data[i];
-				var itemId = itemData["id"];
-				var item = BX.Crm.EntityDetailTab.create(
-					itemId,
+			menuManager.getAllItems().forEach(function(item) {
+				if (firstItem === null)
+				{
+					firstItem = item;
+				}
+
+				var itemData = tabsById[item.dataset.id];
+				if (!itemData)
+				{
+					return;
+				}
+
+				this._items.push(BX.Crm.EntityDetailTab.create(
+					itemData['id'],
 					{
 						manager: this,
 						data: itemData,
-						container: this._container.querySelector('[data-tab-id="' + itemId + '"]'),
-						menuContainer: this._menuContainer.querySelector('[data-tab-id="' + itemId + '"]')
+						container: this._container.querySelector('[data-tab-id="' + itemData['id'] + '"]'),
+						menuContainer: item
 					}
-				);
-				this._items.push(item);
+				))
+			}.bind(this));
+
+			var activeItem = menuManager.getActive();
+			if (activeItem['DATA_ID'] === 'main' && firstItem.dataset.id !== activeItem['DATA_ID'])
+			{
+				var script = BX.data(firstItem, 'onclick');
+				if (BX.type.isNotEmptyString(script))
+				{
+					eval(script);
+				}
 			}
 		},
 		getId: function()
@@ -992,12 +1020,11 @@ if(typeof BX.Crm.EntityDetailTab === "undefined")
 	BX.Crm.EntityDetailTab = function()
 	{
 		this._id = "";
-		this._settings = {};
 		this._data = {};
 		this._manager = null;
 		this._container = null;
 		this._menuContainer = null;
-		this._onMenuClickHandler = BX.delegate(this.onMenuClick, this);
+		this.onMenuClick = this.onMenuClick.bind(this);
 
 		this._isActive = false;
 		this._isEnabled = false;
@@ -1008,22 +1035,17 @@ if(typeof BX.Crm.EntityDetailTab === "undefined")
 		initialize: function(id, settings)
 		{
 			this._id = BX.type.isNotEmptyString(id) ? id : BX.util.getRandomString(4);
-			this._settings = settings ? settings : {};
 
-			this._data = BX.prop.getObject(this._settings, "data", {});
-			this._manager = BX.prop.get(this._settings, "manager", null);
-
-			this._container = BX.prop.getElementNode(this._settings, "container");
-			this._menuContainer = BX.prop.getElementNode(this._settings, "menuContainer");
+			settings = settings ? settings : {};
+			this._data = BX.prop.getObject(settings, "data", {});
+			this._manager = BX.prop.get(settings, "manager", null);
+			this._container = BX.prop.getElementNode(settings, "container");
+			this._menuContainer = BX.prop.getElementNode(settings, "menuContainer");
 
 			this._isActive = BX.prop.getBoolean(this._data, "active", false);
 			this._isEnabled = BX.prop.getBoolean(this._data, "enabled", true);
 
-			var link = this._menuContainer.querySelector("a.crm-entity-section-tab-link");
-			if(link)
-			{
-				BX.bind(link, "click", this._onMenuClickHandler);
-			}
+			BX.addCustomEvent(this._manager.getId() + '_click_' + this._id, this.onMenuClick);
 
 			var loaderSettings = BX.prop.getObject(this._data, "loader", null);
 			if(loaderSettings)
@@ -1060,6 +1082,10 @@ if(typeof BX.Crm.EntityDetailTab === "undefined")
 
 			if(this._isActive)
 			{
+				if(this._loader && !this._loader.isLoaded())
+				{
+					this._loader.load();
+				}
 				// setTimeout(BX.delegate(this.showTab, this), 10);
 				this.showTab()
 			}
@@ -1073,7 +1099,7 @@ if(typeof BX.Crm.EntityDetailTab === "undefined")
 		{
 			BX.addClass(this._container, "crm-entity-section-tab-content-show");
 			BX.removeClass(this._container, "crm-entity-section-tab-content-hide");
-			BX.addClass(this._menuContainer, "crm-entity-section-tab-current");
+			BX.addClass(this._menuContainer, "crm-entity-section-tab-active");
 
 			this._container.style.display = "";
 			this._container.style.position = "absolute";
@@ -1113,7 +1139,7 @@ if(typeof BX.Crm.EntityDetailTab === "undefined")
 		{
 			BX.addClass(this._container, "crm-entity-section-tab-content-hide");
 			BX.removeClass(this._container, "crm-entity-section-tab-content-show");
-			BX.removeClass(this._menuContainer, "crm-entity-section-tab-current");
+			BX.removeClass(this._menuContainer, "crm-entity-section-tab-active");
 
 			var hideTab = new BX.easing({
 				duration : 350,
@@ -1135,19 +1161,17 @@ if(typeof BX.Crm.EntityDetailTab === "undefined")
 			hideTab.animate();
 
 		},
-		onMenuClick: function(e)
+		onMenuClick: function()
 		{
-			if(!this._isEnabled)
+			if (!this._isEnabled)
 			{
-				return BX.PreventDefault(e);
+				return;
 			}
-
 			if(this._loader && !this._loader.isLoaded())
 			{
 				this._loader.load();
 			}
 			this._manager.processItemSelect(this);
-			return BX.PreventDefault(e);
 		}
 	};
 	BX.Crm.EntityDetailTab.create = function(id, settings)
@@ -1188,12 +1212,6 @@ if(typeof(BX.Crm.EditorTabLazyLoader) === "undefined")
 				throw "Error: Could not find container.";
 			}
 
-			this._serviceUrl = BX.prop.getString(this._settings, "serviceUrl", "");
-			if(this._serviceUrl === "")
-			{
-				throw "Error. Could not find service url.";
-			}
-
 			this._tabId = BX.prop.getString(this._settings, "tabId", "");
 			if(this._tabId === "")
 			{
@@ -1201,6 +1219,44 @@ if(typeof(BX.Crm.EditorTabLazyLoader) === "undefined")
 			}
 
 			this._params = BX.prop.getObject(this._settings, "componentData", {});
+
+			this._ajaxComponentActionParams = BX.prop.getObject(this._params, "ajaxComponentActionParams", {});
+			this._useAjaxComponentAction = BX.type.isNotEmptyObject(this._ajaxComponentActionParams);
+
+			if (this._useAjaxComponentAction)
+			{
+				this._componentName = BX.prop.getString(this._ajaxComponentActionParams, "componentName", "");
+				if(this._componentName === "")
+				{
+					throw "Error. Could not find component name.";
+				}
+
+				this._actionName = BX.prop.getString(this._ajaxComponentActionParams, "actionName", "");
+				if(this._actionName === "")
+				{
+					throw "Error. Could not find action name.";
+				}
+
+				this._signedParameters = BX.prop.getString(this._ajaxComponentActionParams, "signedParameters", "");
+				if(this._signedParameters === "")
+				{
+					throw "Error. Could not find signed parameters.";
+				}
+
+				this._template = BX.prop.getString(this._params, "template", "");
+				if(this._template === "")
+				{
+					throw "Error. Could not find template.";
+				}
+			}
+			else
+			{
+				this._serviceUrl = BX.prop.getString(this._settings, "serviceUrl", "");
+				if(this._serviceUrl === "")
+				{
+					throw "Error. Could not find service url.";
+				}
+			}
 		},
 		getId: function()
 		{
@@ -1221,7 +1277,7 @@ if(typeof(BX.Crm.EditorTabLazyLoader) === "undefined")
 			params["TAB_ID"] = this._tabId;
 			this._startRequest(params);
 		},
-		_startRequest: function(params)
+		_startRequest: function(request)
 		{
 			if(this._isRequestRunning)
 			{
@@ -1229,27 +1285,59 @@ if(typeof(BX.Crm.EditorTabLazyLoader) === "undefined")
 			}
 
 			this._isRequestRunning = true;
-			BX.ajax(
-				{
-					url: this._serviceUrl,
-					method: "POST",
-					dataType: "html",
-					data:
-					{
-						"LOADER_ID": this._id,
-						"PARAMS": params
-					},
-					onsuccess: BX.delegate(this._onRequestSuccess, this),
-					onfailure: BX.delegate(this._onRequestFailure, this)
-				}
-			);
+
+			if (this._useAjaxComponentAction)
+			{
+				BX.ajax.runComponentAction(this._componentName, this._actionName, {
+					signedParameters: this._signedParameters,
+					data: {
+						template: this._template
+					}
+				}).then(this._onRequestSuccess.bind(this), this._onRequestFailure.bind(this));
+			}
+			else if (request.isComponentAjaxAction && request.detailComponent)
+			{
+				BX.ajax.runComponentAction(request.detailComponent, 'children', {
+					mode: 'class',
+					data: {
+						parentEntityTypeId: request.params.PARENT_ENTITY_TYPE_ID,
+						parentEntityId: request.params.PARENT_ENTITY_ID,
+						entityTypeId: request.params.ENTITY_TYPE_ID
+					}
+				}).then(function (response){
+					this._container.innerHTML = response.data.html;
+					var result = BX.processHTML(response.data.html);
+					BX.ajax.processScripts(result.SCRIPT);
+				}.bind(this));
+			}
+			else
+			{
+				BX.ajax({
+						url: this._serviceUrl,
+						method: "POST",
+						dataType: "html",
+						data:
+							{
+								"LOADER_ID": this._id,
+								"PARAMS": request
+							},
+						onsuccess: BX.delegate(this._onRequestSuccess, this),
+						onfailure: BX.delegate(this._onRequestFailure, this)
+				});
+			}
 
 			return true;
 		},
 		_onRequestSuccess: function(data)
 		{
 			this._isRequestRunning = false;
-			this._container.innerHTML = data;
+			if (this._useAjaxComponentAction)
+			{
+				data = BX.prop.getObject(data, "data", {});
+				data = BX.prop.getString(data, "html", null);
+			}
+
+			BX.html(this._container, data);
 			this._isLoaded = true;
 		},
 		_onRequestFailure: function(data)

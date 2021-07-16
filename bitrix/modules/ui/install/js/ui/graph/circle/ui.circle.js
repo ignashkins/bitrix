@@ -3,7 +3,7 @@
 
 	BX.namespace('BX.UI.Graph');
 
-	BX.UI.Graph.Circle = function(domNode, perimetr, progressBar, fixCounter) {
+	BX.UI.Graph.Circle = function(domNode, perimetr, progressBar, settings) {
 		this.domNode = domNode;
 		this.perimetr = perimetr;
 		this.radius = perimetr / 2;
@@ -13,7 +13,15 @@
 		this.waves = null;
 		this.leftWave = null;
 		this.rightWave = null;
-		this.fixCounter = fixCounter ? fixCounter : null;
+		this.fixCounter = settings.fixCounter ? settings.fixCounter : null;
+		this.color1 = settings.color1;
+		this.color2 = settings.color2;
+		this.x = 0;
+		this.flat = 400;
+		this.speed = 3;
+		this.rate = 0;
+		this.wave = 35;
+		this.distance = 200;
 	};
 
 	BX.UI.Graph.Circle.prototype =
@@ -63,6 +71,18 @@
 				this.progressMove.setAttributeNS(null, 'stroke-dashoffset', this.getCircumProgress());
 			},
 
+			createCanvas: function()
+			{
+				this.canvas = BX.create('canvas', {
+					attrs: {
+						className: 'ui-graph-circle-canvas',
+						// 'data-progress': this.progressBar
+					}
+				});
+
+				return this.canvas;
+			},
+
 			createNumberBlock: function() {
 				this.number = BX.create('div', {
 					attrs: {
@@ -72,6 +92,92 @@
 				});
 
 				return this.number;
+			},
+
+			drawCircle: function(ctx, mW, color)
+			{
+				ctx.mozImageSmoothingEnabled = false;
+				ctx.imageSmoothingEnabled = false;
+				ctx.beginPath();
+				ctx.arc(mW / 2, mW / 2, mW / 2 - 1, 0, 2 * Math.PI);
+				ctx.strokeStyle = color;
+				ctx.stroke();
+				ctx.beginPath();
+				ctx.arc(mW / 2, mW / 2, mW / 2 - 2, 0, 2 * Math.PI);
+				ctx.clip();
+			},
+
+			drawSin: function(ctx, mW, color1, color2, wav, dY)
+			{
+				ctx.mozImageSmoothingEnabled = false;
+				ctx.imageSmoothingEnabled = false;
+				ctx.save();
+				ctx.beginPath();
+				ctx.moveTo(0, mW);
+				ctx.lineTo(0, dY);
+				ctx.quadraticCurveTo(mW / 4, dY - (mW * (wav / 200)), mW / 2, dY);
+				// ctx.quadraticCurveTo(mW / 4, dY - wav, mW / 2, dY)
+				ctx.lineTo(mW / 2, dY);
+				ctx.quadraticCurveTo((mW * 3) / 4, dY + (mW * (wav / 200)), mW, dY);
+				// ctx.quadraticCurveTo((mW * 3) / 4, dY + wav, mW, dY);
+				//  ctx.stroke();
+				ctx.lineTo(mW, mW);
+				ctx.lineTo(0, mW);
+				ctx.fillStyle = color1;
+				ctx.fill();
+				ctx.restore();
+			},
+
+			init: function(mW) {
+				var canvas1 = document.querySelector('.ui-graph-circle-canvas');
+				canvas1.style.height = mW;
+				canvas1.width = canvas1.height = mW;
+
+				var canvas2 = document.createElement('canvas'),
+				ctx2 = canvas2.getContext('2d');
+				canvas2.width = mW;
+				canvas2.height = mW;
+
+				var canvas3 = document.createElement('canvas'),
+				ctx3 = canvas3.getContext('2d');
+				canvas3.width = mW;
+				canvas3.height = mW;
+
+				var x = this.x;
+				var flat = this.flat;
+				var speed = this.speed;
+				var rate = this.rate;
+				var wave = this.wave;
+				var distance = this.distance;
+
+				var ctx1 = canvas1.getContext('2d');
+
+				// this.drawCircle(ctx1, mW, '#fff');
+				// 'rgba(49,205,255,.41)'
+				// 'rgba(85, 208, 224,.32)'
+
+				if (!this.color1 && !this.color2)
+				{
+					this.drawSin(ctx2, mW, 'rgba(183, 235, 129, .45)', 'rgba(183, 235, 129, .45)', wave, mW - mW * rate);
+					this.drawSin(ctx3, mW, 'rgba(178, 232, 0, .29)', 'rgba(178, 232, 0, .29)', wave, mW - mW * rate);
+				}
+				else
+				{
+					this.drawSin(ctx2, mW, this.color1, this.color1, wave, mW - mW * rate);
+					this.drawSin(ctx3, mW, this.color2, this.color2, wave, mW - mW * rate);
+				}
+
+				function animation()
+				{
+					ctx1.clearRect(0, 0, mW, mW);
+					ctx1.drawImage(canvas2, x, 0, mW + flat, mW);
+					ctx1.drawImage(canvas2, x - mW - flat, 0, mW + flat, mW);
+					ctx1.drawImage(canvas3, x - distance, 0, mW + flat, mW);
+					ctx1.drawImage(canvas3, x - mW - distance - flat, 0, mW + flat, mW);
+					x >= (mW - speed + flat) ? x = 0 : x += speed;
+					requestAnimationFrame(animation);
+				}
+				animation();
 			},
 
 			createWavesBlock: function() {
@@ -102,26 +208,41 @@
 			},
 
 			animateWavesBlock: function(fixCounter) {
-				var progress = this.progressBar;
+				this.progress = this.progressBar;
 
 				if(fixCounter)
 				{
-					if (progress <= 50)
+					if (this.progress <= 50)
 					{
-						progress = 45;
+						this.rate = 0.45;
 					}
 
-					if (progress > 50)
+					if (this.progress > 50)
 					{
-						progress = 85;
+						this.rate = 0.75;
 					}
 
-					this.progressBar <= 25 ? progress = 25 : null;
-					this.waves.style.transform = 'translateY(-' + progress + '%)';
+					this.progressBar <= 25 ? this.rate = 0.25 : null;
+
+					// this.progressBar <= 25 ? progress = 25 : null;
+					// this.waves.style.transform = 'translateY(-' + progress + '%)';
+				}
+				else
+				{
+					if (this.progress <= 50)
+					{
+						this.rate = 0.50;
+					}
+
+					if (this.progress > 50)
+					{
+						this.rate = 0.85;
+					}
+					console.log('animateWavesBlock', this.progress);
 				}
 
-				this.progressBar <= 25 ? progress = 25 : null;
-				this.waves.style.transform = 'translateY(-' + progress + '%)';
+				this.progressBar <= 25 ? this.progress = 25 : null;
+				// this.waves.style.transform = 'translateY(-' + progress + '%)';
 			},
 
 			animateBothWaves: function() {
@@ -172,9 +293,10 @@
 					}
 				});
 
-				this.graph.appendChild(this.createCircle());
+				// this.graph.appendChild(this.createCircle());
+				this.graph.appendChild(this.createCanvas());
 				this.graph.appendChild(this.createNumberBlock());
-				this.graph.appendChild(this.createWavesBlock());
+				// this.graph.appendChild(this.createWavesBlock());
 
 				return this.graph;
 			},
@@ -232,16 +354,23 @@
 			{
 				this.progressBar = counter;
 
-				if (fixCounter)
-				{
-					this.progressMove.setAttributeNS(null, 'stroke-dashoffset', 0);
+				// if (fixCounter)
+				// {
+				// 	this.progressMove.setAttributeNS(null, 'stroke-dashoffset', 0);
+				// }
+				// else
+				// {
+				// 	this.progressMove.setAttributeNS(null, 'stroke-dashoffset', this.getCircumProgress());
+				// }
+				if (fixCounter) {
+					this.animateNumber(fixCounter);
+					this.animateWavesBlock(fixCounter);
 				}
 				else
 				{
-					this.progressMove.setAttributeNS(null, 'stroke-dashoffset', this.getCircumProgress());
+					this.animateNumber();
+					this.animateWavesBlock();
 				}
-				this.animateNumber(fixCounter);
-				this.animateWavesBlock(fixCounter);
 			},
 
 			show: function() {
@@ -252,14 +381,15 @@
 					this.animateNumber(this.fixCounter);
 					if (this.fixCounter)
 					{
-						this.animateFixedBar();
+						// this.animateFixedBar();
 					}
 					else
 					{
-						this.animateProgressBar();
+						// this.animateProgressBar();
 					}
-					this.animateBothWaves();
+					// this.animateBothWaves();
 					this.animateWavesBlock(this.fixCounter);
+					this.init(200);
 				}.bind(this), 500);
 			}
 		};

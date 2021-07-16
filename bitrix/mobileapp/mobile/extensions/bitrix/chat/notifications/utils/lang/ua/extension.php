@@ -1,0 +1,3 @@
+<?php
+$MESS["MOBILE_EXT_NOTIFICATION_BB_CODE_DISLIKE"] = "Не подобається";
+$MESS["MOBILE_EXT_NOTIFICATION_BB_CODE_LIKE"] = "Подобається";

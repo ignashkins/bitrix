@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["TASKS_ALL_TASKS"] = "Всі";
 $MESS["TASKS_EMPTY_LIST"] = "Список завдань порожній";
 $MESS["TASKS_EMPTY_LIST1"] = "Створити завдання";
@@ -18,5 +18,4 @@ $MESS["TASK_COLUMN_DEADLINE"] = "термін";
 $MESS["TASK_COLUMN_PRIORITY"] = "пріоритет";
 $MESS["TASK_COLUMN_RESPONSIBLE_ID"] = "відповідальний";
 $MESS["TASK_COLUMN_STATUS"] = "статус";
-$MESS["TASK_EXPIRED"] = "Прострочено";
-?>
+$MESS["TASK_EXPIRED"] = "Протерміновано";

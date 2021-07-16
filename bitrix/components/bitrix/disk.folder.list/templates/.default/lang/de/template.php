@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["DISK_FOLDER_BTN_CREATE_FOLDER"] = "Erstellen";
 $MESS["DISK_FOLDER_LABEL_NAME_CREATE_FOLDER"] = "Name";
 $MESS["DISK_FOLDER_LIST_BIZPROC_LABEL"] = "Workflows aktivieren";
@@ -68,6 +68,7 @@ $MESS["DISK_FOLDER_LIST_SHARING_LABEL_RIGHT_READ"] = "Lesen";
 $MESS["DISK_FOLDER_LIST_SHARING_LABEL_TOOLTIP_SHARING"] = "Alle Nutzer, für die dieser Ordner freigegeben ist,<br/>können diesen Ordner mit anderen Nutzern teilen";
 $MESS["DISK_FOLDER_LIST_SHARING_TITLE_MODAL"] = "Freigabe-Parameter";
 $MESS["DISK_FOLDER_LIST_SHARING_TITLE_MODAL_2"] = "Freigeben";
+$MESS["DISK_FOLDER_LIST_SHARING_TITLE_MODAL_3"] = "Mit anderen Nutzern teilen";
 $MESS["DISK_FOLDER_LIST_SPOTLIGHT_VIEW_MODE"] = "Wählen Sie den Modus der Dateiansicht aus";
 $MESS["DISK_FOLDER_LIST_SUCCESS_CONNECT_TO_DISK_FILE"] = "Die Datei #NAME# wurde mit meinen Drive erfolgreich verknüpft";
 $MESS["DISK_FOLDER_LIST_SUCCESS_CONNECT_TO_DISK_FOLDER"] = "Ordner #NAME# wurde an meinen Drive erfolgreich angeschlossen";
@@ -117,4 +118,3 @@ $MESS["DISK_FOLDER_MW_CREATE_TYPE_DOC"] = "Dokument";
 $MESS["DISK_FOLDER_MW_CREATE_TYPE_PPT"] = "Präsentation";
 $MESS["DISK_FOLDER_MW_CREATE_TYPE_XLS"] = "Tabelle";
 $MESS["DISK_FOLDER_TITLE_CREATE_FOLDER"] = "Ordner erstellen";
-?>

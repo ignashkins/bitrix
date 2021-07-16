@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["CRM_ALL"] = "Total";
 $MESS["CRM_COMPANY_ACTION_DELETE"] = "Delete";
 $MESS["CRM_COMPANY_ACTION_MERGE"] = "Merge";
@@ -21,9 +21,6 @@ $MESS["CRM_COMPANY_ASSIGN_TO"] = "Assign responsible person";
 $MESS["CRM_COMPANY_BATCH_DELETION_COMPLETED"] = "Companies have been deleted.";
 $MESS["CRM_COMPANY_BATCH_DELETION_COUNT_FAILED"] = "Failed to delete: #number#.";
 $MESS["CRM_COMPANY_BATCH_DELETION_COUNT_SUCCEEDED"] = "Successfully deleted: #number#.";
-$MESS["CRM_COMPANY_BATCH_MERGE_COMPLETED"] = "Companies have been merged.";
-$MESS["CRM_COMPANY_BATCH_MERGE_COUNT_FAILED"] = "Cannot merge: #number#.";
-$MESS["CRM_COMPANY_BATCH_MERGE_COUNT_SUCCEEDED"] = "Merged successfully: #number#.";
 $MESS["CRM_COMPANY_BIZPROC"] = "Business Process";
 $MESS["CRM_COMPANY_BIZPROC_LIST"] = "New business process";
 $MESS["CRM_COMPANY_BIZPROC_LIST_TITLE"] = "Run new business process";
@@ -41,7 +38,7 @@ $MESS["CRM_COMPANY_CONVERT_ADDRESSES_DLG_TITLE"] = "Move legacy company addresse
 $MESS["CRM_COMPANY_CONVERT_ADDRESSES_STATE"] = "#processed# out of #total#";
 $MESS["CRM_COMPANY_CONVERT_UF_ADDRESSES_DLG_TITLE"] = "Move addresses from user fields to company details";
 $MESS["CRM_COMPANY_CONVERT_UF_ADDRESSES_STATE"] = "#processed# out of #total#";
-$MESS["CRM_COMPANY_COPY"] = "Copy Company";
+$MESS["CRM_COMPANY_COPY"] = "Copy";
 $MESS["CRM_COMPANY_COPY_TITLE"] = "Copy Company";
 $MESS["CRM_COMPANY_CREATE_CALL_LIST"] = "Create call list";
 $MESS["CRM_COMPANY_DEAL_ADD"] = "Add Deal";
@@ -62,8 +59,6 @@ $MESS["CRM_COMPANY_LIST_DEL_PROC_DLG_SUMMARY"] = "This will delete the selected 
 $MESS["CRM_COMPANY_LIST_DEL_PROC_DLG_TITLE"] = "Delete companies";
 $MESS["CRM_COMPANY_LIST_FILTER_NAV_BUTTON_LIST"] = "List";
 $MESS["CRM_COMPANY_LIST_FILTER_NAV_BUTTON_WIDGET"] = "Reports";
-$MESS["CRM_COMPANY_LIST_MERGE_PROC_DLG_SUMMARY"] = "This will merge the selected companies. This operation may take some time.";
-$MESS["CRM_COMPANY_LIST_MERGE_PROC_DLG_TITLE"] = "Merge companies";
 $MESS["CRM_COMPANY_LRP_DLG_BTN_CLOSE"] = "Close";
 $MESS["CRM_COMPANY_LRP_DLG_BTN_START"] = "Run";
 $MESS["CRM_COMPANY_LRP_DLG_BTN_STOP"] = "Stop";
@@ -102,4 +97,3 @@ $MESS["CRM_SHOW_ROW_COUNT"] = "Show quantity";
 $MESS["CRM_SIP_MGR_MAKE_CALL"] = "Call";
 $MESS["CRM_SIP_MGR_UNKNOWN_RECIPIENT"] = "Unknown recipient";
 $MESS["CRM_STATUS_INIT"] = "- Status -";
-?>

@@ -7,7 +7,6 @@ $MESS["CP_BCS_TPL_ADD_TO_BASKET_ACTION"] = "Показувати кнопку д
 $MESS["CP_BCS_TPL_BESTSELLERS"] = "Найбільш продавані";
 $MESS["CP_BCS_TPL_BRAND_PROPERTY"] = "Властивість брендів";
 $MESS["CP_BCS_TPL_COMPARE_NAME"] = "Унікальне ім'я для списку порівняння";
-$MESS["CP_BCS_TPL_CUSTOM_FILTER"] = "Фільтр товарів";
 $MESS["CP_BCS_TPL_DATA_LAYER_NAME"] = "Ім'я контейнера даних";
 $MESS["CP_BCS_TPL_DISCOUNT_PERCENT_POSITION"] = "Розташування відсотка знижки";
 $MESS["CP_BCS_TPL_DML_EXT"] = "розширений";
@@ -62,7 +61,6 @@ $MESS["CP_BCS_TPL_PROP_EMPTY"] = "не вибрано";
 $MESS["CP_BCS_TPL_RAND"] = "Будь-яка рекомендація";
 $MESS["CP_BCS_TPL_RELATIVE_QUANTITY_FACTOR"] = "Значення, від якого відбувається підміна";
 $MESS["CP_BCS_TPL_SETTINGS_DELETE"] = "Видалити";
-$MESS["CP_BCS_TPL_SETTINGS_INVALID_CONDITION"] = "Умова задана невірно";
 $MESS["CP_BCS_TPL_SETTINGS_QUANTITY"] = "Кількість товарів на сторінку";
 $MESS["CP_BCS_TPL_SETTINGS_QUANTITY_BIG_DATA"] = "Кількість товарів BigData на сторінці";
 $MESS["CP_BCS_TPL_SETTINGS_VARIANT"] = "Варіант";
@@ -108,4 +106,3 @@ $MESS["SHOW_OLD_PRICE_TIP"] = "Показувати стару ціну, якщ�
 $MESS["TEMPLATE_THEME_TIP"] = "Колірна тема для відображення. За замовчуванням береться синя тема.";
 $MESS["USE_ENHANCED_ECOMMERCE_TIP"] = "Потрібне додаткове налаштування в Google Analytics Enhanced 
 Ecommerce та/або Яндекс.Метриці";
-?>

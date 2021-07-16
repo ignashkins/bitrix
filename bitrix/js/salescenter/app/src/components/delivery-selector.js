@@ -1,6 +1,6 @@
 import {Vuex} from 'ui.vue.vuex';
 import {Vue} from 'ui.vue';
-import {Loc} from 'main.core';
+import {ajax, Loc} from 'main.core';
 import DeliverySelector from 'salescenter.deliveryselector';
 
 export default {
@@ -10,9 +10,19 @@ export default {
 	components: {
 		'delivery-selector': DeliverySelector,
 	},
+	data()
+	{
+		return {
+			availableServiceIds: [],
+		};
+	},
 	methods: {
 		onChange(payload)
 		{
+			let fromPropId = this.getAddressFromPropId();
+			let prevFrom = this.getPrevFrom(fromPropId);
+			let newFrom = this.getNewFrom(fromPropId, payload.relatedPropsValues);
+
 			this.$store.dispatch('orderCreation/setDelivery', payload.deliveryPrice);
 
 			this.$store.dispatch(
@@ -36,16 +46,90 @@ export default {
 				payload.responsibleUser ? payload.responsibleUser.id : null
 			);
 
+			if (prevFrom !== newFrom)
+			{
+				this.refreshAvailableServiceIds();
+			}
+
+			this.$emit('change', payload);
+		},
+		getAddressFromPropId()
+		{
+			for (let propId in this.$root.$app.options.deliveryOrderPropOptions)
+			{
+				if (this.$root.$app.options.deliveryOrderPropOptions.hasOwnProperty(propId))
+				{
+					if (this.$root.$app.options.deliveryOrderPropOptions[propId].hasOwnProperty('isFromAddress'))
+					{
+						return propId;
+					}
+				}
+			}
+
+			return null;
+		},
+		getPrevFrom(fromPropId)
+		{
+			for (let prop of this.order.propertyValues)
+			{
+				if (prop.id === fromPropId)
+				{
+					return prop.value;
+				}
+			}
+
+			return null;
+		},
+		getNewFrom(fromPropId, relatedPropsValues)
+		{
+			for (let prop of relatedPropsValues)
+			{
+				if (prop.id === fromPropId)
+				{
+					return prop.value;
+				}
+			}
+
+			return null;
 		},
 		onSettingsChanged()
 		{
 			this.$emit('delivery-settings-changed');
+		},
+		refreshAvailableServiceIds()
+		{
+			ajax.runAction(
+				'salescenter.order.getCompatibleDeliverySystems',
+				{
+					data: {
+						basketItems: this.config.basket ? this.config.basket : [],
+						options: {
+							sessionId: this.config.sessionId,
+							ownerTypeId: this.config.ownerTypeId,
+							ownerId: this.config.ownerId,
+						},
+						deliveryServiceId: this.order.deliveryId,
+						shipmentPropValues: this.order.propertyValues,
+						deliveryRelatedServiceValues: this.order.deliveryExtraServicesValues,
+						deliveryResponsibleId: this.order.deliveryResponsibleId,
+					}
+				}
+			).then((result) => {
+				let data = BX.prop.getObject(result, "data", {});
+
+				this.availableServiceIds = (data.availableServiceIds) ? data.availableServiceIds : [];
+			}).catch((result) => {
+				this.availableServiceIds = [];
+			});
 		}
 	},
 	created()
 	{
 		this.$store.dispatch('orderCreation/setPersonTypeId', this.config.personTypeId);
+
+		this.refreshAvailableServiceIds();
 	},
+
 	computed: {
 		localize()
 		{
@@ -55,13 +139,9 @@ export default {
 		{
 			return Loc.getMessage('SALESCENTER_PRODUCT_PRODUCTS_PRICE');
 		},
-		productsPriceFormatted()
-		{
-			return this.order.total.result;
-		},
 		productsPrice()
 		{
-			return this.order.total.resultNumeric;
+			return this.order.total.result;
 		},
 		delivery()
 		{
@@ -92,12 +172,16 @@ export default {
 		{
 			return (this.order.delivery !== null);
 		},
-
+		excludedServiceIds()
+		{
+			return this.$root.$app.options.mode === 'delivery' ? [this.$root.$app.options.emptyDeliveryServiceId] : [];
+		},
 		actionData()
 		{
 			return {
 				basketItems: this.config.basket,
 				options: {
+					orderId : this.$root.$app.orderId,
 					sessionId: this.config.sessionId,
 					ownerTypeId: this.config.ownerTypeId,
 					ownerId: this.config.ownerId,
@@ -111,8 +195,9 @@ export default {
 	template: `
 		<delivery-selector
 			:editable="this.config.editable"
-			:init-is-calculated="config.isExistingItem"		
-			:init-estimated-delivery-price="config.expectedDeliveryPrice"		
+			:available-service-ids="availableServiceIds"
+			:excluded-service-ids="excludedServiceIds"
+			:init-is-calculated="config.isCalculated"				
 			:init-entered-delivery-price="config.deliveryPrice"
 			:init-delivery-service-id="config.deliveryServiceId"
 			:init-related-services-values="config.relatedServicesValues"

@@ -3,14 +3,14 @@
 	if (typeof this.SocketConnection == 'undefined')
 	{
 		this.SocketConnection = new Connection();
-		this.SocketConnection.start();
+		ChatReadyCheck.wait().then(() => this.SocketConnection.start());
 	}
 	else
 	{
 		SocketConnection.disconnect(1000, "restart");
 		setTimeout(() => {
 			this.SocketConnection = new Connection();
-			this.SocketConnection.start();
+			ChatReadyCheck.wait().then(() => this.SocketConnection.start());
 		}, 2000);
 	}
 
@@ -28,12 +28,14 @@
 				'messages': 'im_messenger',
 				'openlines': 'im_messenger',
 				'tasks_total': 'tasks_total',
+				'crm_activity_current_calltracker': 'crm_activity_current_calltracker',
 			};
 
 			this.userCounterMapTabName = {
 				'**': 'stream',
 				'im': 'messages',
 				'tasks_total': 'tasks_total',
+				'crm_activity_current_calltracker': 'crm_activity_current_calltracker',
 			};
 
 			this.sharedStorage = Application.sharedStorage();
@@ -311,15 +313,11 @@
 			console.info("AppCounters.update: update counters: "+total+"\n", this.counters);
 			Application.setBadges(this.counters);
 
-			if (this.firstSetBadge || this.total != total)
-			{
-				this.total = total;
+			this.total = total;
 
-				if (!Application.isBackground())
-				{
-					Application.setIconBadge(this.total);
-					this.firstSetBadge = false;
-				}
+			if (!Application.isBackground())
+			{
+				Application.setIconBadge(this.total);
 			}
 
 			this.updateCache();
@@ -442,10 +440,28 @@
 			return true;
 		}
 
+		if( typeof Application.registerVoipNotifications == "function") {
+			Application.registerVoipNotifications().then( ({token, uuid, model}) => {
+				BX.ajax({
+					url : env.siteDir + "mobile/",
+					method : "POST",
+					dataType : "json",
+					tokenSaveRequest : true,
+					data : {
+						mobile_action : "save_device_token",
+						device_name : model,
+						uuid : uuid,
+						device_token_voip : token,
+						device_type : "APPLE",
+					}
+				})
+					.then((data) => console.log("save_device_token response ", data))
+					.catch((e) => console.error(e))
+				;
+			})
+		}
+
 		window.registerSuccess = true;
-
-		console.error(111);
-
 		Cordova.exec(
 			(deviceInfo) =>
 			{
@@ -489,7 +505,6 @@
 								device_name : (typeof device.name == "undefined"? device.model: device.name),
 								uuid : device.uuid,
 								device_token : token,
-								device_token_voip : data.voip ? data.voip : '',
 								device_type : dt,
 							}
 						})
@@ -504,7 +519,7 @@
 			}, "Device", "getDeviceInfo", []);
 	};
 
-	BX.addCustomEvent('onAppData', pushNotificationRegister);
+	ChatReadyCheck.wait().then(() => pushNotificationRegister);
 	setTimeout(pushNotificationRegister, 5000);
 
 	/**
@@ -515,12 +530,12 @@
 	let PushNotifications = {
 		urlByTag: function(tag)
 		{
-			var link = (env.siteDir ? env.siteDir : '/');
-			var result = false;
-			var unique = false;
-			var uniqueParams = {};
+			let link = (env.siteDir ? env.siteDir : '/');
+			let result = false;
+			let unique = false;
+			let uniqueParams = {};
 
-			var params = [];
+			let params = [];
 
 			if (
 				tag.substr(0, 10) == 'BLOG|POST|'
@@ -540,6 +555,14 @@
 			{
 				params = tag.split("|");
 				result = link + "mobile/log/?ACTION=CONVERT&ENTITY_TYPE_ID=BLOG_POST&ENTITY_ID=" + params[2] + "&commentId=" + params[3] + "#com" + params[3];
+			}
+
+			else if (
+				tag.substr(0, 25) == 'XDIMPORT|COMMENT_MENTION|'
+			)
+			{
+				params = tag.split("|");
+				result = link + "mobile/log/?ACTION=CONVERT&ENTITY_TYPE_ID=LOG_ENTRY&ENTITY_ID=" + params[2];
 			}
 
 			else if(
@@ -563,6 +586,11 @@
 				params = tag.split("|");
 				result = link + "mobile/?mobile_action=disk_folder_list&type=group&path=/&entityId=" + params[1];
 			}
+			else if (tag.startsWith('CALENDAR|INVITE'))
+			{
+				params = tag.split("|");
+				result = link + "mobile/calendar/view_event.php?event_id=" + params[2];
+			}
 
 			if (result)
 			{
@@ -579,11 +607,12 @@
 		{
 			let push = Application.getLastNotification();
 			let pushParams = {};
-
+			let data = null;
 			if (typeof (push) !== 'object' || typeof (push.params) === 'undefined')
 			{
 				pushParams =  {'ACTION' : 'NONE'};
 			}
+
 			if(typeof push.params != "undefined")
 			{
 				try
@@ -597,21 +626,28 @@
 
 				if (this.actions.includes(pushParams.ACTION))
 				{
-					var data = this.urlByTag(pushParams.TAG);
-
-					if (
-						typeof (data.LINK) != 'undefined'
-						&& data.LINK.length > 0
-					)
-					{
-						PageManager.openPage({
-							url : data.LINK,
-							unique : data.UNIQUE,
-							data: data.DATA,
-						});
-					}
+					data = this.urlByTag(pushParams.TAG);
 				}
 			}
+			else if(push.id != null) {
+				data = this.urlByTag(push.id);
+			}
+
+			if(data != null)
+			{
+				if ( typeof data.LINK != 'undefined' && data.LINK.length > 0)
+				{
+					PageManager.openPage({
+						url : data.LINK,
+						unique : data.UNIQUE,
+						data: data.DATA,
+					});
+				}
+			}
+
+
+
+
 		},
 		actions: ["post", "tasks", "comment", "mention", "share", "share2users", "sonet_group_event"],
 		init:function(){

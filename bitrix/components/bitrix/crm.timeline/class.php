@@ -35,6 +35,8 @@ class CCrmTimelineComponent extends CBitrixComponent
 	protected $entityID = 0;
 	/** @var array|null  */
 	private $entityInfo = null;
+	/** @var array|null  */
+	private $extras = null;
 	/** @var array */
 	protected $errors = array();
 	/** @var CTextParser|null  */
@@ -121,6 +123,9 @@ class CCrmTimelineComponent extends CBitrixComponent
 
 		$this->entityInfo = isset($this->arParams['~ENTITY_INFO']) && is_array($this->arParams['~ENTITY_INFO'])
 			? $this->arParams['~ENTITY_INFO'] : array();
+
+		$this->extras = isset($this->arParams['~EXTRAS']) && is_array($this->arParams['~EXTRAS'])
+			? $this->arParams['~EXTRAS'] : [];
 
 		if($this->entityID > 0 && !\Bitrix\Crm\Security\EntityAuthorization::checkReadPermission($this->entityTypeID, $this->entityID))
 		{
@@ -219,7 +224,7 @@ class CCrmTimelineComponent extends CBitrixComponent
 
 			$this->arResult['ADDITIONAL_TABS'][] = array(
 				'id' => 'activity_rest_applist',
-				'name' => Loc::getMessage('CRM_REST_BUTTON_TITLE')
+				'name' => Loc::getMessage('CRM_REST_BUTTON_TITLE_2')
 			);
 		}
 
@@ -236,6 +241,7 @@ class CCrmTimelineComponent extends CBitrixComponent
 		$this->arResult['ENTITY_TYPE_NAME'] = $this->entityTypeName;
 		$this->arResult['ENTITY_ID'] = $this->entityID;
 		$this->arResult['ENTITY_INFO'] = $this->entityInfo;
+		$this->arResult['EXTRAS'] = $this->extras;
 
 		$this->parser = new CTextParser();
 		$this->parser->allow['SMILES'] = 'N';
@@ -251,7 +257,7 @@ class CCrmTimelineComponent extends CBitrixComponent
 		//region Chat
 		$this->arResult['CHAT_DATA'] = array();
 		$this->arResult['CHAT_DATA']['ENABLED'] = $this->entityID > 0
-			&& in_array($this->entityTypeID, array(CCrmOwnerType::Lead, CCrmOwnerType::Deal))
+			&& \Bitrix\Crm\Integration\Im\Chat::isEntitySupported($this->entityTypeID)
 			&& Main\ModuleManager::isModuleInstalled('im');
 		if($this->arResult['CHAT_DATA']['ENABLED'])
 		{
@@ -269,6 +275,11 @@ class CCrmTimelineComponent extends CBitrixComponent
 			{
 				\CPullWatch::Add($this->userID, 'MESSAGESERVICE');
 			}
+
+			if (Crm\Integration\NotificationsManager::canUse() && Crm\Integration\NotificationsManager::getPullTagName())
+			{
+				\CPullWatch::Add($this->userID, Crm\Integration\NotificationsManager::getPullTagName());
+			}
 		}
 		//endregion
 
@@ -285,6 +296,13 @@ class CCrmTimelineComponent extends CBitrixComponent
 		{
 			$this->arResult['SMS_CONFIG']['isSalescenterEnabled'] = $this->arResult['ENABLE_SALESCENTER'];
 		}
+
+		$this->arResult['ENABLE_DELIVERY'] = (
+			$this->arResult['ENABLE_SALESCENTER']
+			&& $this->entityTypeID === CCrmOwnerType::Deal
+			&& Crm\Integration\SalesCenterManager::getInstance()->hasInstallableDeliveryItems()
+		);
+
 		//endregion
 
 		$documentGeneratorManager = Crm\Integration\DocumentGeneratorManager::getInstance();
@@ -313,7 +331,7 @@ class CCrmTimelineComponent extends CBitrixComponent
 		}
 		$this->arResult['SMS_CONFIG']['isDocumentsEnabled'] = $this->arResult['ENABLE_DOCUMENTS'];
 
-        $this->arResult['SHOW_FILES_FEATURE'] = false;
+		$this->arResult['SHOW_FILES_FEATURE'] = false;
 		$this->arResult['ENABLE_FILES'] = (Main\Loader::includeModule('disk') && \Bitrix\Disk\Configuration::isPossibleToShowExternalLinkControl());
 		if($this->arResult['ENABLE_FILES'])
 		{
@@ -332,9 +350,9 @@ class CCrmTimelineComponent extends CBitrixComponent
 				];
 			}
 			else
-            {
-                $this->arResult['SHOW_FILES_FEATURE'] = \Bitrix\Crm\Integration\Bitrix24Manager::isEnabled();
-            }
+			{
+				$this->arResult['SHOW_FILES_FEATURE'] = \Bitrix\Crm\Integration\Bitrix24Manager::isEnabled();
+			}
 		}
 		else
 		{
@@ -377,6 +395,7 @@ class CCrmTimelineComponent extends CBitrixComponent
 						Crm\Filter\TimelineEntryCategory::WEB_FORM,
 						Crm\Filter\TimelineEntryCategory::CHAT,
 						Crm\Filter\TimelineEntryCategory::ACTIVITY_ZOOM,
+						Crm\Filter\TimelineEntryCategory::ACTIVITY_CALL_TRACKER
 					)
 				)
 			),
@@ -425,7 +444,7 @@ class CCrmTimelineComponent extends CBitrixComponent
 				)
 			),
 			'applications' => array(
-				'name' => Loc::getMessage('CRM_TIMELINE_FILTER_PRESET_APPLICATIONS'),
+				'name' => Loc::getMessage('CRM_TIMELINE_FILTER_PRESET_APPLICATIONS_2'),
 				'fields' => array(
 					'ENTRY_CATEGORY_ID' => array(
 						Crm\Filter\TimelineEntryCategory::APPLICATION
@@ -658,6 +677,15 @@ class CCrmTimelineComponent extends CBitrixComponent
 			Crm\Timeline\TimelineManager::getIgnoredEntityTypeIDs()
 		);
 
+		if (
+			$this->entityTypeID === \CCrmOwnerType::Deal
+			&& !\CCrmSaleHelper::isWithOrdersMode()
+		)
+		{
+			$orderFilter = $this->getExcludingOrderFilter($this->entityID);
+			$query->whereNot($orderFilter);
+		}
+
 		$query->setOrder(array('CREATED' => 'DESC', 'ID' => 'DESC'));
 		if($limit > 0)
 		{
@@ -731,11 +759,42 @@ class CCrmTimelineComponent extends CBitrixComponent
 				$this->arResult['CHAT_DATA']['USER_INFOS'][$userID] = $userInfo;
 			}
 
-			$messageData = \Bitrix\Im\Chat::getMessages($chatID, null, array('LIMIT' => 1, 'JSON' => 'Y'));
+			$messageData = \Bitrix\Im\Chat::getMessages($chatID, null, ['LIMIT' => 1, 'USER_TAG_SPREAD' => 'Y', 'JSON' => 'Y']);
 			if(isset($messageData['messages']) && is_array($messageData['messages']) && !empty($messageData['messages']))
 			{
+				$messageData['messages'][0]['text'] = preg_replace_callback("/\[USER=([0-9]{1,})\]\[\/USER\]/i", Array('\Bitrix\Im\Text', 'modifyShortUserTag'), $messageData['messages'][0]['text']);
 				$this->arResult['CHAT_DATA']['MESSAGE'] = $messageData['messages'][0];
 			}
 		}
+	}
+
+	private function getExcludingOrderFilter(int $dealId)
+	{
+		$orderList = [];
+
+		$dealListIterator = Crm\Order\DealBinding::getList([
+			'select' => ['ORDER_ID'],
+			'filter' => ['DEAL_ID' => $dealId],
+		]);
+		while ($deal = $dealListIterator->fetch())
+		{
+			$orderList[] = $deal['ORDER_ID'];
+		}
+
+		$orderFilter = Query::filter();
+
+		if ($orderList)
+		{
+			$orderFilter->whereIn('ASSOCIATED_ENTITY_ID', $orderList);
+			$orderFilter->where('ASSOCIATED_ENTITY_TYPE_ID', TimelineType::ORDER);
+			$orderFilter->whereIn('TYPE_ID', [TimelineType::MODIFICATION, TimelineType::ORDER]);
+			$orderFilter->whereNot('TYPE_CATEGORY_ID', Crm\Timeline\OrderCategoryType::ENCOURAGE_BUY_PRODUCTS);
+			$orderFilter->whereNotIn('TYPE_CATEGORY_ID', [
+				Crm\Timeline\OrderCategoryType::ENCOURAGE_BUY_PRODUCTS,
+				TimelineType::MODIFICATION
+			]);
+		}
+
+		return $orderFilter;
 	}
 }

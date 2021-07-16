@@ -224,16 +224,28 @@ if (isset($_REQUEST['action']) && $arResult['CAN_EDIT'] && check_bitrix_sessid()
 						if ($arSection['IBLOCK_SECTION_ID'] > 0)
 						{
 							$dbRes = CUser::GetList(
-								$by,$order,
+								'', '',
 								array('UF_DEPARTMENT' => $dpt),
-								array('SELECT' => array('ID'))
+								array('SELECT' => array('ID', 'UF_DEPARTMENT'))
 							);
 
 							$GLOBALS['DB']->StartTransaction();
 
 							$obUser = new CUser();
 							while ($arRes = $dbRes->fetch())
-								$obUser->update($arRes['ID'], array('UF_DEPARTMENT' => array($arSection['IBLOCK_SECTION_ID'])));
+							{
+								if (count($arRes['UF_DEPARTMENT']) > 1)
+								{
+									$newDpt = $arRes['UF_DEPARTMENT'];
+									$deletedDptKey = array_search($dpt, $arRes['UF_DEPARTMENT']);
+									unset($newDpt[$deletedDptKey]);
+								}
+								else
+								{
+									$newDpt = [$arSection['IBLOCK_SECTION_ID']];
+								}
+								$obUser->update($arRes['ID'], array('UF_DEPARTMENT' => $newDpt));
+							}
 
 							$dbRes = CIBlockSection::GetList(array(), array('IBLOCK_ID' => $IBLOCK_ID, 'SECTION_ID' => $arSection['ID']));
 
@@ -647,7 +659,7 @@ if ($this->StartResultCache(false, $arParams['IBLOCK_ID'].'|'.$arResult['CAN_EDI
 				$company_name = COption::GetOptionString("main", "site_name", "");
 				if(!$company_name)
 				{
-					$dbrs = CSite::GetList($o, $b, Array("DEFAULT"=>"Y"));
+					$dbrs = CSite::GetList('', '', Array("DEFAULT"=>"Y"));
 					if($ars = $dbrs->Fetch())
 						$company_name = $ars["NAME"];
 				}
@@ -677,7 +689,7 @@ if ($this->StartResultCache(false, $arParams['IBLOCK_ID'].'|'.$arResult['CAN_EDI
 		{
 			$arHeads = array_unique($arHeads);
 			$dbRes = CUser::GetList(
-				$by = 'last_name', $order = 'asc',
+				'last_name', 'asc',
 				array('ACTIVE' => 'Y', 'ID' => implode('|', $arHeads))
 			);
 			while ($arRes = $dbRes->Fetch())
@@ -733,7 +745,7 @@ if ($this->StartResultCache(false, $arParams['IBLOCK_ID'].'|'.$arResult['CAN_EDI
 		if (count($arResult['ENTRIES']) > 0)
 		{
 			$dbRes = CUser::GetList(
-				$by = 'last_name', $order = 'asc',
+				'last_name', 'asc',
 				array('ACTIVE' => 'Y', 'UF_DEPARTMENT' => array_keys($arResult['ENTRIES'])),
 				array('SELECT' => array('UF_DEPARTMENT'))
 			);
@@ -825,6 +837,7 @@ else
 
 	$template =& $this->GetTemplate();
 	$APPLICATION->AddHeadScript($template->GetFolder().'/structure.js');
+	$APPLICATION->SetAdditionalCSS("/bitrix/js/intranet/intranet-common.css");
 
 	if (!defined('INTRANET_ISV_MUL_INCLUDED'))
 	{

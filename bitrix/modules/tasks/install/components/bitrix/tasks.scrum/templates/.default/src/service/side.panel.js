@@ -11,7 +11,10 @@ export class SidePanel extends EventEmitter
 
 		/* eslint-disable */
 		this.sidePanelManager = BX.SidePanel.Instance;
+		this.contentSidePanelManager = new BX.SidePanel.Manager({});
 		/* eslint-enable */
+
+		this.contentSidePanels = new Set();
 
 		this.bindEvents();
 	}
@@ -31,35 +34,59 @@ export class SidePanel extends EventEmitter
 			this.emit('onCloseSidePanel', sidePanel);
 		});
 
-		/* eslint-disable */
-		BX.addCustomEvent(window, 'onAfterPopupShow', (popupWindow) => {
-			const topSlider = this.sidePanelManager.getTopSlider();
-			const topSidePanelZIndex = (topSlider ? topSlider.getZindex() : 1000);
-			const popupWindowZIndex = popupWindow.getZindex();
-			const zIndex = (topSidePanelZIndex > popupWindowZIndex ? topSidePanelZIndex + 1 : popupWindowZIndex + 1);
-			Dom.style(popupWindow.getPopupContainer(), 'zIndex', zIndex);
+		EventEmitter.subscribe('SidePanel.Slider:onCloseComplete', (event: BaseEvent) => {
+			const [sliderEvent] = event.getCompatData();
+			const sidePanel = sliderEvent.getSlider();
+			if (this.contentSidePanels.has(sidePanel.getUrl()))
+			{
+				this.contentSidePanels.delete(sidePanel.getUrl());
+				if (!this.contentSidePanels.size)
+				{
+					this.resetBodyWidthHack();
+					this.addEscapePressHandler();
+				}
+			}
 		});
-		/* eslint-enable */
 	}
 
 	isPreviousSidePanelExist(currentSidePanel): Boolean
 	{
-		return Boolean(this.sidePanelManager.getPreviousSlider(currentSidePanel));
+		const manager = this.contentSidePanels.has(currentSidePanel.getUrl())
+			? this.contentSidePanelManager
+			: this.sidePanelManager
+		;
+
+		return Boolean(manager.getPreviousSlider(currentSidePanel));
 	}
 
-	reloadTopSidePanel()
+	reloadTopSidePanel(contentSidePanel: boolean = false)
 	{
-		this.sidePanelManager.getTopSlider().reload();
+		const manager = contentSidePanel ? this.contentSidePanelManager : this.sidePanelManager;
+
+		if (manager.getTopSlider())
+		{
+			manager.getTopSlider().reload();
+		}
 	}
 
-	closeTopSidePanel()
+	closeTopSidePanel(contentSidePanel: boolean = false)
 	{
-		this.sidePanelManager.getTopSlider().close();
+		const manager = contentSidePanel ? this.contentSidePanelManager : this.sidePanelManager;
+
+		if (manager.getTopSlider())
+		{
+			manager.getTopSlider().close();
+		}
 	}
 
 	reloadPreviousSidePanel(currentSidePanel)
 	{
-		const previousSidePanel = this.sidePanelManager.getPreviousSlider(currentSidePanel);
+		const manager = this.contentSidePanels.has(currentSidePanel.getUrl())
+			? this.contentSidePanelManager
+			: this.sidePanelManager
+		;
+		const previousSidePanel = manager.getPreviousSlider(currentSidePanel);
+
 		previousSidePanel.reload();
 	}
 
@@ -70,6 +97,52 @@ export class SidePanel extends EventEmitter
 
 	openSidePanel(id, options)
 	{
-		this.sidePanelManager.open(id, options);
+		this.applyBodyWidthHack();
+		this.removeEscapePressHandler();
+
+		this.contentSidePanelManager.open(id, options);
+
+		this.contentSidePanels.add(id);
+	}
+
+	existFrameTopSlider(): boolean
+	{
+		return Boolean(this.sidePanelManager.getTopSlider());
+	}
+
+	addEscapePressHandler()
+	{
+		const sidePanel = this.sidePanelManager.getTopSlider();
+		if (sidePanel)
+		{
+			const frameWindow = sidePanel.getFrameWindow();
+			frameWindow.addEventListener('keydown', sidePanel.handleFrameKeyDown);
+		}
+	}
+
+	removeEscapePressHandler()
+	{
+		const sidePanel = this.sidePanelManager.getTopSlider();
+		if (sidePanel)
+		{
+			const frameWindow = sidePanel.getFrameWindow();
+			frameWindow.removeEventListener('keydown', sidePanel.handleFrameKeyDown);
+		}
+	}
+
+	applyBodyWidthHack()
+	{
+		if (this.existFrameTopSlider())
+		{
+			Dom.addClass(document.body, 'tasks-scrum-side-panel-padding');
+		}
+	}
+
+	resetBodyWidthHack()
+	{
+		if (this.existFrameTopSlider())
+		{
+			Dom.removeClass(document.body, 'tasks-scrum-side-panel-padding');
+		}
 	}
 }

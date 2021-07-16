@@ -1,6 +1,7 @@
 <?php
 $MESS["BPCDA_FIELD_REQUIED"] = "Поле '#FIELD#' обов'язково для заповнення.";
 $MESS["BPSA_CHECK_LIST_ITEMS"] = "Чек-лист";
+$MESS["BPSA_CREATED_BY_ERROR"] = "Не вказаний постановник завдання.";
 $MESS["BPSA_CYCLING_ERROR"] = "Завдання не створене. Підозра на зациклення дії";
 $MESS["BPSA_TRACK_CLOSED"] = "Завдання завершене #DATE#";
 $MESS["BPSA_TRACK_DELETED"] = "Завдання було видалено";

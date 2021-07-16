@@ -39,10 +39,10 @@ class CWebDavVirtual extends CWebDavBase
 	
 	var $permission_real = "R";
 
-	function CWebDavVirtual($arStructure, $base_url, $arParams = array())
+	public function __construct($arStructure, $base_url, $arParams = array())
 	{
 		$arParams = (is_array($arParams) ? $arParams : array());
-		$this->CWebDavBase($base_url);
+		parent::__construct($base_url);
 		
 		$this->arStructure = $arStructure;
 		$this->permission =  $this->permission_real ;

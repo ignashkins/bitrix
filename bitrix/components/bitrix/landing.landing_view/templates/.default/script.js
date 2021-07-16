@@ -31,6 +31,22 @@
 
 		return BX.Landing.Component.View.instance;
 	};
+	BX.Landing.Component.View.loadEditor = function()
+	{
+		var component = new BX.Landing.Component.View({});
+		var editorWindow = BX.Landing.PageObject.getEditorWindow();
+		var rootWindow = BX.Landing.PageObject.getRootWindow();
+
+		component.loadEditor();
+		component.buildTop();
+
+		editorWindow.addEventListener('load', function() {
+			BX.Landing.UI.Panel.StylePanel.getInstance();
+			rootWindow.BX.Landing.UI.Panel.Top.instance = null;
+			BX.Landing.UI.Panel.Top.getInstance();
+		});
+	};
+
 	BX.Landing.Component.View.prototype =
 	{
 		/**
@@ -267,9 +283,12 @@
 						}
 
 						setTimeout(function() {
-							BX.remove(loaderContainer);
-							BX.remove(userActionContainer);
-						}, 200);
+							BX.Dom.addClass(loaderContainer, 'landing-ui-hide');
+							setTimeout(function() {
+								BX.remove(loaderContainer);
+								BX.remove(userActionContainer);
+							}, 200);
+						}, 300);
 					});
 				});
 			}
@@ -379,6 +398,7 @@
 		buildTop: function(options)
 		{
 			options = options || {};
+			this.urls = this.urls || {};
 
 			// direct id for some urls
 			for (var key in this.urls)
@@ -473,6 +493,34 @@
 					}.bind(this)
 				);
 			}
+			if (BX('landing-design-block-close'))
+			{
+				BX('landing-design-block-close').addEventListener(
+					'click',
+					function()
+					{
+						BX.SidePanel.Instance.close();
+					}
+				);
+			}
+			if (BX('landing-design-block-save'))
+			{
+				BX('landing-design-block-save').addEventListener(
+					'click',
+					function()
+					{
+						top.BX.onCustomEvent(
+							'Landing:onDesignerBlockSave',
+							[
+								function()
+								{
+									BX.SidePanel.Instance.close();
+								}
+							]
+						);
+					}
+				);
+			}
 			// nav chain
 			// BX('landing-navigation-site').text = this.siteTitle;
 			// BX('landing-navigation-site').setAttribute('title', this.siteTitle);
@@ -565,6 +613,18 @@
 						disabled: !this.rights.settings
 					}
 					: null,
+					{
+						href: this.urls['landingDesign'],
+						text: BX.message('LANDING_TPL_SETTINGS_PAGE_DIZ_URL'),
+						disabled: !this.rights.settings
+					},
+					!this.formEditor
+						? {
+							href: this.urls['landingSiteDesign'],
+							text: BX.message('LANDING_TPL_SETTINGS_SITE_DIZ_URL'),
+							disabled: !this.rights.settings
+						}
+						: null,
 					this.storeEnabled
 					? {
 						href: this.urls['landingCatalogEdit'],
@@ -679,7 +739,7 @@ var landingAlertMessage = function landingAlertMessage(errorText, payment, error
 	{
 		(function()
 		{
-			if (BX.message('LANDING_SITE_TYPE') === 'STORE')
+			if (landingSiteType === 'STORE')
 			{
 				top.BX.UI.InfoHelper.show('limit_shop_number');
 			}

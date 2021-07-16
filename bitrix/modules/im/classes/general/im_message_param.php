@@ -88,7 +88,7 @@ class CIMMessageParam
 					{
 						if(is_array($v2))
 						{
-							$value = \Bitrix\Main\Web\Json::encode($v2);
+							$value = \Bitrix\Im\Common::jsonEncode($v2);
 							if($value <> '' && mb_strlen($value) < 60000)
 							{
 								$key = md5($name.$value);
@@ -442,7 +442,13 @@ class CIMMessageParam
 
 			if ($ar["PARAM_JSON"] <> '')
 			{
-				$value = \Bitrix\Main\Web\Json::decode($ar["PARAM_JSON"]);
+				try
+				{
+					$value = \Bitrix\Main\Web\Json::decode($ar["PARAM_JSON"]);
+				}
+				catch (\Bitrix\Main\SystemException $e)
+				{
+				}
 			}
 			else
 			{
@@ -558,7 +564,7 @@ class CIMMessageParam
 					$arValues[$key] = $arDefault[$key];
 				}
 			}
-			else if ($key == 'CHAT_USER' || $key == 'DATE_TS' || $key == 'FILE_ID' || $key == 'LIKE'  || $key == 'FAVORITE' || $key == 'KEYBOARD_ACTION' || $key == 'URL_ID' || $key == 'LINK_ACTIVE')
+			else if ($key == 'CHAT_USER' || $key == 'DATE_TS' || $key == 'FILE_ID' || $key == 'LIKE'  || $key == 'FAVORITE' || $key == 'KEYBOARD_ACTION' || $key == 'URL_ID' || $key == 'LINK_ACTIVE' || $key == 'USERS')
 			{
 				if (is_array($value) && !empty($value))
 				{
@@ -630,7 +636,19 @@ class CIMMessageParam
 					$arValues[$key] = $arDefault[$key];
 				}
 			}
-			else if ($key == 'TYPE' || $key == 'COMPONENT_ID' || $key == 'CLASS' || $key == 'IMOL_VOTE' || $key == 'IMOL_VOTE_TEXT' ||  $key == 'IMOL_VOTE_LIKE' ||  $key == 'IMOL_VOTE_DISLIKE' ||  $key == 'IMOL_FORM' ||  $key == 'IMOL_COMMENT_HEAD')
+			else if (
+				$key == 'TYPE' ||
+				$key == 'COMPONENT_ID' ||
+				$key == 'CLASS' ||
+				$key == 'IMOL_VOTE' ||
+				$key == 'IMOL_VOTE_TEXT' ||
+				$key == 'IMOL_VOTE_LIKE' ||
+				$key == 'IMOL_VOTE_DISLIKE' ||
+				$key == 'IMOL_FORM' ||
+				$key == 'IMOL_COMMENT_HEAD' ||
+				$key == 'IMOL_DATE_CLOSE_VOTE' ||
+				$key == 'IMOL_TIME_LIMIT_VOTE'
+			)
 			{
 				$arValues[$key] = isset($value[0])? $value[0]: '';
 			}
@@ -689,23 +707,23 @@ class CIMMessageParam
 
 	public static function GetDefault()
 	{
-		$arDefault = Array(
+		$arDefault = [
 			'TYPE' => '',
 			'COMPONENT_ID' => '',
 			'CODE' => '',
-			'FAVORITE' => Array(),
-			'LIKE' => Array(),
-			'FILE_ID' => Array(),
-			'URL_ID' => Array(),
+			'FAVORITE' => [],
+			'LIKE' => [],
+			'FILE_ID' => [],
+			'URL_ID' => [],
 			'URL_ONLY' => 'N',
-			'ATTACH' => Array(),
-			'LINK_ACTIVE' => Array(),
+			'ATTACH' => [],
+			'LINK_ACTIVE' => [],
 			'LARGE_FONT' => 'N',
 			'NOTIFY' => 'Y',
 			'MENU' => 'N',
 			'KEYBOARD' => 'N',
 			'KEYBOARD_UID' => 0,
-			'CONNECTOR_MID' => Array(),
+			'CONNECTOR_MID' => [],
 			'IS_ERROR' => 'N',
 			'IS_DELIVERED' => 'Y',
 			'IS_DELETED' => 'N',
@@ -720,9 +738,9 @@ class CIMMessageParam
 			'CHAT_ID' => 0,
 			'CHAT_MESSAGE' => 0,
 			'CHAT_LAST_DATE' => '',
-			'CHAT_USER' => Array(),
-			'DATE_TEXT' => Array(),
-			'DATE_TS' => Array(),
+			'CHAT_USER' => [],
+			'DATE_TEXT' => [],
+			'DATE_TS' => [],
 			'IMOL_VOTE' => '',
 			'IMOL_VOTE_TEXT' => '',
 			'IMOL_VOTE_LIKE' => '',
@@ -735,7 +753,10 @@ class CIMMessageParam
 			'IMOL_SID' => 0,
 			'IMOL_FORM' => '',
 			'CRM_FORM_VALUE' => '',
-		);
+			'IMOL_DATE_CLOSE_VOTE' => '',
+			'IMOL_TIME_LIMIT_VOTE' => '',
+			'USERS' => [],
+		];
 
 		return $arDefault;
 	}
@@ -1315,7 +1336,7 @@ class CIMMessageParamAttach
 
 	public function GetJSON()
 	{
-		$result = \Bitrix\Main\Web\Json::encode($this->result);
+		$result = \Bitrix\Im\Common::jsonEncode($this->result);
 		return mb_strlen($result) < 60000? $result: "";
 	}
 

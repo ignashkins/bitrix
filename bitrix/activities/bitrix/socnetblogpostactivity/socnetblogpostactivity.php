@@ -269,8 +269,7 @@ class CBPSocnetBlogPostActivity
 	public static function GetPropertiesDialog($documentType, $activityName, $arWorkflowTemplate, $arWorkflowParameters, $arWorkflowVariables, $arCurrentValues = null, $formName = "")
 	{
 		$sites = array();
-		$b = $o = '';
-		$sitesIterator = CSite::GetList($b, $o, Array('ACTIVE' => 'Y'));
+		$sitesIterator = CSite::GetList('', '', Array('ACTIVE' => 'Y'));
 		while ($site = $sitesIterator->fetch())
 		{
 			$sites[$site['LID']] = $site['NAME'];
@@ -306,11 +305,13 @@ class CBPSocnetBlogPostActivity
 			),
 			'PostTitle' => array(
 				'Name' => GetMessage("SNBPA_POST_TITLE"),
+				'Description' => GetMessage("SNBPA_POST_TITLE"),
 				'FieldName' => 'post_title',
 				'Type' => 'string'
 			),
 			'PostMessage' => array(
 				'Name' => GetMessage("SNBPA_POST_MESSAGE"),
+				'Description' => GetMessage("SNBPA_POST_MESSAGE"),
 				'FieldName' => 'post_message',
 				'Type' => 'text',
 				'Required' => true

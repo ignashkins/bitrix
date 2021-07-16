@@ -206,6 +206,10 @@ if(typeof BX.UI.EntityEditorControl === "undefined")
 		{
 			return this._schemeElement ? this._schemeElement.getData() : {};
 		},
+		getInnerConfig: function()
+		{
+			return this._schemeElement ? this._schemeElement.getInnerConfig() : {};
+		},
 		isVisible: function()
 		{
 			if(!this._isVisible)
@@ -660,25 +664,44 @@ if(typeof BX.UI.EntityEditorControl === "undefined")
 		doRegisterLayout: function()
 		{
 		},
+		needRefreshViewModeLayout: function(options)
+		{
+			if (this._mode === BX.UI.EntityEditorMode.edit)
+			{
+				return false;
+			}
+			if(!this._hasLayout)
+			{
+				return false;
+			}
+			return true;
+		},
+		refreshViewModeLayout: function(options)
+		{
+			if (this.needRefreshViewModeLayout(options))
+			{
+				this.refreshLayout(options);
+			}
+		},
 		refreshLayout: function(options)
 		{
 			if(!this._hasLayout)
 			{
 				return;
 			}
-
-			this.clearLayout({ preservePosition: true });
-
 			if(!BX.type.isPlainObject(options))
 			{
 				options = {};
 			}
+			options["preservePosition"] = true;
+
+			this.clearLayout(options);
+
 			if(BX.prop.getBoolean(options, "reset", false))
 			{
 				this.reset();
 			}
 
-			options["preservePosition"] = true;
 			this.layout(options);
 		},
 		clearLayout: function(options)
@@ -904,6 +927,9 @@ if(typeof BX.UI.EntityEditorControl === "undefined")
 		onContextMenuClose: function()
 		{
 			BX.PopupMenu.destroy(this._id);
+		},
+		onPopupDestroy: function()
+		{
 			this._isContextMenuOpened = false;
 		},
 		createContextMenuButton: function()
@@ -954,7 +980,8 @@ if(typeof BX.UI.EntityEditorControl === "undefined")
 						events:
 							{
 								onPopupShow: BX.delegate(this.onContextMenuShow, this),
-								onPopupClose: BX.delegate(this.onContextMenuClose, this)
+								onPopupClose: BX.delegate(this.onContextMenuClose, this),
+								onPopupDestroy: BX.delegate(this.onPopupDestroy, this)
 							}
 					}
 				);
@@ -1120,6 +1147,51 @@ if(typeof BX.UI.EntityEditorField === "undefined")
 		{
 			this._layoutAttributes = { animate: "show" };
 		}
+	};
+	BX.UI.EntityEditorField.prototype.needRefreshViewModeLayout = function(options)
+	{
+		if (!BX.UI.EntityEditorField.superclass.needRefreshViewModeLayout.call(this, options))
+		{
+			return false;
+		}
+		var prevModel = BX.prop.get(options, 'previousModel', null);
+		if (!prevModel)
+		{
+			return true;
+		}
+
+		var affectedFields = this._schemeElement ? this._schemeElement.getAffectedFields() : [];
+		if (!affectedFields.length)
+		{
+			affectedFields.push(this.getDataKey());
+		}
+
+		return affectedFields.reduce(function(result, fieldName) {
+			return result || !this.areModelValuesEqual(prevModel, this._model, fieldName);
+		}.bind(this), false);
+	};
+	BX.UI.EntityEditorField.prototype.areModelValuesEqual = function(previousModel, currentModel, fieldName)
+	{
+		var prevModelHasField = previousModel.hasField(fieldName);
+		var curModelHasField = currentModel.hasField(fieldName);
+
+		if (!prevModelHasField && !curModelHasField)
+		{
+			return true;
+		}
+
+		if (!prevModelHasField || !curModelHasField)
+		{
+			return false;
+		}
+		var prevValue = previousModel.getField(fieldName);
+		var curValue = currentModel.getField(fieldName);
+
+		return this.areValuesEqual(prevValue, curValue);
+	};
+	BX.UI.EntityEditorField.prototype.areValuesEqual = function(value1, value2)
+	{
+		return (JSON.stringify(value1) === JSON.stringify(value2));
 	};
 	BX.UI.EntityEditorField.prototype.onModelChange = function(sender, params)
 	{
@@ -1414,9 +1486,13 @@ if(typeof BX.UI.EntityEditorField === "undefined")
 	};
 	BX.UI.EntityEditorField.prototype.isNeedToDisplay = function(options)
 	{
-		if(this._mode === BX.UI.EntityEditorMode.edit
-			|| this.checkOptionFlag(BX.UI.EntityEditorControlOptions.showAlways)
-			|| this._schemeElement.isShownAlways()
+		if (
+			!(this._editor && this._editor.isExternalLayoutResolversEnabled()) &&
+			(
+				this._mode === BX.UI.EntityEditorMode.edit
+				|| this.checkOptionFlag(BX.UI.EntityEditorControlOptions.showAlways)
+				|| this._schemeElement.isShownAlways()
+			)
 		)
 		{
 			return true;
@@ -1815,7 +1891,7 @@ if(typeof BX.UI.EntityEditorField === "undefined")
 		results.push(
 			{
 				value: "showAlways",
-				text: '<label class="ui-entity-card-context-menu-item-hide-empty-wrap">' +
+				html: '<label class="ui-entity-card-context-menu-item-hide-empty-wrap">' +
 				'<input type="checkbox"' +
 				(this.checkOptionFlag(BX.UI.EntityEditorControlOptions.showAlways) ? ' checked = "true"' : '') +
 				' class="ui-entity-card-context-menu-item-hide-empty-input">' +
@@ -2279,6 +2355,17 @@ if(typeof BX.UI.EntityEditorColumn === "undefined")
 		if(callback)
 		{
 			callback();
+		}
+	};
+	BX.UI.EntityEditorColumn.prototype.refreshViewModeLayout = function(options)
+	{
+		if (this.needRefreshViewModeLayout(options))
+		{
+			for (var i = 0, l = this._sections.length; i < l; i++)
+			{
+				var section = this._sections[i];
+				section.refreshViewModeLayout(options);
+			}
 		}
 	};
 	BX.UI.EntityEditorColumn.prototype.onStubClick = function(e)
@@ -2943,19 +3030,10 @@ if(typeof BX.UI.EntityEditorSection === "undefined")
 	};
 	BX.UI.EntityEditorSection.prototype.initializeFromModel =  function()
 	{
-		var i, length;
-		if(this._fields)
-		{
-			for(i = 0, length = this._fields.length; i < length; i++)
-			{
-				this._fields[i].release();
-			}
-		}
-
-		this._fields = [];
+		this.release();
 
 		var elements = this._schemeElement.getElements();
-		for(i = 0, length = elements.length; i < length; i++)
+		for(var i = 0, length = elements.length; i < length; i++)
 		{
 			var element = elements[i];
 			var field = this._editor.createControl(
@@ -3295,6 +3373,31 @@ if(typeof BX.UI.EntityEditorSection === "undefined")
 			callback();
 		}
 	};
+	BX.UI.EntityEditorSection.prototype.refreshViewModeLayout = function(options)
+	{
+		if (this.needRefreshViewModeLayout(options))
+		{
+			for (var i = 0, l = this._fields.length; i < l; i++)
+			{
+				var field = this._fields[i];
+				field.refreshViewModeLayout(options);
+			}
+		}
+	};
+
+	BX.UI.EntityEditorSection.prototype.release = function()
+	{
+		var i, length;
+		if(this._fields)
+		{
+			for(i = 0, length = this._fields.length; i < length; i++)
+			{
+				this._fields[i].release();
+			}
+		}
+
+		this._fields = [];
+	};
 	BX.UI.EntityEditorSection.prototype.onStubClick = function(e)
 	{
 		this.toggle();
@@ -3521,6 +3624,7 @@ if(typeof BX.UI.EntityEditorSection === "undefined")
 	};
 	BX.UI.EntityEditorSection.prototype.doSetMode = function(mode)
 	{
+		this.removeFieldConfigurator();
 		if(this._titleMode === BX.UI.EntityEditorMode.edit)
 		{
 			this.toggleTitleMode();
@@ -3926,6 +4030,17 @@ if(typeof BX.UI.EntityEditorSection === "undefined")
 		for(var i = 0; i < length; i++)
 		{
 			var schemeElement = schemeElements[i];
+
+			if (schemeElement)
+			{
+				var data = schemeElement.getData();
+
+				if (data.doNotDisplayInShowFieldList)
+				{
+					continue;
+				}
+			}
+
 			menuItems.push({ text: schemeElement.getTitle(), value: schemeElement.getName() });
 		}
 
@@ -4223,6 +4338,80 @@ if(typeof BX.UI.EntityEditorSection === "undefined")
 				this
 			)
 		)
+
+		var typeId = BX.prop.getString(params, "typeId");
+		if (typeId === "list")
+		{
+			var fieldData = { "typeId": typeId };
+
+			fieldData["innerConfig"] = BX.prop.getObject(params, "innerConfig", {});
+			fieldData["enumeration"] = BX.prop.getArray(params, "enumeration", []);
+
+			if (
+				BX.Type.isPlainObject(fieldData["innerConfig"])
+				&& fieldData["innerConfig"].hasOwnProperty("controller")
+				&& BX.Type.isStringFilled(fieldData["innerConfig"]["controller"])
+			)
+			{
+				BX.ajax.runAction(fieldData["innerConfig"]["controller"], { data: { configData: fieldData } }).then(
+					function(response) {
+						if (
+							BX.Type.isObject(response)
+							&& response.hasOwnProperty("status")
+							&& response.status === "success"
+							&& response.hasOwnProperty("data")
+							&& BX.Type.isArray(response["data"])
+						)
+						{
+							var field = BX.prop.get(params, "field", null);
+							if (BX.Type.isObject(field))
+							{
+								var enumeration = response["data"];
+								var items = [];
+								for (var i = 0; i < enumeration.length; i++)
+								{
+									items.push({
+										"NAME": enumeration[i]["VALUE"],
+										"VALUE": enumeration[i]["ID"]
+									});
+								}
+								field.getSchemeElement().setDataParam("items", items);
+								field.setItems();
+								field.refreshLayout();
+							}
+						}
+						else
+						{
+							console.error("Invalid server response.");
+						}
+					}.bind(this),
+					function(response) {
+						if (
+							BX.Type.isObject(response)
+							&& response.hasOwnProperty("status")
+							&& response["status"] === "error"
+							&& response.hasOwnProperty("errors")
+							&& BX.Type.isArray(response["errors"])
+							&& response["errors"].length > 0
+							&& BX.Type.isPlainObject(response["errors"][0])
+							&& response["errors"][0].hasOwnProperty("message")
+							&& BX.Type.isString(response["errors"][0]["message"])
+						)
+						{
+							console.error(response["errors"][0]["message"]);
+						}
+						else
+						{
+							console.error("Invalid server response.");
+						}
+					}.bind(this)
+				);
+			}
+			else
+			{
+				console.error("Invalid field inner configuration.");
+			}
+		}
 	};
 	BX.UI.EntityEditorSection.prototype.onFieldConfigurationCancel = function(sender, params)
 	{
@@ -4382,12 +4571,82 @@ if(typeof BX.UI.EntityEditorSection === "undefined")
 
 			field.adjustFieldParams(fieldData, false);
 
-			this._editor.getUserFieldManager().updateField(
-				fieldData,
-				field.getMode()
-			).then(
-				BX.delegate(this.onUserFieldUpdate, this)
-			);
+			var updateField = function()
+			{
+				this._editor.getUserFieldManager().updateField(
+					fieldData,
+					field.getMode()
+				).then(
+					BX.delegate(this.onUserFieldUpdate, this)
+				);
+			}.bind(this);
+
+			if (typeId === BX.UI.EntityUserFieldType.crmStatus)
+			{
+				var configData = {
+					"typeId": typeId,
+					"innerConfig": BX.prop.getObject(params, "innerConfig", {}),
+					"enumeration": BX.prop.getArray(params, "enumeration", [])
+				};
+
+				if (
+					BX.Type.isPlainObject(configData["innerConfig"])
+					&& configData["innerConfig"].hasOwnProperty("controller")
+					&& BX.Type.isStringFilled(configData["innerConfig"]["controller"])
+				)
+				{
+					BX.ajax.runAction(
+						configData["innerConfig"]["controller"],
+						{ data: { configData: configData } }
+					).then(
+						function(response) {
+							if (
+								!(
+									BX.Type.isObject(response)
+									&& response.hasOwnProperty("status")
+									&& response.status === "success"
+									&& response.hasOwnProperty("data")
+									&& BX.Type.isArray(response["data"])
+								)
+							)
+							{
+								console.error("Invalid server response.");
+							}
+							updateField();
+						}.bind(this),
+						function(response) {
+							if (
+								BX.Type.isObject(response)
+								&& response.hasOwnProperty("status")
+								&& response["status"] === "error"
+								&& response.hasOwnProperty("errors")
+								&& BX.Type.isArray(response["errors"])
+								&& response["errors"].length > 0
+								&& BX.Type.isPlainObject(response["errors"][0])
+								&& response["errors"][0].hasOwnProperty("message")
+								&& BX.Type.isString(response["errors"][0]["message"])
+							)
+							{
+								console.error(response["errors"][0]["message"]);
+							}
+							else
+							{
+								console.error("Invalid server response.");
+							}
+							updateField();
+						}.bind(this)
+					);
+				}
+				else
+				{
+					console.error("Invalid field inner configuration.");
+					updateField();
+				}
+			}
+			else
+			{
+				updateField();
+			}
 		}
 		else
 		{
@@ -7129,13 +7388,22 @@ if(typeof BX.UI.EntityEditorList === "undefined")
 
 			var value = BX.prop.getString(item, "VALUE", i);
 			var name = BX.prop.getString(item, "NAME", value);
-			menu.push(
-				{
-					text: this.getDataBooleanParam('isHtml', false) ? name : BX.util.htmlspecialchars(name),
-					value: value,
-					onclick: BX.delegate( this.onItemSelect, this)
-				}
-			);
+
+			var itemParams = {
+				value: value,
+				onclick: BX.delegate( this.onItemSelect, this)
+			};
+
+			if (this.getDataBooleanParam('isHtml', false))
+			{
+				itemParams['html'] = name;
+			}
+			else
+			{
+				itemParams['text'] = name;
+			}
+
+			menu.push(itemParams);
 		}
 
 		BX.PopupMenu.show(
@@ -7430,8 +7698,20 @@ if(typeof BX.UI.EntityEditorMultiList === "undefined")
 				for (var i=0; i<this._selectedValues.length ;i++)
 				{
 					var item = this.getItemByValue(this._selectedValues[i].VALUE);
-					var code = (BX.type.isNotEmptyString(item['NAME'])) ? 'NAME' : 'VALUE';
-					selectedNames.push(item[code]);
+					var selectedName;
+					if (BX.type.isNotEmptyString(item['HTML']))
+					{
+						selectedName = item['HTML'];
+					}
+					else if (BX.type.isNotEmptyString(item['NAME']))
+					{
+						selectedName = BX.util.htmlspecialchars(item['NAME']);
+					}
+					else
+					{
+						selectedName = BX.util.htmlspecialchars(item['VALUE']);
+					}
+					selectedNames.push(selectedName);
 				}
 
 				if (selectedNames.length > 0)
@@ -7439,7 +7719,7 @@ if(typeof BX.UI.EntityEditorMultiList === "undefined")
 					this._innerWrapper.appendChild(BX.create("div",
 						{
 							props: {className: "ui-entity-editor-content-block"},
-							text: selectedNames.join(', ')
+							html: selectedNames.join(', ')
 						}
 					));
 				}
@@ -8683,6 +8963,14 @@ if(typeof BX.UI.EntityEditorCustom === "undefined")
 	};
 
 	BX.extend(BX.UI.EntityEditorCustom, BX.UI.EntityEditorField);
+	BX.UI.EntityEditorCustom.prototype.initialize = function(id, settings)
+	{
+		BX.UI.EntityEditorCustom.superclass.initialize.call(this, id, settings);
+		if (this._schemeElement && this._schemeElement.getDataParam('type') === 'LOCATION' &&  this._model && this._model.getField(id))
+		{
+			this.setRuntimeValue(this._model.getField(id));
+		}
+	}
 	BX.UI.EntityEditorCustom.prototype.hasContentToDisplay = function()
 	{
 		return this.getHtmlContent() !== "";
@@ -8699,6 +8987,21 @@ if(typeof BX.UI.EntityEditorCustom === "undefined")
 			result |= BX.UI.EntityEditorModeSwitchType.button|BX.UI.EntityEditorModeSwitchType.content;
 		}
 		return result;
+	};
+	BX.UI.EntityEditorCustom.prototype.areModelValuesEqual = function(previousModel, currentModel)
+	{
+		var prevValue = previousModel.getSchemeField(
+			this._schemeElement,
+			'view',
+			''
+		);
+		var curValue = currentModel.getSchemeField(
+			this._schemeElement,
+			'view',
+			''
+		);
+
+		return this.areValuesEqual(prevValue, curValue);
 	};
 	BX.UI.EntityEditorCustom.prototype.layout = function(options)
 	{
@@ -9207,8 +9510,8 @@ if(typeof BX.UI.EntityEditorMoney === "undefined")
 		{
 			menu.push(
 				{
-					text: currencyList[key]["NAME"],
-					value: currencyList[key]["VALUE"],
+					text: BX.util.htmlspecialchars(currencyList[key]["NAME"]),
+					value: BX.util.htmlspecialchars(currencyList[key]["VALUE"]),
 					onclick: BX.delegate( this.onCurrencySelect, this)
 				}
 			);

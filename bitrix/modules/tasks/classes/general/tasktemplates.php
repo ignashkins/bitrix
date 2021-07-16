@@ -262,7 +262,7 @@ class CTaskTemplates
 		{
 			if(isset($arFields["RESPONSIBLE_ID"]))
 			{
-				/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 				$r = CUser::GetByID($arFields["RESPONSIBLE_ID"]);
 				if (!$r->Fetch())
 				{
@@ -374,7 +374,7 @@ class CTaskTemplates
 			if ($arFields['FILES'] !== false)
 			{
 				// There is must be serialized array
-				$arFilesIds = unserialize($arFields['FILES']);
+				$arFilesIds = unserialize($arFields['FILES'], ['allowed_classes' => false]);
 
 				if (is_array($arFilesIds))
 				{
@@ -440,13 +440,13 @@ class CTaskTemplates
 
 	private static function removeAgents($templateId)
 	{
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		CAgent::RemoveAgent('CTasks::RepeatTaskByTemplateId('.$templateId.');', 'tasks');
 
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		CAgent::RemoveAgent('CTasks::RepeatTaskByTemplateId('.$templateId.', 0);', 'tasks');
 
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		CAgent::RemoveAgent('CTasks::RepeatTaskByTemplateId('.$templateId.', 1);', 'tasks');
 	}
 
@@ -508,7 +508,7 @@ class CTaskTemplates
 
 				$ID = $DB->Add("b_tasks_template", $arFields, $arBinds, "tasks");
 				if (isset($arFields['FILES']))
-					CTaskFiles::removeTemporaryStatusForFiles(unserialize($arFields['FILES']), $arParams['USER_ID']);
+					CTaskFiles::removeTemporaryStatusForFiles(unserialize($arFields['FILES'], ['allowed_classes' => false]), $arParams['USER_ID']);
 
 				$USER_FIELD_MANAGER->Update("TASKS_TASK_TEMPLATE", $ID, $arFields, $arParamsForCheckFields['USER_ID']);
 
@@ -524,10 +524,10 @@ class CTaskTemplates
 					// Set up new agent
 					if ($arFields['REPLICATE'] === 'Y')
 					{
-						$nextTime = CTasks::getNextTime(unserialize($arFields['REPLICATE_PARAMS']), $ID); // localtime
+						$nextTime = CTasks::getNextTime(unserialize($arFields['REPLICATE_PARAMS'], ['allowed_classes' => false]), $ID); // localtime
 						if ($nextTime)
 						{
-							/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 							CAgent::AddAgent(
 								$name,
 								'tasks',
@@ -669,7 +669,7 @@ class CTaskTemplates
 				}
 
 				if (isset($arFields['FILES']))
-					CTaskFiles::removeTemporaryStatusForFiles(unserialize($arFields['FILES']), $arParams['USER_ID']);
+					CTaskFiles::removeTemporaryStatusForFiles(unserialize($arFields['FILES'], ['allowed_classes' => false]), $arParams['USER_ID']);
 
 				$USER_FIELD_MANAGER->Update("TASKS_TASK_TEMPLATE", $ID, $arFields, $userID);
 
@@ -692,16 +692,16 @@ class CTaskTemplates
 					$name = 'CTasks::RepeatTaskByTemplateId('.$ID.');';
 
 					// First, remove all agents for this template
-					/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 					self::removeAgents($ID);
 
 					// Set up new agent
 					if ($arFields['REPLICATE'] === 'Y')
 					{
-						$nextTime = CTasks::getNextTime(unserialize($arFields['REPLICATE_PARAMS']), $ID);
+						$nextTime = CTasks::getNextTime(unserialize($arFields['REPLICATE_PARAMS'], ['allowed_classes' => false]), $ID);
 						if ($nextTime)
 						{
-							/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 							$ares = CAgent::AddAgent(
 								$name,
 								'tasks',
@@ -903,7 +903,7 @@ class CTaskTemplates
 		// delete files
 		if ($template["FILES"])
 		{
-			$files = unserialize($template["FILES"]);
+			$files = unserialize($template["FILES"], ['allowed_classes' => false]);
 			if (is_array($files))
 			{
 				$filesToDelete = array();
@@ -1091,7 +1091,7 @@ class CTaskTemplates
 		return $arSqlSearch;
 	}
 
-	function GetByID($ID, $arParams = array())
+	public static function GetByID($ID, $arParams = array())
 	{
 		if(!intval($ID))
 		{

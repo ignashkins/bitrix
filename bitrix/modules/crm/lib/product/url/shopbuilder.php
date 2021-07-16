@@ -1,8 +1,9 @@
 <?php
 namespace Bitrix\Crm\Product\Url;
 
-use Bitrix\Main\Loader,
-	Bitrix\Catalog;
+use Bitrix\Main;
+use Bitrix\Main\Loader;
+use Bitrix\Catalog;
 
 if (Loader::includeModule('catalog'))
 {
@@ -14,16 +15,31 @@ if (Loader::includeModule('catalog'))
 
 		protected const PATH_PREFIX = '/shop/settings/';
 
-		public function use(): bool
+		protected const PATH_DETAIL_CARD_PREFIX = '/shop/catalog/';
+
+		public function __construct()
 		{
-			return (defined('CATALOG_PRODUCT') && defined('SELF_FOLDER_URL'));
+			parent::__construct();
 		}
 
-		protected function addSliderOptions(array &$options): void
+		public function use(): bool
 		{
-			$options['publicSidePanel'] = 'Y';
-			$options['IFRAME'] = 'Y';
-			$options['IFRAME_TYPE'] = 'SIDE_SLIDER';
+			if (defined('CATALOG_PRODUCT') && defined('SELF_FOLDER_URL'))
+			{
+				return true;
+			}
+			if (!$this->request->isAdminSection())
+			{
+				if ($this->checkCurrentPage([
+					self::PATH_PREFIX,
+					self::PATH_DETAIL_CARD_PREFIX
+				]))
+				{
+					return true;
+				}
+			}
+
+			return false;
 		}
 
 		protected function initConfig(): void
@@ -66,11 +82,15 @@ if (Loader::includeModule('catalog'))
 				.'#ADDITIONAL_PARAMETERS#';
 			if ($this->isUiCatalog())
 			{
-				$this->urlTemplates[self::PAGE_ELEMENT_DETAIL] = '/shop/catalog/'
-					.'#IBLOCK_ID#/product/#ENTITY_ID#/';
-				$this->urlTemplates[self::PAGE_ELEMENT_COPY] = '/shop/catalog/'
+				$this->urlTemplates[self::PAGE_ELEMENT_DETAIL] = self::PATH_DETAIL_CARD_PREFIX
+					.'#IBLOCK_ID#/product/#ENTITY_ID#/'
+					.'?#ADDITIONAL_PARAMETERS#';
+				$this->urlTemplates[self::PAGE_ELEMENT_COPY] = self::PATH_DETAIL_CARD_PREFIX
 					.'#IBLOCK_ID#/product/0/copy/#ENTITY_ID#/';
 				$this->urlTemplates[self::PAGE_ELEMENT_SAVE] = $this->urlTemplates[self::PAGE_ELEMENT_DETAIL];
+				$this->urlTemplates[self::PAGE_OFFER_DETAIL] = '/shop/catalog/'
+					.'#PRODUCT_IBLOCK_ID#/product/#PRODUCT_ID#/'
+					.'variation/#ENTITY_ID#/';
 			}
 			else
 			{
@@ -85,6 +105,7 @@ if (Loader::includeModule('catalog'))
 					.'cat_product_edit.php'
 					.'?#BASE_PARAMS#'
 					.'#ADDITIONAL_PARAMETERS#';
+				$this->urlTemplates[self::PAGE_OFFER_DETAIL] = $this->urlTemplates[self::PAGE_ELEMENT_DETAIL];
 			}
 			$this->urlTemplates[self::PAGE_ELEMENT_SEARCH] = '/bitrix/tools/iblock/element_search.php'
 				.'?#LANGUAGE#'

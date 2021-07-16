@@ -22,6 +22,8 @@ BX.Tasks.Kanban.Item = function(options)
 
 	this.isSprintView = (options.isSprintView === 'Y');
 	this.storyPoints = (this.data.storyPoints ? this.data.storyPoints : '');
+
+	this.calendarSettings = (options.calendarSettings ? options.calendarSettings : {});
 };
 
 BX.Tasks.Kanban.Item.prototype = {
@@ -215,11 +217,10 @@ BX.Tasks.Kanban.Item.prototype = {
 		}
 		else if (this.task_mute && !data.muted)
 		{
+			var isExpiredCounts = data.is_expired && !data.completed && !data.completed_supposedly;
 			BX.removeClass(this.container, "tasks-kanban-task-muted");
 			this.task_mute.setAttribute("title", BX.message("TASKS_KANBAN_TITLE_MUTE"));
-			this.task_counter.setColor(
-				data.is_expired && !data.completed ? BX.UI.Counter.Color.DANGER : BX.UI.Counter.Color.SUCCESS
-			);
+			this.task_counter.setColor(isExpiredCounts ? BX.UI.Counter.Color.DANGER : BX.UI.Counter.Color.SUCCESS);
 		}
 	},
 
@@ -351,12 +352,16 @@ BX.Tasks.Kanban.Item.prototype = {
 		var format = BX.date.convertBitrixFormat(BX.message("FORMAT_DATETIME"));
 		var value = BX.date.format(format, data.date_deadline || data.date_day_end);
 
-		BX.calendar({
+		var calendar = BX.calendar({
 			node: BX.proxy_context,
 			value: value,
 			currentTime: value,
 			bTime: true,
-			bCompatibility: false,
+			bCompatibility: true,
+			bCategoryTimeVisibilityOption: 'tasks.bx.calendar.deadline',
+			bTimeVisibility: (
+				this.calendarSettings ? (this.calendarSettings.deadlineTimeVisibility === 'Y') : false
+			),
 			callback: function(data)
 			{
 				this.getGrid().ajax({
@@ -381,7 +386,15 @@ BX.Tasks.Kanban.Item.prototype = {
 						BX.Kanban.Utils.showErrorDialog("Error: " + error, true);
 					}.bind(this)
 				);
+			}.bind(this),
+			callback_after: function(value) {
+				BX.onCustomEvent(this.getGrid(), 'Tasks.Kanban.Item:deadlineChanged', {value: value});
 			}.bind(this)
+		});
+
+		BX.onCustomEvent(this.getGrid(), 'Tasks.Kanban.Item:deadlineChangeClick', {
+			calendar: calendar,
+			itemId: data.id
 		});
 	},
 
@@ -541,9 +554,9 @@ BX.Tasks.Kanban.Item.prototype = {
 		var taskCompletePromise = new BX.Promise();
 
 		if (
-			this.isSprintView &&
-			(this.getColumn().type === this.getColumn().finishStatus) &&
-			(draggableItem.getColumn().type !== this.getColumn().finishStatus)
+			this.isSprintView
+			&& (this.getColumn().isFinishType())
+			&& (!draggableItem.getColumn().isFinishType())
 		)
 		{
 			if (typeof BX.Tasks.Scrum === 'undefined' || typeof BX.Tasks.Scrum.ScrumDod === 'undefined')
@@ -1113,7 +1126,7 @@ BX.Tasks.Kanban.Item.prototype = {
 
 		//endregion
 
-		if (!this.isSprintView)
+		if (!this.getGrid().isScrumGrid())
 		{
 			this.track_control = BX.create("div", {
 				props: {
@@ -1166,26 +1179,17 @@ BX.Tasks.Kanban.Item.prototype = {
 			});
 			this.track_control.appendChild(this.task_complete);
 		}
-
-		//region checked button
-		if(this.getGrid().isMultiSelect())
+		else
 		{
-			this.task_check = BX.create("div", {
+			this.storyPointsNode = BX.create('div', {
 				props: {
-					className: "tasks-kanban-item-checkbox"
+					className: 'tasks-kanban-item-story-points',
+					title: 'Story Points'
 				},
-				events: {
-					click: function()
-					{
-						this.checked = !this.checked;
-						this.checked
-							? BX.addClass(this.checkedButton, "tasks-kanban-item-checkbox-checked")
-							: BX.removeClass(this.checkedButton, "tasks-kanban-item-checkbox-checked");
-					}.bind(this)
-				}
+				text: this.getDataKey('storyPoints'),
 			});
 
-			this.container.appendChild(this.task_check);
+			this.container.appendChild(this.storyPointsNode);
 		}
 
 		//endregion
@@ -1245,30 +1249,37 @@ BX.Tasks.Kanban.Item.prototype = {
 
 		this.layout.container = BX.create("div", {
 			attrs: {
-				className: this.grid.firstRenderComplete ? "main-kanban-item main-kanban-item-new" : "main-kanban-item",
+				className: "main-kanban-item",
 				"data-id": this.getId(),
 				"data-type": "item"
 			},
 			children: [
 				this.getDragTarget(),
 				this.getBodyContainer()
-			],
-			events: {
-				click: this.handleClick.bind(this)
-			}
+			]
 		});
 
 		this.makeDraggable();
 		this.makeDroppable();
 
-		BX.addCustomEvent("Kanban.Grid:onItemDragStart", function() {
+		if(this.grid.firstRenderComplete && !this.draftContainer)
+		{
+			this.layout.container.classList.add("main-kanban-item-new");
+			var cleanAnimate = function() {
+				this.layout.container.classList.remove("main-kanban-item-new");
+				this.getBodyContainer().removeEventListener("animationend", cleanAnimate);
+			}.bind(this);
+			this.getBodyContainer().addEventListener("animationend", cleanAnimate);
+		}
+
+		BX.addCustomEvent(this.getGrid(), "Kanban.Grid:onItemDragStart", function() {
 			if(this.getGrid().isRealtimeMode())
 			{
 				this.disableDropping();
 			}
 		}.bind(this));
 
-		BX.addCustomEvent("Kanban.Grid:onItemDragStop", function() {
+		BX.addCustomEvent(this.getGrid(), "Kanban.Grid:onItemDragStop", function() {
 			if(this.getGrid().isRealtimeMode())
 			{
 				this.enableDropping();

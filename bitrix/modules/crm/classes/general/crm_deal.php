@@ -527,7 +527,7 @@ class CAllCrmDeal
 			}
 			else
 			{
-				list($ufId, $ufType, $ufName) = \Bitrix\Crm\Integration\Calendar::parseUserfieldKey($arFilter['CALENDAR_FIELD']);
+				[$ufId, $ufType, $ufName] = \Bitrix\Crm\Integration\Calendar::parseUserfieldKey($arFilter['CALENDAR_FIELD']);
 
 				if (intval($ufId) > 0 && $ufType == 'resourcebooking' || is_null($ufType))
 				{
@@ -562,8 +562,8 @@ class CAllCrmDeal
 						$sqlData['FROM'][] = $ufSelectSql->GetJoin($alias.'.ID');
 					}
 
-					$sqlData['WHERE'][] = CDatabase::ForSql($ufName)." <= ".$DB->CharToDateFunction($arFilter['CALENDAR_DATE_TO'], 'SHORT');
-					$sqlData['WHERE'][] = CDatabase::ForSql($ufName)." >= ".$DB->CharToDateFunction($arFilter['CALENDAR_DATE_FROM'], 'SHORT');
+					$sqlData['WHERE'][] = $DB->ForSql($ufName)." <= ".$DB->CharToDateFunction($arFilter['CALENDAR_DATE_TO'], 'SHORT');
+					$sqlData['WHERE'][] = $DB->ForSql($ufName)." >= ".$DB->CharToDateFunction($arFilter['CALENDAR_DATE_FROM'], 'SHORT');
 				}
 			}
 		}
@@ -1268,48 +1268,19 @@ class CAllCrmDeal
 
 	public static function GetTopIDs($top, $sortType = 'ASC', $userPermissions = null)
 	{
-		$top = (int) $top;
+		$top = (int)$top;
 		if ($top <= 0)
-		{
-			return array();
-		}
-
-		$sortType = mb_strtoupper($sortType) !== 'DESC' ? 'ASC' : 'DESC';
-
-		$permissionSql = '';
-		if (!CCrmPerms::IsAdmin())
-		{
-			if (!$userPermissions)
-			{
-				$userPermissions = CCrmPerms::GetCurrentUserPermissions();
-			}
-
-			$permissionSql = self::BuildPermSql('L', 'READ', ['PERMS' => $userPermissions]);
-		}
-
-		if ($permissionSql === false)
 		{
 			return [];
 		}
 
-		$query = new Bitrix\Main\Entity\Query(Crm\DealTable::getEntity());
-		$query->addSelect('ID');
-		$query->addOrder('ID', $sortType);
-		$query->setLimit($top);
+		$sortType = mb_strtoupper($sortType) !== 'DESC' ? 'ASC' : 'DESC';
 
-		if ($permissionSql !== '')
-		{
-			$permissionSql = mb_substr($permissionSql, 7);
-			$query->where('ID', 'in', new Bitrix\Main\DB\SqlExpression($permissionSql));
-		}
-
-		$rs = $query->exec();
-		$results = [];
-		while ($field = $rs->fetch())
-		{
-			$results[] = (int) $field['ID'];
-		}
-		return $results;
+		return \Bitrix\Crm\Entity\Deal::getInstance()->getTopIDs([
+			'order' => ['ID' => $sortType],
+			'limit' => $top,
+			'userPermissions' => $userPermissions
+		]);
 	}
 
 	public static function GetTotalCount()
@@ -1492,7 +1463,7 @@ class CAllCrmDeal
 			//endregion
 
 			//region StageID, SemanticID and IsNew
-			if (!isset($arFields['STAGE_ID']))
+			if (!isset($arFields['STAGE_ID']) || (string)$arFields['STAGE_ID'] === '')
 			{
 				$arFields['STAGE_ID'] = self::GetStartStageID(
 					$categoryID,
@@ -1860,7 +1831,9 @@ class CAllCrmDeal
 			}
 
 			//region Search content index
-			Bitrix\Crm\Search\SearchContentBuilderFactory::create(CCrmOwnerType::Deal)->build($ID);
+			Bitrix\Crm\Search\SearchContentBuilderFactory::create(
+				CCrmOwnerType::Deal
+			)->build($ID, ['checkExist' => true]);
 			//endregion
 
 			if(isset($options['REGISTER_SONET_EVENT']) && $options['REGISTER_SONET_EVENT'] === true)
@@ -1981,7 +1954,8 @@ class CAllCrmDeal
 					$item,
 					[
 						'TYPE' => self::$TYPE_NAME,
-						'CATEGORY_ID' => \CCrmDeal::GetCategoryID($ID)
+						'CATEGORY_ID' => \CCrmDeal::GetCategoryID($ID),
+						'SKIP_CURRENT_USER' => ($userID !== 0),
 					]
 				);
 			}
@@ -3009,7 +2983,8 @@ class CAllCrmDeal
 			}
 
 			//region Search content index
-			Bitrix\Crm\Search\SearchContentBuilderFactory::create(CCrmOwnerType::Deal)->build($ID);
+			Bitrix\Crm\Search\SearchContentBuilderFactory::create(CCrmOwnerType::Deal)
+				->build($ID, ['checkExist' => true]);
 			//endregion
 
 			Bitrix\Crm\Timeline\DealController::getInstance()->onModify(
@@ -3211,12 +3186,12 @@ class CAllCrmDeal
 									"LOG_ID" => $logEventID,
 									"NOTIFY_EVENT" => "deal_update",
 									"NOTIFY_TAG" => "CRM|DEAL_PROGRESS|".$ID,
-									"NOTIFY_MESSAGE" => GetMessage("CRM_DEAL_PROGRESS_IM_NOTIFY", Array(
+									"NOTIFY_MESSAGE" => GetMessage("CRM_DEAL_PROGRESS_IM_NOTIFY_2", Array(
 										"#title#" => "<a href=\"".$url."\" class=\"bx-notifier-item-action\">".htmlspecialcharsbx($title)."</a>",
 										"#start_status_title#" => htmlspecialcharsbx($infos[$sonetEventFields['PARAMS']['START_STATUS_ID']]['NAME']),
 										"#final_status_title#" => htmlspecialcharsbx($infos[$sonetEventFields['PARAMS']['FINAL_STATUS_ID']]['NAME'])
 									)),
-									"NOTIFY_MESSAGE_OUT" => GetMessage("CRM_DEAL_PROGRESS_IM_NOTIFY", Array(
+									"NOTIFY_MESSAGE_OUT" => GetMessage("CRM_DEAL_PROGRESS_IM_NOTIFY_2", Array(
 										"#title#" => htmlspecialcharsbx($title),
 										"#start_status_title#" => htmlspecialcharsbx($infos[$sonetEventFields['PARAMS']['START_STATUS_ID']]['NAME']),
 										"#final_status_title#" => htmlspecialcharsbx($infos[$sonetEventFields['PARAMS']['FINAL_STATUS_ID']]['NAME'])
@@ -3268,7 +3243,8 @@ class CAllCrmDeal
 					$item,
 					[
 						'TYPE' => self::$TYPE_NAME,
-						'CATEGORY_ID' => \CCrmDeal::GetCategoryID($ID)
+						'CATEGORY_ID' => \CCrmDeal::GetCategoryID($ID),
+						'SKIP_CURRENT_USER' => ($userID !== 0),
 					]
 				);
 			}
@@ -3495,7 +3471,8 @@ class CAllCrmDeal
 				$item,
 				[
 					'TYPE' => self::$TYPE_NAME,
-					'CATEGORY_ID' => $categoryID
+					'CATEGORY_ID' => $categoryID,
+					'SKIP_CURRENT_USER' => ($iUserId !== 0),
 				]
 			);
 		}
@@ -3634,7 +3611,7 @@ class CAllCrmDeal
 		{
 			$arUser = Array();
 			$dbUsers = CUser::GetList(
-				($sort_by = 'last_name'), ($sort_dir = 'asc'),
+				'last_name', 'asc',
 				array('ID' => implode('|', array(intval($arFieldsOrig['ASSIGNED_BY_ID']), intval($arFieldsModif['ASSIGNED_BY_ID'])))),
 				array('FIELDS' => array('ID', 'NAME', 'SECOND_NAME', 'LAST_NAME', 'LOGIN', 'TITLE', 'EMAIL'))
 			);
@@ -3843,6 +3820,55 @@ class CAllCrmDeal
 		return $arMsg;
 	}
 
+	public static function addProductRows(
+		int $ID,
+		array $newRows,
+		array $options = [],
+		$checkPerms = true,
+		$regEvent = true,
+		$syncOwner = true
+	)
+	{
+		$rows = self::LoadProductRows($ID);
+		if (!is_array($rows))
+		{
+			return false;
+		}
+
+		$sort = self::getMaxProductDealSort($rows);
+		foreach ($newRows as $newRow)
+		{
+			$sort += 10;
+
+			$newRow['SORT'] = $sort;
+
+			$rows[] = $newRow;
+		}
+
+		return \CCrmDeal::SaveProductRows($ID, $rows, $checkPerms, $regEvent, $syncOwner);
+	}
+
+	/**
+	 * @param array $products
+	 * @return int
+	 */
+	private static function getMaxProductDealSort(array $products): int
+	{
+		$sort = 0;
+
+		foreach ($products as $product)
+		{
+			if ($product['SORT'] <= $sort)
+			{
+				continue;
+			}
+
+			$sort = $product['SORT'];
+		}
+
+		return $sort;
+	}
+
 	public static function LoadProductRows($ID)
 	{
 		return CCrmProductRow::LoadRows('D', $ID);
@@ -3915,9 +3941,39 @@ class CAllCrmDeal
 			if (!$entity::isManualOpportunity($ID))
 			{
 				$arFields['OPPORTUNITY'] = isset($arTotalInfo['OPPORTUNITY']) ? $arTotalInfo['OPPORTUNITY'] : 0.0;
+
+				$arFields['OPPORTUNITY'] += static::calculateDeliveryTotal($ID);
 			}
 			$entity->Update($ID, $arFields);
 		}
+	}
+
+	/**
+	 * Collects sum of shipments from orders related to deal $id
+	 * @param int $id Deal ID
+	 * @return int|float
+	 */
+	public static function calculateDeliveryTotal($id)
+	{
+		$total = 0;
+
+		$dbRes = Crm\Order\DealBinding::getList([
+			'select' => ['ORDER_ID'],
+			'filter' => [
+				'=DEAL_ID' => $id
+			]
+		]);
+
+		foreach ($dbRes as $binding)
+		{
+			$order = Crm\Order\Order::load($binding['ORDER_ID']);
+			if ($order)
+			{
+				$total += $order->getShipmentCollection()->getPriceDelivery();
+			}
+		}
+
+		return $total;
 	}
 
 	public static function GetCategoryID($ID)
@@ -4627,41 +4683,62 @@ class CAllCrmDeal
 
 		$successStageID = DealCategory::prepareStageID($newCategoryID, 'WON');
 		$failureStageID = DealCategory::prepareStageID($newCategoryID, 'LOSE');
-		$processStageID = '';
-		//Looking for first process stage ID
-		foreach(array_keys(self::GetStages($newCategoryID)) as $statusID)
+		$processStageID = $options['PREFERRED_STAGE_ID'] ?? '';
+		$categoryStages = self::GetStages($newCategoryID);
+		if (!$processStageID || !array_key_exists($processStageID, $categoryStages))
 		{
-			if($successStageID !== $statusID)
+			//Looking for first process stage ID
+			foreach (array_keys($categoryStages) as $statusID)
 			{
-				$processStageID = $statusID;
-				break;
+				if ($successStageID !== $statusID)
+				{
+					$processStageID = $statusID;
+					break;
+				}
+			}
+
+			if($processStageID === '')
+			{
+				$processStageID = DealCategory::prepareStageID($newCategoryID, 'NEW');
 			}
 		}
 
-		if($processStageID === '')
-		{
-			$processStageID = DealCategory::prepareStageID($newCategoryID, 'NEW');
-		}
-
 		$semanticID = self::GetSemanticID($stageID, $categoryID);
-		if($semanticID === Bitrix\Crm\PhaseSemantics::SUCCESS)
+		$newStageID = $processStageID;
+		if (!isset($options['PREFERRED_STAGE_ID']))
 		{
-			$newStageID = $successStageID;
+			if ($semanticID === Bitrix\Crm\PhaseSemantics::SUCCESS)
+			{
+				$newStageID = $successStageID;
+			}
+			elseif ($semanticID === Bitrix\Crm\PhaseSemantics::FAILURE)
+			{
+				$newStageID = $failureStageID;
+			}
 		}
-		elseif($semanticID === Bitrix\Crm\PhaseSemantics::FAILURE)
-		{
-			$newStageID = $failureStageID;
-		}
-		else//if($semanticID === Bitrix\Crm\PhaseSemantics::PROCESS)
-		{
-			$newStageID = $processStageID;
-		}
+		$newStageSemanticID = self::GetSemanticID($newStageID, $newCategoryID);
 
 		$connection = \Bitrix\Main\Application::getConnection();
+		$sqlHelper = $connection->getSqlHelper();
+
+		$escapedCategoryId = (int)$newCategoryID;
+		$escapedStageId = $sqlHelper->forSql($newStageID);
+		$escapedNewStageSemanticId = $sqlHelper->forSql($newStageSemanticID);
 		$now = $connection->getSqlHelper()->getCurrentDateTimeFunction();
-		$connection->query(
-			"UPDATE b_crm_deal SET CATEGORY_ID = {$newCategoryID}, STAGE_ID = '{$newStageID}', DATE_MODIFY = {$now} WHERE ID = {$ID}"
-		);
+
+		$sql = "UPDATE b_crm_deal SET "
+			. " CATEGORY_ID = {$escapedCategoryId},"
+			. " STAGE_ID = '{$escapedStageId}',"
+			. (
+				($semanticID != $newStageSemanticID)
+					? " STAGE_SEMANTIC_ID='{$escapedNewStageSemanticId}', "
+					: ''
+			)
+			. " DATE_MODIFY = {$now} "
+			. " WHERE ID = {$ID}"
+		;
+
+		$connection->query($sql);
 
 		//region Update Permissions
 		CCrmPerms::DeleteEntityAttr(DealCategory::convertToPermissionEntityType($categoryID), $ID);
@@ -5159,6 +5236,10 @@ class CAllCrmDeal
 		global $DB;
 		$DB->Query("UPDATE b_crm_deal SET LEAD_ID = NULL WHERE LEAD_ID = {$leadID}", false, 'FILE: '.__FILE__.'<br /> LINE: '.__LINE__);
 	}
+	/**
+	 * @deprecated
+	 * @param array $fields
+	 */
 	public static function ProcessStatusModification(array $fields)
 	{
 		$entityID = isset($fields['ENTITY_ID']) ? $fields['ENTITY_ID'] : '';
@@ -5179,6 +5260,11 @@ class CAllCrmDeal
 			);
 		}
 	}
+
+	/**
+	 * @deprecated
+	 * @param array $fields
+	 */
 	public static function ProcessStatusDeletion(array $fields)
 	{
 		$entityID = isset($fields['ENTITY_ID']) ? $fields['ENTITY_ID'] : '';

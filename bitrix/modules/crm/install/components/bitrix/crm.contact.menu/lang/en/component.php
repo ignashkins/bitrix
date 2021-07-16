@@ -1,7 +1,9 @@
-<?
+<?php
 $MESS["CONTACT_BUILD_REQUISITES"] = "Create contact details";
 $MESS["CONTACT_BUILD_REQUISITES_TITLE"] = "Create contact details";
 $MESS["CONTACT_DEDUPE"] = "Duplicate control";
+$MESS["CONTACT_DEDUPE_AUTOSEARCH"] = "Find and merge duplicates";
+$MESS["CONTACT_DEDUPE_HELP"] = "How do I handle duplicate entities?";
 $MESS["CONTACT_DEDUPE_TITLE"] = "Duplicate control";
 $MESS["CRM_CONTACT_ADD"] = "Add";
 $MESS["CRM_CONTACT_ADD_ACTIVITY"] = "Add";
@@ -32,7 +34,6 @@ $MESS["CRM_CONTACT_DELETE_DLG_TITLE"] = "Delete contact";
 $MESS["CRM_CONTACT_DELETE_TITLE"] = "Delete contact";
 $MESS["CRM_CONTACT_EDIT"] = "Edit";
 $MESS["CRM_CONTACT_EDIT_TITLE"] = "Edit contact";
-$MESS["CRM_CONTACT_EXPORT"] = "Export";
 $MESS["CRM_CONTACT_EXPORT_CARDDAV"] = "Export using CardDAV";
 $MESS["CRM_CONTACT_EXPORT_CARDDAV_TITLE"] = "Export contacts using CardDAV";
 $MESS["CRM_CONTACT_EXPORT_CSV"] = "Export to CSV";
@@ -89,4 +90,3 @@ $MESS["CRM_TASK_TAG"] = "crm";
 $MESS["CRM_TASK_TITLE_PREFIX"] = "CRM:";
 $MESS["DOCUMENT_BUTTON_TEXT"] = "Documents";
 $MESS["DOCUMENT_BUTTON_TITLE"] = "Create document based on contact";
-?>

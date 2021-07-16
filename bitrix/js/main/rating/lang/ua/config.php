@@ -1,6 +1,7 @@
 <?php
 $MESS["RATING_LIKE_EMOTION_ANGRY"] = "Злюсь";
 $MESS["RATING_LIKE_EMOTION_CRY"] = "Засмучуюсь";
+$MESS["RATING_LIKE_EMOTION_FACEPALM"] = "Розчарований";
 $MESS["RATING_LIKE_EMOTION_KISS"] = "Захоплююсь";
 $MESS["RATING_LIKE_EMOTION_LAUGH"] = "Сміюсь";
 $MESS["RATING_LIKE_EMOTION_LIKE"] = "Подобається";

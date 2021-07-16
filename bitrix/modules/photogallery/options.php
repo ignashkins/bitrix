@@ -5,12 +5,12 @@ if ($RIGHTS > "D"):
 	$counter = 0;
 	$bVarsFromForm = false;
 
-	$arSights = @unserialize(COption::GetOptionString("photogallery", "pictures"));
+	$arSights = @unserialize(COption::GetOptionString("photogallery", "pictures"), ['allowed_classes' => false]);
 	if (!is_array($arSights))
 		$arSights = array();
 
 	$arLangs = array();
-	$db_res = CLanguage::GetList($by, $order, array());
+	$db_res = CLanguage::GetList();
 	while($res = $db_res->Fetch())
 		$arLangs[$res["LID"]] = $res;
 	//*****************************************************************************************************************

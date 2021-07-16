@@ -74,6 +74,7 @@ Class intranet extends CModule
 		RegisterModuleDependences("main", "OnAfterUserAuthorize", "intranet", "CIntranetEventHandlers", "OnAfterUserAuthorize");
 		RegisterModuleDependences("forum", "onAfterMessageAdd", "intranet", "CIntranetEventHandlers", "onAfterForumMessageAdd");
 		RegisterModuleDependences("forum", "onAfterMessageDelete", "intranet", "CIntranetEventHandlers", "onAfterForumMessageDelete");
+		RegisterModuleDependences("main", "OnAfterUserTypeAdd", "intranet", "CIntranetEventHandlers", "OnAfterUserTypeAdd");
 
 		RegisterModuleDependences("iblock", "OnBeforeIBlockSectionUpdate", "intranet", "CIntranetEventHandlers", "OnBeforeIBlockSectionUpdate");
 		RegisterModuleDependences("iblock", "OnBeforeIBlockSectionAdd", "intranet", "CIntranetEventHandlers", "OnBeforeIBlockSectionAdd");
@@ -594,7 +595,7 @@ Class intranet extends CModule
 		);
 
 		$arLanguages = array();
-		$rsLanguage = CLanguage::GetList($by, $order, array());
+		$rsLanguage = CLanguage::GetList();
 		while($arLanguage = $rsLanguage->Fetch())
 			$arLanguages[] = $arLanguage["LID"];
 
@@ -661,7 +662,7 @@ Class intranet extends CModule
 
 		if (empty($arLangList))
 		{
-			$rsLangs = CLanguage::GetList($by="LID", $order="ASC", array("ACTIVE" => "Y"));
+			$rsLangs = CLanguage::GetList('lid', 'asc', array("ACTIVE" => "Y"));
 			while ($arLang = $rsLangs->Fetch())
 			{
 				$arLangList[] = $arLang['LID'];

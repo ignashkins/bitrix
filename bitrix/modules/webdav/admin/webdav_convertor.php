@@ -83,7 +83,7 @@ class CWebDavConvertor
 	protected function getIblockIdsWithUserFiles()
 	{
 		$userLibOptions = COption::GetOptionString('webdav', 'user_files', array());
-        $userLibOptions = @unserialize($userLibOptions, false);
+        $userLibOptions = @unserialize($userLibOptions, ['allowed_classes' => false]);
 
 		if (!is_array($userLibOptions))
 		{
@@ -106,7 +106,7 @@ class CWebDavConvertor
 	protected function getIblockIdsWithGroupFiles()
 	{
 		$groupLibOptions = COption::GetOptionString('webdav', 'group_files', array());
-        $groupLibOptions = @unserialize($groupLibOptions, false);
+        $groupLibOptions = @unserialize($groupLibOptions, ['allowed_classes' => false]);
 
 		if (!is_array($groupLibOptions))
 		{

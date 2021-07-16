@@ -3,6 +3,11 @@
 require($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/include/prolog_before.php");
 require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/main/interface/admin_lib.php");
 
+if (!defined('ADMIN_THEME_ID'))
+{
+	define('ADMIN_THEME_ID', '.default');
+}
+
 $file = trim(preg_replace("'[\\\\/]+'", "/", (dirname(__FILE__)."/lang/".LANGUAGE_ID."/iblock_settings.php")));
 __IncludeLang($file);
 $iblock_id = intval($_REQUEST["IBLOCK_ID"]);
@@ -279,7 +284,7 @@ $popupWindow->StartContent();
 	</tr>
 <?
 	$arResult["GROUPS"] = array(); 
-	$db_res = CGroup::GetList($by="sort", $order="asc", Array("ID"=>"~2"));
+	$db_res = CGroup::GetList("sort", "asc", Array("ID"=>"~2"));
 	if ($db_res && $res = $db_res->Fetch())
 	{
 		do 

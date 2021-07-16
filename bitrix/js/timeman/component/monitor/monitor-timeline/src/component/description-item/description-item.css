@@ -1,0 +1,23 @@
+.bx-monitor-timeline-description {
+    display: flex;
+    justify-content: space-between;
+}
+
+.bx-monitor-timeline-description-item {
+    display: flex;
+}
+
+.bx-monitor-timeline-description-dot {
+    height: 8px;
+    width: 8px;
+    margin: 8px;
+    border-radius: 50%;
+}
+
+.bx-monitor-timeline-description-title {
+    display: flex;
+    align-items: center;
+    color: #535c69;
+    font: 13px/22px "Helvetica Neue", Helvetica, Arial, sans-serif;
+    margin-right: 16px;
+}

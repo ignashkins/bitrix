@@ -11,21 +11,29 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true)
 /** @var array $messages */
 /** @var string $filterId */
 
+use Bitrix\Main\UI\Extension;
 use Bitrix\Main\Web\Json;
 
 $isKanban = true;
 
 require_once __DIR__.'/header.php';
 
+if ($arResult['frameMode'] === 'Y')
+{
+	require_once __DIR__.'/slider_crutch.php';
+}
+
+Extension::load('tasks.scrum.dod');
+
 $APPLICATION->IncludeComponent(
 	'bitrix:tasks.kanban',
-	'.default',
+	'scrum',
 	[
-		'INCLUDE_INTERFACE_HEADER' => 'Y',
 		'PERSONAL' => 'N',
 		'TIMELINE_MODE' => 'N',
 		'KANBAN_SHOW_VIEW_MODE'=>'N',
 		'SPRINT_ID' => $arResult['completedSprintId'],
+		'IS_COMPLETED_SPRINT' => 'Y',
 		'GROUP_ID' => $arParams['GROUP_ID'],
 		'ITEMS_COUNT' => '50',
 		'PAGE_VAR' => $arParams['PAGE_VAR'],
@@ -63,16 +71,24 @@ $APPLICATION->IncludeComponent(
 ?>
 
 <script>
-	BX.ready(function() {
-		BX.message(<?=Json::encode($messages)?>);
-		new BX.Tasks.Scrum.Entry({
-			signedParameters: '<?=$this->getComponent()->getSignedParameters()?>',
-			debugMode: '<?=$arResult['debugMode']?>',
-			views: <?=Json::encode($arResult['views'])?>,
-			activeView: 'completedSprint',
-			completedSprint: <?=Json::encode($arResult['completedSprint'])?>,
-			filterId: '<?=$filterId?>',
-			sprints: <?=Json::encode($arResult['sprints'])?>
+	BX.ready(function()
+	{
+		BX.message(<?= Json::encode($messages) ?>);
+		BX.Tasks.Scrum.Entry = new BX.Tasks.Scrum.Entry({
+			viewName: 'completedSprint',
+			signedParameters: '<?= $this->getComponent()->getSignedParameters() ?>',
+			debugMode: '<?= $arResult['debugMode'] ?>',
+			isOwnerCurrentUser: '<?= ($arResult['isOwnerCurrentUser'] ? 'Y' : 'N') ?>',
+			userId: '<?= (int)$arParams['USER_ID'] ?>',
+			groupId: '<?= (int)$arParams['GROUP_ID'] ?>',
+			views: <?= Json::encode($arResult['views']) ?>,
+			completedSprint: <?= Json::encode($arResult['completedSprint']) ?>,
+			filterId: '<?= $filterId ?>',
+			sprints: <?= Json::encode($arResult['sprints']) ?>
 		});
+		BX.Tasks.Scrum.Entry.renderTabsTo(document.getElementById('tasks-scrum-switcher'));
+		BX.Tasks.Scrum.Entry.renderCountersTo(document.getElementById('tasks-scrum-counters-container'));
+		BX.Tasks.Scrum.Entry.renderSprintStatsTo(document.getElementById('tasks-scrum-sprint-stats'));
+		BX.Tasks.Scrum.Entry.renderButtonsTo(document.getElementById('tasks-scrum-buttons-container'));
 	});
 </script>

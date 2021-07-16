@@ -57,9 +57,9 @@ $arTooltipPropertiesDefault = serialize(array(
 ));
 
 if (!array_key_exists("SHOW_FIELDS_TOOLTIP", $arParams))
-	$arParams["SHOW_FIELDS_TOOLTIP"] = unserialize(COption::GetOptionString("socialnetwork", "tooltip_fields", $arTooltipFieldsDefault));
+	$arParams["SHOW_FIELDS_TOOLTIP"] = unserialize(COption::GetOptionString("socialnetwork", "tooltip_fields", $arTooltipFieldsDefault), ["allowed_classes" => false]);
 if (!array_key_exists("USER_PROPERTY_TOOLTIP", $arParams))
-	$arParams["USER_PROPERTY_TOOLTIP"] = unserialize(COption::GetOptionString("socialnetwork", "tooltip_properties", $arTooltipPropertiesDefault));
+	$arParams["USER_PROPERTY_TOOLTIP"] = unserialize(COption::GetOptionString("socialnetwork", "tooltip_properties", $arTooltipPropertiesDefault), ["allowed_classes" => false]);
 
 if (
 	!array_key_exists("USER_PROPERTY", $arParams)
@@ -129,7 +129,7 @@ else
 
 	$arFilter = array(
 		'ACTIVE' => 'Y',
-		'!EXTERNAL_AUTH_ID' => array('replica', 'email', 'bot', 'imconnector'),
+		'!EXTERNAL_AUTH_ID' => \Bitrix\Main\UserTable::getExternalUserTypes(),
 	);
 
 	if ($arResult['DEPARTMENT'] > 0 && (!CModule::IncludeModule('extranet') || !CExtranet::IsExtranetSite()))
@@ -169,7 +169,7 @@ else
 	if (in_array('*', $arSelectFields) || in_array('UF_*', $arSelectFields))
 	{
 		$dbUsers = CUser::getList(
-			$by = 'CURRENT_BIRTHDAY', $order = 'ASC',
+			'CURRENT_BIRTHDAY', 'ASC',
 			$arFilter,
 			array(
 				'SELECT'     => $arRequiredFields,
@@ -193,7 +193,7 @@ else
 		if (!empty($arResult['USERS']))
 		{
 			$dbUsers = CUser::getList(
-				$by = 'ID', $order = 'DESC',
+				'ID', 'DESC',
 				array(
 					'ID' => join('|', $arResult['USERS'])
 				),
@@ -212,7 +212,7 @@ else
 	else
 	{
 		$dbUsers = CUser::getList(
-			$by = 'CURRENT_BIRTHDAY', $order = 'ASC',
+			'CURRENT_BIRTHDAY', 'ASC',
 			$arFilter,
 			array(
 				'SELECT'     => $arSelectFields,

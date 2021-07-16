@@ -470,6 +470,11 @@ this.BX = this.BX || {};
 	      return BX.prop.getString(this._data, 'presetId', "0");
 	    }
 	  }, {
+	    key: "getPresetCountryId",
+	    value: function getPresetCountryId() {
+	      return BX.prop.getString(this._data, 'presetCountryId', "0");
+	    }
+	  }, {
 	    key: "getBankDetails",
 	    value: function getBankDetails() {
 	      return BX.prop.getArray(this._data, 'bankDetails', []);
@@ -603,6 +608,11 @@ this.BX = this.BX || {};
 	    key: "setPresetId",
 	    value: function setPresetId(presetId) {
 	      this._data.presetId = presetId;
+	    }
+	  }, {
+	    key: "setPresetCountryId",
+	    value: function setPresetCountryId(presetCountryId) {
+	      this._data.presetCountryId = presetCountryId;
 	    }
 	  }, {
 	    key: "setSelected",
@@ -753,7 +763,8 @@ this.BX = this.BX || {};
 	      this._entityId = BX.prop.getInteger(settings, 'entityId', 0);
 	      this._contextId = BX.prop.getString(settings, 'contextId', "");
 	      this._requisiteEditUrl = BX.prop.getString(settings, 'requisiteEditUrl', "");
-	      main_core_events.EventEmitter.subscribe('onLocalStorageSet', this.onExternalEvent.bind(this));
+	      this._onExternalEventListener = this.onExternalEvent.bind(this);
+	      main_core_events.EventEmitter.subscribe('onLocalStorageSet', this._onExternalEventListener);
 	    }
 	  }, {
 	    key: "setRequisiteList",
@@ -917,6 +928,11 @@ this.BX = this.BX || {};
 	      return this._mode === BX.UI.EntityEditorMode.view;
 	    }
 	  }, {
+	    key: "release",
+	    value: function release() {
+	      main_core_events.EventEmitter.unsubscribe('onLocalStorageSet', this._onExternalEventListener);
+	    }
+	  }, {
 	    key: "onExternalEvent",
 	    value: function onExternalEvent(event) {
 	      var dataArray = event.getData();
@@ -956,6 +972,10 @@ this.BX = this.BX || {};
 
 	          if (main_core.Type.isString(value.presetId)) {
 	            requisite.setPresetId(value.presetId);
+	          }
+
+	          if (main_core.Type.isString(value.presetCountryId)) {
+	            requisite.setPresetCountryId(value.presetCountryId);
 	          }
 
 	          if (this.isViewMode()) {
@@ -1073,6 +1093,17 @@ this.BX = this.BX || {};
 	      main_core_events.EventEmitter.subscribe(this._editor, 'onFieldInit', this.onFieldInit.bind(this));
 	      this.initRequisiteEditor();
 	      this.initRequisiteList();
+	      var selectedItem = BX.prop.getObject(this.getConfig(), "requisiteBinding", {});
+
+	      if (!main_core.Type.isUndefined(selectedItem.REQUISITE_ID) && !main_core.Type.isUndefined(selectedItem.BANK_DETAIL_ID)) {
+	        var requisite = this._requisiteList.getByRequisiteId(selectedItem.REQUISITE_ID);
+
+	        if (requisite) {
+	          var bankDetail = selectedItem.BANK_DETAIL_ID > 0 ? requisite.getBankDetailByBankDetailId(selectedItem.BANK_DETAIL_ID) : null;
+
+	          this._requisiteList.setSelected(this._requisiteList.indexOf(requisite), bankDetail ? requisite.getBankDetails().indexOf(bankDetail) : null);
+	        }
+	      }
 	    }
 	  }, {
 	    key: "initRequisiteList",
@@ -1106,10 +1137,12 @@ this.BX = this.BX || {};
 	    key: "initAddressField",
 	    value: function initAddressField() {
 	      if (this._addressField) {
+	        var countryId = 0;
 	        var addressList = {};
 	        var selectedRequisite = this._requisiteList ? this._requisiteList.getSelected() : null;
 
 	        if (selectedRequisite) {
+	          countryId = selectedRequisite.getPresetCountryId();
 	          var requisiteAddressList = selectedRequisite.getAddressList();
 
 	          for (var type in requisiteAddressList) {
@@ -1118,6 +1151,8 @@ this.BX = this.BX || {};
 	            }
 	          }
 	        }
+
+	        this._addressField.setCountryId(countryId);
 
 	        this._addressField.setAddressList(addressList);
 	      }
@@ -1466,6 +1501,13 @@ this.BX = this.BX || {};
 	      return this._requisiteEditor.getSignRequisitePromise(requisite);
 	    }
 	  }, {
+	    key: "release",
+	    value: function release() {
+	      if (this._requisiteEditor) {
+	        this._requisiteEditor.release();
+	      }
+	    }
+	  }, {
 	    key: "onFieldInit",
 	    value: function onFieldInit(event) {
 	      var eventData = event.getData();
@@ -1565,6 +1607,12 @@ this.BX = this.BX || {};
 
 	      if (presetId > 0) {
 	        requisite.setPresetId(presetId);
+	      }
+
+	      var presetCountryId = BX.prop.getInteger(formData, 'PRESET_COUNTRY_ID', 0);
+
+	      if (presetCountryId > 0) {
+	        requisite.setPresetCountryId(presetCountryId);
 	      }
 
 	      if (this._requisiteList.indexOf(requisite) < 0) {
@@ -1780,6 +1828,9 @@ this.BX = this.BX || {};
 
 	    babelHelpers.classCallCheck(this, PresetMenu);
 	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(PresetMenu).call(this));
+
+	    _this.setEventNamespace('BX.Crm.RequisitePresetMenu');
+
 	    _this._isShown = false;
 	    _this.menuId = id;
 	    _this.presetList = presetList;
@@ -3248,9 +3299,17 @@ this.BX = this.BX || {};
 	          var addressValue = defaultRequisite ? defaultRequisite.getAddressList() : null;
 
 	          if (!main_core.Type.isNull(addressValue) && Object.keys(addressValue).length) {
+	            var countryId = 0;
+
+	            if (defaultRequisite) {
+	              countryId = parseInt(defaultRequisite.getPresetCountryId());
+	            }
+
 	            this._addressField = crm_entityEditor_field_address_base.EntityEditorBaseAddressField.create(this._entityInfo.getId(), {
 	              showFirstItemOnly: true,
-	              showAddressTypeInViewMode: true
+	              showAddressTypeInViewMode: true,
+	              addressZoneConfig: BX.prop.getObject(this._addressConfig, "addressZoneConfig", {}),
+	              countryId: countryId
 	            });
 
 	            this._addressField.setMultiple(true);
@@ -3310,6 +3369,10 @@ this.BX = this.BX || {};
 	        this._tooltip.close();
 
 	        this._tooltip.removeDebouncedEvents();
+	      }
+
+	      if (this._requisiteEditor) {
+	        this._requisiteEditor.release();
 	      }
 	    }
 	  }, {
@@ -3482,6 +3545,8 @@ this.BX = this.BX || {};
 
 	      this._requisiteList.setSelected(eventData.id, eventData.bankDetailId);
 
+	      this.doAddressLayout();
+
 	      var newSelectedRequisite = this._requisiteList.getSelected();
 
 	      if (newSelectedRequisite) {
@@ -3556,6 +3621,9 @@ this.BX = this.BX || {};
 	exports.EntityEditorRequisiteAddressField = EntityEditorRequisiteAddressField;
 	exports.EntityEditorRequisiteController = EntityEditorRequisiteController;
 	exports.EntityEditorClientRequisites = EntityEditorClientRequisites;
+	exports.EntityEditorRequisiteTooltip = EntityEditorRequisiteTooltip;
+	exports.RequisiteList = RequisiteList;
+	exports.EntityEditorRequisiteEditor = EntityEditorRequisiteEditor;
 
 }((this.BX.Crm = this.BX.Crm || {}),BX.Crm,BX.Main,BX.UI.Dialogs,BX.Crm,BX,BX,BX.Crm,BX.Event));
 //# sourceMappingURL=requisite.bundle.js.map

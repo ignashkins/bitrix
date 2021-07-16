@@ -4,6 +4,7 @@ if(!defined('CACHED_b_crm_status')) define('CACHED_b_crm_status', 360000);
 
 IncludeModuleLangFile(__FILE__);
 
+use Bitrix\Crm\Attribute\FieldAttributeManager;
 use Bitrix\Crm\StatusTable;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Crm\Category\DealCategory;
@@ -14,7 +15,6 @@ class CCrmStatus
 
 	protected $entityId = '';
 	private static $FIELD_INFOS;
-	private static $STATUSES = [];
 
 	private $LAST_ERROR = '';
 
@@ -75,7 +75,7 @@ class CCrmStatus
 				],
 				'SEMANTICS' => [
 					'TYPE' => 'char',
-					'ATTRIBUTES' => [CCrmFieldInfoAttr::ReadOnly]
+					'ATTRIBUTES' => [CCrmFieldInfoAttr::Immutable]
 				],
 				'EXTRA' => ['TYPE' => 'crm_status_extra'],
 			];
@@ -107,7 +107,8 @@ class CCrmStatus
 			'STATUS' => [
 				'ID' =>'STATUS',
 				'NAME' => GetMessage('CRM_STATUS_TYPE_STATUS'),
-				'SEMANTIC_INFO' => self::GetLeadStatusSemanticInfo()
+				'SEMANTIC_INFO' => self::GetLeadStatusSemanticInfo(),
+				'ENTITY_TYPE_ID' => \CCrmOwnerType::Lead,
 			],
 			'SOURCE' => ['ID' =>'SOURCE', 'NAME' => GetMessage('CRM_STATUS_TYPE_SOURCE')],
 			'CONTACT_TYPE' => ['ID' =>'CONTACT_TYPE', 'NAME' => GetMessage('CRM_STATUS_TYPE_CONTACT_TYPE')],
@@ -131,7 +132,9 @@ class CCrmStatus
 			$arEntityType['DEAL_STAGE'] = [
 				'ID' =>'DEAL_STAGE',
 				'NAME' => GetMessage('CRM_STATUS_TYPE_DEAL_STAGE'),
-				'SEMANTIC_INFO' => self::GetDealStageSemanticInfo()
+				'SEMANTIC_INFO' => self::GetDealStageSemanticInfo(),
+				'FIELD_ATTRIBUTE_SCOPE' => FieldAttributeManager::getEntityScopeByCategory(),
+				'ENTITY_TYPE_ID' => CCrmOwnerType::Deal,
 			];
 		}
 
@@ -154,7 +157,53 @@ class CCrmStatus
 			$arEntityType['PRODUCT'] = ['ID' => 'PRODUCT', 'NAME' => GetMessage('CRM_STATUS_TYPE_PRODUCT')];
 		}
 
+		$arEntityType = array_merge(
+			$arEntityType,
+			static::getDynamicEntities()
+		);
+
 		return $arEntityType;
+	}
+
+	protected static function getDynamicEntities(): array
+	{
+		$typesMap = \Bitrix\Crm\Service\Container::getInstance()->getDynamicTypesMap();
+		try
+		{
+			$typesMap->load([
+				'isLoadStages' => false,
+			]);
+		}
+		catch (Exception $exception)
+		{
+		}
+		catch (Error $error)
+		{
+		}
+
+		foreach ($typesMap->getTypes() as $type)
+		{
+			foreach ($typesMap->getCategories($type->getEntityTypeId()) as $category)
+			{
+				$statusEntityId = $typesMap->getStagesEntityId($type->getEntityTypeId(), $category->getId());
+				$entities[$statusEntityId] = [
+					'ID' => $statusEntityId,
+					'NAME' => $type->getTitle() . '(' . $category->getName() . ')',
+					'SEMANTIC_INFO' => [],
+					'PREFIX' => static::getDynamicEntityStatusPrefix($type->getEntityTypeId(), $category->getId()),
+					'FIELD_ATTRIBUTE_SCOPE' => FieldAttributeManager::getEntityScopeByCategory($category->getId()),
+					'ENTITY_TYPE_ID' => $type->getEntityTypeId(),
+					'IS_ENABLED' => $type->getIsStagesEnabled(),
+				];
+			}
+		}
+
+		return $entities ?? [];
+	}
+
+	public static function getDynamicEntityStatusPrefix(int $entityTypeId, int $categoryId): string
+	{
+		return 'DT' . $entityTypeId . '_' . $categoryId;
 	}
 
 	/**
@@ -168,25 +217,15 @@ class CCrmStatus
 			'COLOR' => ['TYPE' => 'string']
 		];
 	}
+
 	public static function IsDepricatedTypesEnabled(): bool
 	{
 		return mb_strtoupper(COption::GetOptionString('crm', 'enable_depricated_statuses', 'N')) !== 'N';
 	}
+
 	public static function EnableDepricatedTypes($enable)
 	{
 		return COption::SetOptionString('crm', 'enable_depricated_statuses', $enable ? 'Y' : 'N');
-	}
-	private static function GetCachedStatuses($entityId): ?array
-	{
-		return self::$STATUSES[$entityId] ?? null;
-	}
-	private static function SetCachedStatuses($entityId, $items): void
-	{
-		self::$STATUSES[$entityId] = $items;
-	}
-	private static function ClearCachedStatuses($entityId): void
-	{
-		unset(self::$STATUSES[$entityId]);
 	}
 
 	protected function getStatusPrefix(): string
@@ -200,9 +239,12 @@ class CCrmStatus
 	{
 		$statusId = $this->removePrefixFromStatusId($statusId);
 
-		$prefix = $this->getStatusPrefix();
+		return static::addKnownPrefixToStatusId($statusId, $this->getStatusPrefix());
+	}
 
-		return ($prefix ? $this->getStatusPrefix() . static::PREFIX_SEPARATOR : '') . $statusId;
+	public static function addKnownPrefixToStatusId(string $statusId, ?string $prefix): string
+	{
+		return ($prefix ? $prefix . static::PREFIX_SEPARATOR : '') . $statusId;
 	}
 
 	protected function removePrefixFromStatusId(string $statusId): string
@@ -212,6 +254,7 @@ class CCrmStatus
 		{
 			return $statusId;
 		}
+
 		return mb_substr($statusId, $prefixPos + 1);
 	}
 
@@ -282,9 +325,8 @@ class CCrmStatus
 			'SYSTEM'	=> $arFields['SYSTEM'] === 'Y'? 'Y': 'N',
 			'CATEGORY_ID' => $categoryId,
 			'COLOR' => $arFields['COLOR'],
-			'SEMANTICS' => $arFields['SEMANTICS'],
+			'SEMANTICS' => $arFields['SEMANTICS'] ?? null,
 		]);
-		self::ClearCachedStatuses($this->entityId);
 
 		if(!$result->isSuccess())
 		{
@@ -366,21 +408,14 @@ class CCrmStatus
 			$this->LAST_ERROR = $result->getErrorMessages()[0];
 		}
 
-		$fields = $this->GetStatusById($ID);
-		if(is_array($fields))
-		{
-			CCrmLead::ProcessStatusModification($fields);
-			CCrmDeal::ProcessStatusModification($fields);
-		}
-
-		self::ClearCachedStatuses($this->entityId);
-
 		return $ID;
 	}
 
 	/**
 	 * Deletes status by id.
 	 *
+	 * @deprecated
+	 * @see StatusTable::delete() instead
 	 * @param int $ID
 	 * @return bool
 	 */
@@ -388,19 +423,7 @@ class CCrmStatus
 	{
 		$this->LAST_ERROR = '';
 
-		$fields = StatusTable::getById($ID)->fetch();
-		if(!is_array($fields))
-		{
-			$this->LAST_ERROR = GetMessage('CRM_STATUS_ERR_NOT_FOUND');
-			return false;
-		}
-
-		CCrmLead::ProcessStatusDeletion($fields);
-		CCrmDeal::ProcessStatusDeletion($fields);
-
 		$result = StatusTable::delete($ID);
-
-		self::ClearCachedStatuses($this->entityId);
 
 		if(!$result->isSuccess())
 		{
@@ -430,8 +453,8 @@ class CCrmStatus
 			for ($i=0, $ic=count($filter_keys); $i<$ic; $i++)
 			{
 				$val = $arFilter[$filter_keys[$i]];
-				if ($val == '' || $val=='NOT_REF') continue;
-				switch(mb_strtoupper($filter_keys[$i]))
+				if ((string)$val == '' || (string)$val=='NOT_REF') continue;
+				switch(strtoupper($filter_keys[$i]))
 				{
 					case 'ID':
 						$arSqlSearch[] = "CS.ID = '".$DB->ForSql($val)."'";
@@ -648,22 +671,7 @@ class CCrmStatus
 	 */
 	public static function loadStatusesByEntityId(string $entityId): array
 	{
-		$result = [];
-
-		$list = StatusTable::getList([
-			'filter' => [
-				'=ENTITY_ID' => $entityId,
-			],
-			'order' => [
-				'SORT' => 'ASC',
-			],
-		]);
-		while($status = $list->fetch())
-		{
-			$result[$status['STATUS_ID']] = $status;
-		}
-
-		return $result;
+		return StatusTable::loadStatusesByEntityId($entityId);
 	}
 
 	/**
@@ -681,23 +689,8 @@ class CCrmStatus
 		{
 			return [];
 		}
-		if(CACHED_b_crm_status === false)
-		{
-			return static::loadStatusesByEntityId($entityId);
-		}
-		$cached = self::GetCachedStatuses($entityId);
-		if($cached !== null)
-		{
-			$result = $cached;
-		}
-		else
-		{
-			$result = static::loadStatusesByEntityId($entityId);
 
-			self::SetCachedStatuses($entityId, $result);
-		}
-
-		return $result;
+		return StatusTable::getStatusesByEntityId($entityId);
 	}
 
 	/**
@@ -742,15 +735,8 @@ class CCrmStatus
 		{
 			return [];
 		}
-		$result = [];
-		$statuses = self::GetStatus($entityId);
 
-		foreach($statuses as $status)
-		{
-			$result[$status['STATUS_ID']] = $status['NAME'];
-		}
-
-		return $result;
+		return StatusTable::getStatusesList($entityId);
 	}
 
 	/**
@@ -765,15 +751,14 @@ class CCrmStatus
 		{
 			return [];
 		}
-		$result = [];
-		$statuses = self::GetStatus($entityId);
 
-		foreach($statuses as $status)
+		$escapedList = [];
+		foreach (static::GetStatusList($entityId) as $statusId => $statusName)
 		{
-			$result[$status['STATUS_ID']] = htmlspecialcharsbx($status['NAME']);
+			$escapedList[htmlspecialcharsbx($statusId)] = htmlspecialcharsbx($statusName);
 		}
 
-		return $result;
+		return $escapedList;
 	}
 
 	/**
@@ -1035,7 +1020,6 @@ class CCrmStatus
 				'SORT' => 79,
 				'SYSTEM' => 'Y'
 			],
-
 			[
 				'NAME' => GetMessage('CRM_STATUS_TYPE_SOURCE_OTHER'),
 				'STATUS_ID' => 'OTHER',

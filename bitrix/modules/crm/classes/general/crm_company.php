@@ -1,11 +1,13 @@
 <?php
 IncludeModuleLangFile(__FILE__);
 
+use Bitrix\Crm\Entity\Traits\UserFieldPreparer;
 use Bitrix\Main;
 use Bitrix\Crm;
 use Bitrix\Crm\UtmTable;
 use Bitrix\Crm\Tracking;
 use Bitrix\Crm\EntityAddress;
+use Bitrix\Crm\EntityAddressType;
 use Bitrix\Crm\CompanyAddress;
 use Bitrix\Crm\Binding\ContactCompanyTable;
 use Bitrix\Crm\Integrity\DuplicateBankDetailCriterion;
@@ -19,6 +21,8 @@ use Bitrix\Crm\Counter\EntityCounterManager;
 
 class CAllCrmCompany
 {
+	use UserFieldPreparer;
+
 	static public $sUFEntityID = 'CRM_COMPANY';
 	const USER_FIELD_ENTITY_ID = 'CRM_COMPANY';
 	const SUSPENDED_USER_FIELD_ENTITY_ID = 'CRM_COMPANY_SPD';
@@ -26,7 +30,7 @@ class CAllCrmCompany
 
 	public $LAST_ERROR = '';
 	protected $checkExceptions = array();
-	
+
 	public $cPerms = null;
 	protected $bCheckPermission = true;
 	const TABLE_ALIAS = 'L';
@@ -282,17 +286,17 @@ class CAllCrmCompany
 			if (COption::GetOptionString('crm', '~CRM_CONVERT_COMPANY_ADDRESSES', 'N') === 'Y')
 			{
 				$addrJoin = 'LEFT JOIN b_crm_addr ADDR ON L.ID = ADDR.ENTITY_ID AND ADDR.TYPE_ID = '
-					.EntityAddress::Primary.' AND ADDR.ENTITY_TYPE_ID = '.CCrmOwnerType::Company;
+					.EntityAddressType::Primary.' AND ADDR.ENTITY_TYPE_ID = '.CCrmOwnerType::Company;
 				$regAddrJoin = 'LEFT JOIN b_crm_addr R_ADDR ON L.ID = R_ADDR.ENTITY_ID AND R_ADDR.TYPE_ID = '
-					.EntityAddress::Registered.' AND R_ADDR.ENTITY_TYPE_ID = '.CCrmOwnerType::Company;
+					.EntityAddressType::Registered.' AND R_ADDR.ENTITY_TYPE_ID = '.CCrmOwnerType::Company;
 			}
 			else
 			{
 				$addrJoin = 'LEFT JOIN b_crm_addr ADDR ON L.ID = ADDR.ANCHOR_ID AND ADDR.TYPE_ID = '
-					.EntityAddress::Primary.' AND ADDR.ANCHOR_TYPE_ID = '.CCrmOwnerType::Company.
+					.EntityAddressType::Primary.' AND ADDR.ANCHOR_TYPE_ID = '.CCrmOwnerType::Company.
 					' AND ADDR.IS_DEF = 1';
 				$regAddrJoin = 'LEFT JOIN b_crm_addr R_ADDR ON L.ID = R_ADDR.ANCHOR_ID AND R_ADDR.TYPE_ID = '
-					.EntityAddress::Registered.' AND R_ADDR.ANCHOR_TYPE_ID = '.CCrmOwnerType::Company.
+					.EntityAddressType::Registered.' AND R_ADDR.ANCHOR_TYPE_ID = '.CCrmOwnerType::Company.
 					' AND R_ADDR.IS_DEF = 1';
 			}
 
@@ -433,7 +437,7 @@ class CAllCrmCompany
 
 	public static function GetTopIDs($top, $sortType = 'ASC', $userPermissions = null)
 	{
-		$top = (int) $top;
+		$top = (int)$top;
 		if ($top <= 0)
 		{
 			return [];
@@ -441,40 +445,11 @@ class CAllCrmCompany
 
 		$sortType = mb_strtoupper($sortType) !== 'DESC' ? 'ASC' : 'DESC';
 
-		$permissionSql = '';
-		if (!CCrmPerms::IsAdmin())
-		{
-			if (!$userPermissions)
-			{
-				$userPermissions = CCrmPerms::GetCurrentUserPermissions();
-			}
-
-			$permissionSql = self::BuildPermSql('L', 'READ', ['PERMS' => $userPermissions]);
-		}
-
-		if ($permissionSql === false)
-		{
-			return [];
-		}
-
-		$query = new Main\Entity\Query(Crm\CompanyTable::getEntity());
-		$query->addSelect('ID');
-		$query->addOrder('ID', $sortType);
-		$query->setLimit($top);
-
-		if ($permissionSql !== '')
-		{
-			$permissionSql = mb_substr($permissionSql, 7);
-			$query->where('ID', 'in', new Main\DB\SqlExpression($permissionSql));
-		}
-
-		$rs = $query->exec();
-		$results = [];
-		while ($field = $rs->fetch())
-		{
-			$results[] = (int) $field['ID'];
-		}
-		return $results;
+		return \Bitrix\Crm\Entity\Company::getInstance()->getTopIDs([
+			'order' => ['ID' => $sortType],
+			'limit' => $top,
+			'userPermissions' => $userPermissions
+		]);
 	}
 
 	public static function GetTotalCount()
@@ -1057,6 +1032,9 @@ class CAllCrmCompany
 			$arFields['TITLE'] = self::GetAutoTitle();
 		}
 
+		$fields = self::GetUserFields();
+		$this->fillEmptyFieldValues($arFields, $fields);
+
 		if (!$this->CheckFields($arFields, false, $options))
 		{
 			$result = false;
@@ -1210,7 +1188,7 @@ class CAllCrmCompany
 			EntityAddress::register(
 				CCrmOwnerType::Company,
 				$ID,
-				EntityAddress::Primary,
+				EntityAddressType::Primary,
 				array(
 					'ADDRESS_1' => isset($arFields['ADDRESS']) ? $arFields['ADDRESS'] : null,
 					'ADDRESS_2' => isset($arFields['ADDRESS_2']) ? $arFields['ADDRESS_2'] : null,
@@ -1228,7 +1206,7 @@ class CAllCrmCompany
 			EntityAddress::register(
 				CCrmOwnerType::Company,
 				$ID,
-				EntityAddress::Registered,
+				EntityAddressType::Registered,
 				array(
 					'ADDRESS_1' => isset($arFields['REG_ADDRESS']) ? $arFields['REG_ADDRESS'] : null,
 					'ADDRESS_2' => isset($arFields['REG_ADDRESS_2']) ? $arFields['REG_ADDRESS_2'] : null,
@@ -1280,7 +1258,9 @@ class CAllCrmCompany
 			}
 
 			//region Search content index
-			Bitrix\Crm\Search\SearchContentBuilderFactory::create(CCrmOwnerType::Company)->build($ID);
+			Bitrix\Crm\Search\SearchContentBuilderFactory::create(
+				CCrmOwnerType::Company
+			)->build($ID, ['checkExist' => true]);
 			//endregion
 
 			if(isset($options['REGISTER_SONET_EVENT']) && $options['REGISTER_SONET_EVENT'] === true)
@@ -1694,7 +1674,7 @@ class CAllCrmCompany
 				EntityAddress::register(
 					CCrmOwnerType::Company,
 					$ID,
-					EntityAddress::Primary,
+					EntityAddressType::Primary,
 					array(
 						'ADDRESS_1' => isset($arFields['ADDRESS'])
 							? $arFields['ADDRESS'] : (isset($arRow['ADDRESS']) ? $arRow['ADDRESS'] : null),
@@ -1737,7 +1717,7 @@ class CAllCrmCompany
 				EntityAddress::register(
 					CCrmOwnerType::Company,
 					$ID,
-					EntityAddress::Registered,
+					EntityAddressType::Registered,
 					array(
 						'ADDRESS_1' => isset($arFields['REG_ADDRESS'])
 							? $arFields['REG_ADDRESS'] : (isset($arRow['REG_ADDRESS']) ? $arRow['REG_ADDRESS'] : null),
@@ -1786,6 +1766,14 @@ class CAllCrmCompany
 					Bitrix\Crm\Statistics\LeadConversionStatisticsEntry::processBindingsChange($curLeadID);
 				}
 			}
+
+			$enableDupIndexInvalidation = isset($arOptions['ENABLE_DUP_INDEX_INVALIDATION'])
+				? (bool)$arOptions['ENABLE_DUP_INDEX_INVALIDATION'] : true;
+			if(!$isSystemAction && $enableDupIndexInvalidation)
+			{
+				\Bitrix\Crm\Integrity\DuplicateManager::markDuplicateIndexAsDirty(CCrmOwnerType::Company, $ID);
+			}
+
 			Bitrix\Crm\Statistics\CompanyGrowthStatisticEntry::synchronize($ID, array(
 				'ASSIGNED_BY_ID' => $assignedByID
 			));
@@ -1820,6 +1808,10 @@ class CAllCrmCompany
 						),
 						$assignedByIDs
 					);
+				}
+				if ($assignedByID !== $previousAssignedByID && $enableDupIndexInvalidation)
+				{
+					\Bitrix\Crm\Integrity\DuplicateManager::onChangeEntityAssignedBy(CCrmOwnerType::Company, $ID);
 				}
 			}
 
@@ -1896,7 +1888,8 @@ class CAllCrmCompany
 			}
 
 			//region Search content index
-			Bitrix\Crm\Search\SearchContentBuilderFactory::create(CCrmOwnerType::Company)->build($ID);
+			Bitrix\Crm\Search\SearchContentBuilderFactory::create(CCrmOwnerType::Company)
+				->build($ID, ['checkExist' => true]);
 			//endregion
 
 			Bitrix\Crm\Timeline\CompanyController::getInstance()->onModify(
@@ -2149,17 +2142,17 @@ class CAllCrmCompany
 				}
 			}
 
-			DuplicateEntityRanking::unregisterEntityStatistics(CCrmOwnerType::Company, $ID);
-			DuplicateOrganizationCriterion::unregister(CCrmOwnerType::Company, $ID);
-			DuplicateCommunicationCriterion::unregister(CCrmOwnerType::Company, $ID);
-			DuplicateIndexMismatch::unregisterEntity(CCrmOwnerType::Company, $ID);
-
 			$enableDupIndexInvalidation = isset($arOptions['ENABLE_DUP_INDEX_INVALIDATION'])
 				? (bool)$arOptions['ENABLE_DUP_INDEX_INVALIDATION'] : true;
 			if($enableDupIndexInvalidation)
 			{
-				\Bitrix\Crm\Integrity\DuplicateIndexBuilder::markAsJunk(CCrmOwnerType::Company, $ID);
+				\Bitrix\Crm\Integrity\DuplicateManager::markDuplicateIndexAsJunk(CCrmOwnerType::Company, $ID);
 			}
+
+			DuplicateEntityRanking::unregisterEntityStatistics(CCrmOwnerType::Company, $ID);
+			DuplicateOrganizationCriterion::unregister(CCrmOwnerType::Company, $ID);
+			DuplicateCommunicationCriterion::unregister(CCrmOwnerType::Company, $ID);
+			DuplicateIndexMismatch::unregisterEntity(CCrmOwnerType::Company, $ID);
 
 			//Statistics & History -->
 			$leadID = isset($arFields['LEAD_ID']) ? (int)$arFields['LEAD_ID'] : 0;
@@ -2192,8 +2185,8 @@ class CAllCrmCompany
 				$CCrmFieldMulti = new CCrmFieldMulti();
 				$CCrmFieldMulti->DeleteByElement('COMPANY', $ID);
 
-				EntityAddress::unregister(CCrmOwnerType::Company, $ID, EntityAddress::Primary);
-				EntityAddress::unregister(CCrmOwnerType::Company, $ID, EntityAddress::Registered);
+				EntityAddress::unregister(CCrmOwnerType::Company, $ID, EntityAddressType::Primary);
+				EntityAddress::unregister(CCrmOwnerType::Company, $ID, EntityAddressType::Registered);
 				\Bitrix\Crm\Timeline\TimelineEntry::deleteByOwner(CCrmOwnerType::Company, $ID);
 
 				$requisite = new \Bitrix\Crm\EntityRequisite();
@@ -2269,7 +2262,7 @@ class CAllCrmCompany
 
 		if (isset($arFields['LOGO']) && is_array($arFields['LOGO']))
 		{
-			if (($strError = CFile::CheckFile($arFields['LOGO'], 0, 0, CFile::GetImageExtensions())) != '')
+			if (($strError = CFile::CheckFile($arFields['LOGO'], 0, false, CFile::GetImageExtensions())) != '')
 				$this->LAST_ERROR .= $strError."<br />";
 		}
 
@@ -2438,7 +2431,7 @@ class CAllCrmCompany
 			CompanyAddress::prepareChangeEvents(
 				$arFieldsOrig,
 				$arFieldsModif,
-				EntityAddress::Primary,
+				EntityAddressType::Primary,
 				$addressOptions
 			)
 		);
@@ -2448,7 +2441,7 @@ class CAllCrmCompany
 			CompanyAddress::prepareChangeEvents(
 				$arFieldsOrig,
 				$arFieldsModif,
-				EntityAddress::Registered,
+				EntityAddressType::Registered,
 				$addressOptions
 			)
 		);
@@ -2528,14 +2521,11 @@ class CAllCrmCompany
 			&& (int)$arFieldsOrig['ASSIGNED_BY_ID'] != (int)$arFieldsModif['ASSIGNED_BY_ID'])
 		{
 			$arUser = Array();
-			$sort_by = 'last_name';
-			$sort_dir = 'asc';
 			$dbUsers = CUser::GetList(
-				$sort_by, $sort_dir,
+				'last_name', 'asc',
 				array('ID' => implode('|', array(intval($arFieldsOrig['ASSIGNED_BY_ID']), intval($arFieldsModif['ASSIGNED_BY_ID'])))),
 				array('FIELDS' => array('ID', 'NAME', 'SECOND_NAME', 'LAST_NAME', 'LOGIN', 'TITLE', 'EMAIL'))
 			);
-			unset($sort_by, $sort_dir);
 			while ($arRes = $dbUsers->Fetch())
 				$arUser[$arRes['ID']] = CUser::FormatName(CSite::GetNameFormat(false), $arRes);
 
@@ -2843,18 +2833,18 @@ class CAllCrmCompany
 			}
 			elseif($fieldName === Crm\EntityRequisite::ADDRESS)
 			{
-				$requisiteFields[Crm\EntityRequisite::ADDRESS] = array(
-					EntityAddress::Primary =>
+				$requisiteFields[Crm\EntityRequisite::ADDRESS] = [
+					EntityAddressType::Primary =>
 						CompanyAddress::mapEntityFields(
 							$entityFields,
-							array('TYPE_ID' => EntityAddress::Primary, 'SKIP_EMPTY' => true)
+							['TYPE_ID' => EntityAddressType::Primary, 'SKIP_EMPTY' => true]
 						),
-					EntityAddress::Registered =>
+					EntityAddressType::Registered =>
 						CompanyAddress::mapEntityFields(
 							$entityFields,
-							array('TYPE_ID' => EntityAddress::Registered, 'SKIP_EMPTY' => true)
+							['TYPE_ID' => EntityAddressType::Registered, 'SKIP_EMPTY' => true]
 						)
-				);
+				];
 			}
 		}
 
@@ -3028,5 +3018,16 @@ class CAllCrmCompany
 		return $fields;
 	}
 
+	public static function isMyCompany(int $id)
+	{
+		$result = \CCrmCompany::GetListEx(
+			[],
+			['=ID' => $id, 'CHECK_PERMISSIONS' => 'N'],
+			false,
+			false,
+			['IS_MY_COMPANY']
+		)->Fetch();
+
+		return ($result && $result['IS_MY_COMPANY'] === 'Y');
+	}
 }
-?>

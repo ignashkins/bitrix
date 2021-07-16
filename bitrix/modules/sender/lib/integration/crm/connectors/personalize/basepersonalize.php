@@ -336,21 +336,20 @@ abstract class BasePersonalize
 
 	private static function buildAddress($entityType,$address)
 	{
-		$addressFormatter = '\\Bitrix\\Crm\\Format\\'.
-			ucfirst(strtolower($entityType)).
-			'AddressFormatter';
-
-		return $addressFormatter::format(
-			[
-				'ADDRESS' => $address['ADDRESS'],
-				'ADDRESS_2' => $address['ADDRESS_2'],
-				'ADDRESS_CITY' => $address['ADDRESS_CITY'],
-				'ADDRESS_REGION' => $address['ADDRESS_REGION'],
-				'ADDRESS_PROVINCE' => $address['ADDRESS_PROVINCE'],
-				'ADDRESS_POSTAL_CODE' => $address['ADDRESS_POSTAL_CODE'],
-				'ADDRESS_COUNTRY' => $address['ADDRESS_COUNTRY']
-			],
-			array('SEPARATOR' => Bitrix\Crm\Format\AddressSeparator::Comma)
+		$entityAddressClassName = '\\Bitrix\\Crm\\Format\\'.ucfirst(strtolower($entityType)).'Address';
+		return Bitrix\Crm\Format\AddressFormatter::getSingleInstance()->formatTextComma(
+			$entityAddressClassName::mapEntityFields(
+				[
+					'ADDRESS' => $address['ADDRESS'],
+					'ADDRESS_2' => $address['ADDRESS_2'],
+					'ADDRESS_CITY' => $address['ADDRESS_CITY'],
+					'ADDRESS_REGION' => $address['ADDRESS_REGION'],
+					'ADDRESS_PROVINCE' => $address['ADDRESS_PROVINCE'],
+					'ADDRESS_POSTAL_CODE' => $address['ADDRESS_POSTAL_CODE'],
+					'ADDRESS_COUNTRY' => $address['ADDRESS_COUNTRY'],
+					'ADDRESS_LOC_ADDR_ID' => $address['ADDRESS_COUNTRY']
+				]
+			)
 		);
 	}
 
@@ -454,18 +453,17 @@ abstract class BasePersonalize
 	 */
 	private static function addAssignedByFieldsValue($assignedByID, &$objDocument)
 	{
-		$sortBy = 'id';
-		$sortOrder = 'asc';
+		if ($assignedByID < 1)
+		{
+			return;
+		}
 
 		$dbUsers = \CUser::GetList(
-			$sortBy,
-			$sortOrder,
+			'id',
+			'asc',
 			['ID' => $assignedByID],
 			[
 				'SELECT' => [
-					'EMAIL',
-					'PHONE',
-					'IM',
 					'UF_SKYPE',
 					'UF_TWITTER',
 					'UF_FACEBOOK',
@@ -473,7 +471,20 @@ abstract class BasePersonalize
 					'UF_XING',
 					'UF_WEB_SITES',
 					'UF_PHONE_INNER',
-				]
+				],
+				'FIELDS' => [
+					'EMAIL',
+					'WORK_PHONE',
+					'PERSONAL_MOBILE',
+					'LOGIN',
+					'ACTIVE',
+					'NAME',
+					'LAST_NAME',
+					'SECOND_NAME',
+					'WORK_POSITION',
+					'PERSONAL_WWW',
+					'PERSONAL_CITY',
+				],
 			]
 		);
 
@@ -549,25 +560,30 @@ abstract class BasePersonalize
 				break;
 			case 'MODIFY_BY_ID':
 			case 'CREATED_BY_ID':
-				$dbUsers = \CUser::GetList(
-					$sortBy,
-					$sortOrder,
-					['ID' => $objDocument[$usedField]],
-					[
-						'SELECT' => [
-							'NAME',
-							'LAST_NAME'
+				if ($objDocument[$usedField] > 1)
+				{
+					$dbUsers = \CUser::GetList(
+						'',
+						'',
+						['ID' => $objDocument[$usedField]],
+						[
+							'FIELDS' => [
+								'NAME',
+								'LAST_NAME'
+							]
 						]
-					]
-				);
+					);
 
-				$arUser = is_object($dbUsers)? $dbUsers->Fetch() : null;
-				$objDocument[$usedField] =
-					is_array($arUser)? implode(" ", [
-						$arUser['NAME'],
-						$arUser['LAST_NAME']
-					]
-					) : '';
+					$arUser = is_object($dbUsers)? $dbUsers->Fetch() : null;
+					$objDocument[$usedField] =
+						is_array($arUser)? implode(" ", [
+							$arUser['NAME'],
+							$arUser['LAST_NAME']
+						]
+						) : '';
+
+				}
+
 				break;
 			case 'CONTACT_ID':
 				$contactID = \Bitrix\Crm\Binding\ContactCompanyTable::getCompanyContactIDs($objDocument['ID']);

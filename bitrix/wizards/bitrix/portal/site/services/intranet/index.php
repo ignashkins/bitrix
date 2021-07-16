@@ -35,7 +35,7 @@ if ($structure_iblock_id = COption::GetOptionInt('intranet', 'iblock_structure',
 {
 	$arLabels = array();
 	$arBindingLabels = array();
-	$dbRes = CLanguage::GetList($by = 'sort', $order = 'asc');
+	$dbRes = CLanguage::GetList();
 	while ($arRes = $dbRes->Fetch())
 	{
 		if (file_exists(dirname(__FILE__).'/'.$arRes['LID'].'/labels.php'))

@@ -2,6 +2,7 @@
 namespace Bitrix\Mobile\Rest;
 
 use Bitrix\Main;
+use Bitrix\Main\Loader;
 use Bitrix\Tasks\Integration\SocialNetwork;
 use Bitrix\Tasks\Kanban\TimeLineTable;
 use Bitrix\Tasks\Util\Type\DateTime;
@@ -27,8 +28,16 @@ class Tasks extends \IRestService
 				'callback' => [__CLASS__, 'searchGroups'],
 				'options' => ['private' => false],
 			],
-			'mobile.tasks.group.last.get' => [
-				'callback' => [__CLASS__, 'getLastGroups'],
+			'mobile.tasks.group.lastActive.get' => [
+				'callback' => [__CLASS__, 'getLastActiveGroups'],
+				'options' => ['private' => false],
+			],
+			'mobile.tasks.group.lastSearched.validate' => [
+				'callback' => [__CLASS__, 'validateLastSearchedGroups'],
+				'options' => ['private' => false],
+			],
+			'mobile.task.link.params.get' => [
+				'callback' => [__CLASS__, 'getParamsToCreateLink'],
 				'options' => ['private' => false],
 			],
 		];
@@ -64,7 +73,7 @@ class Tasks extends \IRestService
 	 * @throws Main\LoaderException
 	 * @throws Main\SystemException
 	 */
-	public static function getLastGroups(): array
+	public static function getLastActiveGroups(): array
 	{
 		$logDestination = SocialNetwork::getLogDestination();
 
@@ -74,27 +83,38 @@ class Tasks extends \IRestService
 			$lastGroups[$key] = str_replace('SG', '', $group);
 		}
 
-		$lastGroupsData = SocialNetwork\Group::getData($lastGroups, ['IMAGE_ID']);
-		foreach ($lastGroups as $sgId => $id)
+		return static::prepareGroups($lastGroups);
+	}
+
+	public static function validateLastSearchedGroups(array $params): array
+	{
+		return static::prepareGroups($params['ids']);
+	}
+
+	private static function prepareGroups(array $groupIds): array
+	{
+		$data = SocialNetwork\Group::getData($groupIds, ['IMAGE_ID']);
+
+		foreach ($groupIds as $key => $id)
 		{
-			if (array_key_exists($id, $lastGroupsData))
+			if (array_key_exists($id, $data))
 			{
-				$group = $lastGroupsData[$id];
+				$group = $data[$id];
 				$group['id'] = $group['ID'];
 				$group['name'] = $group['NAME'];
 				$group['image'] = (is_array($file = \CFile::GetFileArray($group['IMAGE_ID'])) ? $file['SRC'] : '');
 				unset($group['ID'], $group['NAME'], $group['IMAGE_ID'], $group['EXPANDED']);
-				$lastGroups[$sgId] = $group;
+				$groupIds[$key] = $group;
 			}
 		}
-		$lastGroups = array_filter(
-			$lastGroups,
+		$groupIds = array_filter(
+			$groupIds,
 			static function ($group) {
 				return is_array($group);
 			}
 		);
 
-		return array_values($lastGroups);
+		return array_values($groupIds);
 	}
 
 	/**
@@ -120,5 +140,28 @@ class Tasks extends \IRestService
 		}
 
 		return $groups;
+	}
+
+	/**
+	 * @param array $params
+	 *
+	 * @return string
+	 * @throws Main\ArgumentException
+	 * @throws Main\LoaderException
+	 * @throws \Bitrix\Rest\RestException
+	 * @throws \CTaskAssertException
+	 */
+	public static function getParamsToCreateLink(array $params): string
+	{
+		if (!Loader::includeModule('mobile'))
+		{
+			throw new \Bitrix\Rest\RestException(
+				'Module mobile is not installed', 'SERVER_ERROR', \CRestServer::STATUS_WRONG_REQUEST
+			);
+		}
+
+		$taskId = (int)$params['taskId'];
+
+		return \CMobileHelper::getParamsToCreateTaskLink($taskId);
 	}
 }

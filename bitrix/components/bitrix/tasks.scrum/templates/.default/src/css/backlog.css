@@ -21,7 +21,7 @@
 	-ms-flex-align: baseline;
 	align-items: baseline;
 	font-size: 10px;
-	padding: 14px 0 14px;
+	padding: 14px 0 14px 2px;
 	border-bottom: 1px solid #edeefe;
 }
 
@@ -102,4 +102,8 @@
 
 .tasks-scrum-backlog-items.tasks-scrum-backlog-items-group-mode {
 	padding: 0 0 10px 16px;
+}
+
+.tasks-scrum-backlog-items-loader {
+	overflow: hidden;
 }

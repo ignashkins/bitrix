@@ -1,8 +1,10 @@
-<?
-use Bitrix\Main\Loader,
-	Bitrix\Main\Localization\Loc,
-	Bitrix\Main,
-	Bitrix\Iblock;
+<?php
+
+use Bitrix\Main;
+use Bitrix\Main\File\Image;
+use Bitrix\Main\Loader;
+use Bitrix\Main\Localization\Loc;
+use Bitrix\Iblock;
 
 IncludeModuleLangFile(__FILE__);
 
@@ -1127,6 +1129,10 @@ class CAllIBlock
 		global $USER_FIELD_MANAGER;
 
 		$ID = (int)$ID;
+		if ($ID <= 0)
+		{
+			return false;
+		}
 
 		$APPLICATION->ResetException();
 		foreach(GetModuleEvents("iblock", "OnBeforeIBlockDelete", true) as $arEvent)
@@ -2161,7 +2167,7 @@ REQ
 			{
 				$a = &$arDefFields[$FIELD_ID]["DEFAULT_VALUE"];
 
-				$a = $a <> ''? unserialize($a) : array();
+				$a = $a <> ''? unserialize($a, ['allowed_classes' => false]) : array();
 
 				if(array_key_exists("TRANS_LEN", $a))
 				{
@@ -3252,26 +3258,36 @@ REQ
 		if(!file_exists($file) && !is_file($file))
 			return GetMessage("IBLOCK_BAD_FILE_NOT_FOUND");
 
-		$width = intval($arResize["WIDTH"]);
-		$height = intval($arResize["HEIGHT"]);
+		$width = (int)$arResize["WIDTH"];
+		$height = (int)$arResize["HEIGHT"];
 
 		if($width <= 0 && $height <= 0)
 			return $arFile;
 
-		$orig = CFile::GetImageSize($file, true);
-		if(!is_array($orig))
+		$image = new Image($file);
+		$imageInfo = $image->getInfo(false);
+		if (empty($imageInfo))
+		{
 			return GetMessage("IBLOCK_BAD_FILE_NOT_PICTURE");
+		}
+		$orig = [
+			0 => $imageInfo->getWidth(),
+			1 => $imageInfo->getHeight(),
+			2 => $imageInfo->getFormat(),
+			3 => $imageInfo->getAttributes(),
+			"mime" => $imageInfo->getMime(),
+		];
 
 		$width_orig = $orig[0];
 		$height_orig = $orig[1];
 
 		$orientation = 0;
-		$exifData = array();
+		$exifData = [];
 		$image_type = $orig[2];
-		if($image_type == IMAGETYPE_JPEG)
+		if($image_type == Image::FORMAT_JPEG)
 		{
-			$exifData = CFile::ExtractImageExif($file);
-			if ($exifData  && isset($exifData['Orientation']))
+			$exifData = $image->getExifData();
+			if (isset($exifData['Orientation']))
 			{
 				$orientation = $exifData['Orientation'];
 				if ($orientation >= 5 && $orientation <= 8)
@@ -3312,7 +3328,7 @@ REQ
 				$height = $height_new;
 
 			$image_type = $orig[2];
-			if($image_type == IMAGETYPE_JPEG)
+			if ($image_type == Image::FORMAT_JPEG)
 			{
 				$image = imagecreatefromjpeg($file);
 				if ($image === false)
@@ -3335,19 +3351,31 @@ REQ
 						|| $orientation == 4 || $orientation == 5
 					)
 					{
-						CFile::ImageFlipHorizontal($image);
+						$engine = new Image\Gd();
+						$engine->setResource($image);
+						$engine->flipHorizontal();
 					}
 				}
 			}
-			elseif($image_type == IMAGETYPE_GIF)
+			elseif ($image_type == Image::FORMAT_GIF)
+			{
 				$image = imagecreatefromgif($file);
-			elseif($image_type == IMAGETYPE_PNG)
+			}
+			elseif ($image_type == Image::FORMAT_PNG)
+			{
 				$image = imagecreatefrompng($file);
+			}
+			elseif ($image_type == Image::FORMAT_WEBP)
+			{
+				$image = imagecreatefromwebp($file);
+			}
 			else
-				return GetMessage("IBLOCK_BAD_FILE_UNSUPPORTED");
+			{
+				return GetMessage("IBLOCK_ERR_BAD_FILE_UNSUPPORTED");
+			}
 
 			$image_p = imagecreatetruecolor($width, $height);
-			if($image_type == IMAGETYPE_JPEG)
+			if($image_type == Image::FORMAT_JPEG)
 			{
 				if($arResize["METHOD"] === "resample")
 					imagecopyresampled($image_p, $image, 0, 0, 0, 0, $width, $height, $width_orig, $height_orig);
@@ -3359,7 +3387,7 @@ REQ
 				else
 					imagejpeg($image_p, $file);
 			}
-			elseif($image_type == IMAGETYPE_GIF && function_exists("imagegif"))
+			elseif($image_type == Image::FORMAT_GIF && function_exists("imagegif"))
 			{
 				imagetruecolortopalette($image_p, true, imagecolorstotal($image));
 				imagepalettecopy($image_p, $image);
@@ -3411,88 +3439,52 @@ REQ
 	public static function FilterPicture($filePath, $arFilter)
 	{
 		if (!file_exists($filePath))
-			return false;
-
-		$arFileSize = CFile::GetImageSize($filePath, true);
-		if(!is_array($arFileSize))
-			return false;
-
-		if ($arFilter["type"] === "text" && mb_strlen($arFilter["text"]) > 1 && $arFilter["coefficient"] > 0)
 		{
-			$arFilter["text_width"] = ($arFileSize[0]-5) * $arFilter["coefficient"] / 100;
+			return false;
+		}
+		if (
+			!isset($arFilter['name'])
+			|| ($arFilter['name'] !== 'sharpen' && $arFilter['name'] !== 'watermark')
+		)
+		{
+			return false;
 		}
 
-		switch ($arFileSize[2])
+		$image = new Image($filePath);
+		$imageInfo = $image->getInfo();
+		if (empty($imageInfo))
 		{
-		case IMAGETYPE_GIF:
-			$picture = imagecreatefromgif($filePath);
-			$bHasAlpha = true;
-			break;
+			return false;
+		}
+		if (!$image->load())
+		{
+			return false;
+		}
 
-		case IMAGETYPE_PNG:
-			$picture = imagecreatefrompng($filePath);
-			$bHasAlpha = true;
-			break;
-
-		case IMAGETYPE_JPEG:
-			$picture = imagecreatefromjpeg($filePath);
-			$orientation = 0;
-			$exifData = CFile::ExtractImageExif($filePath);
-			if ($exifData && isset($exifData['Orientation']))
-			{
-				$orientation = $exifData['Orientation'];
-			}
-			if ($orientation > 1)
-			{
-				if ($orientation == 7 || $orientation == 8)
-					$picture = imagerotate($picture, 90, null);
-				elseif ($orientation == 3 || $orientation == 4)
-					$picture = imagerotate($picture, 180, null);
-				elseif ($orientation == 5 || $orientation == 6)
-					$picture = imagerotate($picture, 270, null);
-
-				if (
-					$orientation == 2 || $orientation == 7
-					|| $orientation == 4 || $orientation == 5
-				)
+		$orientation = 0;
+		$exifData = $image->getExifData();
+		if (isset($exifData['Orientation']))
+		{
+			$orientation = $exifData['Orientation'];
+		}
+		$image->autoRotate($orientation);
+		switch ($arFilter['name'])
+		{
+			case 'sharpen':
+				$image->filter(Image\Mask::createSharpen($arFilter['precision']));
+				break;
+			case 'watermark':
+				if ($arFilter['type'] === 'text' && mb_strlen($arFilter['text']) > 1 && $arFilter['coefficient'] > 0)
 				{
-					CFile::ImageFlipHorizontal($picture);
+					$arFilter['text_width'] = ($imageInfo->getWidth() - 5) * $arFilter['coefficient'] / 100;
 				}
-			}
-			$bHasAlpha = false;
-			break;
-
-		default:
-			$picture = false;
-			$bHasAlpha = false;
-			break;
+				$watermark = Image\Watermark::createFromArray($arFilter);
+				$image->drawWatermark($watermark);
+				break;
 		}
-		if (!is_resource($picture))
-			return false;
+		$image->save(self::getDefaultJpegQuality());
+		$image->clear();
 
-		$bNeedCreatePicture = CFile::ApplyImageFilter($picture, $arFilter, $bHasAlpha);
-		if ($bNeedCreatePicture)
-		{
-			switch ($arFileSize[2])
-			{
-			case IMAGETYPE_GIF:
-				imagegif($picture, $filePath);
-				break;
-
-			case IMAGETYPE_PNG:
-				imagealphablending($picture, false);
-				imagesavealpha($picture, true);
-				imagepng($picture, $filePath);
-				break;
-
-			case IMAGETYPE_JPEG:
-				$jpgQuality = self::getDefaultJpegQuality();
-
-				imagejpeg($picture, $filePath, $jpgQuality);
-				break;
-			}
-		}
-		imagedestroy($picture);
 		return true;
 	}
 

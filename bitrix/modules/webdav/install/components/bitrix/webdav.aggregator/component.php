@@ -579,7 +579,7 @@ else
 			if (mb_strpos($userName, '(') !== false)
 			{
 				$userFilter = array('LOGIN_EQUAL' => trim($userName, '()')); 
-				$dbUser = CUser::GetList($by, $order, $userFilter);
+				$dbUser = CUser::GetList('', '', $userFilter);
 			} else {
 				//$userFilter = array('NAME' => $userName);
 				$arName = explode(' ', $userName);
@@ -635,7 +635,7 @@ else
 						$destFilter = array('NAME' => $destName);
 					}
 
-					$dbUser = CUser::GetList($by, $order, $destFilter);
+					$dbUser = CUser::GetList('', '', $destFilter);
 					if (($dbUser !== false) && $arUser = $dbUser->Fetch())
 					{
 						$destID = $arUser['ID'];

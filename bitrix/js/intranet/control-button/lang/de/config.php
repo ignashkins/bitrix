@@ -1,0 +1,7 @@
+<?php
+$MESS["INTRANET_JS_CONTROL_BUTTON_CHAT"] = "Chat öffnen";
+$MESS["INTRANET_JS_CONTROL_BUTTON_MEETING"] = "Termin erstellen";
+$MESS["INTRANET_JS_CONTROL_BUTTON_NAME"] = "HD-Videoanruf";
+$MESS["INTRANET_JS_CONTROL_BUTTON_POST"] = "Im Feed veröffentlichen";
+$MESS["INTRANET_JS_CONTROL_BUTTON_TASK"] = "Aufgabe erstellen";
+$MESS["INTRANET_JS_CONTROL_BUTTON_VIDEOCALL"] = "Videoanruf starten";

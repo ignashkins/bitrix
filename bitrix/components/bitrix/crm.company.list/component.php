@@ -100,11 +100,11 @@ use Bitrix\Main;
 use Bitrix\Crm;
 use Bitrix\Crm\Agent\Requisite\CompanyAddressConvertAgent;
 use Bitrix\Crm\Agent\Requisite\CompanyUfAddressConvertAgent;
+use Bitrix\Crm\Format\AddressFormatter;
 use Bitrix\Crm\Tracking;
 use Bitrix\Crm\EntityAddress;
-use Bitrix\Crm\Format\AddressSeparator;
+use Bitrix\Crm\EntityAddressType;
 use Bitrix\Crm\CompanyAddress;
-use Bitrix\Crm\Format\CompanyAddressFormatter;
 use Bitrix\Crm\Settings\HistorySettings;
 use Bitrix\Crm\Settings\CompanySettings;
 use Bitrix\Crm\WebForm\Manager as WebFormManager;
@@ -333,7 +333,7 @@ $arResult['AJAX_OPTION_HISTORY'] = isset($arParams['AJAX_OPTION_HISTORY']) ? $ar
 $arResult['PRESERVE_HISTORY'] = isset($arParams['PRESERVE_HISTORY']) ? $arParams['PRESERVE_HISTORY'] : false;
 
 $addressLabels = EntityAddress::getShortLabels();
-$regAddressLabels = EntityAddress::getShortLabels(EntityAddress::Registered);
+$regAddressLabels = EntityAddress::getShortLabels(EntityAddressType::Registered);
 $requisite = new \Bitrix\Crm\EntityRequisite();
 
 //region Filter Presets Initialization
@@ -486,7 +486,7 @@ if($enableOutmodedFields)
 			array('id' => 'ADDRESS_POSTAL_CODE', 'name' => $addressLabels['POSTAL_CODE'], 'sort' => 'address_postal_code', 'editable' => false),
 			array('id' => 'ADDRESS_COUNTRY', 'name' => $addressLabels['COUNTRY'], 'sort' => 'address_country', 'editable' => false),
 
-			array('id' => 'FULL_REG_ADDRESS', 'name' => EntityAddress::getFullAddressLabel(EntityAddress::Registered), 'sort' => false, 'editable' => false),
+			array('id' => 'FULL_REG_ADDRESS', 'name' => EntityAddress::getFullAddressLabel(EntityAddressType::Registered), 'sort' => false, 'editable' => false),
 			//REG_ADDRESS = ADDRESS_LEGAL
 			array('id' => 'ADDRESS_LEGAL', 'name' => $regAddressLabels['ADDRESS'], 'sort' => 'registered_address', 'editable' => false),
 			array('id' => 'REG_ADDRESS_2', 'name' => $regAddressLabels['ADDRESS_2'], 'sort' => 'registered_address_2', 'editable' => false),
@@ -719,17 +719,9 @@ $USER_FIELD_MANAGER->AdminListAddFilter(CCrmCompany::$sUFEntityID, $arFilter);
 $searchRestriction = \Bitrix\Crm\Restriction\RestrictionManager::getSearchLimitRestriction();
 if(!$searchRestriction->isExceeded(CCrmOwnerType::Company))
 {
-	Bitrix\Crm\Search\SearchEnvironment::convertEntityFilterValues(CCrmOwnerType::Company, $arFilter);
+	$searchRestriction->notifyIfLimitAlmostExceed(CCrmOwnerType::Company);
 
-	if (
-		($limitWarningValue = $searchRestriction->getLimitWarningValue(CCrmOwnerType::Company)) > 0
-	)
-	{
-		$searchRestriction->notifyLimitWarning(
-			CCrmOwnerType::Company,
-			$limitWarningValue
-		);
-	}
+	Bitrix\Crm\Search\SearchEnvironment::convertEntityFilterValues(CCrmOwnerType::Company, $arFilter);
 }
 else
 {
@@ -1668,7 +1660,7 @@ if(isset($arSort['nearest_activity']))
 else
 {
 	$addressSort = array();
-	$addressTypeID = \Bitrix\Crm\EntityAddress::Primary;
+	$addressTypeID = EntityAddressType::Primary;
 	foreach($arSort as $k => $v)
 	{
 		if(strncmp($k, 'address', 7) === 0)
@@ -1679,7 +1671,7 @@ else
 
 	if(empty($addressSort))
 	{
-		$addressTypeID = \Bitrix\Crm\EntityAddress::Registered;
+		$addressTypeID = EntityAddressType::Registered;
 		foreach($arSort as $k => $v)
 		{
 			if(strncmp($k, 'registered_address', 18) === 0)
@@ -1839,14 +1831,6 @@ $bContact = !$CCrmCompany->cPerms->HavePerm('CONTACT', BX_CRM_PERM_NONE, 'ADD');
 $arResult['PERM_CONTACT'] = $bContact;
 
 $enableExportEvent = $isInExportMode && HistorySettings::getCurrent()->isExportEventEnabled();
-
-$addressFormatOptions = $sExportType === 'csv'
-	? array('SEPARATOR' => AddressSeparator::Comma)
-	: array('SEPARATOR' => AddressSeparator::HtmlLineBreak, 'NL2BR' => true);
-
-$regAddressFormatOptions = $sExportType === 'csv'
-	? array('SEPARATOR' => AddressSeparator::Comma, 'TYPE_ID' => EntityAddress::Registered)
-	: array('SEPARATOR' => AddressSeparator::HtmlLineBreak, 'NL2BR' => true, 'TYPE_ID' => EntityAddress::Registered);
 
 $bizProcTabId = $isMyCompanyMode ? 'CRM_MYCOMPANY_SHOW_V12_active_tab' : 'CRM_COMPANY_SHOW_V12_active_tab';
 
@@ -2149,12 +2133,34 @@ foreach($arResult['COMPANY'] as &$arCompany)
 
 	if(isset($arSelectMap['FULL_ADDRESS']))
 	{
-		$arCompany['FULL_ADDRESS'] = CompanyAddressFormatter::format($arCompany, $addressFormatOptions);
+		if ($sExportType === 'csv')
+		{
+			$arCompany['FULL_ADDRESS'] = AddressFormatter::getSingleInstance()->formatTextComma(
+				CompanyAddress::mapEntityFields($arCompany)
+			);
+		}
+		else
+		{
+			$arCompany['FULL_ADDRESS'] = AddressFormatter::getSingleInstance()->formatHtmlMultiline(
+				CompanyAddress::mapEntityFields($arCompany)
+			);
+		}
 	}
 
 	if(isset($arSelectMap['FULL_REG_ADDRESS']))
 	{
-		$arCompany['FULL_REG_ADDRESS'] = CompanyAddressFormatter::format($arCompany, $regAddressFormatOptions);
+		if ($sExportType === 'csv')
+		{
+			$arCompany['FULL_REG_ADDRESS'] = AddressFormatter::getSingleInstance()->formatTextComma(
+				CompanyAddress::mapEntityFields($arCompany, ['TYPE_ID' => EntityAddressType::Registered])
+			);
+		}
+		else
+		{
+			$arCompany['FULL_REG_ADDRESS'] = AddressFormatter::getSingleInstance()->formatHtmlMultiline(
+				CompanyAddress::mapEntityFields($arCompany, ['TYPE_ID' => EntityAddressType::Registered])
+			);
+		}
 	}
 
 	$arResult['COMPANY'][$entityID] = $arCompany;

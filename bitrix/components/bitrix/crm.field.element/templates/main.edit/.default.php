@@ -2,6 +2,7 @@
 
 if(!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) die();
 
+use Bitrix\Crm\UserField\Types\ElementType;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Text\HtmlFilter;
 
@@ -14,14 +15,20 @@ $component = $this->getComponent();
 
 $fieldName = $arParams['userField']['FIELD_NAME'];
 $formName = (isset($arParams['form_name']) ? (string)$arParams['form_name'] : '');
-$fieldUID = mb_strtolower(str_replace('_', '-', $fieldName));
+
+$randString = $this->randString();
+if ($component->isAjaxRequest())
+{
+	$randString .= time();
+}
+
+$fieldUID = mb_strtolower(str_replace('_', '-', $fieldName)) . $randString;
 if($formName !== '')
 {
 	$fieldUID = mb_strtolower(str_replace('_', '-', $formName)).'-' . $fieldUID;
 }
 $fieldUID = CUtil::JSescape($fieldUID);
 
-$randString = $this->randString();
 $jsObject = 'CrmEntitySelector_' . $randString;
 
 if($arResult['PERMISSION_DENIED'])
@@ -70,45 +77,11 @@ else
 				'crmPrefixType' => 'SHORT'
 			];
 
-			$tabsCounter = 0;
-			if(in_array(\CCrmOwnerType::ContactName, $arParams['ENTITY_TYPE'], true))
-			{
-				$selectorOptions['enableCrmContacts'] = 'Y';
-				$selectorOptions['addTabCrmContacts'] = 'Y';
-				$tabsCounter++;
-			}
-			if(in_array(\CCrmOwnerType::CompanyName, $arParams['ENTITY_TYPE'], true))
-			{
-				$selectorOptions['enableCrmCompanies'] = 'Y';
-				$selectorOptions['addTabCrmCompanies'] = 'Y';
-				$tabsCounter++;
-			}
-			if(in_array(\CCrmOwnerType::LeadName, $arParams['ENTITY_TYPE'], true))
-			{
-				$selectorOptions['enableCrmLeads'] = 'Y';
-				$selectorOptions['addTabCrmLeads'] = 'Y';
-				$tabsCounter++;
-			}
-			if(in_array(\CCrmOwnerType::DealName, $arParams['ENTITY_TYPE'], true))
-			{
-				$selectorOptions['enableCrmDeals'] = 'Y';
-				$selectorOptions['addTabCrmDeals'] = 'Y';
-				$tabsCounter++;
-			}
-			if(in_array(\CCrmOwnerType::OrderName, $arParams['ENTITY_TYPE'], true))
-			{
-				$selectorOptions['enableCrmOrders'] = 'Y';
-				$selectorOptions['addTabCrmOrders'] = 'Y';
-				$tabsCounter++;
-			}
-			if($tabsCounter <= 1)
-			{
-				$selectorOptions['addTabCrmContacts'] = 'N';
-				$selectorOptions['addTabCrmCompanies'] = 'N';
-				$selectorOptions['addTabCrmLeads'] = 'N';
-				$selectorOptions['addTabCrmDeals'] = 'N';
-				$selectorOptions['addTabCrmOrders'] = 'N';
-			}
+			$entityTypesSelectorOptions = ElementType::getEnableEntityTypesForSelectorOptions(
+				$arParams['ENTITY_TYPE'],
+				$arResult['DYNAMIC_TYPE_TITLES']
+			);
+			$selectorOptions = array_merge($selectorOptions, $entityTypesSelectorOptions);
 
 			$APPLICATION->IncludeComponent(
 				'bitrix:main.user.selector',

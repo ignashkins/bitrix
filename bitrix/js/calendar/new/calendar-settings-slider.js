@@ -1,3 +1,4 @@
+
 ;(function(window) {
 	function SettingsSlider(params)
 	{
@@ -14,8 +15,6 @@
 
 		this.SLIDER_WIDTH = 500;
 		this.SLIDER_DURATION = 80;
-
-		this.fixPopupZIndexBinded = this.fixPopupZIndex.bind(this);
 	}
 
 	SettingsSlider.prototype = {
@@ -36,8 +35,6 @@
 
 			this.calendar.disableKeyHandler();
 			this.isOpenedState = true;
-
-			BX.addCustomEvent('onPopupShow', this.fixPopupZIndexBinded);
 		},
 
 		close: function ()
@@ -63,8 +60,6 @@
 				{
 					BX.removeCustomEvent("SidePanel.Slider:onClose", BX.proxy(this.hide, this));
 				}
-
-				BX.removeCustomEvent('onPopupShow', this.fixPopupZIndexBinded);
 			}
 		},
 
@@ -120,8 +115,14 @@
 
 		initControls: function ()
 		{
-			BX.bind(top.BX(this.uid + '_save'), 'click', BX.proxy(this.save, this));
-			BX.bind(top.BX(this.uid + '_close'), 'click', BX.proxy(this.close, this));
+			BX.bind(top.BX(this.uid + '_save'), 'click', this.save.bind(this));
+			BX.bind(top.BX(this.uid + '_close'), 'click', this.close.bind(this));
+
+			this.DOM.buttonsWrap = this.DOM.content.querySelector('.calendar-form-buttons-fixed');
+			if (this.DOM.buttonsWrap)
+			{
+				BX.ZIndexManager.register(this.DOM.buttonsWrap);
+			}
 
 			this.DOM.denyBusyInvitation = top.BX(this.uid + '_deny_busy_invitation');
 			this.DOM.showWeekNumbers = top.BX(this.uid + '_show_week_numbers');
@@ -157,7 +158,23 @@
 					BX.Event.bind(this.DOM.emailHelpIcon, 'click', function(){BX.Helper.show("redirect=detail&code=12070142")});
 					BX.UI.Hint.initNode(this.DOM.emailHelpIcon);
 				}
+
 				this.emailSelectorControl.setValue(this.calendar.util.getUserOption('sendFromEmail'));
+
+				var emailWrap = this.DOM.content.querySelector('.calendar-settings-email-wrap')
+				if (BX.Calendar.Util.isEventWithEmailGuestAllowed())
+				{
+					BX.Dom.removeClass(emailWrap, 'lock');
+					this.DOM.sendFromEmailSelect.disabled = false;
+				}
+				else
+				{
+					BX.Dom.addClass(emailWrap, 'lock');
+					this.DOM.sendFromEmailSelect.disabled = true;
+					BX.Event.bind(this.DOM.sendFromEmailSelect.parentNode, 'click', function(){
+						BX.UI.InfoHelper.show('limit_calendar_invitation_by_mail');
+					});
+				}
 			}
 
 			// General settings
@@ -191,13 +208,14 @@
 			if (this.inPersonal)
 			{
 				this.DOM.sectionSelect.options.length = 0;
-				var
-					sections = this.calendar.sectionController.getSectionList(),
-					meetSection = parseInt(this.calendar.util.getUserOption('meetSection')),
-					crmSection = parseInt(this.calendar.util.getUserOption('crmSection')),
-					i, section, selected;
 
-				for (i = 0; i < sections.length; i++)
+				var sections = this.calendar.sectionManager.getSectionListForEdit();
+				var meetSection = parseInt(this.calendar.util.getUserOption('meetSection'));
+				var crmSection = parseInt(this.calendar.util.getUserOption('crmSection'));
+				var section;
+				var selected;
+
+				for (var i = 0; i < sections.length; i++)
 				{
 					section = sections[i];
 					if (section.belongsToOwner())
@@ -445,11 +463,6 @@
 					}, this),
 					bind: this.accessButton
 				});
-
-				if (top.BX.Access.popup && top.BX.Access.popup.popupContainer)
-				{
-					top.BX.Access.popup.popupContainer.style.zIndex = this.zIndex + 10;
-				}
 			}, this));
 
 
@@ -585,20 +598,6 @@
 				top.BX.PopupMenu.destroy(menuId);
 				_this.accessPopupMenu = null;
 			});
-		},
-
-		fixPopupZIndex: function(popupWindow)
-		{
-			var Z_INDEX = 4200;
-			if (popupWindow.params.zIndex && popupWindow.params.zIndex < Z_INDEX
-				||
-				popupWindow.popupContainer.style.zIndex
-				&& popupWindow.popupContainer.style.zIndex < Z_INDEX
-			)
-			{
-				popupWindow.params.zIndex = Z_INDEX;
-				popupWindow.popupContainer.style.zIndex = Z_INDEX;
-			}
 		}
 	};
 

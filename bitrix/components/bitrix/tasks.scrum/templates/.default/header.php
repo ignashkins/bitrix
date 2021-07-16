@@ -12,25 +12,29 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true)
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Page\Asset;
-use Bitrix\Main\Text\HtmlFilter;
 use Bitrix\Main\UI\Extension;
 use Bitrix\Tasks\Helper\Filter;
 
-CJSCore::init(['tasks_util_query', 'tasks_integration_socialnetwork']);
-
-Extension::load('ui.forms');
-Extension::load('ui.buttons.icons');
-Extension::load('ui.cnt');
+Extension::load([
+	'ui.forms',
+	'ui.buttons.icons',
+	'ui.cnt',
+	'ui.dialogs.messagebox',
+	'ui.icons.b24',
+	'ui.draganddrop.draggable',
+	'ui.label',
+	'ui.entity-selector',
+	'ui.confetti',
+]);
 Extension::load('date');
 Extension::load('sidepanel');
 Extension::load('popup');
-Extension::load('ui.dialogs.messagebox');
-Extension::load('ui.icons.b24');
-Extension::load('ui.draganddrop.draggable');
-Extension::load('ui.label');
-Extension::load('ui.entity-selector');
-Extension::load('ui.confetti');
 Extension::load(['amcharts4', 'amcharts4_theme_animated']);
+
+if (Loader::includeModule('pull'))
+{
+	Extension::load('pull.client');
+}
 
 if (Loader::includeModule('disk'))
 {
@@ -43,32 +47,23 @@ if (Loader::includeModule('disk'))
 }
 
 $isKanban = $isKanban ?? false;
+$viewName = $this->getComponent()->getTemplatePage();
 
 $messages = Loc::loadLanguageFile(__FILE__);
 
 $isBitrix24Template = (SITE_TEMPLATE_ID === 'bitrix24');
 
-$filterInstance = Filter::getInstance($arParams['USER_ID'], $arParams['GROUP_ID']);
-
-$filter = $filterInstance->getFilters();
-
-$filter['EPIC'] = [
-	'id' => 'EPIC',
-	'name' => Loc::getMessage("TASKS_SCRUM_ITEM_ACTIONS_EPIC"),
-	'type' => 'list',
-	'items' => $arResult['epics']
-];
-
-$presets = Filter::getPresets();
-foreach ($presets as $presetId => $preset)
-{
-	if ($presetId == 'filter_tasks_in_progress')
-	{
-		$presets[$presetId]['default'] = false;
-	}
-}
+/** @var Filter $filterInstance */
+$filterInstance = $arResult['filterInstance'];
 
 $filterId = $filterInstance->getId();
+$filters = $filterInstance->getFilters();
+$presets = Filter::getPresets($filterInstance);
+
+if ($viewName === 'completed_sprint')
+{
+	unset($presets['filter_tasks_scrum']);
+}
 
 $bodyClass = $APPLICATION->GetPageProperty('BodyClass');
 $APPLICATION->SetPageProperty(
@@ -122,12 +117,12 @@ $APPLICATION->includeComponent(
 	'',
 	[
 		'FILTER_ID' => $filterId,
-		'FILTER' => $filter,
+		'FILTER' => $filters,
 		'PRESETS' => $presets,
 		'TEMPLATES_LIST' => $arParams['TEMPLATES_LIST'],//todo
 		'USER_ID' => $arParams['USER_ID'],
 		'GROUP_ID' => $arParams['GROUP_ID'],
-		'SPRINT_ID' => ($arResult['completedSprintId'] ? $arResult['completedSprintId'] : -1),
+		'SPRINT_ID' => (isset($arResult['completedSprintId']) ? $arResult['completedSprintId'] : -1),
 		'MENU_GROUP_ID' => $arParams['GROUP_ID'],
 		'PATH_TO_USER_TASKS_TEMPLATES' => $arParams['PATH_TO_USER_TASKS_TEMPLATES'],
 		'PATH_TO_GROUP_TASKS_TASK' => $arParams['PATH_TO_GROUP_TASKS_TASK'],
@@ -150,8 +145,7 @@ $APPLICATION->includeComponent(
 						Loc::getMessage("KANBAN_SORT_ACTUAL_RECOMMENDED_LABEL").'</span>',
 					'className' => ($arResult['orderNewTask'] == 'actual') ?
 						'menu-popup-item-accept' : 'menu-popup-item-none',
-					'onclick' => 'BX.delegate(BX.Tasks.KanbanComponent.ClickSort)',
-					'params' => '{order: "actual"}'
+					'onclick' => '"BX.Tasks.Scrum.Kanban.onClickSort(this, \'actual\')"'
 				],
 				[
 					'tabId' => 'popupMenuOptions',
@@ -162,16 +156,14 @@ $APPLICATION->includeComponent(
 					'text' => Loc::getMessage('KANBAN_SORT_DESC'),
 					'className' => ($arResult['orderNewTask'] == 'desc') ?
 						'menu-popup-item-accept' : 'menu-popup-item-none',
-					'onclick' => 'BX.delegate(BX.Tasks.KanbanComponent.ClickSort)',
-					'params' => '{order: "desc"}'
+					'onclick' => '"BX.Tasks.Scrum.Kanban.onClickSort(this, \'desc\')"'
 				],
 				[
 					'tabId' => 'popupMenuOptions',
 					'text' => Loc::getMessage('KANBAN_SORT_ASC'),
 					'className' => ($arResult['orderNewTask'] == 'asc') ?
 						'menu-popup-item-accept' : 'menu-popup-item-none',
-					'onclick' => 'BX.delegate(BX.Tasks.KanbanComponent.ClickSort)',
-					'params' => '{order: "asc"}'
+					'onclick' => '"BX.Tasks.Scrum.Kanban.onClickSort(this, \'asc\')"'
 				]
 			] : [],
 	],
@@ -181,56 +173,17 @@ $APPLICATION->includeComponent(
 
 if ($isBitrix24Template)
 {
-	$this->setViewTarget("below_pagetitle");
+	$this->setViewTarget('below_pagetitle');
 }
 ?>
 
-	<div class="tasks-scrum-switcher">
-		<div class="tasks-scrum-switcher-views">
-			<a href="<?=HtmlFilter::encode($arResult['views']['plan']['url'])?>" class="tasks-scrum-switcher-tab <?=
-			($arResult['views']['plan']['active'] ? 'tasks-scrum-switcher-tab-active' : '')?>">
-				<?= $arResult['views']['plan']['name']; ?>
-			</a>
-			<a href="<?=HtmlFilter::encode($arResult['views']['activeSprint']['url'])?>" class="tasks-scrum-switcher-tab <?=
-			($arResult['views']['activeSprint']['active'] ? 'tasks-scrum-switcher-tab-active' : '')?>">
-				<?= $arResult['views']['activeSprint']['name']; ?>
-			</a>
-			<a href="<?=HtmlFilter::encode($arResult['views']['completedSprint']['url'])?>" class="tasks-scrum-switcher-tab <?=
-			($arResult['views']['completedSprint']['active'] ? 'tasks-scrum-switcher-tab-active' : '')?>">
-				<?= $arResult['views']['completedSprint']['name']; ?>
-			</a>
-		</div>
-		<?php if ($arResult['views']['plan']['active']): ?>
-			<div id="tasks-scrum-team-speed-button-container" class="tasks-scrum-team-speed-button-container">
-				<button class="ui-btn ui-btn-primary ui-btn-xs">
-					<?=Loc::getMessage('TASKS_SCRUM_TEAM_SPEED_BUTTON');?>
-				</button>
-			</div>
-		<?php endif; ?>
-		<?php if ($arResult['views']['activeSprint']['active'] && $arResult['activeSprintId'] > 0): ?>
-			<div id="tasks-scrum-active-sprint-stats" class="tasks-scrum-active-sprint-stats"></div>
-			<div id="tasks-scrum-actions-complete-sprint" class="tasks-scrum-actions-complete-sprint">
-				<button class="ui-btn ui-btn-primary-dark ui-btn-round ui-btn-xs">
-					<?=Loc::getMessage('TASKS_SCRUM_ACTIVE_SPRINT_BUTTON');?>
-				</button>
-				<button class="ui-btn ui-btn-primary ui-btn-round ui-btn-xs">
-					<?=Loc::getMessage('TASKS_SCRUM_ACTIONS_COMPLETE_SPRINT');?>
-				</button>
-			</div>
-		<?php endif; ?>
-		<?php if ($arResult['views']['completedSprint']['active'] && $arResult['completedSprintId'] > 0): ?>
-			<div id="tasks-scrum-completed-sprint-title" class="tasks-scrum-completed-sprint-title"></div>
-			<div id="tasks-scrum-completed-sprint-chart" class="tasks-scrum-actions-complete-sprint">
-				<button class="ui-btn ui-btn-primary-dark ui-btn-round ui-btn-xs">
-					<?=Loc::getMessage('TASKS_SCRUM_ACTIVE_SPRINT_BUTTON');?>
-				</button>
-			</div>
-		<?php endif; ?>
-	</div>
+<div id="tasks-scrum-switcher" class="tasks-scrum-switcher"></div>
+<div id="tasks-scrum-counters-container" class="tasks-scrum-counters-container"></div>
+<div id="tasks-scrum-sprint-stats" class="tasks-scrum-sprint-stats"></div>
+<div id="tasks-scrum-buttons-container" class="tasks-scrum-buttons"></div>
 
 <?php
 if ($isBitrix24Template)
 {
 	$this->EndViewTarget();
 }
-?>

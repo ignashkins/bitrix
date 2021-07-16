@@ -1,15 +1,12 @@
-<?
+<?php
 
-use \Bitrix\Calendar\Sync\GoogleApiSync;
-use \Bitrix\Calendar\Sync\GoogleApiPush;
-use \Bitrix\Calendar\PushTable;
+use Bitrix\Calendar\Sync\GoogleApiSync;
+use Bitrix\Calendar\Sync\GoogleApiPush;
+use Bitrix\Calendar\PushTable;
 use Bitrix\Calendar\UserSettings;
 use Bitrix\Main\Loader;
-use \Bitrix\Main\Type;
-use Bitrix\Main\Localization\Loc;
-use \Bitrix\Main\Config\Option;
-use \Bitrix\Main\Context;
-use Bitrix\Calendar\Sync;
+use Bitrix\Main\Type;
+use Bitrix\Main\Config\Option;
 use Bitrix\Calendar\Internals;
 
 class CCalendarSync
@@ -18,7 +15,6 @@ class CCalendarSync
 	public static $doNotSendToGoogle = false;
 	private static $mobileBannerDisplay;
 	const MINIMAL_LIMIT = 1;
-
 
 	public static function doSync()
 	{
@@ -161,7 +157,7 @@ class CCalendarSync
 						'OWNER_ID' => $connectionData["ENTITY_ID"],
 						'CAL_TYPE' => 'user',
 						'CAL_DAV_CON' => $connectionData["ID"],
-						'EXTERNAL_TYPE' => 'google',
+						'EXTERNAL_TYPE' => \Bitrix\Calendar\Sync\Google\Dictionary::ACCESS_ROLE_TO_EXTERNAL_TYPE[$externalCalendar['accessRole']],
 					);
 					$localSections[] = array_merge($arFields, array('ID' => CCalendarSect::Edit(array('arFields' => $arFields))));
 				}
@@ -177,7 +173,8 @@ class CCalendarSync
 						'OWNER_ID' => $connectionData["ENTITY_ID"],
 						'CAL_TYPE' => 'user',
 						'CAL_DAV_CON' => $connectionData["ID"],
-						'ID' => $localSections[$localCalendarIndex]['ID']
+						'ID' => $localSections[$localCalendarIndex]['ID'],
+						'EXTERNAL_TYPE' => \Bitrix\Calendar\Sync\Google\Dictionary::ACCESS_ROLE_TO_EXTERNAL_TYPE[$externalCalendar['accessRole']],
 					);
 					CCalendarSect::Edit(array('arFields' => $arFields));
 				}
@@ -211,7 +208,7 @@ class CCalendarSync
 		{
 			$eventsSyncToken = self::syncCalendarEvents($localCalendar);
 			// Exit if we've got an error during connection to Google API
-			if ($eventsSyncToken === false)
+			if (empty($eventsSyncToken))
 			{
 				return false;
 			}
@@ -227,47 +224,19 @@ class CCalendarSync
 		return $bShouldClearCache;
 	}
 
-	public static function syncCalendarEvents($localCalendar)
+	public static function syncCalendarEvents($localCalendar): string
 	{
 		$googleApiConnection = new GoogleApiSync($localCalendar['OWNER_ID']);
 		// If we've got error from Google: save it and exit.
 		if ($error = $googleApiConnection->getTransportConnectionError())
 		{
 			CDavConnection::Update($localCalendar['CAL_DAV_CON'], ["LAST_RESULT" => $error], false);
-			return false;
+			return '';
 		}
 
 		self::$doNotSendToGoogle = true;
 
-		$localEventsList = CCalendarEvent::getList(array(
-			'userId' => $localCalendar['OWNER_ID'],
-			'arFilter' => [
-				'SECTION' => $localCalendar['ID']
-			],
-			'arSelect' => [
-				"ID",
-				"CAL_TYPE",
-				"DT_SKIP_TIME",
-				"DATE_FROM",
-				"DATE_TO",
-				"TZ_FROM",
-				"TZ_TO",
-				"PARENT_ID",
-				"IS_MEETING",
-				"MEETING_STATUS",
-				"LOCATION",
-				"RRULE",
-				"EXDATE",
-				"DAV_XML_ID",
-				"RECURRENCE_ID",
-				"G_EVENT_ID",
-				"ATTENDEES_CODES",
-			],
-			'getUserfields' => false,
-			'parseDescription' => false,
-			'fetchSection' => false,
-			'checkPermissions' => false
-		));
+		$localEventsList = self::getLocalEventsList($localCalendar);
 
 		$localEvents = [];
 
@@ -1058,7 +1027,7 @@ class CCalendarSync
 			$strValue = "";
 			foreach($emailList as $email)
 			{
-				$strValue .= ",'".CDatabase::ForSql($email)."'";
+				$strValue .= ",'".$DB->ForSql($email)."'";
 			}
 			$strValue = trim($strValue, ', ');
 
@@ -1087,7 +1056,7 @@ class CCalendarSync
 						if(!in_array(mb_strtolower($email), $checkedEmails) && mb_strtolower(mb_substr($email, mb_strlen($email) - $exchangeMailboxStrlen)) == mb_strtolower($exchangeMailbox))
 						{
 							$value = mb_substr($email, 0, mb_strlen($email) - $exchangeMailboxStrlen);
-							$strLogins .= ",'".CDatabase::ForSql($value)."'";
+							$strLogins .= ",'".$DB->ForSql($value)."'";
 						}
 					}
 					$strLogins = trim($strLogins, ', ');
@@ -1140,7 +1109,7 @@ class CCalendarSync
 		return true;
 	}
 
-	private function GetPassDates($id, $exDates)
+	private static function GetPassDates($id, $exDates)
 	{
 		$excludeDates = [];
 		$parameters = array (
@@ -1177,8 +1146,13 @@ class CCalendarSync
 			//CUserOptions::DeleteOption('calendar', 'mobile_banner_display');
 			self::$mobileBannerDisplay = CUserOptions::GetOption('calendar', 'mobile_banner_display', 'Y');
 			CUserOptions::SetOption('calendar', 'mobile_banner_display', 'N');
+			CUserOptions::SetOption('calendar', 'daily_sync_banner', [
+				'last_sync_day' => (new \Bitrix\Main\Type\Date())->format('Y-m-d'),
+				'count' => 0,
+			]);
 		}
-		return self::$mobileBannerDisplay === 'Y';
+
+		return self::$mobileBannerDisplay === 'Y' || \Bitrix\Calendar\Util::isShowDailyBanner();
 	}
 
 	/**
@@ -1290,7 +1264,8 @@ class CCalendarSync
 						)
 					);
 
-					$newEvent = array_merge(array('ID' => CCalendarEvent::Edit(array('arFields' => $newEventData))), $newEventData);
+					$newEvent = $newEventData;
+					$newEvent['ID'] = CCalendarEvent::Edit(['arFields' => $newEventData, 'path' => CCalendar::GetPath('user', $newEventData['OWNER_ID'])]);
 					$localEvents[$externalEvent['DAV_XML_ID']] = $newEvent;
 				}
 				else
@@ -1392,11 +1367,12 @@ class CCalendarSync
 
 	/**
 	 * @param int $userId
+	 * @return int
 	 * @throws \Bitrix\Main\ArgumentException
 	 * @throws \Bitrix\Main\ObjectPropertyException
 	 * @throws \Bitrix\Main\SystemException
 	 */
-	private static function getUserOffset(int $userId): string
+	private static function getUserOffset(int $userId): int
 	{
 		$userDb = \Bitrix\Main\UserTable::getList([
 			'filter' => [
@@ -1408,12 +1384,51 @@ class CCalendarSync
 			]
 		]);
 
-		if (($user = $userDb->fetch()) && is_string($user['TIME_ZONE_OFFSET']))
+		if (($user = $userDb->fetch()) && isset($user['TIME_ZONE_OFFSET']))
 		{
-			return $user['TIME_ZONE_OFFSET'];
+			return (int)$user['TIME_ZONE_OFFSET'];
 		}
 
-		return '';
+		return 0;
+	}
+
+	/**
+	 * @param $localCalendar
+	 * @return array|mixed|null
+	 */
+	private static function getLocalEventsList($localCalendar)
+	{
+		$localEventsList = CCalendarEvent::getList(array(
+			'userId' => $localCalendar['OWNER_ID'],
+			'arFilter' => [
+				'SECTION' => $localCalendar['ID']
+			],
+			'arSelect' => [
+				"ID",
+				"CAL_TYPE",
+				"DT_SKIP_TIME",
+				"DATE_FROM",
+				"DATE_TO",
+				"TZ_FROM",
+				"TZ_TO",
+				"PARENT_ID",
+				"IS_MEETING",
+				"MEETING_STATUS",
+				"LOCATION",
+				"RRULE",
+				"EXDATE",
+				"DAV_XML_ID",
+				"RECURRENCE_ID",
+				"G_EVENT_ID",
+				"ATTENDEES_CODES",
+			],
+			'getUserfields' => false,
+			'parseDescription' => false,
+			'fetchSection' => false,
+			'checkPermissions' => false
+		));
+
+		return $localEventsList;
 	}
 
 	/**
@@ -1437,7 +1452,7 @@ class CCalendarSync
 		return null;
 	}
 
-	public function GetUserSyncInfo($userId)
+	public static function GetUserSyncInfo($userId)
 	{
 		require_once ($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/dav/classes/mysql/connection.php');
 		require_once ($_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/dav/classes/general/dav.php');
@@ -1645,7 +1660,6 @@ class CCalendarSync
 	public static function GetCaldavItemsInfo($userId, $type, $calculateTimestamp)
 	{
 		$connections = [];
-		$googleConnectionTypes = ['caldav_google_oauth', 'google_api_oauth'];
 		$bCalDAV = CCalendar::IsCalDAVEnabled() && $type === 'user';
 		$bGoogleApi = CCalendar::isGoogleApiEnabled() && $type === 'user';
 
@@ -1690,11 +1704,11 @@ class CCalendarSync
 							'connectionName' => $connection['NAME'],
 							'type' => 'caldav',
 							'status' => self::isConnectionSuccess($connection['LAST_RESULT']),
-							'server' => self['SERVER']
+							'server' => $connection['SERVER']
 						];
 					}
 				}
-				else if(in_array($connection['ACCOUNT_TYPE'], $googleConnectionTypes))
+				else if(\Bitrix\Calendar\Util::isGoogleConnection($connection['ACCOUNT_TYPE']))
 				{
 					$googleAccountInfo = CCalendarSync::GetGoogleAccountInfo($bGoogleApi, $userId, $type);
 					$connections['google'] = [
@@ -1834,12 +1848,6 @@ class CCalendarSync
 
 	private static function isConnectionSuccess(string $lastResult = null): bool
 	{
-		if (!empty($lastResult) && preg_match("/^\[(2\d\d|0)\][a-z0-9 _]*/i", $lastResult))
-		{
-			return true;
-		}
-
-		return false;
+		return (!is_null($lastResult) && preg_match("/^\[(2\d\d|0)\][a-z0-9 _]*/i", $lastResult));
 	}
 }
-?>

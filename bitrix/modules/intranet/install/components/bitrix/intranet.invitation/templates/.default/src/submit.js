@@ -7,11 +7,8 @@ export class Submit extends EventEmitter
 	{
 		super();
 		this.parent = parent;
-		this.setEventNamespace('BX.Intranet.Invitation.Submit');
-
-		this.parent.subscribe('onButtonClick', (event) => {
-
-		});
+		this.setEventNamespace("BX.Intranet.Invitation.Submit");
+		this.parent.subscribe("onButtonClick", (event) => {});
 	}
 
 	parseEmailAndPhone(form)
@@ -74,44 +71,20 @@ export class Submit extends EventEmitter
 		return [items, errorInputData];
 	}
 
-	prepareGroupAndDepartmentData(inputs, form)
+	getGroupAndDepartmentData(requestData)
 	{
-		let groups = [];
-		let departments = [];
+		const selector = this.parent.selector;
+		const selectorItems = selector.getItems();
 
-		function checkValue(element)
+		if (selectorItems["departments"].length > 0)
 		{
-			const value = element.value;
-
-			if (value.match(/^SG(\d+)$/))
-			{
-				groups.push(value);
-			}
-			else if (value.match(/^DR(\d+)$/))
-			{
-				departments.push(parseInt(value.replace('DR', '')));
-			}
-			else if (value.match(/^D(\d+)$/))
-			{
-				departments.push(parseInt(value.replace('D', '')));
-			}
+			requestData["UF_DEPARTMENT"] = selectorItems["departments"];
 		}
 
-		for (let i = 0, len = inputs.length; i < len; i++)
+		if (selectorItems["projects"].length > 0)
 		{
-			if (Type.isArrayLike(inputs[i])) //check RadioNodeList
-			{
-				inputs[i].forEach(element => {
-					checkValue(element);
-				});
-			}
-			else
-			{
-				checkValue(inputs[i]);
-			}
+			requestData["SONET_GROUPS_CODE"] = selectorItems["projects"];
 		}
-
-		return {groups: groups, departments: departments};
 	}
 
 	submitInvite()
@@ -122,14 +95,14 @@ export class Submit extends EventEmitter
 		if (errorInputData.length > 0)
 		{
 			const event = new Event.BaseEvent({data: {error: Loc.getMessage("INTRANET_INVITE_DIALOG_EMAIL_OR_PHONE_VALIDATE_ERROR") + ": " + errorInputData.join(', ')}});
-			this.emit('onInputError', event);
+			this.emit("onInputError", event);
 			return;
 		}
 
 		if (items.length <= 0)
 		{
 			const event = new Event.BaseEvent({data: {error: Loc.getMessage("INTRANET_INVITE_DIALOG_EMAIL_OR_PHONE_EMPTY_ERROR")}});
-			this.emit('onInputError', event);
+			this.emit("onInputError", event);
 			return;
 		}
 
@@ -137,7 +110,12 @@ export class Submit extends EventEmitter
 			"ITEMS": items
 		};
 
-		this.sendAction("invite", requestData);
+		const analyticsLabel = {
+			"INVITATION_TYPE": "invite",
+			"INVITATION_COUNT": items.length
+		};
+
+		this.sendAction("invite", requestData, analyticsLabel);
 	}
 
 	submitInviteWithGroupDp()
@@ -153,44 +131,24 @@ export class Submit extends EventEmitter
 
 		if (items.length <= 0)
 		{
-			const event = new Event.BaseEvent({data: {error: Loc.getMessage("INTRANET_INVITE_DIALOG_EMAIL_OR_PHONE_EMPTY_ERROR")}});
-			this.emit('onInputError', event);
+			const event = new Event.BaseEvent({data: {
+				error: Loc.getMessage("INTRANET_INVITE_DIALOG_EMAIL_OR_PHONE_EMPTY_ERROR")}
+			});
+			this.emit("onInputError", event);
 			return;
 		}
 
 		let requestData = {
 			"ITEMS": items
 		};
+		this.getGroupAndDepartmentData(requestData);
 
-		if (!Type.isUndefined(inviteWithGroupDpForm["GROUP_AND_DEPARTMENT[]"]))
-		{
-			let arGroupsAndDepartmentInput;
+		const analyticsLabel = {
+			"INVITATION_TYPE": "withGroupOrDepartment",
+			"INVITATION_COUNT": items.length
+		};
 
-			if (typeof inviteWithGroupDpForm["GROUP_AND_DEPARTMENT[]"].value == 'undefined')
-			{
-				arGroupsAndDepartmentInput = inviteWithGroupDpForm["GROUP_AND_DEPARTMENT[]"];
-			}
-			else
-			{
-				arGroupsAndDepartmentInput = [
-					inviteWithGroupDpForm["GROUP_AND_DEPARTMENT[]"]
-				];
-			}
-
-			let groupsAndDepartmentId = this.prepareGroupAndDepartmentData(arGroupsAndDepartmentInput, inviteWithGroupDpForm);
-
-			if (Type.isArray(groupsAndDepartmentId["groups"]))
-			{
-				requestData["SONET_GROUPS_CODE"] = groupsAndDepartmentId["groups"];
-			}
-
-			if (Type.isArray(groupsAndDepartmentId["departments"]))
-			{
-				requestData["UF_DEPARTMENT"] = groupsAndDepartmentId["departments"];
-			}
-		}
-
-		this.sendAction("inviteWithGroupDp", requestData);
+		this.sendAction("inviteWithGroupDp", requestData, analyticsLabel);
 	}
 
 	submitSelf()
@@ -198,7 +156,7 @@ export class Submit extends EventEmitter
 		const selfForm = this.parent.contentBlocks["self"].querySelector("form");
 		let obRequestData = {
 			"allow_register": selfForm["allow_register"].checked ? "Y" : "N",
-			'allow_register_confirm': selfForm["allow_register_confirm"].checked ? "Y" : "N",
+			"allow_register_confirm": selfForm["allow_register_confirm"].checked ? "Y" : "N",
 			"allow_register_secret": selfForm["allow_register_secret"].value,
 			"allow_register_whitelist": selfForm["allow_register_whitelist"].value,
 		};
@@ -219,39 +177,24 @@ export class Submit extends EventEmitter
 
 		if (items.length <= 0)
 		{
-			const event = new Event.BaseEvent({data: {error: Loc.getMessage("INTRANET_INVITE_DIALOG_EMAIL_OR_PHONE_EMPTY_ERROR")}});
-			this.emit('onInputError', event);
+			const event = new Event.BaseEvent({data: {
+				error: Loc.getMessage("INTRANET_INVITE_DIALOG_EMAIL_OR_PHONE_EMPTY_ERROR")}
+			});
+			this.emit("onInputError", event);
 			return;
 		}
 
 		let requestData = {
 			"ITEMS": items
 		};
+		this.getGroupAndDepartmentData(requestData);
 
-		if (!Type.isUndefined(extranetForm["GROUP_AND_DEPARTMENT[]"]))
-		{
-			let arGroupsInput;
+		const analyticsLabel = {
+			"INVITATION_TYPE": "extranet",
+			"INVITATION_COUNT": items.length
+		};
 
-			if (typeof extranetForm["GROUP_AND_DEPARTMENT[]"].value == 'undefined')
-			{
-				arGroupsInput = extranetForm["GROUP_AND_DEPARTMENT[]"];
-			}
-			else
-			{
-				arGroupsInput = [
-					extranetForm["GROUP_AND_DEPARTMENT[]"]
-				];
-			}
-
-			let groupsAndDepartmentId = this.prepareGroupAndDepartmentData(arGroupsInput, extranetForm);
-
-			if (Type.isArray(groupsAndDepartmentId["groups"]))
-			{
-				requestData["SONET_GROUPS_CODE"] = groupsAndDepartmentId["groups"];
-			}
-		}
-
-		this.sendAction("extranet", requestData);
+		this.sendAction("extranet", requestData, analyticsLabel);
 	}
 
 	submitIntegrator()
@@ -262,7 +205,11 @@ export class Submit extends EventEmitter
 			"integrator_email": integratorForm["integrator_email"].value,
 		};
 
-		this.sendAction("inviteIntegrator", obRequestData);
+		const analyticsLabel = {
+			"INVITATION_TYPE": "integrator"
+		};
+
+		this.sendAction("inviteIntegrator", obRequestData, analyticsLabel);
 	}
 
 	submitMassInvite()
@@ -270,10 +217,13 @@ export class Submit extends EventEmitter
 		const massInviteForm = this.parent.contentBlocks["mass-invite"].querySelector("form");
 
 		const obRequestData = {
-			"ITEMS": massInviteForm["mass_invite_emails"].value,
+			"ITEMS": massInviteForm["mass_invite_emails"].value
 		};
 
-		this.sendAction("massInvite", obRequestData);
+		const analyticsLabel = {
+			"INVITATION_TYPE": "mass"
+		};
+		this.sendAction("massInvite", obRequestData, analyticsLabel);
 	}
 
 	submitAdd()
@@ -292,47 +242,24 @@ export class Submit extends EventEmitter
 					: "N"
 			),
 		};
+		this.getGroupAndDepartmentData(requestData);
 
-		if (!Type.isUndefined(addForm["GROUP_AND_DEPARTMENT[]"]))
-		{
-			let arGroupsAndDepartmentInput;
-
-			if (typeof addForm["GROUP_AND_DEPARTMENT[]"].value == 'undefined')
-			{
-				arGroupsAndDepartmentInput = addForm["GROUP_AND_DEPARTMENT[]"];
-			}
-			else
-			{
-				arGroupsAndDepartmentInput = [
-					addForm["GROUP_AND_DEPARTMENT[]"]
-				];
-			}
-
-			let groupsAndDepartmentId = this.prepareGroupAndDepartmentData(arGroupsAndDepartmentInput, addForm);
-
-			if (Type.isArray(groupsAndDepartmentId["groups"]))
-			{
-				requestData["SONET_GROUPS_CODE"] = groupsAndDepartmentId["groups"];
-			}
-
-			if (Type.isArray(groupsAndDepartmentId["departments"]))
-			{
-				requestData["DEPARTMENT_ID"] = groupsAndDepartmentId["departments"];
-			}
-		}
-
-		this.sendAction("add", requestData);
+		const analyticsLabel = {
+			"INVITATION_TYPE": "add"
+		};
+		this.sendAction("add", requestData, analyticsLabel);
 	}
 
-	sendAction(action, requestData)
+	sendAction(action, requestData, analyticsLabel)
 	{
 		this.disableSubmitButton(true);
 		requestData["userOptions"] = this.parent.userOptions;
 
 		BX.ajax.runComponentAction(this.parent.componentName, action, {
 			signedParameters: this.parent.signedParameters,
-			mode: 'ajax',
-			data: requestData
+			mode: "ajax",
+			data: requestData,
+			analyticsLabel: analyticsLabel
 		}).then(function (response) {
 
 			this.disableSubmitButton(false);
@@ -356,7 +283,11 @@ export class Submit extends EventEmitter
 
 			if (response.data == "user_limit")
 			{
-				B24.licenseInfoPopup.show('featureID', BX.message("BX24_INVITE_DIALOG_USERS_LIMIT_TITLE"), BX.message("BX24_INVITE_DIALOG_USERS_LIMIT_TEXT"));
+				B24.licenseInfoPopup.show(
+					"featureID",
+					BX.message("BX24_INVITE_DIALOG_USERS_LIMIT_TITLE"),
+					BX.message("BX24_INVITE_DIALOG_USERS_LIMIT_TEXT")
+				);
 			}
 			else
 			{
@@ -376,18 +307,16 @@ export class Submit extends EventEmitter
 
 		if (isDisable)
 		{
-			Dom.addClass(button, "ui-btn-wait");
-			button.style.cursor = 'auto';
+			Dom.addClass(button, ["ui-btn-wait", "invite-cursor-auto"]);
 		}
 		else
 		{
-			Dom.removeClass(button, "ui-btn-wait");
-			button.style.cursor = 'pointer';
+			Dom.removeClass(button, ["ui-btn-wait", "invite-cursor-auto"]);
 		}
 	}
 
 	sendSuccessEvent(users)
 	{
-		BX.SidePanel.Instance.postMessageAll(window, 'BX.Intranet.Invitation:onAdd', { users: users });
+		BX.SidePanel.Instance.postMessageAll(window, "BX.Intranet.Invitation:onAdd", { users: users });
 	}
 }

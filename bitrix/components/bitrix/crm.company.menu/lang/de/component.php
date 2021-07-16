@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["COMPANY_ADD"] = "Hinzufügen";
 $MESS["COMPANY_ADD_ACTIVITY"] = "Hinzufügen";
 $MESS["COMPANY_ADD_ACTIVITY_TITLE"] = "Hinzufügen";
@@ -26,6 +26,8 @@ $MESS["COMPANY_BUILD_REQUISITES_TITLE"] = "Informationen zum Unternehmen erstell
 $MESS["COMPANY_COPY"] = "Kopieren";
 $MESS["COMPANY_COPY_TITLE"] = "Unternehmen kopieren";
 $MESS["COMPANY_DEDUPE"] = "Dublettenkontrolle";
+$MESS["COMPANY_DEDUPE_AUTOSEARCH"] = "Dubletten finden und vereinigen";
+$MESS["COMPANY_DEDUPE_HELP"] = "So können Sie die Dubletten verwalten";
 $MESS["COMPANY_DEDUPE_TITLE"] = "Dublettenkontrolle";
 $MESS["COMPANY_DELETE"] = "Löschen";
 $MESS["COMPANY_DELETE_DLG_BTNTITLE"] = "Löschen";
@@ -70,4 +72,3 @@ $MESS["CRM_TASK_TAG"] = "crm";
 $MESS["CRM_TASK_TITLE_PREFIX"] = "CRM:";
 $MESS["DOCUMENT_BUTTON_TEXT"] = "Dokument";
 $MESS["DOCUMENT_BUTTON_TITLE"] = "Dokument aus dem Unternehmen erstellen";
-?>

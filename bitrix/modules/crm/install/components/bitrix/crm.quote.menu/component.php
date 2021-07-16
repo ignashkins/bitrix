@@ -12,6 +12,7 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED!==true)die();
 
 use Bitrix\Crm\Integration\DocumentGenerator;
 use Bitrix\Crm\Integration\DocumentGeneratorManager;
+use Bitrix\Main\Localization\Loc;
 
 if (!CModule::IncludeModule('crm'))
 	return;
@@ -30,6 +31,20 @@ $arParams['PATH_TO_QUOTE_DETAILS'] = CrmCheckPath('PATH_TO_QUOTE_DETAILS', $arPa
 $arParams['PATH_TO_QUOTE_KANBAN'] = CrmCheckPath('PATH_TO_QUOTE_KANBAN', $arParams['PATH_TO_QUOTE_KANBAN'], $APPLICATION->GetCurPage()."?kanban");
 
 $arParams['ELEMENT_ID'] = isset($arParams['ELEMENT_ID']) ? intval($arParams['ELEMENT_ID']) : 0;
+
+$makeEditPathFromDetailsPath = static function(string $pathToDetails): string
+{
+	$templateWithoutConflictingSymbols = str_replace('#quote_id#', 'quote_id', $pathToDetails);
+	$editWithoutConflictingSymbols = CHTTP::urlAddParams($templateWithoutConflictingSymbols, ['init_mode' => 'edit']);
+
+	return str_replace('quote_id', '#quote_id#', $editWithoutConflictingSymbols);
+};
+
+if (\CCrmOwnerType::IsSliderEnabled(\CCrmOwnerType::Quote))
+{
+	$arParams['PATH_TO_QUOTE_SHOW'] = $arParams['PATH_TO_QUOTE_DETAILS'];
+	$arParams['PATH_TO_QUOTE_EDIT'] = $makeEditPathFromDetailsPath($arParams['PATH_TO_QUOTE_DETAILS']);
+}
 
 if (!isset($arParams['TYPE']))
 	$arParams['TYPE'] = 'list';
@@ -53,6 +68,7 @@ if ($arParams['TYPE'] == 'list')
 	//$bImport = !$CrmPerms->HavePerm('QUOTE', BX_CRM_PERM_NONE, 'IMPORT');
 	$bAdd    = !$CrmPerms->HavePerm('QUOTE', BX_CRM_PERM_NONE, 'ADD');
 	$bWrite  = !$CrmPerms->HavePerm('QUOTE', BX_CRM_PERM_NONE, 'WRITE');
+	$bConfig = $CrmPerms->HavePerm('CONFIG', BX_CRM_PERM_CONFIG, 'WRITE');
 	$bDelete = false;
 }
 else
@@ -64,6 +80,7 @@ else
 	$bAdd    = CCrmQuote::CheckCreatePermission($CrmPerms);
 	$bWrite  = CCrmQuote::CheckUpdatePermission($arParams['ELEMENT_ID'], $CrmPerms);
 	$bDelete = CCrmQuote::CheckDeletePermission($arParams['ELEMENT_ID'], $CrmPerms);
+	$bConfig = $CrmPerms->HavePerm('CONFIG', BX_CRM_PERM_CONFIG, 'WRITE');
 }
 
 if (isset($arParams['DISABLE_EXPORT']) && $arParams['DISABLE_EXPORT'] == 'Y')
@@ -169,6 +186,26 @@ if($arParams['TYPE'] === 'list')
 		);
 	}
 
+	$arResult['BUTTONS'][] = array('NEWBAR' => true);
+
+	if ($bConfig)
+	{
+		\Bitrix\Crm\Service\Container::getInstance()->getLocalization()->loadMessages();
+		$userFieldListUrl = \Bitrix\Crm\Service\Container::getInstance()->getRouter()->getUserFieldListUrl(\CCrmOwnerType::Quote);
+		if ($userFieldListUrl)
+		{
+			$userFieldListUrl = $userFieldListUrl->__toString();
+		}
+		if ($userFieldListUrl)
+		{
+			$arResult['BUTTONS'][] = [
+				'TEXT' => GetMessage('CRM_TYPE_TYPE_FIELDS_SETTINGS'),
+				'TITLE' => GetMessage('CRM_TYPE_TYPE_FIELDS_SETTINGS'),
+				'ONCLICK' => 'BX.Crm.Router.openSlider("' . $userFieldListUrl . '")',
+			];
+		}
+	}
+
 	/*if ($bImport)
 	{
 		$arResult['BUTTONS'][] = array(
@@ -181,77 +218,87 @@ if($arParams['TYPE'] === 'list')
 
 	if ($bExport)
 	{
-		if($bImport)
+		/*if($bImport)
 		{
 			$arResult['BUTTONS'][] = array('SEPARATOR' => true);
-		}
+		}*/
 
-		$entityType = CCrmOwnerType::QuoteName;
-		$stExportId = 'STEXPORT_'.$entityType.'_MANAGER';
-		$randomSequence = new Bitrix\Main\Type\RandomSequence($stExportId);
-		$stExportManagerId = $stExportId.'_'.$randomSequence->randString();
+		$stExportId = 'EXPORT_'.\CCrmOwnerType::QuoteName;
 		$componentName = 'bitrix:crm.quote.list';
 
-		$arResult['STEXPORT_PARAMS'] = array(
-			'componentName' => $componentName,
-			'siteId' => SITE_ID,
-			'entityType' => $entityType,
-			'stExportId' => $stExportId,
-			'managerId' => $stExportManagerId,
-			'sToken' => 's'.time(),
-			'initialOptions' => array(
+		$arResult['EXPORT_CSV_PARAMS'] = [
+			'id' => $stExportId. '_CSV',
+			'controller' => 'bitrix:crm.api.export',
+			'queue' => [
+				[
+					'action' => 'dispatcher',
+				],
+			],
+			'params' => [
+				'SITE_ID' => SITE_ID,
+				'ENTITY_TYPE' => \CCrmOwnerType::QuoteName,
+				'EXPORT_TYPE' => 'csv',
+				'COMPONENT_NAME' => $componentName,
+				'signedParameters' => \Bitrix\Main\Component\ParameterSigner::signParameters($componentName, array(
+					'QUOTE_COUNT' => '20',
+					'PATH_TO_QUOTE_SHOW' => $arResult['PATH_TO_QUOTE_SHOW'],
+					'PATH_TO_QUOTE_EDIT' => $arResult['PATH_TO_QUOTE_EDIT'],
+					'PATH_TO_QUOTE_KANBAN' => $arResult['PATH_TO_QUOTE_KANBAN'],
+					'NAME_TEMPLATE' => $arParams['NAME_TEMPLATE'],
+					'NAVIGATION_CONTEXT_ID' => \CCrmOwnerType::QuoteName
+				)),
+			],
+			'optionsFields' => array(
 				'EXPORT_ALL_FIELDS' => array(
 					'name' => 'EXPORT_ALL_FIELDS',
 					'type' => 'checkbox',
-					'title' => GetMessage('QUOTE_STEXPORT_OPTION_EXPORT_ALL_FIELDS'),
+					'title' => Loc::getMessage('QUOTE_STEXPORT_OPTION_EXPORT_ALL_FIELDS'),
 					'value' => 'N'
 				),
 				'EXPORT_PRODUCT_FIELDS' => array(
 					'name' => 'EXPORT_PRODUCT_FIELDS',
 					'type' => 'checkbox',
-					'title' => GetMessage('QUOTE_STEXPORT_OPTION_EXPORT_PRODUCT_FIELDS'),
+					'title' => Loc::getMessage('QUOTE_STEXPORT_OPTION_EXPORT_PRODUCT_FIELDS'),
 					'value' => 'N'
 				),
 			),
-			'componentParams' => \Bitrix\Main\Component\ParameterSigner::signParameters($componentName, array(
-				'QUOTE_COUNT' => '20',
-				'PATH_TO_QUOTE_SHOW' => $arResult['PATH_TO_QUOTE_SHOW'],
-				'PATH_TO_QUOTE_EDIT' => $arResult['PATH_TO_QUOTE_EDIT'],
-				'PATH_TO_QUOTE_KANBAN' => $arResult['PATH_TO_QUOTE_KANBAN'],
-				'NAME_TEMPLATE' => $arParams['NAME_TEMPLATE'],
-				'NAVIGATION_CONTEXT_ID' => $entityType
-			)),
 			'messages' => array(
-				'stExportExcelDlgTitle' => GetMessage('QUOTE_EXPORT_EXCEL_TITLE'),
-				'stExportExcelDlgSummary' => GetMessage('QUOTE_STEXPORT_SUMMARY'),
-				'stExportCsvDlgTitle' => GetMessage('QUOTE_EXPORT_CSV_TITLE'),
-				'stExportCsvDlgSummary' => GetMessage('QUOTE_STEXPORT_SUMMARY')
-			)
-		);
+				'DialogTitle' => Loc::getMessage('QUOTE_EXPORT_CSV_TITLE'),
+				'DialogSummary' => Loc::getMessage('QUOTE_STEXPORT_SUMMARY'),
+			),
+			'dialogMaxWidth' => 650,
+		];
+
+		// clone params for excel export
+		$arResult['EXPORT_EXCEL_PARAMS'] = $arResult['EXPORT_CSV_PARAMS'];
+		$arResult['EXPORT_EXCEL_PARAMS']['id'] = $stExportId. '_EXCEL';
+		$arResult['EXPORT_EXCEL_PARAMS']['params']['EXPORT_TYPE'] = 'excel';
+		$arResult['EXPORT_EXCEL_PARAMS']['messages']['DialogTitle'] = Loc::getMessage('QUOTE_EXPORT_EXCEL_TITLE');
 
 		$arResult['BUTTONS'][] = array('SEPARATOR' => true);
 
 		$arResult['BUTTONS'][] = array(
-			'TITLE' => GetMessage('QUOTE_EXPORT_CSV_TITLE'),
-			'TEXT' => GetMessage('QUOTE_EXPORT_CSV'),
-			'ONCLICK' => "BX.Crm.ExportManager.items['".CUtil::JSEscape($stExportManagerId)."'].startExport('csv')",
+			'TITLE' => Loc::getMessage('QUOTE_EXPORT_CSV_TITLE'),
+			'TEXT' => Loc::getMessage('QUOTE_EXPORT_CSV'),
+			'ONCLICK' => "BX.UI.StepProcessing.ProcessManager.get('{$stExportId}_CSV').showDialog()",
 			'ICON' => 'btn-export'
 		);
 
 		$arResult['BUTTONS'][] = array(
-			'TITLE' => GetMessage('QUOTE_EXPORT_EXCEL_TITLE'),
-			'TEXT' => GetMessage('QUOTE_EXPORT_EXCEL'),
-			'ONCLICK' => "BX.Crm.ExportManager.items['".CUtil::JSEscape($stExportManagerId)."'].startExport('excel')",
+			'TITLE' => Loc::getMessage('QUOTE_EXPORT_EXCEL_TITLE'),
+			'TEXT' => Loc::getMessage('QUOTE_EXPORT_EXCEL'),
+			'ONCLICK' => "BX.UI.StepProcessing.ProcessManager.get('{$stExportId}_EXCEL').showDialog()",
 			'ICON' => 'btn-export'
 		);
 
 		$arResult['BUTTONS'][] = array('SEPARATOR' => true);
 
-		unset($entityType, $stExportId, $randomSequence, $stExportManagerId);
+		unset($stExportId);
 	}
 
 	if(count($arResult['BUTTONS']) > 1)
 	{
+		$arResult['BUTTONS'][] = ['SEPARATOR' => true];
 		//Force start new bar after first button
 		array_splice($arResult['BUTTONS'], 1, 0, array(array('NEWBAR' => true)));
 	}

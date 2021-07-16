@@ -330,7 +330,7 @@ class CWebDavDiskDispatcher
 		{
 			throw new Exception('Where are options "user_files"?');
 		}
-		$userFilesOptions = unserialize($userFilesOptions, false);
+		$userFilesOptions = unserialize($userFilesOptions, ['allowed_classes' => false]);
 		$iblockId = $userFilesOptions[CSite::getDefSite()]['id'];
 		$userSectionId = CWebDavIblock::getRootSectionIdForUser($iblockId, $this->getUser()->getId());
 		if(!$userSectionId)

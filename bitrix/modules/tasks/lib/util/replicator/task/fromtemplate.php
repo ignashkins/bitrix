@@ -315,7 +315,7 @@ final class FromTemplate extends Util\Replicator\Task
 		if ($template && $template['REPLICATE'] === 'Y')
 		{
 			$agentName = str_replace('#ID#', $templateId, $parameters['AGENT_NAME_TEMPLATE']); // todo: when AGENT_NAME_TEMPLATE is not set?
-			$replicateParams = $template['REPLICATE_PARAMS'] = unserialize($template['REPLICATE_PARAMS']);
+			$replicateParams = $template['REPLICATE_PARAMS'] = unserialize($template['REPLICATE_PARAMS'], ['allowed_classes' => false]);
 
 			$executionTime = static::getExecutionTime($agentName, $replicateParams);
 			if ($executionTime && (static::taskByTemplateAlreadyExist($templateId, $executionTime) || time() < MakeTimeStamp($executionTime)))
@@ -886,7 +886,7 @@ final class FromTemplate extends Util\Replicator\Task
 		$name = 'CTasks::RepeatTaskByTemplateId('.$templateId.');';
 
 		// First, remove all agents for this template
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		self::unInstallAgent($templateId);
 
 		// Set up new agent
@@ -900,7 +900,7 @@ final class FromTemplate extends Util\Replicator\Task
 
 				if($nextTime)
 				{
-					/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 					\CAgent::addAgent(
 						$name,
 						'tasks',
@@ -947,7 +947,7 @@ final class FromTemplate extends Util\Replicator\Task
 			$templateData = array(
 				'CREATED_BY' => $fallenTemplate['CREATED_BY'],
 				'REPLICATE' => $fallenTemplate['REPLICATE'],
-				'REPLICATE_PARAMS' => unserialize($fallenTemplate['REPLICATE_PARAMS']),
+				'REPLICATE_PARAMS' => unserialize($fallenTemplate['REPLICATE_PARAMS'], ['allowed_classes' => false]),
 				'TPARAM_REPLICATION_COUNT' => $fallenTemplate['TPARAM_REPLICATION_COUNT']
 			);
 
@@ -963,13 +963,13 @@ final class FromTemplate extends Util\Replicator\Task
 
 	public static function unInstallAgent($id)
 	{
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		\CAgent::removeAgent('CTasks::RepeatTaskByTemplateId('.$id.');', 'tasks');
 
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		\CAgent::removeAgent('CTasks::RepeatTaskByTemplateId('.$id.', 0);', 'tasks');
 
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		\CAgent::removeAgent('CTasks::RepeatTaskByTemplateId('.$id.', 1);', 'tasks');
 	}
 
@@ -1018,12 +1018,12 @@ final class FromTemplate extends Util\Replicator\Task
 			}
 
 			// unpack values
-			$item['RESPONSIBLES'] = unserialize($item['RESPONSIBLES']);
-			$item['ACCOMPLICES'] = unserialize($item['ACCOMPLICES']);
-			$item['AUDITORS'] = unserialize($item['AUDITORS']);
-			$item['TAGS'] = unserialize($item['TAGS']);
-			$item['REPLICATE_PARAMS'] = unserialize($item['REPLICATE_PARAMS']);
-			$item['DEPENDS_ON'] = unserialize($item['DEPENDS_ON']);
+			$item['RESPONSIBLES'] = unserialize($item['RESPONSIBLES'], ['allowed_classes' => false]);
+			$item['ACCOMPLICES'] = unserialize($item['ACCOMPLICES'], ['allowed_classes' => false]);
+			$item['AUDITORS'] = unserialize($item['AUDITORS'], ['allowed_classes' => false]);
+			$item['TAGS'] = unserialize($item['TAGS'], ['allowed_classes' => false]);
+			$item['REPLICATE_PARAMS'] = unserialize($item['REPLICATE_PARAMS'], ['allowed_classes' => false]);
+			$item['DEPENDS_ON'] = unserialize($item['DEPENDS_ON'], ['allowed_classes' => false]);
 
 			$result[$item['ID']] = $item;
 		}

@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["CRM_DEAL_CREATE_ON_BASIS"] = "Створити на підставі";
 $MESS["CRM_DEAL_SL_SUBSCRIBE"] = "Стежити";
 $MESS["CRM_DEAL_SL_SUBSCRIBE_TITLE"] = "Стежити за угодою (події цієї угоди будуть показуватися у вашій живий стрічці)";
@@ -57,6 +57,7 @@ $MESS["DEAL_LIST"] = "Список угод";
 $MESS["DEAL_LIST_TITLE"] = "Список угод";
 $MESS["DEAL_MIGRATION"] = "Міграція з інших CRM";
 $MESS["DEAL_MIGRATION_TITLE"] = "Міграція з інших CRM";
+$MESS["DEAL_ORDER_SCENARIO"] = "Режим роботи із замовленнями";
 $MESS["DEAL_REGISTER_CALL"] = "Зафіксувати дзвінок";
 $MESS["DEAL_REGISTER_CALL_TITLE"] = "Зафіксувати новий дзвінок";
 $MESS["DEAL_SHOW"] = "Переглянути угоду";
@@ -68,4 +69,3 @@ $MESS["DEAL_VERTICAL_CRM"] = "Галузеві сценарії";
 $MESS["DEAL_VERTICAL_CRM_TITLE"] = "Галузеві сценарії";
 $MESS["DOCUMENT_BUTTON_TEXT"] = "Документ";
 $MESS["DOCUMENT_BUTTON_TITLE"] = "Створити документ на підставі угоди";
-?>

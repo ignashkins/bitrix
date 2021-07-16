@@ -8,6 +8,7 @@ $MESS["LANDING_TPL_ACTION_DELETE"] = "Видалити сторінку";
 $MESS["LANDING_TPL_ACTION_DELETE_CONFIRM"] = "Видалити сторінку?";
 $MESS["LANDING_TPL_ACTION_DELETE_FOLDER"] = "Видалити папку";
 $MESS["LANDING_TPL_ACTION_EDIT"] = "Налаштувати";
+$MESS["LANDING_TPL_ACTION_EDIT_DESIGN"] = "Налаштувати дизайн";
 $MESS["LANDING_TPL_ACTION_FOLDER_UP"] = "Наверх";
 $MESS["LANDING_TPL_ACTION_GOTO"] = "Перейти на сторінку";
 $MESS["LANDING_TPL_ACTION_MOVE"] = "Перемістити сторінку";

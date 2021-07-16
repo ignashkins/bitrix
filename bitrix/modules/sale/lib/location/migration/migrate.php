@@ -72,7 +72,7 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 	{
 		global $DBType;
 		$this->Init($curPath = "", $DBType, $updaterName = "", $curDir = "", self::MODULE_ID, "DB");
-		$this->data = unserialize($data);
+		$this->data = unserialize($data, ['allowed_classes' => false]);
 	}
 
 	public static function updateDBSchemaRestoreLegacyIndexes()
@@ -1283,10 +1283,8 @@ class CUpdaterLocationPro extends \CUpdater implements \Serializable
 		}
 
 		// language list
-		$a = false;
-		$b = false;
 		$lang = new \CLanguage();
-		$res = $lang->GetList($a, $b);
+		$res = $lang->GetList();
 		$this->data['LANG'] = array();
 		while($item = $res->Fetch())
 			$this->data['LANG'][] = $item['LID'];

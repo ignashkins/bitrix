@@ -18,7 +18,6 @@ class Factory
 	{
 		switch($className)
 		{
-			//case '\Sale\Handlers\Delivery\YandextaxiHandler':
 			case '\\' . \Sale\Handlers\Delivery\YandextaxiHandler::class:
 				return new YandexTaxi();
 				break;
@@ -33,9 +32,6 @@ class Factory
 	/**
 	 * @param string $code
 	 * @return HandlerContract|RestDelivery
-	 * @throws \Bitrix\Main\ArgumentException
-	 * @throws \Bitrix\Main\ObjectPropertyException
-	 * @throws \Bitrix\Main\SystemException
 	 */
 	public static function makeRest(string $code)
 	{

@@ -55,7 +55,6 @@ foreach ($arResult['ROWS'] as $index => $data)
 		$buttonCaption = ''; $buttonColor = '';
 		$buttonIcon = ''; $buttonAction = '';
 		$buttonTitle = '';
-
 		if ($data['STATE']['isSent'])
 		{
 			$dateCaption = Loc::getMessage('SENDER_LETTER_LIST_STATE_IS_SENT');
@@ -161,7 +160,19 @@ foreach ($arResult['ROWS'] as $index => $data)
 		</div>
 		<div class="sender-letter-list-desc-normal-grey">
 			<?
-			if ($data['STATE']['isFinished'])
+
+			if ($data['WAITING_RECIPIENT'] === 'Y')
+			{
+			?>
+			<span class="sender-letter-list-circular-box" title="<?php echo Loc::getMessage('SENDER_DISPATCH_STATE_M')?>">
+					<svg class="sender-letter-list-button-icon sender-letter-list-circular" viewBox="25 25 50 50">
+						<circle class="sender-letter-list-path" cx="50" cy="50" r="20" fill="none" stroke-miterlimit="10"/>
+						<circle class="sender-letter-list-inner-path" cx="50" cy="50" r="20" fill="none" stroke-miterlimit="10"/>
+					</svg>
+				</span>
+			<?
+			}
+			elseif ($data['STATE']['isFinished'])
 			{
 				$count = number_format((int) $data['COUNT']['sent'], 0, '.', ' ');
 				?>
@@ -231,7 +242,7 @@ foreach ($arResult['ROWS'] as $index => $data)
 
 	// statistics
 	ob_start();
-	if ($data['POSTING_ID'] && $canViewClient)
+	if ($data['POSTING_ID'] && $canViewClient && $data['WAITING_RECIPIENT'] === 'N')
 	{
 
 		?>
@@ -241,13 +252,13 @@ foreach ($arResult['ROWS'] as $index => $data)
 		>
 			<?=Loc::getMessage('SENDER_LETTER_LIST_ROW_RECIPIENT')?>
 		</a>
+		<br/>
 		<?
 	}
 	if ($data['HAS_STATISTICS'])
 	{
 
 		?>
-		<br>
 		<a class="sender-letter-list-link"
 			onclick="BX.Sender.Page.open('<?=CUtil::JSEscape($data['URLS']['STAT'])?>'); return false;"
 			href="<?=htmlspecialcharsbx($data['URLS']['STAT'])?>"
@@ -264,7 +275,9 @@ foreach ($arResult['ROWS'] as $index => $data)
 			<?
 			$clicks = $data['STATS']['CLICK'];
 			$clicks .= '%';
-			echo Loc::getMessage('SENDER_LETTER_LIST_ROW_STATS_CLICKS', ['#COUNT#' => $clicks])?>
+			$unsub = $data['STATS']['UNSUB'];
+			$unsub .= '%';
+			echo Loc::getMessage('SENDER_LETTER_LIST_ROW_STATS_CLICKS', ['#COUNT#' => $clicks, '#UNSUB#' => $unsub])?>
 		</a>
 		<?
 	}

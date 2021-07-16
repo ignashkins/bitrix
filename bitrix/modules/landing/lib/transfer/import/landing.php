@@ -164,6 +164,11 @@ class Landing
 			}
 			$blockInstance->setAttributes($block['attrs']);
 		}
+		// update dynamic source
+		if (isset($block['dynamic']) && is_array($block['dynamic']))
+		{
+			$blockInstance->saveDynamicParams($block['dynamic']);
+		}
 	}
 
 	/**
@@ -239,15 +244,28 @@ class Landing
 		}
 
 		// add block to the landing
+		$blockFields = [
+			'PUBLIC' => 'N',
+			'SORT' => $sort,
+			'ANCHOR' => isset($block['anchor'])
+				? $block['anchor']
+				: ''
+		];
+		if ($block['full_content'] ?? null)
+		{
+			$blockFields['CONTENT'] = str_replace(
+				['<?', '?>'],
+				['< ?', '? >'],
+				$block['full_content']
+			);
+		}
+		if ($block['designed'] ?? null)
+		{
+			$blockFields['DESIGNED'] = 'Y';
+		}
 		$blockId = $landing->addBlock(
 			$block['code'],
-			[
-				'PUBLIC' => 'N',
-				'SORT' => $sort,
-				'ANCHOR' => isset($block['anchor'])
-					? $block['anchor']
-					: ''
-			]
+			$blockFields
 		);
 		if ($blockId)
 		{

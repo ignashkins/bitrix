@@ -44,9 +44,6 @@ require_once($_SERVER["DOCUMENT_ROOT"]."/bitrix/components/bitrix/mobile.socialn
 
 __IncludeLang(dirname(__FILE__)."/lang/".$lng."/ajax.php");
 
-if(CModule::IncludeModule("compression"))
-	CCompress::Disable2048Spaces();
-
 if(CModule::IncludeModule("socialnetwork"))
 {
 	$bCurrentUserIsAdmin = CSocNetUser::IsCurrentUserModuleAdmin();
@@ -1370,8 +1367,8 @@ if(CModule::IncludeModule("socialnetwork"))
 		);
 
 		$rsUser = CUser::GetList(
-			($by="last_name"),
-			($order="asc"),
+			"last_name",
+			"asc",
 			array(
 				"ID" => intval($USER->GetId())
 			),

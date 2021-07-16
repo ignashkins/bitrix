@@ -1,0 +1,4 @@
+<?php
+$MESS["MOBILE_EXT_NOTIFICATION_ITEM_AUTHOR_SYSTEM"] = "Системне повідомлення";
+$MESS["MOBILE_EXT_NOTIFICATION_ITEM_MORE_USERS"] = "і ще #COUNT# людина(людей)";
+$MESS["MOBILE_EXT_NOTIFICATION_ITEM_USERS_LIST"] = "Користувачі";

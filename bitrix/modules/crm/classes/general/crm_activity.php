@@ -117,6 +117,7 @@ class CAllCrmActivity
 		}
 
 		self::NormalizeDateTimeFields($arFields);
+
 		$ID = $DB->Add(CCrmActivity::TABLE_NAME, $arFields, array('DESCRIPTION', 'STORAGE_ELEMENT_IDS', 'SETTINGS', 'PROVIDER_PARAMS', 'PROVIDER_DATA'));
 		if(is_string($ID) && $ID !== '')
 		{
@@ -139,8 +140,8 @@ class CAllCrmActivity
 		}
 
 		$arFields['ID'] = $ID;
-		$arFields['SETTINGS'] = isset($arFields['SETTINGS']) ? unserialize($arFields['SETTINGS']) : array();
-		$arFields['PROVIDER_PARAMS'] = isset($arFields['PROVIDER_PARAMS']) ? unserialize($arFields['PROVIDER_PARAMS']) : array();
+		$arFields['SETTINGS'] = isset($arFields['SETTINGS']) ? unserialize($arFields['SETTINGS'], ['allowed_classes' => false]) : array();
+		$arFields['PROVIDER_PARAMS'] = isset($arFields['PROVIDER_PARAMS']) ? unserialize($arFields['PROVIDER_PARAMS'], ['allowed_classes' => false]) : array();
 
 		CCrmActivity::DoSaveElementIDs($ID, $arFields['STORAGE_TYPE_ID'], $storageElementIDs);
 
@@ -311,14 +312,19 @@ class CAllCrmActivity
 
 			if($provider !== null)
 			{
-				$provider::onAfterAdd($arFields);
+				$provider::onAfterAdd(
+					$arFields,
+					[
+						'IS_RESTORATION' => $isRestoration
+					]
+				);
 			}
 
 
 			//Crm\Activity\Provider\ProviderManager::processRestorationFromRecycleBin(
 			\Bitrix\Crm\Activity\Provider\ProviderManager::processCreation(
 				$arFields,
-				array('BINDINGS' => $arBindings, 'IS_RESTORATION' => true)
+				array('BINDINGS' => $arBindings, 'IS_RESTORATION' => $isRestoration)
 			);
 
 			\Bitrix\Crm\Pseudoactivity\WaitEntry::processActivityCreation(
@@ -504,8 +510,8 @@ class CAllCrmActivity
 			));
 		}
 
-		$arFields['SETTINGS'] = isset($arFields['SETTINGS']) ? unserialize($arFields['SETTINGS']) : array();
-		$arFields['PROVIDER_PARAMS'] = isset($arFields['PROVIDER_PARAMS']) ? unserialize($arFields['PROVIDER_PARAMS']) : array();
+		$arFields['SETTINGS'] = isset($arFields['SETTINGS']) ? unserialize($arFields['SETTINGS'], ['allowed_classes' => false]) : array();
+		$arFields['PROVIDER_PARAMS'] = isset($arFields['PROVIDER_PARAMS']) ? unserialize($arFields['PROVIDER_PARAMS'], ['allowed_classes' => false]) : array();
 
 		CCrmEntityHelper::RemoveCached(self::CACHE_NAME, $ID);
 
@@ -793,6 +799,16 @@ class CAllCrmActivity
 
 		$USER_FIELD_MANAGER->update(static::UF_ENTITY_TYPE, $ID, $arFields, $arFields['EDITOR_ID']);
 
+		if ($provider !== null)
+		{
+			$provider::onAfterUpdate(
+				$ID,
+				$arFields,
+				$arPrevEntity,
+				$arCurEntity
+			);
+		}
+
 		$rsEvents = GetModuleEvents('crm', 'OnActivityUpdate');
 		while ($arEvent = $rsEvents->Fetch())
 		{
@@ -1016,6 +1032,11 @@ class CAllCrmActivity
 		{
 			self::UnregisterLiveFeedEvent($ID);
 			CCrmSonetSubscription::UnRegisterSubscriptionByEntity(CCrmOwnerType::Activity, $ID);
+		}
+
+		if ($provider !== null)
+		{
+			$provider::onAfterDelete($ID, $ary);
 		}
 
 		$rsEvents = GetModuleEvents('crm', 'OnActivityDelete');
@@ -2026,10 +2047,13 @@ class CAllCrmActivity
 		//Ignore RESTRICT_BY_IDS. We can not apply filter by activity ID for Lead, Deal, Contact or Company
 		unset($permOptions['RESTRICT_BY_IDS']);
 
-		$entitiesSql[strval(CCrmOwnerType::Lead)] = CCrmLead::BuildPermSql($aliasPrefix, $permType, $permOptions);
-		$entitiesSql[strval(CCrmOwnerType::Deal)] = CCrmDeal::BuildPermSql($aliasPrefix, $permType, $permOptions);
-		$entitiesSql[strval(CCrmOwnerType::Contact)] = CCrmContact::BuildPermSql($aliasPrefix, $permType, $permOptions);
-		$entitiesSql[strval(CCrmOwnerType::Company)] = CCrmCompany::BuildPermSql($aliasPrefix, $permType, $permOptions);
+		$entitiesSql[(string)CCrmOwnerType::Lead] = CCrmLead::BuildPermSql($aliasPrefix, $permType, $permOptions);
+		$entitiesSql[(string)CCrmOwnerType::Deal] = CCrmDeal::BuildPermSql($aliasPrefix, $permType, $permOptions);
+		$entitiesSql[(string)CCrmOwnerType::Contact] = CCrmContact::BuildPermSql($aliasPrefix, $permType, $permOptions);
+		$entitiesSql[(string)CCrmOwnerType::Company] = CCrmCompany::BuildPermSql($aliasPrefix, $permType, $permOptions);
+		$entitiesSql[(string)CCrmOwnerType::Order] =
+			CCrmPerms::BuildSql(CCrmOwnerType::OrderName, $aliasPrefix, $permType, $permOptions);
+
 		//Invoice does not have activities
 		//$entitiesSql[strval(CCrmOwnerType::Invoice)] = CCrmInvoice::BuildPermSql($aliasPrefix, $permType, $permOptions);
 
@@ -2037,7 +2061,7 @@ class CAllCrmActivity
 		{
 			if(!is_string($entitySql))
 			{
-				//If $entityPermSql is not string - acces denied. Clear permission SQL and related records will be ignored.
+				//If $entityPermSql is not string - access denied. Clear permission SQL and related records will be ignored.
 				unset($entitiesSql[$entityTypeID]);
 				continue;
 			}
@@ -2667,8 +2691,8 @@ class CAllCrmActivity
 	public static function DetachBinding($srcOwnerTypeID, $srcOwnerID, $targOwnerTypeID, $targOwnerID)
 	{
 		$dbResult = \Bitrix\Main\Application::getConnection()->query(
-			"SELECT a.ID, a.RESPONSIBLE_ID 
-				FROM b_crm_act a INNER JOIN b_crm_act_bind b ON a.ID = b.ACTIVITY_ID  
+			"SELECT a.ID, a.RESPONSIBLE_ID
+				FROM b_crm_act a INNER JOIN b_crm_act_bind b ON a.ID = b.ACTIVITY_ID
 				WHERE b.OWNER_TYPE_ID = {$srcOwnerTypeID} AND b.OWNER_ID = {$srcOwnerID}"
 		);
 
@@ -2866,7 +2890,7 @@ class CAllCrmActivity
 		{
 			if($enableSettings)
 			{
-				$arRes['ENTITY_SETTINGS'] = isset($arRes['ENTITY_SETTINGS']) && $arRes['ENTITY_SETTINGS'] !== '' ? unserialize($arRes['ENTITY_SETTINGS']) : array();
+				$arRes['ENTITY_SETTINGS'] = isset($arRes['ENTITY_SETTINGS']) && $arRes['ENTITY_SETTINGS'] !== '' ? unserialize($arRes['ENTITY_SETTINGS'], ['allowed_classes' => false]) : array();
 			}
 			else
 			{
@@ -2925,7 +2949,7 @@ class CAllCrmActivity
 
 			if(isset($comm['ENTITY_SETTINGS']))
 			{
-				$settings = unserialize($comm['ENTITY_SETTINGS']);
+				$settings = unserialize($comm['ENTITY_SETTINGS'], ['allowed_classes' => false]);
 			}
 			else
 			{
@@ -3098,7 +3122,7 @@ class CAllCrmActivity
 						'SHOW_URL' => CCrmOwnerType::GetEntityShowPath($entityTypeID, $entityID, false)
 					);
 
-					$settings = isset($comm['ENTITY_SETTINGS']) ? unserialize($comm['ENTITY_SETTINGS']) : array();
+					$settings = isset($comm['ENTITY_SETTINGS']) ? unserialize($comm['ENTITY_SETTINGS'], ['allowed_classes' => false]) : array();
 					if(empty($settings))
 					{
 						$customComm = array('ENTITY_ID' => $entityID, 'ENTITY_TYPE_ID' => $entityTypeID);
@@ -3559,7 +3583,7 @@ class CAllCrmActivity
 		}
 		elseif(is_string($field) && $field !== '')
 		{
-			$result = unserialize($field);
+			$result = unserialize($field, ['allowed_classes' => false]);
 		}
 		else
 		{
@@ -3802,10 +3826,11 @@ class CAllCrmActivity
 
 			$ownerTypeName = '';
 			$ownerID = 0;
-			if(preg_match('/^([A-Z]+)_([0-9]+)$/', mb_strtoupper(trim($value)), $match) === 1)
+			$parseResult = \CCrmOwnerType::ParseEntitySlug(mb_strtoupper(trim($value)));
+			if(is_array($parseResult))
 			{
-				$ownerTypeName = CCrmOwnerTypeAbbr::ResolveName($match[1]);
-				$ownerID = intval($match[2]);
+				$ownerTypeName = \CCrmOwnerType::ResolveName($parseResult['ENTITY_TYPE_ID']);
+				$ownerID = $parseResult['ENTITY_ID'];
 			}
 			elseif($defaultTypeName !== '')
 			{
@@ -4080,7 +4105,7 @@ class CAllCrmActivity
 				{
 					if($remindData !== '')
 					{
-						$remindData = unserialize($remindData);
+						$remindData = unserialize($remindData, ['allowed_classes' => false]);
 					}
 
 					if(!is_array($remindData))
@@ -4535,8 +4560,8 @@ class CAllCrmActivity
 					$arNewUser = array();
 
 					$dbUser = CUser::GetList(
-						($by='id'),
-						($order='asc'),
+						'id',
+						'asc',
 						array('ID'=> "{$oldID}|{$newID}"),
 						array(
 							'FIELDS'=> array(
@@ -4567,6 +4592,11 @@ class CAllCrmActivity
 					$template = CSite::GetNameFormat(false);
 					$oldText = CUser::FormatName($template, $arOldUser);
 					$newText = CUser::FormatName($template, $arNewUser);
+				}
+				elseif($fieldName === 'LOCATION' && \Bitrix\Main\Loader::includeModule('calendar'))
+				{
+					$oldText = \CCalendar::GetTextLocation($oldText);
+					$newText = \CCalendar::GetTextLocation($newText);
 				}
 			}
 		}
@@ -5896,7 +5926,7 @@ class CAllCrmActivity
 			$deadline = '';
 		}
 
-		if($activityID > 0 && $deadline !== '')
+		if($activityID > 0 && $deadline !== '' && CheckDateTime($deadline))
 		{
 			CCrmActivity::DoSaveNearestUserActivity(
 				array(
@@ -7061,8 +7091,9 @@ class CAllCrmActivity
 		{
 			$fields['DESCRIPTION_RAW'] = mb_substr($fields['DESCRIPTION_RAW'], 0, $limit);
 		}
+		$fields['DESCRIPTION_RAW'] = \Bitrix\Main\Text\Emoji::decode($fields['DESCRIPTION_RAW']);
+		if(isset($fields['SUBJECT'])) $fields['SUBJECT'] = \Bitrix\Main\Text\Emoji::decode($fields['SUBJECT']);
 	}
-
 }
 
 class CCrmActivityType
@@ -7718,6 +7749,11 @@ class CCrmActivityEmailSender
 			$descriptionHtml = htmlspecialcharsbx($description);
 		}
 
+		if (isset($settings['DISABLE_SENDING_MESSAGE_COPY']) && $settings['DISABLE_SENDING_MESSAGE_COPY'] === 'Y')
+		{
+			$cc = '';
+		}
+
 		$postingData = array(
 			'STATUS' => 'D',
 			'FROM_FIELD' => $from,
@@ -7898,9 +7934,9 @@ class CCrmActivityDbResult extends CDBResult
 {
 	private $selectFields = null;
 	private $selectCommunications = false;
-	function CCrmActivityDbResult($res, $selectFields = array())
+	public function __construct($res, $selectFields = array())
 	{
-		parent::CDBResult($res);
+		parent::__construct($res);
 
 		if(!is_array($selectFields))
 		{
@@ -7916,12 +7952,12 @@ class CCrmActivityDbResult extends CDBResult
 		{
 			if(array_key_exists('SETTINGS', $result))
 			{
-				$result['SETTINGS'] = is_string($result['SETTINGS']) ? unserialize($result['SETTINGS']) : array();
+				$result['SETTINGS'] = is_string($result['SETTINGS']) ? unserialize($result['SETTINGS'], ['allowed_classes' => false]) : array();
 			}
 
 			if(array_key_exists('PROVIDER_PARAMS', $result))
 			{
-				$result['PROVIDER_PARAMS'] = is_string($result['PROVIDER_PARAMS']) ? unserialize($result['PROVIDER_PARAMS']) : array();
+				$result['PROVIDER_PARAMS'] = is_string($result['PROVIDER_PARAMS']) ? unserialize($result['PROVIDER_PARAMS'], ['allowed_classes' => false]) : array();
 			}
 
 			if($this->selectCommunications)

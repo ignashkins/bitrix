@@ -70,6 +70,7 @@ $userBlockController = new CrmWebFormEditUserBlockController(
 			fieldsDictionary: <?=CUtil::PhpToJSObject($arResult['AVAILABLE_FIELDS'])?>,
 			schemesDictionary: <?=CUtil::PhpToJSObject($arResult['ENTITY_SCHEMES'])?>,
 			entityDictionary: <?=CUtil::PhpToJSObject($arResult['AVAILABLE_ENTITIES'])?>,
+			dynamicEntities: <?=CUtil::PhpToJSObject($arResult['DYNAMIC_ENTITIES'])?>,
 			dependencies: <?=CUtil::PhpToJSObject($arResult['FORM']['DEPENDENCIES'])?>,
 			presetFields: <?=CUtil::PhpToJSObject($arResult['FORM']['PRESET_FIELDS'])?>,
 			booleanFieldItems: <?=CUtil::PhpToJSObject($arResult['BOOLEAN_FIELD_ITEMS'])?>,
@@ -106,7 +107,7 @@ $userBlockController = new CrmWebFormEditUserBlockController(
 				'dlgClose' => Loc::getMessage('CRM_WEBFORM_EDIT_CLOSE'),
 				'dlgTitle' => Loc::getMessage('CRM_WEBFORM_EDIT_POPUP_SETTINGS_TITLE'),
 				'dlgInvoiceEmptyProductTitle' => Loc::getMessage('CRM_WEBFORM_EDIT_POPUP_INVOICE_EMPTY_PRODUCT_ERROR_TITLE'),
-				'dlgInvoiceEmptyProduct' => Loc::getMessage('CRM_WEBFORM_EDIT_POPUP_INVOICE_EMPTY_PRODUCT_ERROR1'),
+				'dlgInvoiceEmptyProduct' => Loc::getMessage('CRM_WEBFORM_EDIT_POPUP_INVOICE_EMPTY_PRODUCT_ERROR2'),
 				'defaultProductName' => Loc::getMessage('CRM_WEBFORM_EDIT_DEFAULT_PRODUCT_NAME'),
 				'dlgChange' => Loc::getMessage('CRM_WEBFORM_EDIT_CHANGE'),
 				'dlgChoose' => Loc::getMessage('CRM_WEBFORM_EDIT_CHOOSE'),
@@ -445,7 +446,7 @@ if (!empty($arResult['ERRORS']))
 				<?endforeach;?>
 				<label for="ENTITY_SCHEMES_ADD_INVOICE">
 					<input data-bx-web-form-entity-scheme-invoice="" id="ENTITY_SCHEMES_ADD_INVOICE" type="checkbox" <?=($arResult['ENTITY_SCHEMES']['HAS_INVOICE'] ? 'checked' : '')?> class="crm-webform-edit-task-options-document-settings-radio">
-					<span class="crm-webform-edit-task-options-document-settings-radio-element"><?=Loc::getMessage('CRM_WEBFORM_EDIT_DOC_ADD_INVOICE')?></span>
+					<span class="crm-webform-edit-task-options-document-settings-radio-element"><?=Loc::getMessage('CRM_WEBFORM_EDIT_DOC_ADD_INVOICE1')?></span>
 				</label>
 			</div>
 			<div class="crm-webform-edit-task-options-document-settings-description">
@@ -471,6 +472,26 @@ if (!empty($arResult['ERRORS']))
 									<?=htmlspecialcharsbx($dealCategory['NAME'])?>
 								</option>
 							<?endforeach;?>
+						</select>
+					</div>
+				</div>
+
+				<div
+					data-bx-web-form-entity-scheme-dyn-cat=""
+					class="crm-webform-edit-animate crm-webform-edit-task-options-document-duplicate-control"
+				>
+					<div class="crm-webform-edit-task-options-document-duplicate-list-element">
+						<?=Loc::getMessage('CRM_WEBFORM_EDIT_DYNAMIC_CATEGORY_LIST')?>:
+					</div>
+					<div class="crm-webform-edit-task-options-document-duplicate-list-container">
+						<select
+							id="DYNAMIC_CATEGORY"
+							name="DYNAMIC_CATEGORY"
+							class="crm-webform-edit-task-options-rule-select"
+						>
+							<?if(!empty($arResult['FORM']['FORM_SETTINGS']['DYNAMIC_CATEGORY'])):?>
+								<option value="<?=htmlspecialcharsbx($arResult['FORM']['FORM_SETTINGS']['DYNAMIC_CATEGORY'])?>"></option>
+							<?endif?>
 						</select>
 					</div>
 				</div>
@@ -508,14 +529,14 @@ if (!empty($arResult['ERRORS']))
 			</div>
 			<div data-bx-crm-webform-invoice="" class="crm-webform-edit-task-options-account-setup <?=(!$arResult['ENTITY_SCHEMES']['HAS_INVOICE'] ? 'crm-webform-display-none' : '')?>">
 				<div class="crm-webform-edit-task-options-settings-title-container">
-					<h4 class="crm-webform-edit-task-options-settings-title"><?=Loc::getMessage('CRM_WEBFORM_EDIT_DOC_INVOICE_TITLE')?>:</h4>
+					<h4 class="crm-webform-edit-task-options-settings-title"><?=Loc::getMessage('CRM_WEBFORM_EDIT_DOC_INVOICE_TITLE1')?>:</h4>
 				</div>
 				<div class="crm-webform-edit-task-options-account-setup-container">
 
 					<div data-bx-crm-webform-invoice-payer="">
 						<div class="crm-webform-edit-task-options-account-setup-info">
 							<span data-bx-crm-webform-invoice-payer-text-no="">
-								<?=Loc::getMessage('CRM_WEBFORM_EDIT_DOC_INVOICE_ADD_PAYER')?>
+								<?=Loc::getMessage('CRM_WEBFORM_EDIT_DOC_INVOICE_ADD_PAYER1')?>
 							</span>
 							<br>
 							<?=Loc::getMessage('CRM_WEBFORM_EDIT_DOC_INVOICE_CHOOSE_PAYER')?>:
@@ -532,7 +553,7 @@ if (!empty($arResult['ERRORS']))
 
 					<div data-bx-crm-webform-invoice-product="">
 						<div class="crm-webform-edit-task-options-account-setup-info-description">
-							<?=Loc::getMessage('CRM_WEBFORM_EDIT_DOC_INVOICE_PRODUCT_CHOICE')?>
+							<?=Loc::getMessage('CRM_WEBFORM_EDIT_DOC_INVOICE_PRODUCT_CHOICE1')?>
 						</div>
 
 						<div>
@@ -618,7 +639,7 @@ if (!empty($arResult['ERRORS']))
 			<div class="crm-webform-edit-task-options-metrics-container">
 				<div id="CRM_WEBFORM_EXTERNAL_ANALYTICS" class="crm-webform-edit-task-options-metric">
 
-					<?if(in_array(LANGUAGE_ID, array('ru', 'ua', 'kz', 'by'))):?>
+					<?if($arResult['IS_RU_ZONE']):?>
 					<div data-bx-crm-webform-ext-an="ya" class="<?=($arResult['FORM']['YANDEX_METRIC_ID'] ? 'crm-webform-edit-task-options-metric-exist' : '')?>">
 						<div class="crm-webform-edit-task-options-metric-option">
 							<span class="crm-webform-edit-task-options-metric-item"><?=Loc::getMessage('CRM_WEBFORM_EDIT_EXTERNAL_ANALYTICS_YA')?>:</span>
@@ -695,12 +716,13 @@ if (!empty($arResult['ERRORS']))
 						</div><!--crm-webform-edit-task-options-metric-create-->
 					</div><!--crm-webform-edit-task-options-metric-option-->
 
+					<?if(!$arResult['IS_UA_ZONE_RU_LANG']):?>
 					<div class="crm-webform-edit-task-options-document-settings-description">
 						<span class="crm-webform-edit-task-options-document-settings-description-element">
 							<?=Loc::getMessage('CRM_WEBFORM_EDIT_EXTERNAL_ANALYTICS_AUTO_EVENTS')?>
 						</span>
 					</div>
-
+					<?endif;?>
 				</div><!--crm-webform-edit-task-options-metric-->
 			</div>
 		</div><!--crm-webform-edit-task-options-settings-container-->

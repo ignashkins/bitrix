@@ -8,8 +8,7 @@ use Bitrix\Crm\Attribute\FieldAttributeManager;
 use Bitrix\Crm\Attribute\FieldAttributeType;
 use Bitrix\Crm\Attribute\FieldAttributePhaseGroupType;
 use Bitrix\Crm\EntityAddress;
-use Bitrix\Crm\Format\ContactAddressFormatter;
-use Bitrix\Crm\Format\AddressSeparator;
+use Bitrix\Crm\Format\AddressFormatter;
 use Bitrix\Crm\Tracking;
 
 if(!Main\Loader::includeModule('crm'))
@@ -74,6 +73,8 @@ class CCrmContactDetailsComponent extends CBitrixComponent
 	private $enableSearchHistory = true;
 	/** @var array */
 	private $defaultEntityData = [];
+	/** @var bool */
+	private $isLocationModuleIncluded = false;
 
 	public function __construct($component = null)
 	{
@@ -120,6 +121,7 @@ class CCrmContactDetailsComponent extends CBitrixComponent
 		global $APPLICATION;
 
 		$this->enableOutmodedFields = false;//\Bitrix\Crm\Settings\ContactSettings::getCurrent()->areOutmodedRequisitesEnabled();
+		$this->isLocationModuleIncluded = Main\Loader::includeModule('location');
 
 		//region Params
 		$this->arResult['ENTITY_ID'] = isset($this->arParams['~ENTITY_ID']) ? (int)$this->arParams['~ENTITY_ID'] : 0;
@@ -308,7 +310,7 @@ class CCrmContactDetailsComponent extends CBitrixComponent
 
 		$this->prepareEntityUserFields();
 		$this->prepareEntityUserFieldInfos();
-		$this->prepareEntityData();
+		$this->initializeData();
 
 		//region GUID
 		$this->guid = $this->arResult['GUID'] = isset($this->arParams['GUID'])
@@ -344,11 +346,7 @@ class CCrmContactDetailsComponent extends CBitrixComponent
 		//endregion
 
 		//region Fields
-		$this->prepareFieldInfos();
-
-		$this->prepareEntityFieldAttributes();
-
-		$this->arResult['ENTITY_FIELDS'] = $this->entityFieldInfos;
+		$this->arResult['ENTITY_FIELDS'] = $this->prepareFieldInfos();
 		$this->arResult['ENTITY_ATTRIBUTE_SCOPE'] = FieldAttributeManager::resolveEntityScope(
 			CCrmOwnerType::Contact,
 			$this->entityID
@@ -378,6 +376,17 @@ class CCrmContactDetailsComponent extends CBitrixComponent
 
 		//region TABS
 		$this->arResult['TABS'] = array();
+
+		$relationManager = Crm\Service\Container::getInstance()->getRelationManager();
+		$this->arResult['TABS'] = array_merge(
+			$this->arResult['TABS'],
+			$relationManager->getRelationTabsForDynamicChildren(
+				\CCrmOwnerType::Contact,
+				$this->entityID,
+				($this->entityID === 0)
+			)
+		);
+
 		if($this->entityID > 0)
 		{
 			$this->arResult['TABS'][] = array(
@@ -453,7 +462,11 @@ class CCrmContactDetailsComponent extends CBitrixComponent
 					)
 				)
 			);
-			if (CModule::IncludeModule('sale') && Main\Config\Option::get("crm", "crm_shop_enabled") === "Y")
+			if (
+				CModule::IncludeModule('sale')
+				&& Main\Config\Option::get("crm", "crm_shop_enabled") === "Y"
+				&& CCrmSaleHelper::isWithOrdersMode()
+			)
 			{
 				$this->arResult['TABS'][] = array(
 					'id' => 'tab_order',
@@ -894,7 +907,7 @@ class CCrmContactDetailsComponent extends CBitrixComponent
 			),
 			array(
 				'name' => 'EXPORT',
-				'title' => Loc::getMessage('CRM_CONTACT_FIELD_EXPORT'),
+				'title' => Loc::getMessage('CRM_CONTACT_FIELD_EXPORT_NEW'),
 				'type' => 'boolean',
 				'editable' => true
 			),
@@ -965,16 +978,7 @@ class CCrmContactDetailsComponent extends CBitrixComponent
 							)
 						)
 					),
-					'clientEditorFieldsParams' => [
-						CCrmOwnerType::ContactName => [
-							'REQUISITES' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Contact, 'requisite'),
-							'ADDRESS' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Contact,'requisite_address'),
-						],
-						CCrmOwnerType::CompanyName => [
-							'REQUISITES' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Company, 'requisite'),
-							'ADDRESS' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Company,'requisite_address'),
-						]
-					]
+					'clientEditorFieldsParams' => $this->prepareClientEditorFieldsParams()
 				)
 			),
 			array(
@@ -1581,10 +1585,9 @@ class CCrmContactDetailsComponent extends CBitrixComponent
 		//region Responsible
 		if(isset($this->entityData['ASSIGNED_BY_ID']) && $this->entityData['ASSIGNED_BY_ID'] > 0)
 		{
-			$by = 'ID';
-			$order = 'ASC';
 			$dbUsers = \CUser::GetList(
-				$by, $order,
+				'ID',
+				'ASC',
 				array('ID' => $this->entityData['ASSIGNED_BY_ID']),
 				array(
 					'FIELDS' => array(
@@ -1593,7 +1596,6 @@ class CCrmContactDetailsComponent extends CBitrixComponent
 					)
 				)
 			);
-			unset($by, $order);
 			$user = is_object($dbUsers) ? $dbUsers->Fetch() : null;
 			if(is_array($user))
 			{
@@ -1881,14 +1883,10 @@ class CCrmContactDetailsComponent extends CBitrixComponent
 
 		if($this->enableOutmodedFields)
 		{
-			$this->entityData['ADDRESS_HTML'] = ContactAddressFormatter::format(
-				$this->entityData,
-				array(
-					'SEPARATOR' => AddressSeparator::HtmlLineBreak,
-					'NL2BR' => true,
-					'HTML_ENCODE' => true
-				)
-			);
+			$this->entityData['ADDRESS_HTML'] =
+				AddressFormatter::getSingleInstance()->formatHtmlMultilineSpecialchar(
+					Crm\ContactAddress::mapEntityFields($this->entityData)
+				);
 		}
 
 		Tracking\UI\Details::prepareEntityData(
@@ -1940,5 +1938,40 @@ class CCrmContactDetailsComponent extends CBitrixComponent
 	protected function getFileUrlTemplate(): string
 	{
 		return '/bitrix/components/bitrix/crm.contact.show/show_file.php?ownerId=#owner_id#&fieldName=#field_name#&fileId=#file_id#';
+	}
+
+	protected function prepareClientEditorFieldsParams(): array
+	{
+		$result = [
+			CCrmOwnerType::ContactName => [
+				'REQUISITES' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Contact, 'requisite')
+			],
+			CCrmOwnerType::CompanyName => [
+				'REQUISITES' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Company, 'requisite')
+			]
+		];
+		if ($this->isLocationModuleIncluded)
+		{
+			$result[CCrmOwnerType::ContactName]['ADDRESS'] = \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Contact,'requisite_address');
+			$result[CCrmOwnerType::CompanyName]['ADDRESS'] = \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Company,'requisite_address');
+		}
+
+		return $result;
+	}
+
+	public function initializeData()
+	{
+		$this->prepareEntityData();
+		$this->prepareFieldInfos();
+		$this->prepareEntityFieldAttributes();
+	}
+
+	public function getEntityEditorData(): array
+	{
+		return [
+			'ENTITY_ID' => $this->getEntityID(),
+			'ENTITY_DATA' => $this->prepareEntityData(),
+			'ENTITY_INFO' => $this->prepareEntityInfo()
+		];
 	}
 }

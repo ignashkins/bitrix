@@ -187,21 +187,55 @@ class CAllControllerMember
 			return false;
 		}
 
-		$strCommand = '$arResult = array("DATE_FORMAT" => CSite::GetDateFormat());';
+		$strCommand = "echo 'DATE_FORMAT='.urlencode(CSite::GetDateFormat()).'&';\n";
 		if($ar_group["CHECK_COUNTER_FREE_SPACE"] == "Y")
-			$strCommand .= "\n".'$quota = new CDiskQuota(); $disk_quota = $quota->GetDiskQuota(); if(is_bool($disk_quota))$arResult["COUNTER_FREE_SPACE"] = -1; else $arResult["COUNTER_FREE_SPACE"] = round($disk_quota/1024, 2);';
+		{
+			$strCommand .= "function counter_free_space(\$APPLICATION, \$USER, \$DB) {\n";
+			$strCommand .= "  \$quota = new CDiskQuota();\n";
+			$strCommand .= "  \$disk_quota = \$quota->GetDiskQuota();\n";
+			$strCommand .= "  if(is_bool(\$disk_quota))\n";
+			$strCommand .= "    return -1;\n";
+			$strCommand .= "  else\n";
+			$strCommand .= "    return round(\$disk_quota/1024, 2);\n";
+			$strCommand .= "}\n";
+			$strCommand .= "echo 'COUNTER_FREE_SPACE='.urlencode(counter_free_space(\$APPLICATION, \$USER, \$DB)).'&';\n";
+		}
 		if($ar_group["CHECK_COUNTER_SITES"] == "Y")
-			$strCommand .= "\n".'$dbr = CSite::GetList(($by="sort"), ($order="asc"), array("ACTIVE"=>Y)); $arResult["COUNTER_SITES"] = $dbr->SelectedRowsCount();';
+		{
+			$strCommand .= "function counter_sites(\$APPLICATION, \$USER, \$DB) {\n";
+			$strCommand .= "  \$by = 'sort';\n";
+			$strCommand .= "  \$order = 'asc';\n";
+			$strCommand .= "  \$dbr = CSite::GetList(\$by, \$order, array('ACTIVE'=>'Y'));\n";
+			$strCommand .= "  return \$dbr->SelectedRowsCount();\n";
+			$strCommand .= "}\n";
+			$strCommand .= "echo 'COUNTER_SITES='.urlencode(counter_sites(\$APPLICATION, \$USER, \$DB)).'&';\n";
+		}
 		if($ar_group["CHECK_COUNTER_USERS"] == "Y")
-			$strCommand .= "\n".'$dbr = $GLOBALS["DB"]->Query("SELECT COUNT(1) as USER_COUNT FROM b_user U WHERE (U.EXTERNAL_AUTH_ID IS NULL OR U.EXTERNAL_AUTH_ID=\'\')"); $ar = $dbr->Fetch(); $arResult["COUNTER_USERS"] = $ar["USER_COUNT"];';
+		{
+			$strCommand .= "function counter_users(\$APPLICATION, \$USER, \$DB) {\n";
+			$strCommand .= "  \$dbr = \$DB->Query(\"SELECT COUNT(1) as USER_COUNT FROM b_user U WHERE (U.EXTERNAL_AUTH_ID IS NULL OR U.EXTERNAL_AUTH_ID='')\");\n";
+			$strCommand .= "  \$ar = \$dbr->Fetch();\n";
+			$strCommand .= "  return \$ar['USER_COUNT'];\n";
+			$strCommand .= "}\n";
+			$strCommand .= "echo 'COUNTER_USERS='.urlencode(counter_users(\$APPLICATION, \$USER, \$DB)).'&';\n";
+		}
 		if($ar_group["CHECK_COUNTER_LAST_AUTH"] == "Y")
-			$strCommand .= "\n".'$dbr = $GLOBALS["DB"]->Query("SELECT MAX(U.LAST_LOGIN) as LAST_LOGIN FROM b_user U"); $ar = $dbr->Fetch(); $arResult["COUNTER_LAST_AUTH"] = $ar["LAST_LOGIN"];';
-
+		{
+			$strCommand .= "function counter_last_auth(\$APPLICATION, \$USER, \$DB) {\n";
+			$strCommand .= "  \$dbr = \$DB->Query(\"SELECT MAX(U.LAST_LOGIN) as LAST_LOGIN FROM b_user U\");\n";
+			$strCommand .= "  \$ar = \$dbr->Fetch();\n";
+			$strCommand .= "  return \$ar['LAST_LOGIN'];\n";
+			$strCommand .= "}\n";
+			$strCommand .= "echo 'COUNTER_LAST_AUTH='.urlencode(counter_last_auth(\$APPLICATION, \$USER, \$DB)).'&';\n";
+		}
 		$rsCounters = CControllerCounter::GetMemberCounters($member_id);
 		while($arCounter = $rsCounters->Fetch())
-			$strCommand .= "\n".'$arResult['.$arCounter['ID'].'] = eval("'.EscapePHPString($arCounter["COMMAND"]).'");';
-
-		$strCommand .= "\n".'foreach($arResult as $k=>$v) echo urlencode($k),"=",urlencode($v),"&";';
+		{
+			$strCommand .= "function counter_".$arCounter['ID']."(\$APPLICATION, \$USER, \$DB) {\n";
+			$strCommand .= "  return eval(\"".EscapePHPString($arCounter["COMMAND"])."\");\n";
+			$strCommand .= "}\n";
+			$strCommand .= "echo '".$arCounter['ID']."='.urlencode(counter_".$arCounter['ID']."(\$APPLICATION, \$USER, \$DB)).'&';\n";
+		}
 
 		foreach(GetModuleEvents("controller", "OnBeforeUpdateCounters", true) as $arEvent)
 		{
@@ -339,7 +373,7 @@ class CAllControllerMember
 	public static function logChanges($CONTROLLER_MEMBER_ID, $arFieldsOld, $arFieldsNew, $strNote)
 	{
 		global $DB, $USER;
-		static $arFieldsToLog = array("CONTROLLER_GROUP_ID", "SITE_ACTIVE", "NAME");
+		static $arFieldsToLog = array("CONTROLLER_GROUP_ID", "SITE_ACTIVE", "NAME", "ACTIVE");
 
 		if(is_object($USER))
 			$USER_ID = $USER->GetID();
@@ -703,7 +737,7 @@ class CAllControllerMember
 				{
 					$arFilterNew[$k] = $value;
 				}
-				elseif($value <> '')
+				elseif((string)$value <> '')
 				{
 					if(array_key_exists("date_format", $arOptions) && preg_match($date_field, $k))
 						$arFilterNew[$k] = ConvertTimeStamp(MakeTimeStamp($value, $arOptions["date_format"]), "FULL");

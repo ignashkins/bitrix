@@ -191,7 +191,7 @@ try
 				catch (Exception $e)
 				{
 					if ($e->GetCode() & TasksException::TE_FLAG_SERIALIZED_ERRORS_IN_MESSAGE)
-						$arErrors = unserialize($e->GetMessage());
+						$arErrors = unserialize($e->GetMessage(), ['allowed_classes' => false]);
 					else
 					{
 						$arErrors[] = array(
@@ -366,7 +366,7 @@ try
 				}
 
 				$rsUser = CUser::GetList(
-					$by = 'ID', $order = 'ASC',
+					'ID', 'ASC',
 					array('ID' => $userId),
 					array('FIELDS' => array('NAME', 'LAST_NAME', 'SECOND_NAME', 'LOGIN'))
 				);
@@ -587,7 +587,7 @@ try
 				catch (Exception $e)
 				{
 					if ($e->GetCode() & TasksException::TE_FLAG_SERIALIZED_ERRORS_IN_MESSAGE)
-						$arErrors = unserialize($e->GetMessage());
+						$arErrors = unserialize($e->GetMessage(), ['allowed_classes' => false]);
 					else
 					{
 						$arErrors[] = array(
@@ -644,7 +644,7 @@ try
 				catch (Exception $e)
 				{
 					if ($e->GetCode() & TasksException::TE_FLAG_SERIALIZED_ERRORS_IN_MESSAGE)
-						$arErrors = unserialize($e->GetMessage());
+						$arErrors = unserialize($e->GetMessage(), ['allowed_classes' => false]);
 					else
 					{
 						$arErrors[] = array(
@@ -856,7 +856,7 @@ try
 				if ( ! empty($arUsers) )
 				{
 					$rsUser = CUser::GetList(
-						$by = 'ID', $order = 'ASC',
+						'ID', 'ASC',
 						array('ID' => implode("|", array_keys($arUsers))),
 						array('FIELDS' => array('ID', 'NAME', 'LAST_NAME', 'SECOND_NAME', 'LOGIN'))
 					);
@@ -886,20 +886,18 @@ try
 				{
 					usort(
 						$arUsers,
-						create_function(
-							'$a,$b',
-							'return strnatcasecmp($a["LAST_NAME"], $b["LAST_NAME"]);'
-						)
+						function ($a, $b) {
+							return strnatcasecmp($a["LAST_NAME"], $b["LAST_NAME"]);
+						}
 					);
 				}
 				else
 				{
 					usort(
 						$arUsers,
-						create_function(
-							'$a,$b',
-							'return strnatcasecmp($a["NAME_FORMATTED"], $b["NAME_FORMATTED"]);'
-						)
+						function ($a, $b) {
+							return strnatcasecmp($a["NAME_FORMATTED"], $b["NAME_FORMATTED"]);
+						}
 					);
 				}
 

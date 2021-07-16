@@ -359,7 +359,7 @@ class CCurrencyClassifierComponent extends \CBitrixComponent
 
 		if ($currencyId !== '')
 		{
-			$currencyLangList = CCurrencyLang::GetList($by = '', $order = '', $currencyId);
+			$currencyLangList = CCurrencyLang::GetList('', '', $currencyId);
 			while ($currencyLang = $currencyLangList->Fetch())
 			{
 				$langSettings = $currencyLang;
@@ -566,6 +566,14 @@ class CCurrencyClassifierComponent extends \CBitrixComponent
 	 */
 	public function executeComponent()
 	{
+		global $USER;
+
+		$CrmPerms = new CCrmPerms($USER->GetID());
+		if (!$CrmPerms->HavePerm('CONFIG', BX_CRM_PERM_CONFIG, 'WRITE'))
+		{
+			ShowError(Loc::getMessage('CRM_CURRENCY_CLASSIFIER_PERMISSION_DENIED'));
+			return;
+		}
 		if ($this->checkModulesIncluding())
 		{
 			$this->prepareData();

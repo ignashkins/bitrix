@@ -172,6 +172,7 @@ Class imopenlines extends CModule
 		$eventManager->registerEventHandler('imconnector', 'OnReceivedStatusReading', 'imopenlines', '\Bitrix\ImOpenLines\Connector', 'onReceivedStatusReading');
 		$eventManager->registerEventHandler('imconnector', 'OnReceivedStatusWrites', 'imopenlines', '\Bitrix\ImOpenLines\Connector', 'onReceivedStatusWrites');
 		$eventManager->registerEventHandler('imconnector', 'OnReceivedStatusBlock', 'imopenlines', '\Bitrix\ImOpenLines\Connector', 'OnReceivedStatusBlock');
+		$eventManager->registerEventHandler('imconnector', 'OnReceivedError', 'imopenlines', '\Bitrix\ImOpenLines\Connector', 'OnReceivedError');
 		$eventManager->registerEventHandler('main', 'OnAfterSetOption_~controller_group_name', 'imopenlines', '\Bitrix\ImOpenLines\Limit', 'onBitrix24LicenseChange');
 		$eventManager->registerEventHandler('rest', 'OnRestServiceBuildDescription', 'imopenlines', '\Bitrix\ImOpenLines\Rest', 'onRestServiceBuildDescription');
 		$eventManager->registerEventHandler('imopenlines', 'OnSessionStart', 'imopenlines', '\Bitrix\ImOpenLines\Connector', 'onSessionStart');
@@ -199,7 +200,14 @@ Class imopenlines extends CModule
 		$eventManager->registerEventHandler('imopenlines', 'OnImopenlineChangeQueueType', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onQueueTypeChange');
 		$eventManager->registerEventHandler('imopenlines', 'OnQueueOperatorsAdd', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onQueueOperatorsAdd');
 		$eventManager->registerEventHandler('imopenlines', 'OnQueueOperatorsDelete', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onQueueOperatorsDelete');
+		$eventManager->registerEventHandler('iblock', 'OnBeforeIBlockSectionDelete', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'OnBeforeDepartmentsDelete');
+		$eventManager->registerEventHandler('iblock', 'OnAfterIBlockSectionDelete', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'OnAfterDepartmentsDelete');
+		$eventManager->registerEventHandler('iblock', 'OnBeforeIBlockSectionUpdate', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'OnBeforeDepartmentsUpdate');
+		$eventManager->registerEventHandler('iblock', 'OnAfterIBlockSectionUpdate', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'OnAfterDepartmentsUpdate');
+		$eventManager->registerEventHandler('main', 'OnAfterUserAdd', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onUserAdd');
+		$eventManager->registerEventHandler('main', 'OnBeforeUserUpdate', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onUserUpdateBefore');
 		$eventManager->registerEventHandler('main', 'OnAfterUserUpdate', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onUserUpdate');
+		$eventManager->registerEventHandler('main', 'OnAfterUserDelete', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'OnAfterUserDelete');
 		$eventManager->registerEventHandler('main', 'OnUserDelete', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onUserDelete');
 		$eventManager->registerEventHandler('timeman', 'OnAfterTMDayStart', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onAfterTMDayStart');
 		$eventManager->registerEventHandler('timeman', 'OnAfterTMDayPause', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onAfterTMDayPause');
@@ -222,6 +230,7 @@ Class imopenlines extends CModule
 		CAgent::AddAgent('\Bitrix\ImOpenLines\Common::deleteBrokenSession();', "imopenlines", "N", 86400, "", "Y", \ConvertTimeStamp(time()+\CTimeZone::GetOffset()+86400, "FULL"));
 		CAgent::AddAgent('\Bitrix\ImOpenLines\Session::dismissedOperatorAgent(0);', "imopenlines", "N", 86400);
 		CAgent::AddAgent('\Bitrix\ImOpenLines\Session\Agent::sendMessageNoAnswer();', "imopenlines", "N", 60);
+		CAgent::AddAgent('\Bitrix\ImOpenLines\Session\Agent::sendAutomaticMessage();', 'imopenlines', 'N', 60);
 		CAgent::AddAgent('\Bitrix\ImOpenLines\KpiManager::setExpiredMessagesAgent();', "imopenlines", "N", 60, "", "Y", \ConvertTimeStamp(time()+\CTimeZone::GetOffset()+60, "FULL"));
 
 		if (!IsModuleInstalled('bitrix24'))
@@ -400,6 +409,7 @@ Class imopenlines extends CModule
 		$eventManager->unRegisterEventHandler('imconnector', 'OnReceivedStatusReading', 'imopenlines', '\Bitrix\ImOpenLines\Connector', 'onReceivedStatusReading');
 		$eventManager->unRegisterEventHandler('imconnector', 'OnReceivedStatusWrites', 'imopenlines', '\Bitrix\ImOpenLines\Connector', 'onReceivedStatusWrites');
 		$eventManager->unRegisterEventHandler('imconnector', 'OnReceivedStatusBlock', 'imopenlines', '\Bitrix\ImOpenLines\Connector', 'OnReceivedStatusBlock');
+		$eventManager->unRegisterEventHandler('imconnector', 'OnReceivedError', 'imopenlines', '\Bitrix\ImOpenLines\Connector', 'OnReceivedError');
 		$eventManager->unRegisterEventHandler('main', 'OnAfterSetOption_~controller_group_name', 'imopenlines', '\Bitrix\ImOpenLines\Limit', 'onBitrix24LicenseChange');
 		$eventManager->unRegisterEventHandler('rest', 'OnRestServiceBuildDescription', 'imopenlines', '\Bitrix\ImOpenLines\Rest', 'onRestServiceBuildDescription');
 		$eventManager->unRegisterEventHandler('main', 'Bitrix\Disk\Controller\File::'.\Bitrix\Main\Engine\Controller::EVENT_ON_BEFORE_ACTION, 'imopenlines', '\Bitrix\ImOpenLines\Widget\Auth', 'onDiskCheckAuth');
@@ -408,7 +418,14 @@ Class imopenlines extends CModule
 		$eventManager->unRegisterEventHandler('imopenlines', 'OnImopenlineChangeQueueType', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onQueueTypeChange');
 		$eventManager->unRegisterEventHandler('imopenlines', 'OnQueueOperatorsAdd', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onQueueOperatorsAdd');
 		$eventManager->unRegisterEventHandler('imopenlines', 'OnQueueOperatorsDelete', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onQueueOperatorsDelete');
+		$eventManager->unRegisterEventHandler('iblock', 'OnBeforeIBlockSectionDelete', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'OnBeforeDepartmentsDelete');
+		$eventManager->unRegisterEventHandler('iblock', 'OnAfterIBlockSectionDelete', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'OnAfterDepartmentsDelete');
+		$eventManager->unRegisterEventHandler('iblock', 'OnBeforeIBlockSectionUpdate', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'OnBeforeDepartmentsUpdate');
+		$eventManager->unRegisterEventHandler('iblock', 'OnAfterIBlockSectionUpdate', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'OnAfterDepartmentsUpdate');
+		$eventManager->unRegisterEventHandler('main', 'OnAfterUserAdd', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onUserAdd');
+		$eventManager->unRegisterEventHandler('main', 'OnBeforeUserUpdate', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onUserUpdateBefore');
 		$eventManager->unRegisterEventHandler('main', 'OnAfterUserUpdate', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onUserUpdate');
+		$eventManager->unRegisterEventHandler('main', 'OnAfterUserDelete', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'OnAfterUserDelete');
 		$eventManager->unRegisterEventHandler('main', 'OnUserDelete', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onUserDelete');
 		$eventManager->unRegisterEventHandler('timeman', 'OnAfterTMDayStart', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onAfterTMDayStart');
 		$eventManager->unRegisterEventHandler('timeman', 'OnAfterTMDayPause', 'imopenlines', '\Bitrix\ImOpenLines\Queue\Event', 'onAfterTMDayPause');

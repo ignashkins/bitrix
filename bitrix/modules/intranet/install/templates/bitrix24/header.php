@@ -36,7 +36,8 @@ CModule::IncludeModule("intranet");
 	"intranet.sidepanel.bitrix24",
 	"socialnetwork.slider",
 	"calendar.sliderloader",
-	"ui.notification"
+	"ui.notification",
+	"ui.info-helper"
 ]);
 
 Loc::loadMessages($_SERVER["DOCUMENT_ROOT"]."/bitrix/templates/".SITE_TEMPLATE_ID."/header.php");
@@ -372,7 +373,8 @@ if ($isBitrix24Cloud)
 						);
 					?>
 					</div>
-					<?
+					<div class="header-personal">
+						<?
 						$profileLink = $isExtranet ? SITE_DIR."contacts/personal" : SITE_DIR."company/personal";
 						$APPLICATION->IncludeComponent(
 							"bitrix:system.auth.form",
@@ -383,13 +385,27 @@ if ($isBitrix24Cloud)
 							),
 							false
 						);
-					?>
+						?>
+						<div class="header-item" id="header-buttons">
+							<?
+							$APPLICATION->IncludeComponent("bitrix:intranet.license.widget", "", []);
+							$APPLICATION->IncludeComponent("bitrix:intranet.invitation.widget", "", []);
+							?>
+						</div>
+					</div>
 				</div>
 			</div>
 		</td>
 	</tr>
 	<tr>
-		<td class="bx-layout-cont">
+		<td class="bx-layout-cont"><?php
+			$dynamicArea = new \Bitrix\Main\Composite\StaticArea("inline-scripts");
+			$dynamicArea->startDynamicArea();
+
+			$APPLICATION->ShowViewContent("inline-scripts");
+
+			$dynamicArea->finishDynamicArea();
+			?>
 			<table class="bx-layout-inner-table">
 				<tr class="bx-layout-inner-top-row">
 					<td class="bx-layout-inner-left" id="layout-left-column">

@@ -2,6 +2,7 @@
 
 if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true) die();
 
+use Bitrix\Calendar\ICal\Parser\Calendar as CalendarIcalComponent;
 use Bitrix\Mail;
 use Bitrix\Mail\ImapCommands\MailsFlagsManager;
 use Bitrix\Mail\ImapCommands\MailsFoldersManager;
@@ -186,15 +187,16 @@ class CMailClientAjaxController extends \Bitrix\Main\Engine\Controller
 	/**
 	 * Deletes messages.
 	 * @param string[] $ids
+	 * @param boolean $deleteImmediately
 	 */
-	public function deleteAction($ids)
+	public function deleteAction($ids, $deleteImmediately = false)
 	{
 		$result = $this->getIds($ids);
 		if ($result->isSuccess())
 		{
 			$data = $result->getData();
 			$mailMarkerManager = new MailsFoldersManager($data['mailboxId'], $data['messagesIds']);
-			$result = $mailMarkerManager->deleteMails();
+			$result = $mailMarkerManager->deleteMails($deleteImmediately);
 			if (!$result->isSuccess())
 			{
 				$errors = $result->getErrors();
@@ -991,6 +993,7 @@ class CMailClientAjaxController extends \Bitrix\Main\Engine\Controller
 
 	public function icalAction()
 	{
+//		return false;
 		$request = Context::getCurrent()->getRequest();
 
 		$messageId = (int)$request->getPost("messageId");
@@ -1033,17 +1036,25 @@ class CMailClientAjaxController extends \Bitrix\Main\Engine\Controller
 			return false;
 		}
 
-		list($event, $method) = ICalMailManager::parseRequest($message['OPTIONS']['iCal']);
+		$icalComponent = ICalMailManager::parseRequest($message['OPTIONS']['iCal']);
 
-		if (isset($method) && $method === 'REQUEST')
+		if ($icalComponent instanceof \Bitrix\Calendar\ICal\Parser\Calendar
+			&& $icalComponent->getMethod() === \Bitrix\Calendar\ICal\Parser\Dictionary::METHOD['request']
+			&& $icalComponent->hasOneEvent()
+		)
 		{
-			ICalMailManager::manageRequest([
-				'event'  => $event,
-				'userId' => $message['USER_ID'],
-				'emailFrom'  => $message['FIELD_FROM'],
-				'emailTo'  => $message['FIELD_TO'],
-				'answer' => $action
-			]);
+			\Bitrix\Calendar\ICal\MailInvitation\IncomingInvitationRequestHandler::createInstance()
+				->setDecision($action)
+				->setIcalComponent($icalComponent)
+				->setUserId((int)$message['USER_ID'])
+				->handle();
+//			ICalMailManager::manageRequest([
+//				'event'  => $icalComponent->getEvent(),
+//				'userId' => $message['USER_ID'],
+//				'emailFrom'  => $message['FIELD_FROM'],
+//				'emailTo'  => $message['FIELD_TO'],
+//				'answer' => $action
+//			]);
 
 			return true;
 		}

@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["B24_APP_INSTALL_CANCEL"] = "Закрити";
 $MESS["B24_APP_INSTALL_VERSION"] = "Версія";
 $MESS["BX24_APP_INSTALL_ADMIN_ERROR"] = "Для встановлення застосунку зверніться до адміністратора порталу";
@@ -13,5 +13,4 @@ $MESS["BX24_APP_INSTALL_PRIVACY_LINK"] = "https://www.bitrix24.ua/about/privacy.
 $MESS["BX24_APP_INSTALL_PRIVACY_TEXT"] = "Я ознайомлений та згоден з <a href=\"#LINK#\" target=\"_blank\">політикою конфіденційності</a>";
 $MESS["BX24_APP_INSTALL_RIGHTS"] = "Застосунок запитує дозвіл на такі дії:";
 $MESS["BX24_APP_INSTALL_SUCCESS"] = "Застосунок було успішно встановлено. <a href='#LINK#'>Перейти</a>";
-$MESS["BX24_APP_INSTALL_TERMS_OF_SERVICE_TEXT"] = "Встановлюючи або завантажуючи застосунки або інтеграції, ви погоджуєтеся з <a href=\"#LINK#\" target=\"_blank\">Умовами використання Маркетплейс Бітрікс24</a>";
-?>
+$MESS["BX24_APP_INSTALL_TERMS_OF_SERVICE_TEXT_2"] = "Встановлюючи або завантажуючи застосунки або інтеграції, ви погоджуєтеся з  <a href=\"#LINK#\" target=\"_blank\">Умовами використання Бітрікс24.Маркет</a>";

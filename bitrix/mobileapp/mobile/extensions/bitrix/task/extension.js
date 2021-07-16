@@ -109,19 +109,32 @@
 		{
 			const urlPrefix = `${pathToExtension}images/mobile-task-popup-`;
 			const urlPostfix = '.png';
-			return {
-				changeDeadline: `${urlPrefix}deadline${urlPostfix}`,
-				changeResponsible: `${urlPrefix}responsible${urlPostfix}`,
-				start: `${urlPrefix}start${urlPostfix}`,
-				pause: `${urlPrefix}pause${urlPostfix}`,
-				read: `${urlPrefix}read${urlPostfix}`,
-				pin: `${urlPrefix}pin${urlPostfix}`,
-				unpin: `${urlPrefix}unpin${urlPostfix}`,
-				mute: `${urlPrefix}mute${urlPostfix}`,
-				unmute: `${urlPrefix}unmute${urlPostfix}`,
-				unfollow: `${urlPrefix}unfollow${urlPostfix}`,
-				remove: `${urlPrefix}remove${urlPostfix}`,
+			const names = {
+				ping: 'ping',
+				changeDeadline: 'deadline',
+				approve: 'approve',
+				disapprove: 'disapprove',
+				start: 'start',
+				pause: 'pause',
+				renew: 'renew',
+				changeResponsible: 'responsible',
+				delegate: 'delegate',
+				changeGroup: 'group',
+				mute: 'mute',
+				unmute: 'unmute',
+				unfollow: 'unfollow',
+				remove: 'remove',
+				read: 'read',
+				pin: 'pin',
+				unpin: 'unpin',
 			};
+			const urls = {};
+
+			Object.keys(names).forEach((key) => {
+				urls[key] = `${urlPrefix}${names[key]}${urlPostfix}`;
+			});
+
+			return urls;
 		}
 
 		constructor(currentUser)
@@ -648,6 +661,7 @@
 			return {
 				changeDeadline: this.rawAccess && this.rawAccess.changeDeadline,
 				changeResponsible: (this.rawAccess && this.rawAccess.edit) || this.currentUser.isAdmin || this.isCreator(),
+				changeGroup: this.rawAccess && this.rawAccess.edit,
 				start: this.rawAccess && this.rawAccess.start,
 				pause: this.rawAccess && this.rawAccess.pause,
 				complete: this.rawAccess && this.rawAccess.complete,
@@ -665,6 +679,7 @@
 				changePin: true,
 				changeMute: true,
 				read: true,
+				ping: true,
 			};
 		}
 
@@ -742,6 +757,7 @@
 								RESPONSIBLE_ID: this.responsible.id,
 								STATUS: this.status,
 								DEADLINE: this.deadline ? (new Date(this.deadline)).toISOString() : null,
+								GROUP_ID: this.groupId || 0,
 							},
 						})
 						.then(
@@ -853,6 +869,30 @@
 					.then(
 						(response) => {
 							console.log(response.result.task);
+							this.error = false;
+
+							resolve();
+						},
+						(response) => {
+							console.log(response);
+							this.error = true;
+
+							reject();
+						}
+					);
+			});
+		}
+
+		ping()
+		{
+			return new Promise((resolve, reject) => {
+				(new Request())
+					.call('ping', {
+						taskId: this.id,
+					})
+					.then(
+						(response) => {
+							console.log(response.result);
 							this.error = false;
 
 							resolve();
@@ -1030,7 +1070,7 @@
 
 		approve()
 		{
-			this.status = Task.statusList.complete;
+			this.status = Task.statusList.completed;
 
 			return new Promise((resolve, reject) => {
 				(new Request())
@@ -1246,6 +1286,7 @@
 				creatorIcon: this.creator.icon,
 				responsibleIcon: this.responsible.icon,
 				actions: (withActions ? this.getSwipeActions() : []),
+				project: {},
 				params: {},
 				styles: {
 					state: {
@@ -1327,11 +1368,46 @@
 					color: '#F2A100',
 					position: 'right',
 				},
+				approve: {
+					identifier: 'approve',
+					title: BX.message(`${titlePrefix}_APPROVE`),
+					iconName: 'action_accept',
+					color: '#468EE5',
+					position: 'right',
+				},
+				disapprove: {
+					identifier: 'disapprove',
+					title: BX.message(`${titlePrefix}_DISAPPROVE`),
+					iconName: 'action_finish_up',
+					color: '#FF5752',
+					position: 'right',
+				},
 				changeResponsible: {
 					identifier: 'changeResponsible',
 					title: BX.message(`${titlePrefix}_CHANGE_RESPONSIBLE`),
 					iconName: 'action_userlist',
 					color: '#2F72B9',
+					position: 'right',
+				},
+				delegate: {
+					identifier: 'delegate',
+					title: BX.message(`${titlePrefix}_DELEGATE`),
+					iconName: 'action_userlist',
+					color: '#2F72B9',
+					position: 'right',
+				},
+				ping: {
+					identifier: 'ping',
+					title: BX.message(`${titlePrefix}_PING`),
+					iconName: 'action_ping',
+					color: '#00B4AC',
+					position: 'right',
+				},
+				changeGroup: {
+					identifier: 'changeGroup',
+					title: BX.message(`${titlePrefix}_CHANGE_GROUP`),
+					iconName: 'action_project',
+					color: '#1BA09B',
 					position: 'right',
 				},
 				start: {
@@ -1348,19 +1424,12 @@
 					color: '#38C4D6',
 					position: 'right',
 				},
-				read: {
-					identifier: 'read',
-					title: BX.message(`${titlePrefix}_READ`),
-					iconName: 'action_read',
-					color: '#E57BB6',
-					position: 'left',
-				},
-				changePin: {
-					identifier: (this.isPinned ? 'unpin' : 'pin'),
-					title: BX.message(`${titlePrefix}_${this.isPinned ? 'UNPIN' : 'PIN'}`),
-					iconName: `action_${(this.isPinned ? 'unpin' : 'pin')}`,
-					color: '#468EE5',
-					position: 'left',
+				renew: {
+					identifier: 'renew',
+					title: BX.message(`${titlePrefix}_RENEW`),
+					iconName: 'action_reload',
+					color: '#00B4AC',
+					position: 'right',
 				},
 				changeMute: {
 					identifier: (this.isMuted ? 'unmute' : 'mute'),
@@ -1383,6 +1452,20 @@
 					color: '#6E7B8F',
 					position: 'right',
 				},
+				read: {
+					identifier: 'read',
+					title: BX.message(`${titlePrefix}_READ`),
+					iconName: 'action_read',
+					color: '#E57BB6',
+					position: 'left',
+				},
+				changePin: {
+					identifier: (this.isPinned ? 'unpin' : 'pin'),
+					title: BX.message(`${titlePrefix}_${this.isPinned ? 'UNPIN' : 'PIN'}`),
+					iconName: `action_${(this.isPinned ? 'unpin' : 'pin')}`,
+					color: '#468EE5',
+					position: 'left',
+				},
 			};
 			const currentActions = [];
 
@@ -1392,6 +1475,11 @@
 					currentActions.push(actions[key]);
 				}
 			});
+
+			if (this.can.changeResponsible && this.can.delegate)
+			{
+				currentActions.splice(currentActions.findIndex(item => item.identifier === 'delegate'), 1);
+			}
 
 			return currentActions;
 		}

@@ -59,7 +59,7 @@ class CIntranetStructureListComponent extends CBitrixComponent
 		$tmpVal = COption::GetOptionString("socialnetwork", "user_property_searchable", false, SITE_ID);
 		if ($tmpVal)
 		{
-			$arPropertySearchable = unserialize($tmpVal);
+			$arPropertySearchable = unserialize($tmpVal,  ["allowed_classes" => false]);
 			if (!empty($arPropertySearchable))
 			{
 				foreach ($arPropertySearchable as $ufCode)
@@ -192,23 +192,7 @@ class CIntranetStructureListComponent extends CBitrixComponent
 		else
 		{
 			$this->arFilter["UF_DEPARTMENT"] = false;
-			$arExternalAuthId = array();
-			if (IsModuleInstalled('socialservices'))
-			{
-				$arExternalAuthId[] = 'replica';
-			}
-			if (IsModuleInstalled('mail'))
-			{
-				$arExternalAuthId[] = 'email';
-			}
-			if (IsModuleInstalled('imconnector'))
-			{
-				$arExternalAuthId[] = 'imconnector';
-			}
-			if (!empty($arExternalAuthId))
-			{
-				$this->arFilter["!EXTERNAL_AUTH_ID"] = $arExternalAuthId;
-			}
+			$this->arFilter["!EXTERNAL_AUTH_ID"] = \Bitrix\Main\UserTable::getExternalUserTypes();
 		}
 	}
 
@@ -286,25 +270,7 @@ class CIntranetStructureListComponent extends CBitrixComponent
 			}
 		}
 
-		$arExternalAuthId = array("bot", "shop");
-		if (IsModuleInstalled('socialservices'))
-		{
-			$arExternalAuthId[] = 'replica';
-		}
-		if (IsModuleInstalled('mail'))
-		{
-			$arExternalAuthId[] = 'email';
-		}
-		if (IsModuleInstalled('imconnector'))
-		{
-			$arExternalAuthId[] = 'imconnector';
-		}
-		if (isModuleInstalled('sale'))
-			$arExternalAuthId[] = 'saleanonymous';
-		if (!empty($arExternalAuthId))
-		{
-			$this->arFilter["!EXTERNAL_AUTH_ID"] = $arExternalAuthId;
-		}
+		$this->arFilter["!EXTERNAL_AUTH_ID"] = \Bitrix\Main\UserTable::getExternalUserTypes();
 
 		//items equal to FALSE (see converting to boolean in PHP) will be removed (see array_filter()). After merge with $this->arFilter
 
@@ -567,8 +533,8 @@ class CIntranetStructureListComponent extends CBitrixComponent
 				}
 
 				$dbUsers = $obUser->getList(
-					$sortBy = 'FULL_NAME',
-					$sortDir = 'ASC',
+					'FULL_NAME',
+					'ASC',
 					$this->arFilter,
 					$arListParams
 				);
@@ -587,8 +553,7 @@ class CIntranetStructureListComponent extends CBitrixComponent
 			$this->setDepWhereUserIsHead();
 
 			$arAdmins = array();
-			/** @noinspection PhpUndefinedVariableInspection */
-			$rsUsers  = CUser::GetList($o, $b, array("GROUPS_ID" => array(static::ADMIN_GROUP_ID)), array("SELECT"=>array("ID")));
+			$rsUsers  = CUser::GetList('', '', array("GROUPS_ID" => array(static::ADMIN_GROUP_ID)), array("SELECT"=>array("ID")));
 			while ($ar = $rsUsers->Fetch())
 			{
 				$arAdmins[$ar["ID"]] = $ar["ID"];
@@ -673,7 +638,8 @@ class CIntranetStructureListComponent extends CBitrixComponent
 			}
 			unset($arUser, $key);
 
-			$this->arResult["USERS_NAV"] = ($bNav ? $dbUsers->GetPageNavStringEx($navComponentObject=null, $this->arParams["NAV_TITLE"]) : '');
+			$navComponentObject = null;
+			$this->arResult["USERS_NAV"] = ($bNav ? $dbUsers->GetPageNavStringEx($navComponentObject, $this->arParams["NAV_TITLE"]) : '');
 
 			if ($this->arParams['bCache'])
 			{
@@ -827,7 +793,7 @@ class CIntranetStructureListComponent extends CBitrixComponent
 				$this->arResult['USERS'][$id]['IS_ONLINE'] = false;
 			}
 
-			$dbRes = \CUser::getList($by='id', $order='asc', array('ID' => $strUserIds, 'LAST_ACTIVITY' => static::getOnlineInterval()), array('FIELDS' => array('ID')));
+			$dbRes = \CUser::getList('id', 'asc', array('ID' => $strUserIds, 'LAST_ACTIVITY' => static::getOnlineInterval()), array('FIELDS' => array('ID')));
 			while ($arRes = $dbRes->fetch())
 			{
 				if ($this->arResult['USERS'][$arRes['ID']])

@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["CONFIG_CHECKER"] = "Konfiguration prüfen";
 $MESS["CONFIG_CHECKER_TITLE"] = "Konfiguration nach dem Export des Lösungspresets prüfen";
 $MESS["CRM_LEAD_SL_SUBSCRIBE"] = "Verfolgen";
@@ -39,6 +39,7 @@ $MESS["LEAD_CREATE_ON_BASIS_HINT_TITLE"] = "Aus diesem Lead erstellen";
 $MESS["LEAD_CREATE_ON_BASIS_TITLE"] = "Auf der Basis von diesem Lead einen Kontakt, ein Unternehmen oder einen Auftrag erstellen";
 $MESS["LEAD_CRM_TYPE"] = "CRM-Modus";
 $MESS["LEAD_DEDUPE"] = "Dublettenkontrolle";
+$MESS["LEAD_DEDUPE_AUTOSEARCH"] = "Dubletten finden und vereinigen";
 $MESS["LEAD_DEDUPE_TITLE"] = "Dublettenkontrolle";
 $MESS["LEAD_DELETE"] = "Löschen";
 $MESS["LEAD_DELETE_DLG_BTNTITLE"] = "Löschen";
@@ -72,4 +73,4 @@ $MESS["LEAD_SHOW"] = "Anzeigen";
 $MESS["LEAD_SHOW_TITLE"] = "Lead anzeigen";
 $MESS["LEAD_VERTICAL_CRM"] = "Lösungspresets";
 $MESS["LEAD_VERTICAL_CRM_TITLE"] = "Lösungspresets";
-?>
+$MESS["LEAD_DEDUPE_HELP"] = "So können Sie die Dubletten verwalten";

@@ -201,6 +201,16 @@ $commonSettings += Input\Manager::getCommonSettings($property, $reload);
 $commonSettings['MULTIPLE']['DESCRIPTION'] = Loc::getMessage('MULTIPLE_DESCRIPTION');
 unset($commonSettings['VALUE']);
 
+if (isset($commonSettings['TYPE']['OPTIONS']['ADDRESS'])
+	&& (
+		!$existentProperty
+		|| $existentProperty['TYPE'] !== 'ADDRESS'
+	)
+)
+{
+	unset($commonSettings['TYPE']['OPTIONS']['ADDRESS']);
+}
+
 $commonSettings['DEFAULT_VALUE'] = array(
 		'REQUIRED' => 'N',
 		'DESCRIPTION' => null,
@@ -311,6 +321,26 @@ $relationsSettings = array(
 	'D' => array('TYPE' => 'ENUM', 'LABEL' => Loc::getMessage('SALE_PROPERTY_DELIVERY' ), 'OPTIONS' => $deliveryOptions, 'MULTIPLE' => 'Y', 'SIZE' => '5'),
 );
 
+$landingOptions = [];
+$dbRes = Bitrix\Sale\TradingPlatform\Manager::getList(
+	[
+		'select' => ['ID', 'NAME'],
+		'filter' => [
+			'=ACTIVE' => 'Y',
+			'%CODE' => Bitrix\Sale\TradingPlatform\Landing\Landing::TRADING_PLATFORM_CODE,
+		]
+	]
+);
+foreach ($dbRes as $item)
+{
+	$landingOptions[$item['ID']] = "{$item['NAME']} [{$item['ID']}]";
+}
+
+if ($landingOptions)
+{
+	$relationsSettings['L'] = ['TYPE' => 'ENUM', 'LABEL' => Loc::getMessage('SALE_PROPERTY_TP_LANDING'), 'OPTIONS' => $landingOptions, 'MULTIPLE' => 'Y', 'SIZE' => '5'];
+}
+
 // VALIDATE AND SAVE POST //////////////////////////////////////////////////////////////////////////////////////////////
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST["apply"]) || isset($_POST["save"])) && bitrix_sessid())
@@ -363,13 +393,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST["apply"]) || isset($_P
 
 	// validate relations
 
-	$hasRelations = false;
-
 	foreach ($relationsSettings as $name => $input)
 	{
 		if (($value = $relations[$name]) && $value != array(''))
 		{
-			$hasRelations = true;
 			if ($error = Input\Manager::getError($input, $value))
 				$errors [] = $input['LABEL'].': '.implode(', ', $error);
 		}
@@ -377,16 +404,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && (isset($_POST["apply"]) || isset($_P
 		{
 			$relations[$name] = array();
 		}
-	}
-
-	if ($hasRelations)
-	{
-		if ($property['IS_LOCATION4TAX'] == 'Y')
-			$errors []= Loc::getMessage('ERROR_LOCATION4TAX_RELATION_NOT_ALLOWED');
-		if ($property['IS_EMAIL'] == 'Y')
-			$errors []= Loc::getMessage('ERROR_EMAIL_RELATION_NOT_ALLOWED');
-		if ($property['IS_PROFILE_NAME'] == 'Y')
-			$errors []= Loc::getMessage('ERROR_PROFILE_NAME_RELATION_NOT_ALLOWED');
 	}
 
 	// insert/update database

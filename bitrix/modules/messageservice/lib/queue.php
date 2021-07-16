@@ -131,7 +131,7 @@ class Queue
 					++$counts[$serviceId];
 				}
 
-				$message['MESSAGE_HEADERS'] = unserialize($message['MESSAGE_HEADERS']);
+				$message['MESSAGE_HEADERS'] = unserialize($message['MESSAGE_HEADERS'], ['allowed_classes' => false]);
 				$toUpdate = array('SUCCESS_EXEC' => "E", 'DATE_EXEC' => new Type\DateTime);
 
 				try
@@ -179,7 +179,7 @@ class Queue
 					}
 					$notifyUpdateMessages[] = $toUpdate;
 				}
-				catch (\Exception $e)
+				catch (\Throwable $e)
 				{
 					$application = \Bitrix\Main\Application::getInstance();
 					$exceptionHandler = $application->getExceptionHandler();

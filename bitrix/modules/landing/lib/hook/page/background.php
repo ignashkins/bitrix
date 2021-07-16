@@ -1,11 +1,11 @@
 <?php
 namespace Bitrix\Landing\Hook\Page;
 
-use \Bitrix\Landing\Field;
-use \Bitrix\Landing\File;
-use \Bitrix\Landing\Manager;
-use \Bitrix\Landing\PublicAction;
-use \Bitrix\Main\Localization\Loc;
+use Bitrix\Landing\Field;
+use Bitrix\Landing\File;
+use Bitrix\Landing\Manager;
+use Bitrix\Landing\PublicAction;
+use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Page\Asset;
 
 Loc::loadMessages(__FILE__);
@@ -108,12 +108,12 @@ class Background extends \Bitrix\Landing\Hook\Page
 
 	/**
 	 * Sets background.
-	 * @param string $picture Picture path or id.
+	 * @param string|null $picture Picture path or id.
 	 * @param string|null $color Color code.
 	 * @param string|null $position Position code.
 	 * @return void
 	 */
-	public static function setBackground(string $picture, ?string $color = null, ?string $position = null): void
+	public static function setBackground(?string $picture, ?string $color = null, ?string $position = null): void
 	{
 		/**
 		 * !!!
@@ -121,14 +121,11 @@ class Background extends \Bitrix\Landing\Hook\Page
 		 * for web form backward compatibility.
 		 */
 
-		if ($picture)
+		if ($picture && is_numeric($picture) && (int)$picture > 0)
 		{
-			if ($picture > 0)
-			{
-				$picture = \htmlspecialcharsbx(
-					\Bitrix\Landing\File::getFilePath($picture)
-				);
-			}
+			$picture = \htmlspecialcharsbx(
+				File::getFilePath((int)$picture)
+			);
 		}
 
 		if ($picture)

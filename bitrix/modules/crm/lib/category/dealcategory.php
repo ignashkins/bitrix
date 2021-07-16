@@ -1,5 +1,7 @@
 <?php
 namespace Bitrix\Crm\Category;
+use Bitrix\Crm\Attribute\FieldAttributeManager;
+use Bitrix\Crm\Color\PhaseColorScheme;
 use Bitrix\Main;
 use Bitrix\Main\Type\Date;
 use Bitrix\Main\Entity\Query;
@@ -405,7 +407,7 @@ class DealCategory
 				}
 				else
 				{
-					$effectiveSort[$fieldID] = strcasecmp($order, 'DESC') ? SORT_DESC : SORT_ASC;
+					$effectiveSort[$fieldID] = strcasecmp($order, 'DESC') === 0 ? SORT_DESC : SORT_ASC;
 				}
 			}
 			if(!empty($effectiveSort))
@@ -704,6 +706,8 @@ class DealCategory
 						'PARENT_ID' => 'DEAL_STAGE',
 						'SEMANTIC_INFO' => \CCrmStatus::GetDealStageSemanticInfo($prefix),
 						'PREFIX' => $prefix,
+						'FIELD_ATTRIBUTE_SCOPE' => FieldAttributeManager::getEntityScopeByCategory($ID),
+						'ENTITY_TYPE_ID' => \CCrmOwnerType::Deal,
 					);
 			}
 			elseif($enableDefault)
@@ -712,7 +716,9 @@ class DealCategory
 					array(
 						'ID' => 'DEAL_STAGE',
 						'NAME' => GetMessage('CRM_DEAL_CATEGORY_STATUS_ENTITY', array('#CATEGORY#' => $name)),
-						'SEMANTIC_INFO' => \CCrmStatus::GetDealStageSemanticInfo()
+						'SEMANTIC_INFO' => \CCrmStatus::GetDealStageSemanticInfo(),
+						'FIELD_ATTRIBUTE_SCOPE' => FieldAttributeManager::getEntityScopeByCategory(),
+						'ENTITY_TYPE_ID' => \CCrmOwnerType::Deal,
 					);
 			}
 		}
@@ -907,10 +913,16 @@ class DealCategory
 
 		if($ID <= 0)
 		{
-			return \CCrmStatus::GetStatus('DEAL_STAGE');
+			$infos = \CCrmStatus::GetStatus('DEAL_STAGE');
+		}
+		else
+		{
+			$infos = \CCrmStatus::GetStatus(self::convertToStatusEntityID($ID));
 		}
 
-		return \CCrmStatus::GetStatus(self::convertToStatusEntityID($ID));
+		$infos = PhaseColorScheme::fillDefaultColors($infos);
+
+		return $infos;
 	}
 
 	/**
@@ -1218,7 +1230,7 @@ class DealCategory
 		$permissionEntity = DealCategory::convertToPermissionEntityType($id);
 		$donorPermissionEntity = DealCategory::convertToPermissionEntityType($donorId);
 		$permissionSet = RolePermission::getByEntityId($donorPermissionEntity);
-		return RolePermission::setByEntityIdForAllNotAdminRoles($permissionEntity, $permissionSet);
+		return RolePermission::setByEntityId($permissionEntity, $permissionSet);
 	}
 
 	/**

@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["SONET_EXT_COMMON_AJAX_ERROR"] = "Fehler bei Verarbeitung der Anfrage.";
 $MESS["SONET_EXT_COMMON_B24_SONET_GROUP_FEATURES_TEXT"] = "<p>Zugriffsrechte ermöglichen es, alle Arbeitsprozesse in einer Gruppe perfekt zu organisieren.  Sie können bestimmen, auf welche Tools Ihre Mitarbeiter zugreifen sollen und auf welche nicht.<p>Zugriffsrechte sind nur in den kostenpflichtigen Tarifen verfügbar.";
 $MESS["SONET_EXT_COMMON_B24_SONET_GROUP_FEATURES_TITLE"] = "Genießen Sie weitere Optionen in Ihrem Bitrix24";
@@ -28,4 +28,4 @@ $MESS["SONET_EXT_COMMON_RECALL_JOIN_POPUP_TEXT"] = "Ihre Anfrage zum Gruppenbeit
 $MESS["SONET_EXT_COMMON_RECALL_JOIN_POPUP_TEXT_PROJECT"] = "Ihre Anfrage zum Projektbeitritt wurde gesendet. Sie bekommen das Projekt in der Liste Ihrer Projekte und Arbeitsgruppen angezeigt, sobald der Projektleiter Ihre Anfrage bestätigt.";
 $MESS["SONET_EXT_COMMON_RECALL_JOIN_POPUP_TITLE"] = "Warnung";
 $MESS["SONET_EXT_COMMON_WAIT"] = "Warten Sie bitte&hellip;";
-?>
+$MESS["SONET_EXT_COMMON_GROUP_MENU_THEME_DIALOG"] = "Design";

@@ -162,7 +162,7 @@ abstract class CheckListFacade
 	 */
 	public static function getList(array $select = [], array $filter = [], array $order = [])
 	{
-		list($filteredSelect, $filteredFilter, $filteredOrder) = static::getFilteredFields($select, $filter, $order);
+		[$filteredSelect, $filteredFilter, $filteredOrder] = static::getFilteredFields($select, $filter, $order);
 
 		/** @var DataManager $checkListDataController */
 		$checkListDataController = static::getCheckListDataController();
@@ -409,7 +409,10 @@ abstract class CheckListFacade
 
 		try
 		{
-			$USER_FIELD_MANAGER->Delete(static::$userFieldsEntityIdName, $id);
+			if (static::$userFieldsEntityIdName)
+			{
+				$USER_FIELD_MANAGER->Delete(static::$userFieldsEntityIdName, $id);
+			}
 		}
 		catch (Exception $exception)
 		{
@@ -419,14 +422,20 @@ abstract class CheckListFacade
 
 		/** @var DataManager $memberDataController */
 		$memberDataController = static::getCheckListMemberDataController();
-		$members = $memberDataController::getList(['select' => ['ID'], 'filter' => ['ITEM_ID' => $id]])->fetchAll();
-		foreach ($members as $member)
+		if ($memberDataController)
 		{
-			$memberDeleteResult = $memberDataController::delete($member['ID']);
-			if (!$memberDeleteResult->isSuccess())
+			$members = $memberDataController::getList([
+				'select' => ['ID'],
+				'filter' => ['ITEM_ID' => $id]
+			])->fetchAll();
+			foreach ($members as $member)
 			{
-				$deleteLeafResult = static::addErrorToResult($deleteLeafResult, 'MEMBER_DELETE_FAILED');
-				static::logError($memberDeleteResult->getErrorMessages()[0]);
+				$memberDeleteResult = $memberDataController::delete($member['ID']);
+				if (!$memberDeleteResult->isSuccess())
+				{
+					$deleteLeafResult = static::addErrorToResult($deleteLeafResult, 'MEMBER_DELETE_FAILED');
+					static::logError($memberDeleteResult->getErrorMessages()[0]);
+				}
 			}
 		}
 
@@ -550,6 +559,8 @@ abstract class CheckListFacade
 	public static function merge($entityId, $userId, $newItems, $parameters = [])
 	{
 		$mergeResult = new Result();
+
+		static::doMergePreActions($entityId, $userId);
 
 		static::enableDeferredActionsMode();
 
@@ -1456,6 +1467,18 @@ abstract class CheckListFacade
 	 * @param array $data
 	 */
 	public static function doDeletePostActions($entityId, $userId, $data = [])
+	{
+
+	}
+
+	/**
+	 * Does some actions before merging checklists.
+	 *
+	 * @param int $entityId
+	 * @param int $userId
+	 * @param array $data
+	 */
+	public static function doMergePreActions($entityId, $userId, $data = [])
 	{
 
 	}

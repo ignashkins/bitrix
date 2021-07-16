@@ -6,7 +6,7 @@ $isAdminSection = (isset($arParams['IS_ADMIN_SECTION']));
 use Bitrix\Main\Page\Asset;
 
 \Bitrix\Main\Loader::includeModule('rest');
-CUtil::InitJSCore(['window', 'ajax', 'bp_selector', 'clipboard', 'marketplace']);
+CUtil::InitJSCore(['window', 'ajax', 'bp_selector', 'clipboard', 'marketplace', 'bp_field_type']);
 \Bitrix\Main\UI\Extension::load(['ui.hint']);
 
 if ($isAdminSection)
@@ -34,14 +34,26 @@ $ID = $arResult["ID"];
 
 $aMenu = [];
 
-$listMenuItem = [
-	"TEXT"  => (($arParams["BIZPROC_EDIT_MENU_LIST_MESSAGE"] <> '') ? htmlspecialcharsbx($arParams["BIZPROC_EDIT_MENU_LIST_MESSAGE"]) : GetMessage("BIZPROC_WFEDIT_MENU_LIST")),
-	"TITLE" => (($arParams["BIZPROC_EDIT_MENU_LIST_TITLE_MESSAGE"] <> '') ? htmlspecialcharsbx($arParams["BIZPROC_EDIT_MENU_LIST_TITLE_MESSAGE"]) : GetMessage("BIZPROC_WFEDIT_MENU_LIST_TITLE")),
-	"LINK"  => $arResult['LIST_PAGE_URL'],
-	"ICON"  => "btn_list",
-];
+$listMenuItem = [];
+if (!array_key_exists('SKIP_BP_TEMPLATES_LIST', $arParams) || $arParams['SKIP_BP_TEMPLATES_LIST'] !== 'Y')
+{
+	$listMenuItem = [
+		"TEXT" => (
+			($arParams["BIZPROC_EDIT_MENU_LIST_MESSAGE"] <> '')
+				? htmlspecialcharsbx($arParams["BIZPROC_EDIT_MENU_LIST_MESSAGE"])
+				: GetMessage("BIZPROC_WFEDIT_MENU_LIST")
+		),
+		"TITLE" => (
+			($arParams["BIZPROC_EDIT_MENU_LIST_TITLE_MESSAGE"] <> '')
+				? htmlspecialcharsbx($arParams["BIZPROC_EDIT_MENU_LIST_TITLE_MESSAGE"])
+				: GetMessage("BIZPROC_WFEDIT_MENU_LIST_TITLE")
+		),
+		"LINK" => $arResult['LIST_PAGE_URL'],
+		"ICON" => "btn_list",
+	];
+}
 
-if ($isAdminSection)
+if ($isAdminSection && $listMenuItem)
 {
 	$aMenu[] = $listMenuItem;
 }
@@ -53,7 +65,7 @@ $aMenu[] = [
 	"ICON"  => "btn_settings",
 ];
 
-if (!$isAdminSection)
+if (!$isAdminSection && $listMenuItem)
 {
 	$aMenu[] = $listMenuItem;
 }

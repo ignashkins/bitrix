@@ -210,7 +210,7 @@ if(\Bitrix\Main\Config\Option::get('disk', 'successfully_converted', false) && C
 		$arResult["FILTER"][] = array("id" => "content", "name" => GetMessage("WD_TITLE_CONTENT"), "default" => true, "type" => "search");
 		$arResult["FILTER"][] = array("id" => "timestamp", "name" => GetMessage("WD_WHEN"), "default" => true, "type" => "date");
 
-		$arFileTypes = @unserialize(COption::GetOptionString("webdav", "file_types"), false);
+		$arFileTypes = @unserialize(COption::GetOptionString("webdav", "file_types"), ['allowed_classes' => false]);
 		$arFilterFileTypes = array("" => "");
 		if ($arFileTypes !== false)
 		{

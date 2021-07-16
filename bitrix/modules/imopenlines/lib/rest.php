@@ -46,6 +46,7 @@ class Rest extends \IRestService
 				'imopenlines.widget.user.get' =>  array('callback' => array(__CLASS__, 'widgetUserGet'), 'options' => array()),
 				'imopenlines.widget.operator.get' =>  array('callback' => array(__CLASS__, 'widgetOperatorGet'), 'options' => array()),
 				'imopenlines.widget.vote.send' =>  array('callback' => array(__CLASS__, 'widgetVoteSend'), 'options' => array()),
+				'imopenlines.widget.action.send' =>  array('callback' => array(__CLASS__, 'widgetActionSend'), 'options' => array()),
 				'imopenlines.widget.form.send' =>  array('callback' => array(__CLASS__, 'widgetFormSend'), 'options' => array()),
 //				'imopenlines.widget.form.fill' =>  array('callback' => array(__CLASS__, 'widgetFormFill'), 'options' => array()),
 
@@ -180,15 +181,30 @@ class Rest extends \IRestService
 		return true;
 	}
 
+	/**
+	 * @param $arParams
+	 * @param $n
+	 * @param \CRestServer $server
+	 * @return bool
+	 * @throws Main\ArgumentException
+	 * @throws Main\Db\SqlQueryException
+	 * @throws Main\LoaderException
+	 * @throws Main\ObjectException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 * @throws \Bitrix\Rest\RestException
+	 */
 	public static function operatorFinish($arParams, $n, \CRestServer $server)
 	{
 		$arParams = array_change_key_case($arParams, CASE_UPPER);
 
 		$control = new \Bitrix\ImOpenLines\Operator($arParams['CHAT_ID']);
 		$result = $control->closeDialog();
-		if (!$result)
+		if (!$result->isSuccess())
 		{
-			throw new \Bitrix\Rest\RestException($control->getError()->msg, $control->getError()->code, \CRestServer::STATUS_WRONG_REQUEST);
+			$errors = $result->getErrors();
+			$error = current($errors);
+			throw new \Bitrix\Rest\RestException($error->getMessage(), $error->getCode(), \CRestServer::STATUS_WRONG_REQUEST);
 		}
 
 		return true;
@@ -470,11 +486,10 @@ class Rest extends \IRestService
 			throw new \Bitrix\Rest\RestException("Line not found", "NOT_FOUND", \CRestServer::STATUS_WRONG_REQUEST);
 		}
 
-		$network = new \Bitrix\ImOpenLines\Network();
-		$result = $network->join($arParams['CODE']);
+		$result = \Bitrix\ImBot\Bot\Network::join($arParams['CODE']);
 		if (!$result)
 		{
-			throw new \Bitrix\Rest\RestException($network->getError()->msg, $network->getError()->code, \CRestServer::STATUS_WRONG_REQUEST);
+			throw new \Bitrix\Rest\RestException(\Bitrix\ImBot\Bot\Network::getError()->msg, \Bitrix\ImBot\Bot\Network::getError()->code, \CRestServer::STATUS_WRONG_REQUEST);
 		}
 
 		return $result;
@@ -777,6 +792,30 @@ class Rest extends \IRestService
 		return true;
 	}
 
+	public static function widgetActionSend($arParams, $n, \CRestServer $server)
+	{
+		$arParams = array_change_key_case($arParams, CASE_UPPER);
+
+		if (isset($arParams['MESSAGE_ID']))
+		{
+			$arParams['ID'] = $arParams['MESSAGE_ID'];
+		}
+
+		$arParams['ID'] = intval($arParams['ID']);
+		if ($arParams['ID'] <= 0)
+		{
+			throw new \Bitrix\Rest\RestException("Message ID can't be empty", "MESSAGE_ID_ERROR", \CRestServer::STATUS_WRONG_REQUEST);
+		}
+
+		$result = \Bitrix\ImOpenLines\Widget\Action::execute($arParams['ID'], $arParams['ACTION_VALUE']);
+		if ($result === false)
+		{
+			throw new \Bitrix\Rest\RestException("Incorrect params", "PARAMS_ERROR", \CRestServer::STATUS_WRONG_REQUEST);
+		}
+
+		return true;
+	}
+
 	public static function widgetFormSend($params, $n, \CRestServer $server)
 	{
 		if ($server->getAuthType() != \Bitrix\Imopenlines\Widget\Auth::AUTH_TYPE)
@@ -1012,6 +1051,7 @@ class Rest extends \IRestService
 			'FORMAT_DATETIME' => $coreMessages['FORMAT_DATETIME'],
 			'AMPM_MODE' => IsAmPmMode(true),
 			'UTF_MODE' => \Bitrix\Main\Application::getInstance()->isUtfMode() ? 'Y' : 'N',
+			'isCloud' => IsModuleInstalled('bitrix24'),
 		];
 
 		return $result;
@@ -1044,9 +1084,16 @@ class Rest extends \IRestService
 		return $config->getList($arParams['PARAMS'], $arParams['OPTIONS']);
 	}
 
+	/**
+	 * @param $arParams
+	 * @param $n
+	 * @param \CRestServer $server
+	 * @return bool
+	 * @throws \Bitrix\Rest\RestException
+	 */
 	public static function configUpdate($arParams, $n, \CRestServer $server)
 	{
-		$arParams['CONFIG_ID'] = intval($arParams['CONFIG_ID']);
+		$arParams['CONFIG_ID'] = (int)$arParams['CONFIG_ID'];
 
 		if ($arParams['CONFIG_ID'] <= 0)
 		{
@@ -1064,6 +1111,17 @@ class Rest extends \IRestService
 		return $config->update($arParams['CONFIG_ID'], $arParams['PARAMS']);
 	}
 
+	/**
+	 * @param $arParams
+	 * @param $n
+	 * @param \CRestServer $server
+	 * @return array|bool|int
+	 * @throws Main\ArgumentException
+	 * @throws Main\LoaderException
+	 * @throws Main\ObjectException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 */
 	public static function configAdd($arParams, $n, \CRestServer $server)
 	{
 		$arParams['PARAMS'] = !empty($arParams['PARAMS']) && is_array($arParams['PARAMS']) ? $arParams['PARAMS'] : [];
@@ -1072,9 +1130,20 @@ class Rest extends \IRestService
 		return $config->create($arParams['PARAMS']);
 	}
 
+	/**
+	 * @param $arParams
+	 * @param $n
+	 * @param \CRestServer $server
+	 * @return bool
+	 * @throws Main\ArgumentException
+	 * @throws Main\LoaderException
+	 * @throws Main\ObjectPropertyException
+	 * @throws Main\SystemException
+	 * @throws \Bitrix\Rest\RestException
+	 */
 	public static function configDelete($arParams, $n, \CRestServer $server)
 	{
-		$arParams['CONFIG_ID'] = intval($arParams['CONFIG_ID']);
+		$arParams['CONFIG_ID'] = (int)$arParams['CONFIG_ID'];
 
 		if ($arParams['CONFIG_ID'] <= 0)
 		{

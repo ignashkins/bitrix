@@ -227,6 +227,13 @@ foreach($arResult['ROWS'] as $key => $row)
 					$userFields['TAGS']->getNameList()
 				));
 				break;
+			case 'WWW':
+				$arResult['ROWS'][$key]['data'][$column] = (
+					$exportMode
+						? $userFields['PERSONAL_WWW']
+						: '<a href="' . htmlspecialcharsbx($userFields['PERSONAL_WWW']) . '" target="_blank">' . htmlspecialcharsEx($userFields['PERSONAL_WWW']) . '</a>'
+				);
+				break;
 			default:
 				if (in_array($column, $ufCodesList))
 				{
@@ -273,7 +280,7 @@ foreach($arResult['ROWS'] as $key => $row)
 						"'.htmlspecialcharsbx(str_replace(['#ID#', '#USER_ID#'], $userFields['ID'], $arParams['PATH_TO_USER'])).'",
 						{
 							cacheable: false,
-							allowChangeHistory: false,
+							allowChangeHistory: true,
 							contentClassName: "bitrix24-profile-slider-content",
 							loader: "intranet:profile",
 							width: 1100

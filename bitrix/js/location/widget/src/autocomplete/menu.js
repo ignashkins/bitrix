@@ -1,9 +1,11 @@
-import {Menu as MainMenu} from "main.popup";
-import "./css/menu.css";
+import {Menu as MainMenu} from 'main.popup';
+import './css/menu.css';
+import MenuBottom from './menubottom';
 
 export default class Menu extends MainMenu
 {
 	choseItemIdx = -1;
+	#bottom;
 
 	constructor(options)
 	{
@@ -11,6 +13,10 @@ export default class Menu extends MainMenu
 
 		const elRect = options.bindElement.getBoundingClientRect();
 		this.popupWindow.setMaxWidth(elRect.width);
+		this.#bottom = new MenuBottom();
+		this.layout.menuContainer.appendChild(
+			this.#bottom.render()
+		);
 	}
 
 	isMenuEmpty(): boolean
@@ -40,7 +46,7 @@ export default class Menu extends MainMenu
 
 	isItemExist(index: number): boolean
 	{
-		return typeof this.menuItems[this.choseItemIdx] !== 'undefined';
+		return typeof this.menuItems[index] !== 'undefined';
 	}
 
 	getChosenItem()
@@ -54,6 +60,7 @@ export default class Menu extends MainMenu
 
 		return result;
 	}
+
 	chooseNextItem(): void
 	{
 		if(!this.isMenuEmpty() && !this.isChoseLastItem())
@@ -78,11 +85,11 @@ export default class Menu extends MainMenu
 	{
 		if(this.isItemExist(index))
 		{
-			let item = this.getChosenItem();
+			const item = this.getChosenItem();
 
 			if(item && item.layout.item)
 			{
-				item.layout.item.classList.add("highlighted");
+				item.layout.item.classList.add('highlighted');
 			}
 		}
 	}
@@ -91,19 +98,30 @@ export default class Menu extends MainMenu
 	{
 		if(this.isItemExist(index))
 		{
-			let item = this.getChosenItem();
+			const item = this.getChosenItem();
 
 			if(item && item.layout.item)
 			{
-				item.layout.item.classList.remove("highlighted");
+				item.layout.item.classList.remove('highlighted');
 			}
 		}
 	}
 
 	chooseItem(index: number)
 	{
+		let idx = index;
+
+		if(idx < 0)
+		{
+			idx = this.menuItems.length - 1;
+		}
+		else if(idx > this.menuItems.length - 1)
+		{
+			idx = 0;
+		}
+
 		this.unHighlightItem(this.choseItemIdx);
-		this.choseItemIdx = index;
+		this.choseItemIdx = idx;
 		this.highlightItem(this.choseItemIdx);
 	}
 
@@ -118,5 +136,15 @@ export default class Menu extends MainMenu
 	isShown(): boolean
 	{
 		return this.getPopupWindow().isShown();
+	}
+
+	setBottomRightItemNode(node: Element): void
+	{
+		this.#bottom.setRightItemNode(node);
+	}
+
+	setBottomLeftItemNode(node: Element): void
+	{
+		this.#bottom.setLeftItemNode(node);
 	}
 }

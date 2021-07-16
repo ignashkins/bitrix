@@ -35,8 +35,11 @@
 		voiceStarted: "Call::voiceStarted",
 		voiceStopped: "Call::voiceStopped",
 		microphoneState: "Call::microphoneState",
+		cameraState: "Call::cameraState",
+		videoPaused: "Call::videoPaused",
 		hangup: "Call::hangup",
 		userInviteTimeout: "Call::userInviteTimeout",
+		repeatAnswer: "Call::repeatAnswer",
 	};
 
 	class PlainCall
@@ -101,6 +104,8 @@
 
 			this.lastPingReceivedTimeout = null;
 
+			this.created = new Date();
+
 			this.initPeers();
 		}
 
@@ -164,15 +169,14 @@
 				userId: userId,
 				ready: userId == this.initiatorId,
 
-				onStreamReceived: (stream) =>
+				onStreamReceived: (track) =>
 				{
-					console.log("onStreamReceived: ", stream);
-					this.eventEmitter.emit(BX.Call.Event.onStreamReceived, [userId, stream]);
-
+					this.log("onStreamReceived; track kind: ", track.kind, "id: ", track.id);
+					this.eventEmitter.emit(BX.Call.Event.onStreamReceived, [userId, track]);
 				},
 				onStreamRemoved: (e) =>
 				{
-					console.log("onStreamRemoved: ", e);
+					this.log("onStreamRemoved: ", e);
 					this.eventEmitter.emit(BX.Call.Event.onStreamRemoved, [userId]);
 				},
 				onStateChanged: this._onPeerStateChanged.bind(this),
@@ -277,6 +281,24 @@
 					this.eventEmitter.emit(BX.Call.Event.onLocalMediaStopped);
 				}
 			}
+
+			this.signaling.sendCameraState(this.users, this.videoEnabled);
+		}
+
+		setVideoPaused(videoPaused)
+		{
+			if (this.videoPaused == videoPaused)
+			{
+				return;
+			}
+
+			this.videoPaused = videoPaused;
+			this.log("call setVideoPaused " + this.videoPaused.toString());
+			if (this.localStream && this.localStream.getVideoTracks().length > 0)
+			{
+				this.localStream.getVideoTracks().forEach(track => track.enabled = !this.videoPaused);
+				this.signaling.sendVideoPaused(this.users, this.videoPaused);
+			}
 		}
 
 		switchCamera()
@@ -358,14 +380,12 @@
 
 		getLocalMedia()
 		{
-			console.log("getLocalMedia");
 			return new Promise((resolve) =>
 			{
 				MediaDevices.getUserMedia({audio: true, video: this.videoEnabled}).then((stream) =>
 				{
 					if (this.videoEnabled)
 					{
-						console.log("emit ", BX.Call.Event.onLocalMediaReceived);
 						this.eventEmitter.emit(BX.Call.Event.onLocalMediaReceived, [stream]);
 					}
 					if (!this.videoEnabled && this.localStream)
@@ -546,6 +566,11 @@
 			}
 		}
 
+		repeatAnswerEvents()
+		{
+			this.signaling.sendRepeatAnswer({userId: this.userId});
+		}
+
 		runCallback(eventName, event)
 		{
 
@@ -564,11 +589,13 @@
 				"Call::voiceStarted": this._onPullEventVoiceStarted.bind(this),
 				"Call::voiceStopped": this._onPullEventVoiceStopped.bind(this),
 				"Call::microphoneState": this._onPullEventMicrophoneState.bind(this),
+				"Call::videoPaused": this._onPullEventVideoPaused.bind(this),
 				"Call::usersJoined": this._onPullEventUsersJoined.bind(this),
 				"Call::usersInvited": this._onPullEventUsersInvited.bind(this),
 				"Call::userInviteTimeout": this._onPullEventUserInviteTimeout.bind(this),
 				"Call::associatedEntityReplaced": this._onPullEventAssociatedEntityReplaced.bind(this),
 				"Call::finish": this._onPullEventFinish.bind(this),
+				[PullEvents.repeatAnswer]: this._onPullEventRepeatAnswer.bind(this),
 			};
 
 			if (handlers[command])
@@ -582,7 +609,7 @@
 		{
 			let senderId = params.senderId;
 
-			console.warn("_onPullEventAnswer", senderId, this.userId);
+			this.log("_onPullEventAnswer", senderId, this.userId);
 			if (senderId == this.userId)
 			{
 				return this._onPullEventAnswerSelf(params);
@@ -648,7 +675,7 @@
 
 			if (!this.isAnyoneParticipating())
 			{
-				this.destroy();
+				this.hangup();
 			}
 		}
 
@@ -718,7 +745,7 @@
 
 			peer.setReady(true);
 			peer.setUserAgent(params.userAgent);
-			peer.setConnectionOffer(params.connectionId, params.sdp);
+			peer.setConnectionOffer(params.connectionId, params.sdp, params.tracks);
 		}
 
 		_onPullEventConnectionAnswer(params)
@@ -735,7 +762,7 @@
 
 			let connectionId = params.connectionId;
 			peer.setUserAgent(params.userAgent);
-			peer.setConnectionAnswer(connectionId, params.sdp);
+			peer.setConnectionAnswer(connectionId, params.sdp, params.tracks);
 		}
 
 		_onPullEventIceCandidate(params)
@@ -782,6 +809,14 @@
 			]);
 		}
 
+		_onPullEventVideoPaused(params)
+		{
+			this.eventEmitter.emit(BX.Call.Event.onUserVideoPaused, [
+				params.senderId,
+				params.videoPaused,
+			]);
+		}
+
 		_onPullEventUsersJoined(params)
 		{
 
@@ -818,6 +853,14 @@
 			this.destroy();
 		}
 
+		_onPullEventRepeatAnswer()
+		{
+			if (this.ready)
+			{
+				this.signaling.sendAnswer({userId: this.userId}, true)
+			}
+		}
+
 		_onPeerStateChanged(e)
 		{
 			this.eventEmitter.emit(BX.Call.Event.onUserStateChanged, [
@@ -842,6 +885,7 @@
 			else if (e.state == BX.Call.UserState.Connected)
 			{
 				this.signaling.sendMicrophoneState(e.userId, !this.muted);
+				this.signaling.sendCameraState(e.userId, this.videoEnabled);
 			}
 		}
 
@@ -916,6 +960,59 @@
 			this.peerConnection = null;
 			this.pendingIceCandidates = {};
 			this.localIceCandidates = [];
+
+			this.trackList = {};
+
+			this._incomingVideoTrack = null;
+			this._incomingScreenTrack = null;
+			Object.defineProperty(this, 'incomingVideoTrack', {
+				get: () => this._incomingVideoTrack,
+				set: (track) => {
+					if (this._incomingVideoTrack != track)
+					{
+						this._incomingVideoTrack = track;
+						if (this._incomingScreenTrack)
+						{
+							// do nothing
+						}
+						else
+						{
+							if (this._incomingVideoTrack)
+							{
+								this.callbacks.onStreamReceived(this._incomingVideoTrack);
+							}
+							else
+							{
+								this.callbacks.onStreamRemoved();
+							}
+						}
+					}
+				}
+			});
+			Object.defineProperty(this, 'incomingScreenTrack', {
+				get: () => this._incomingScreenTrack,
+				set: (track) => {
+					if (this._incomingScreenTrack != track)
+					{
+						this._incomingScreenTrack = track;
+						if (this._incomingScreenTrack)
+						{
+							this.callbacks.onStreamReceived(track);
+						}
+						else
+						{
+							if (this._incomingVideoTrack)
+							{
+								this.callbacks.onStreamReceived(this._incomingVideoTrack);
+							}
+							else
+							{
+								this.callbacks.onStreamRemoved();
+							}
+						}
+					}
+				}
+			});
 
 			this.callbacks = {
 				onStateChanged: BX.type.isFunction(params.onStateChanged) ? params.onStateChanged : DoNothing,
@@ -1158,7 +1255,7 @@
 		{
 			if (this.peerConnection)
 			{
-				console.error("peer connection already exists");
+				this.log("Error: Peer connection already exists");
 				return;
 			}
 
@@ -1169,7 +1266,6 @@
 
 			if (this.isInitiator())
 			{
-				console.log("peer sendMedia 1");
 				let connectionId = CallEngine.getUuidv4();
 				this._createPeerConnection(connectionId);
 				this.call.localStream.getTracks().forEach(track => this.peerConnection.addTrack(track, this.call.localStream));
@@ -1178,7 +1274,6 @@
 			}
 			else
 			{
-				console.log("peer sendMedia 2");
 				this.sendNegotiationNeeded();
 			}
 		}
@@ -1238,7 +1333,7 @@
 			}
 		}
 
-		setConnectionOffer(connectionId, sdp)
+		setConnectionOffer(connectionId, sdp, trackList)
 		{
 			this.log("User " + this.userId + ": received connection offer for connection " + connectionId);
 
@@ -1251,6 +1346,11 @@
 			}
 
 			this.setReady(true);
+
+			if (trackList)
+			{
+				this.trackList = CallUtil.array_flip(trackList);
+			}
 
 			if (this.peerConnection)
 			{
@@ -1301,24 +1401,19 @@
 
 		onNegotiationNeeded()
 		{
-			console.log("peer.onNegotiationNeeded 1");
 			if (this.peerConnection)
 			{
-				console.log("peer.onNegotiationNeeded 2");
 				if (this.peerConnection.signalingState == "have-local-offer")
 				{
-					console.log("peer.onNegotiationNeeded 3");
 					this.sendOffer();
 				}
 				else
 				{
-					console.log("peer.onNegotiationNeeded 4");
 					this.createAndSendOffer({iceRestart: true});
 				}
 			}
 			else
 			{
-				console.log("peer.onNegotiationNeeded 5");
 				this.sendMedia();
 			}
 		}
@@ -1381,7 +1476,7 @@
 			});
 		};
 
-		setConnectionAnswer(connectionId, sdp)
+		setConnectionAnswer(connectionId, sdp, trackList)
 		{
 			if (!this.peerConnection)
 			{
@@ -1394,6 +1489,11 @@
 			{
 				this.log("Could not apply answer, for unknown connection " + connectionId);
 				return;
+			}
+
+			if (trackList)
+			{
+				this.trackList = CallUtil.array_flip(trackList);
 			}
 
 			let sessionDescription = {
@@ -1558,7 +1658,7 @@
 				//iceTransportPolicy: 'relay'
 			};
 
-			console.warn("creating peer connection " + id);
+			this.log("creating peer connection " + id);
 
 			this.localIceCandidates = [];
 
@@ -1585,7 +1685,7 @@
 
 			var connectionId = this.peerConnection._id;
 
-			this.call.log("User " + this.userId + ": Destroying peer connection " + connectionId);
+			this.log("User " + this.userId + ": Destroying peer connection " + connectionId);
 
 			this.peerConnection.off(JNRTCPeerConnection.Events.IceCandidate, this._onPeerConnectionIceCandidateHandler);
 			this.peerConnection.off(JNRTCPeerConnection.Events.IceConnectionStateChange, this._onPeerConnectionIceConnectionStateChangeHandler);
@@ -1674,7 +1774,7 @@
 
 		_onPeerConnectionNegotiationNeeded()
 		{
-			console.warn("_onPeerConnectionNegotiationNeeded");
+			this.log("_onPeerConnectionNegotiationNeeded");
 
 			/*if (this.isInitiator())
 			{
@@ -1686,39 +1786,79 @@
 			}*/
 		}
 
+		_getTrackMid(trackId)
+		{
+			if (!this.peerConnection)
+			{
+				return null;
+			}
+			let tr = this.peerConnection.getTransceivers().find(
+				tr => tr.receiver && tr.receiver.track && tr.receiver.track.id == trackId
+			);
+			if (!tr)
+			{
+				return null;
+			}
+			return tr.mid;
+		}
+
 		_onPeerConnectionTrack(e)
 		{
 			let {track} = e;
 
-			if (track.kind === "video")
-			{
-				this.callbacks.onStreamReceived(track);
-			}
+			this.log("_onPeerConnectionTrack; kind: ", track.kind, "id: ", track.id);
 		}
 
 		_onPeerConnectionRemoveTrack(e)
 		{
 			let {track} = e;
-			console.warn("_onPeerConnectionRemoveTrack", track);
+			this.call.log("_onPeerConnectionRemoveTrack; kind: ", track.kind, "id: ", track.id);
 		}
 
 		_onPeerConnectionAddStream(e)
 		{
-			console.warn("_onPeerConnectionAddStream", e);
+			this.call.log("_onPeerConnectionAddStream", e);
 		}
 
 		_onPeerConnectionRemoveStream(e)
 		{
-			console.warn("_onPeerConnectionRemoveStream", e);
+			this.call.log("_onPeerConnectionRemoveStream", e);
 		}
 
 		_onPeerConnectionSignalingStateChange()
 		{
-			// workaround for android
-			if (this.peerConnection.signalingState == "stable" && !this._hasIncomingVideo())
+			let screenTrack = null;
+			let videoTrack = null;
+			if (this.peerConnection.signalingState == "stable")
 			{
-				this.callbacks.onStreamRemoved();
+				this.peerConnection.getTransceivers().forEach(tr => {
+					if (
+						(tr.currentDirection == "sendrecv" || tr.currentDirection == "recvonly")
+						&& (tr.receiver && tr.receiver.track)
+					)
+					{
+						let track = tr.receiver.track;
+						console.log(`track received. mid: ${tr.mid} kind: ${track.kind}`);
+						if (track.kind === 'audio')
+						{
+							// do nothing
+						}
+						if (track.kind === 'video')
+						{
+							if (this.trackList[tr.mid] === 'screen')
+							{
+								screenTrack = track;
+							}
+							else
+							{
+								videoTrack = track;
+							}
+						}
+					}
+				})
 			}
+			this.incomingScreenTrack = screenTrack;
+			this.incomingVideoTrack = videoTrack;
 		}
 
 		stopSignalingTimeout()
@@ -1802,9 +1942,16 @@
 			return this.__runRestAction(ajaxActions.invite, data);
 		};
 
-		sendAnswer(data)
+		sendAnswer(data, repeated)
 		{
-			return this.__runRestAction(ajaxActions.answer, data);
+			if (repeated)
+			{
+				this.__sendPullEventOrCallRest(PullEvents.answer, ajaxActions.answer, data, 30);
+			}
+			else
+			{
+				return this.__runRestAction(ajaxActions.answer, data);
+			}
 		};
 
 		sendConnectionOffer(data)
@@ -1848,10 +1995,37 @@
 			);
 		};
 
+		sendCameraState(users, cameraState)
+		{
+			this.__sendPullEventOrCallRest(PullEvents.cameraState, "",
+				{
+					userId: users,
+					cameraState: cameraState,
+				},
+				0,
+			);
+		};
+
+		sendVideoPaused(users, videoPaused)
+		{
+			this.__sendPullEventOrCallRest(PullEvents.videoPaused, "",
+				{
+					userId: users,
+					videoPaused: videoPaused,
+				},
+				0,
+			);
+		};
+
 		sendPingToUsers(data)
 		{
 			this.__sendPullEventOrCallRest(PullEvents.ping, "", data, 0);
 		};
+
+		sendRepeatAnswer(data)
+		{
+			this.__sendPullEvent(PullEvents.repeatAnswer, data);
+		}
 
 		sendPingToBackend()
 		{
@@ -1901,7 +2075,7 @@
 			}).catch(error =>
 			{
 				console.error(error);
-				this.call.log(error);
+				this.call.log("__sendPullEventOrCallRest error: ", error);
 			});
 		}
 

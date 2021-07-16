@@ -65,7 +65,7 @@ if ($arParams["PATH_TO_GROUP_BAN"] == '')
 $arParams["PATH_TO_GROUP_BLOG"] = trim($arParams["PATH_TO_GROUP_BLOG"]);
 if($arParams["PATH_TO_GROUP_BLOG"] == '')
 	$arParams["PATH_TO_GROUP_BLOG"] = htmlspecialcharsbx($APPLICATION->GetCurPage()."?".$arParams["PAGE_VAR"]."=group_blog&".$arParams["GROUP_VAR"]."=#group_id#");
-	
+
 $arParams["PATH_TO_GROUP_MICROBLOG"] = trim($arParams["PATH_TO_GROUP_MICROBLOG"]);
 if($arParams["PATH_TO_GROUP_MICROBLOG"] == '')
 	$arParams["PATH_TO_GROUP_MICROBLOG"] = htmlspecialcharsbx($APPLICATION->GetCurPage()."?".$arParams["PAGE_VAR"]."=group_microblog&".$arParams["GROUP_VAR"]."=#group_id#");
@@ -102,8 +102,8 @@ if ($arParams["USE_MAIN_MENU"] == "Y" && !array_key_exists("MAIN_MENU_TYPE", $ar
 $arGroup = CSocNetGroup::GetByID($arParams["GROUP_ID"]);
 
 if (
-	$arGroup 
-	&& is_array($arGroup) 
+	$arGroup
+	&& is_array($arGroup)
 	&& $arGroup["ACTIVE"] == "Y"
 
 )
@@ -207,7 +207,7 @@ if (
 
 			if($arResult["CanView"]["chat"])
 			{
-				$arResult["Urls"]["chat"] = "javascript:if (BXIM) { BXIM.openMessenger('sg".$arResult["Group"]["ID"]."'); }";
+				$arResult["Urls"]["chat"] = "javascript:if (BXIM) { top.BXIM.openMessenger('sg".$arResult["Group"]["ID"]."'); }";
 			}
 
 			$a = array_keys($arResult["Urls"]);
@@ -247,7 +247,7 @@ if (
 					array_key_exists('marketplace', $arResult["ActiveFeatures"])
 					&& $arResult["ActiveFeatures"]['marketplace'] <> ''
 						? $arResult["ActiveFeatures"]['marketplace']
-						: Loc::getMessage('SONET_UM_MARKETPLACE')
+						: Loc::getMessage('SONET_UM_MARKETPLACE_2')
 				);
 				$arResult["Urls"]['marketplace'] = $arResult["Urls"]["view"]."marketplace/";
 
@@ -273,6 +273,22 @@ if (
 						$arResult["Urls"][$tabId] = $arResult["Urls"]["view"]."app/".$placementHandler['ID']."/";
 					}
 				}
+			}
+
+			if (Loader::includeModule('tasks'))
+			{
+				$groupId = $arParams["GROUP_ID"];
+				$counter = \Bitrix\Tasks\Internals\Counter::getInstance($USER->getId());
+				$arResult['Tasks']['Counters'] = [
+					\Bitrix\Tasks\Internals\Counter\Role::ALL => $counter->get(\Bitrix\Tasks\Internals\Counter\CounterDictionary::COUNTER_MEMBER_TOTAL, $groupId),
+					\Bitrix\Tasks\Internals\Counter\Role::RESPONSIBLE => $counter->get(\Bitrix\Tasks\Internals\Counter\CounterDictionary::COUNTER_MY, $groupId),
+					\Bitrix\Tasks\Internals\Counter\Role::ACCOMPLICE => $counter->get(\Bitrix\Tasks\Internals\Counter\CounterDictionary::COUNTER_ACCOMPLICES, $groupId),
+					\Bitrix\Tasks\Internals\Counter\Role::ORIGINATOR => $counter->get(\Bitrix\Tasks\Internals\Counter\CounterDictionary::COUNTER_ORIGINATOR, $groupId),
+					\Bitrix\Tasks\Internals\Counter\Role::AUDITOR => $counter->get(\Bitrix\Tasks\Internals\Counter\CounterDictionary::COUNTER_AUDITOR, $groupId),
+				];
+
+				$filter = \Bitrix\Tasks\Helper\Filter::getInstance($USER->getId(), $groupId);
+				$arResult['Tasks']['DefaultRoleId'] = $filter->getDefaultRoleId();
 			}
 
 			$this->IncludeComponentTemplate();

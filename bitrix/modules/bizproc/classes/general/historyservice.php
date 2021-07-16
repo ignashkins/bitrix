@@ -444,7 +444,7 @@ class CBPHistoryResult extends CDBResult
 	public function __construct($res, $useGZipCompression)
 	{
 		$this->useGZipCompression = $useGZipCompression;
-		parent::CDBResult($res);
+		parent::__construct($res);
 	}
 
 	private function GetFromSerializedForm($value)
@@ -454,7 +454,7 @@ class CBPHistoryResult extends CDBResult
 			if ($this->useGZipCompression)
 				$value = gzuncompress($value);
 
-			$value = unserialize($value);
+			$value = unserialize($value, ['allowed_classes' => false]);
 			if (!is_array($value))
 				$value = array();
 		}

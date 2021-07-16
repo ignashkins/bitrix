@@ -414,7 +414,7 @@ $arBanners = Array(
 
 foreach ($arBanners as $arFields)
 {
-	$dbResult = CAdvBanner::GetList($by, $order, Array("COMMENTS" => $arFields["COMMENTS"], "COMMENTS_EXACT_MATCH" => "Y"), $is_filtered, "N");
+	$dbResult = CAdvBanner::GetList('', '', Array("COMMENTS" => $arFields["COMMENTS"], "COMMENTS_EXACT_MATCH" => "Y"), null, "N");
 	if ($dbResult && $dbResult->Fetch())
 		continue;
 

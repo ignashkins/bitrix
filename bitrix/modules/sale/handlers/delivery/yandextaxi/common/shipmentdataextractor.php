@@ -5,9 +5,8 @@ namespace Sale\Handlers\Delivery\YandexTaxi\Common;
 use Bitrix\Location\Entity\Address;
 use Bitrix\Location\Service\FormatService;
 use Bitrix\Main\Loader;
-use Bitrix\Sale\Delivery\ExtraServices\Manager;
 use Bitrix\Sale\Delivery\Services\OrderPropsDictionary;
-use Bitrix\Sale\PropertyValueBase;
+use Bitrix\Sale\EntityPropertyValue;
 use Bitrix\Sale\Shipment;
 
 /**
@@ -19,18 +18,36 @@ final class ShipmentDataExtractor
 {
 	/**
 	 * @param Shipment $shipment
-	 * @return string
+	 * @return Address
 	 * @throws \Bitrix\Main\ArgumentException
 	 * @throws \Bitrix\Main\LoaderException
 	 * @throws \Bitrix\Main\NotImplementedException
 	 * @throws \Bitrix\Main\ObjectPropertyException
 	 * @throws \Bitrix\Main\SystemException
 	 */
-	public function getShortenedAddressFrom(Shipment $shipment)
+	public function getAddressFrom(Shipment $shipment): ?Address
 	{
-		return $this->getShortenedAddress(
-			$shipment->getOrder()->getPropertyCollection()->getItemByOrderPropertyCode(
+		return $this->getAddress(
+			$shipment->getPropertyCollection()->getItemByOrderPropertyCode(
 				OrderPropsDictionary::ADDRESS_FROM_PROPERTY_CODE
+			)
+		);
+	}
+
+	/**
+	 * @param Shipment $shipment
+	 * @return Address
+	 * @throws \Bitrix\Main\ArgumentException
+	 * @throws \Bitrix\Main\LoaderException
+	 * @throws \Bitrix\Main\NotImplementedException
+	 * @throws \Bitrix\Main\ObjectPropertyException
+	 * @throws \Bitrix\Main\SystemException
+	 */
+	public function getAddressTo(Shipment $shipment): ?Address
+	{
+		return $this->getAddress(
+			$shipment->getPropertyCollection()->getItemByOrderPropertyCode(
+				OrderPropsDictionary::ADDRESS_TO_PROPERTY_CODE
 			)
 		);
 	}
@@ -39,6 +56,24 @@ final class ShipmentDataExtractor
 	 * @param Shipment $shipment
 	 * @return string
 	 * @throws \Bitrix\Main\ArgumentException
+	 * @throws \Bitrix\Main\ArgumentOutOfRangeException
+	 * @throws \Bitrix\Main\LoaderException
+	 * @throws \Bitrix\Main\NotImplementedException
+	 * @throws \Bitrix\Main\ObjectPropertyException
+	 * @throws \Bitrix\Main\SystemException
+	 */
+	public function getShortenedAddressFrom(Shipment $shipment)
+	{
+		return $this->getShortenedAddressString(
+			$this->getAddressFrom($shipment)
+		);
+	}
+
+	/**
+	 * @param Shipment $shipment
+	 * @return string
+	 * @throws \Bitrix\Main\ArgumentException
+	 * @throws \Bitrix\Main\ArgumentOutOfRangeException
 	 * @throws \Bitrix\Main\LoaderException
 	 * @throws \Bitrix\Main\NotImplementedException
 	 * @throws \Bitrix\Main\ObjectPropertyException
@@ -46,10 +81,8 @@ final class ShipmentDataExtractor
 	 */
 	public function getShortenedAddressTo(Shipment $shipment)
 	{
-		return $this->getShortenedAddress(
-			$shipment->getOrder()->getPropertyCollection()->getItemByOrderPropertyCode(
-				OrderPropsDictionary::ADDRESS_TO_PROPERTY_CODE
-			)
+		return $this->getShortenedAddressString(
+			$this->getAddressTo($shipment)
 		);
 	}
 
@@ -67,40 +100,15 @@ final class ShipmentDataExtractor
 
 	/**
 	 * @param Shipment $shipment
-	 * @return float|null
-	 */
-	public function getExpectedDeliveryPrice(Shipment $shipment): ?float
-	{
-		$expectedPriceDelivery = $shipment->getField('EXPECTED_PRICE_DELIVERY');
-
-		return is_null($expectedPriceDelivery) ? $expectedPriceDelivery : (float)$expectedPriceDelivery;
-	}
-
-	/**
-	 * @param Shipment $shipment
-	 * @return bool|mixed|string|string[]|null
-	 */
-	public function getExpectedDeliveryPriceFormatted(Shipment $shipment)
-	{
-		$expectedDeliveryPrice = $this->getExpectedDeliveryPrice($shipment);
-
-		if (is_null($expectedDeliveryPrice))
-		{
-			return null;
-		}
-
-		return SaleFormatCurrency($expectedDeliveryPrice, $shipment->getOrder()->getCurrency());
-	}
-
-	/**
-	 * @param Shipment $shipment
 	 * @return string
 	 * @throws \Bitrix\Main\ArgumentNullException
 	 * @throws \Bitrix\Main\SystemException
 	 */
 	public function getDeliverySystemName(Shipment $shipment)
 	{
-		return $shipment->getDelivery()->getName();
+		$parentDeliveryService = $this->getParentDelivery($shipment);
+
+		return $parentDeliveryService ? $parentDeliveryService->getName() : '';
 	}
 
 	/**
@@ -111,40 +119,43 @@ final class ShipmentDataExtractor
 	 */
 	public function getDeliverySystemLogo(Shipment $shipment)
 	{
-		return $shipment->getDelivery()->getLogotipPath();
+		$parentDeliveryService = $this->getParentDelivery($shipment);
+
+		return $parentDeliveryService ? $parentDeliveryService->getLogotipPath() : '';
 	}
 
 	/**
 	 * @param Shipment $shipment
-	 * @return mixed
+	 * @return \Bitrix\Sale\Delivery\Services\Base|null
+	 * @throws \Bitrix\Main\ArgumentNullException
+	 * @throws \Bitrix\Main\SystemException
+	 */
+	protected function getParentDelivery(Shipment $shipment)
+	{
+		$deliveryService = $shipment->getDelivery();
+		if (!$deliveryService)
+		{
+			return null;
+		}
+
+		return $deliveryService->getParentService();
+	}
+
+	/**
+	 * @param Shipment $shipment
+	 * @return string|null
+	 * @throws \Bitrix\Main\ArgumentNullException
+	 * @throws \Bitrix\Main\SystemException
 	 */
 	public function getDeliveryMethod(Shipment $shipment)
 	{
-		$extraServiceManager = new Manager($shipment->getDeliveryId());
-		$extraServiceManager->setValues($shipment->getExtraServices());
-
-		$items = $extraServiceManager->getItems();
-
-		foreach ($items as $item)
+		$deliveryService = $shipment->getDelivery();
+		if (!$deliveryService)
 		{
-			$params = $item->getParams();
-
-			if ($item->getCode() != OrderEntitiesCodeDictionary::VEHICLE_TYPE_EXTRA_SERVICE_CODE)
-			{
-				continue;
-			}
-
-			$value = $item->getValue();
-			foreach ($params['PRICES'] as $id => $priceItem)
-			{
-				if ($id == $value)
-				{
-					return (string)$priceItem['TITLE'];
-				}
-			}
+			return null;
 		}
 
-		return null;
+		return $deliveryService->getName();
 	}
 
 	/**
@@ -184,44 +195,58 @@ final class ShipmentDataExtractor
 		}
 
 		$responsibleUser = \CUser::GetList(
-			($by = 'id'),
-			($order = 'asc'),
+			'id',
+			'asc',
 			['ID' => $responsibleUserId]
 		)->fetch();
 
 		return $responsibleUser ? $responsibleUser : null;
 	}
-	
+
 	/**
-	 * @param PropertyValueBase $propertyValue
-	 * @return string
+	 * @param EntityPropertyValue $propertyValue
+	 * @return Address|null
 	 * @throws \Bitrix\Main\LoaderException
 	 */
-	private function getShortenedAddress($propertyValue): string
+	private function getAddress($propertyValue): ?Address
 	{
 		if (!Loader::includeModule('location'))
 		{
-			return '';
+			return null;
 		}
 
 		if (is_null($propertyValue))
 		{
-			return '';
+			return null;
 		}
 
 		$addressArray = $propertyValue->getValue();
 		if (!is_array($addressArray))
 		{
-			return '';
+			return null;
 		}
 
-		$address = Address::fromArray($addressArray);
+		return Address::fromArray($addressArray);
+	}
+
+	/**
+	 * @param Address|null $address
+	 * @return string
+	 * @throws \Bitrix\Main\ArgumentOutOfRangeException
+	 * @throws \Bitrix\Main\LoaderException
+	 */
+	private function getShortenedAddressString(?Address $address): string
+	{
+		if (is_null($address))
+		{
+			return '';
+		}
 
 		return Address\Converter\StringConverter::convertToString(
 			$address,
 			FormatService::getInstance()->findDefault(LANGUAGE_ID),
-			'template',
-			'html'
+			\Bitrix\Location\Entity\Address\Converter\StringConverter::STRATEGY_TYPE_TEMPLATE_COMMA,
+			\Bitrix\Location\Entity\Address\Converter\StringConverter::CONTENT_TYPE_TEXT
 		);
 	}
 }

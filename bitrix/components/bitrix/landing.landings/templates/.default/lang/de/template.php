@@ -8,6 +8,7 @@ $MESS["LANDING_TPL_ACTION_DELETE"] = "Seite löschen";
 $MESS["LANDING_TPL_ACTION_DELETE_CONFIRM"] = "Möchten Sie die Seite löschen?";
 $MESS["LANDING_TPL_ACTION_DELETE_FOLDER"] = "Ordner löschen";
 $MESS["LANDING_TPL_ACTION_EDIT"] = "Einstellungen bearbeiten";
+$MESS["LANDING_TPL_ACTION_EDIT_DESIGN"] = "Design-Einstellungen";
 $MESS["LANDING_TPL_ACTION_FOLDER_UP"] = "Nach oben";
 $MESS["LANDING_TPL_ACTION_GOTO"] = "Seite öffnen";
 $MESS["LANDING_TPL_ACTION_MOVE"] = "Seite verschieben";

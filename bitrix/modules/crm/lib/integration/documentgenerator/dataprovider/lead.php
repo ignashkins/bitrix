@@ -9,7 +9,7 @@ use Bitrix\DocumentGenerator\DataProvider\ArrayDataProvider;
 use Bitrix\DocumentGenerator\DataProviderManager;
 use Bitrix\DocumentGenerator\Nameable;
 
-class Lead extends ProductsDataProvider implements Nameable
+class Lead extends ProductsDataProvider
 {
 	protected $contacts;
 	protected $honorific;
@@ -155,10 +155,7 @@ class Lead extends ProductsDataProvider implements Nameable
 		unset($this->data['HONORIFIC']);
 		if(empty($this->data['ADDRESS']))
 		{
-			unset($this->data['ADDRESS']);
-		}
-		else
-		{
+			// for lead there is only one available type
 			$address = LeadAddress::getByOwner(LeadAddress::Primary, $this->getCrmOwnerType(), $this->source);
 			if($address)
 			{
@@ -235,14 +232,6 @@ class Lead extends ProductsDataProvider implements Nameable
 	/**
 	 * @return string
 	 */
-	protected function getCrmProductOwnerType()
-	{
-		return 'L';
-	}
-
-	/**
-	 * @return string
-	 */
 	protected function getUserFieldEntityID()
 	{
 		return \CCrmLead::GetUserFieldEntityID();
@@ -296,12 +285,14 @@ class Lead extends ProductsDataProvider implements Nameable
 
 	public function getHonorificName(): string
 	{
+		$value = null;
+
 		if($this->honorific)
 		{
 			$all = \CCrmStatus::GetStatusList('HONORIFIC');
-			return $all[$this->honorific];
+			$value = $all[$this->honorific];
 		}
 
-		return '';
+		return (string)$value;
 	}
 }

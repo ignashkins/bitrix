@@ -58,8 +58,8 @@ class CExtranet
 			else
 			{
 				$rsUser = CUser::GetList(
-					$o = "ID",
-					$b = "ASC",
+					'ID',
+					'ASC',
 					array("ID_EQUAL_EXACT" => $userID),
 					array("FIELDS" => array("ID"), "SELECT" => array("UF_DEPARTMENT"))
 				);
@@ -113,8 +113,8 @@ class CExtranet
 		else
 		{
 			$rsUser = CUser::GetList(
-				$o = "ID",
-				$b = "ASC",
+				'ID',
+				'ASC',
 				array("ID_EQUAL_EXACT" => $userID),
 				array("FIELDS" => array("ID"), "SELECT" => array("UF_DEPARTMENT"))
 			);
@@ -388,8 +388,8 @@ class CExtranet
 		else
 		{
 			$dbUsers = CUser::GetList(
-				($by="id"),
-				($order="asc"),
+				'ID',
+				'ASC',
 				array(
 					"ACTIVE" => "Y",
 					"GROUPS_ID" => array(CExtranet::GetExtranetUserGroupID())
@@ -517,7 +517,7 @@ class CExtranet
 
 			$arFilter = Array("ID"=>$strUsersInMyGroupsID);
 
-			$rsUsers = CUser::GetList(($by="ID"), ($order="asc"), $arFilter, array("SELECT"=>array("UF_*")));
+			$rsUsers = CUser::GetList("ID", "asc", $arFilter, array("SELECT"=>array("UF_*")));
 
 			while($arUser = $rsUsers->GetNext())
 				$arUsersInMyGroups[] = $arUser;
@@ -535,7 +535,7 @@ class CExtranet
 
 		$arFilter = Array("GROUPS_ID"=>array(CExtranet::GetExtranetUserGroupID()));
 
-		$rsUsers = CUser::GetList(($by="ID"), ($order="asc"), $arFilter);
+		$rsUsers = CUser::GetList("ID", "asc", $arFilter);
 		while($arUser = $rsUsers->GetNext())
 		{
 			if ($full)
@@ -559,7 +559,7 @@ class CExtranet
 			"GROUPS_ID" => array(CExtranet::GetExtranetUserGroupID())
 		);
 
-		$rsUsers = CUser::GetList(($by="ID"), ($order="asc"), $arFilter);
+		$rsUsers = CUser::GetList("ID", "asc", $arFilter);
 		while($arUser = $rsUsers->GetNext())
 		{
 			if ($full)
@@ -601,8 +601,8 @@ class CExtranet
 				}
 
 				$rsUsers = CUser::GetList(
-					($by="ID"),
-					($order="asc"),
+					'ID',
+					'ASC',
 					Array(
 						"!UF_DEPARTMENT" => false
 					),
@@ -644,15 +644,14 @@ class CExtranet
 	{
 		global $USER;
 
-		if (
-			isset($arUser['EXTERNAL_AUTH_ID'])
-		)
+		if (isset($arUser['EXTERNAL_AUTH_ID']))
 		{
-			if ($arUser['EXTERNAL_AUTH_ID'] == 'replica')
+			if ($arUser['EXTERNAL_AUTH_ID'] === 'replica')
 			{
 				return true;
 			}
-			elseif ($arUser['EXTERNAL_AUTH_ID'] == 'email')
+
+			if ($arUser['EXTERNAL_AUTH_ID'] === 'email')
 			{
 				return false;
 			}
@@ -695,36 +694,36 @@ class CExtranet
 				&& (
 					(
 						!is_array($arUser["UF_DEPARTMENT"])
-						&& intval($arUser["UF_DEPARTMENT"]) > 0
+						&& (int)$arUser["UF_DEPARTMENT"] > 0
 					)
 					|| (
 						is_array($arUser["UF_DEPARTMENT"])
-						&& intval($arUser["UF_DEPARTMENT"][0]) > 0
+						&& (int)$arUser["UF_DEPARTMENT"][0] > 0
 					)
 				)
 			)
 			{
 				return true;
 			}
-			else
+
+			$arUsersInMyGroupsID = CExtranet::GetMyGroupsUsers(CExtranet::GetExtranetSiteID(), false, $bOnlyActive);
+			if (
+				!in_array($arUser["ID"], $arUsersInMyGroupsID)
+				&& ($arUser["ID"] != $USER->GetID())
+			)
 			{
-				$arUsersInMyGroupsID = CExtranet::GetMyGroupsUsers(CExtranet::GetExtranetSiteID(), false, $bOnlyActive);
-				if (
-					!in_array($arUser["ID"], $arUsersInMyGroupsID)
-					&& ($arUser["ID"] != $USER->GetID())
-				)
-				{
-					$bNeedCheckContext = true;
-				}
+				$bNeedCheckContext = true;
 			}
 		}
 
 		// if extranet and profile user not public
-		if (
-			CExtranet::IsExtranetSite($site_id)
-			&& $arUser[COption::GetOptionString("extranet", "extranet_public_uf_code", "UF_PUBLIC")] != 1
-		)
+		if (CExtranet::IsExtranetSite($site_id))
 		{
+			if ((int)$arUser[COption::GetOptionString("extranet", "extranet_public_uf_code", "UF_PUBLIC")] === 1)
+			{
+				return true;
+			}
+
 			$arUsersInMyGroupsID = CExtranet::GetMyGroupsUsers(SITE_ID);
 			if (
 				!in_array($arUser["ID"], $arUsersInMyGroupsID)
@@ -742,7 +741,7 @@ class CExtranet
 				&& isset($arContext["ENTITY_TYPE"])
 				&& in_array($arContext["ENTITY_TYPE"], array("LOG_ENTRY"))
 				&& isset($arContext["ENTITY_ID"])
-				&& intval($arContext["ENTITY_ID"]) > 0
+				&& (int)$arContext["ENTITY_ID"] > 0
 			)
 			{
 				return CSocNetUser::CheckContext($USER->GetID(), $arUser["ID"], array_merge($arContext, array('SITE_ID' => CExtranet::GetExtranetSiteID())));
@@ -1198,7 +1197,7 @@ class CExtranet
 		if (intval($arFields["ID"]) > 0) // update
 		{
 			$dbRes = CUser::GetList(
-				$by="id", $order="asc",
+				"id", "asc",
 				array("ID_EQUAL_EXACT" => intval($arFields['ID'])),
 				array('SELECT' => array('UF_PUBLIC'))
 			);
@@ -1231,7 +1230,7 @@ class CExtranet
 		if (intval($ID) > 0)
 		{
 			$dbRes = CUser::GetList(
-				$by="id", $order="asc",
+				"id", "asc",
 				array("ID_EQUAL_EXACT" => intval($ID)),
 				array('SELECT' => array('UF_PUBLIC'))
 			);
@@ -1268,11 +1267,7 @@ class CExtranet
 		{
 			$extranet_site_id = CExtranet::GetExtranetSiteID();
 			$arIntranetSiteID = array();
-			$rsSite = CSite::GetList(
-				$by="sort",
-				$order="desc",
-				array("ACTIVE" => "Y")
-			);
+			$rsSite = CSite::GetList("sort", "desc", array("ACTIVE" => "Y"));
 			while ($arSite = $rsSite->Fetch())
 			{
 				if ($arSite["LID"] == $extranet_site_id)
@@ -1346,7 +1341,7 @@ class CExtranet
 			}
 
 			$rsUser = CUser::GetList(
-				($by = ''), ($order = ''),
+				'', '',
 				$arFilter,
 				array("FIELDS" => array("ID"))
 			);
@@ -1457,6 +1452,11 @@ class CExtranet
 		{
 			$IsShowAllContacts = (
 				CExtranet::ShowAllContactsAllowed()
+				|| (
+					isset($arParams['SHOW_ALL_EXTRANET_CONTACTS'])
+					&& $arParams['SHOW_ALL_EXTRANET_CONTACTS']
+					&& \CSocNetUser::isUserModuleAdmin($currentUserId)
+				)
 					? "Y"
 					: "N"
 			);
@@ -1494,30 +1494,47 @@ class CExtranet
 				$bFilteredByUserId = true;
 			}
 		}
-		elseif ($IsShowAllContacts != "Y")
+		elseif ($IsShowAllContacts !== "Y")
 		{
-			if ($IsExtranetWorkGroupsAllowed != "Y")
+			$subFilter = [];
+
+			if ($IsExtranetWorkGroupsAllowed !== "Y")
 			{
-				$arFilter["!UF_DEPARTMENT"] = false;
+				$subFilter['!UF_DEPARTMENT'] = false;
 			}
 			elseif ($bEmailUsersAll)
 			{
-				$arFilter[] = array(
-					'LOGIC' => 'OR',
-					'!UF_DEPARTMENT' => false,
-					'=EXTERNAL_AUTH_ID' => 'email',
-					'ID' => array_unique(array_merge(array($currentUserId), $arFilteredUserIDs))
-				);
+				$subFilter['!UF_DEPARTMENT'] = false;
+				$subFilter['=EXTERNAL_AUTH_ID'] = 'email';
+				$subFilter['ID'] = array_unique(array_merge([ $currentUserId ], $arFilteredUserIDs));
+
 				$bFilteredByUserId = true;
 			}
 			else
 			{
-				$arFilter[] = array(
-					'LOGIC' => 'OR',
-					'!UF_DEPARTMENT' => false,
-					'ID' => array_unique(array_merge(array($currentUserId), $arFilteredUserIDs))
-				);
+				$subFilter['!UF_DEPARTMENT'] = false;
+				$subFilter['=EXTERNAL_AUTH_ID'] = 'email';
+				$subFilter['ID'] = array_unique(array_merge([ $currentUserId ], $arFilteredUserIDs));
+
 				$bFilteredByUserId = true;
+			}
+
+			if (isset($arParams['ALLOW_BOTS']) && $arParams['ALLOW_BOTS'] === true)
+			{
+				$subFilter['=EXTERNAL_AUTH_ID'] = 'bot';
+			}
+
+			if (count($subFilter) <= 1)
+			{
+				foreach($subFilter as $key => $value)
+				{
+					$arFilter[$key] = $value;
+				}
+			}
+			else
+			{
+				$subFilter['LOGIC'] = 'OR';
+				$arFilter[] = $subFilter;
 			}
 		}
 
@@ -1552,14 +1569,12 @@ class CExtranet
 	{
 		global $USER;
 
-		if ($currentUserId == $USER->GetId())
+		if ((int)$currentUserId === (int)$USER->getId())
 		{
-			return self::IsProfileViewable($arUser, $siteId, $bOnlyActive, $arContext);
+			return self::isProfileViewable($arUser, $siteId, $bOnlyActive, $arContext);
 		}
-		else
-		{
-			return false;
-		}
+
+		return false;
 	}
 }
 

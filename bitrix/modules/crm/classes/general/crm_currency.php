@@ -6,6 +6,8 @@ IncludeModuleLangFile(__FILE__);
 
 class CCrmCurrency
 {
+	/** @var \CCurrencyRates */
+	private static $currencyRatesClassName = \CCurrencyRates::class;
 	private static $BASE_CURRENCY_ID = null;
 	private static $ACCOUNT_CURRENCY_ID = null;
 	private static $CURRENCY_BY_LANG = array();
@@ -257,10 +259,8 @@ class CCrmCurrency
 		$currencies = isset(self::$CURRENCY_BY_LANG[$langID]) ? self::$CURRENCY_BY_LANG[$langID] : null;
 		if(!$currencies)
 		{
-			$by1 = 'sort';
-			$order1 = 'asc';
 			$currencies = array();
-			$resCurrency = CCurrency::GetList($by1, $order1, $langID);
+			$resCurrency = CCurrency::GetList('sort', 'asc', $langID);
 			while ($arCurrency = $resCurrency->Fetch())
 			{
 				$arCurrency['FULL_NAME'] = (string)$arCurrency['FULL_NAME'];
@@ -322,9 +322,7 @@ class CCrmCurrency
 
 		$result = array();
 
-		$by = '';
-		$order = '';
-		$dbResult = CCurrencyLang::GetList($by, $order, self::NormalizeCurrencyID($currencyID));
+		$dbResult = CCurrencyLang::GetList('', '', self::NormalizeCurrencyID($currencyID));
 		if($dbResult)
 		{
 			while($item = $dbResult->Fetch())
@@ -346,9 +344,7 @@ class CCrmCurrency
 
 		self::$LANGS_ID = array();
 
-		$by = 'sort';
-		$order = 'asc';
-		$dbResult = CLangAdmin::GetList($by, $order);
+		$dbResult = CLangAdmin::GetList();
 		while ($arResult = $dbResult->Fetch())
 		{
 			self::$LANGS_ID[] = $arResult['LID'];
@@ -511,7 +507,27 @@ class CCrmCurrency
 			return array();
 		}
 
-		return CCurrencyLang::GetFormatDescription($currencyID);
+		$result = CCurrencyLang::GetFormatDescription($currencyID);
+		// TODO: remove after currency stable
+		if (!isset($result['TEMPLATE']))
+		{
+			$result['TEMPLATE'] = [
+				'SINGLE' => $result['FORMAT_STRING'],
+				'PARTS' => [
+					0 => '#'
+				],
+				'VALUE_INDEX' => 0
+			];
+			$parts = CCurrencyLang::getParsedCurrencyFormat($currencyID);
+			if (!empty($parts))
+			{
+				$result['TEMPLATE']['PARTS'] = $parts;
+				$result['TEMPLATE']['VALUE_INDEX'] = (int)array_search('#', $parts);
+			}
+			unset($parts);
+		}
+
+		return $result;
 	}
 
 	public static function GetCurrencyText($currencyID)
@@ -659,12 +675,12 @@ class CCrmCurrency
 		if($srcExchRate <= 0)
 		{
 			// Use default exchenge rate
-			$result = CCurrencyRates::ConvertCurrency($sum, $srcCurrencyID, $dstCurrencyID);
+			$result = self::$currencyRatesClassName::ConvertCurrency($sum, $srcCurrencyID, $dstCurrencyID);
 		}
 		else
 		{
 			// Convert source currency to base and convert base currency to destination
-			$result = CCurrencyRates::ConvertCurrency(
+			$result = self::$currencyRatesClassName::ConvertCurrency(
 				doubleval($sum * $srcExchRate),
 				self::GetBaseCurrencyID(),
 				$dstCurrencyID
@@ -699,7 +715,7 @@ class CCrmCurrency
 			return 1;
 		}
 
-		$rates = new CCurrencyRates();
+		$rates = new self::$currencyRatesClassName();
 		if(!($rs = $rates->_get_last_rates(date('Y-m-d'), $currencyID)))
 		{
 			return 1.0;

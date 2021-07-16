@@ -371,10 +371,28 @@ if (WIZARD_INSTALL_DEMO_DATA || WIZARD_B24_TO_CP)
 			"PATH" => WIZARD_SITE_DIR."desktop_app/router.php",
 		),
 		array(
+			"CONDITION" => "#^".WIZARD_SITE_DIR."crm/type/#",
+			"RULE" => "",
+			"ID" => "bitrix:crm.router",
+			"PATH" => WIZARD_SITE_DIR."crm/type/index.php",
+		),
+		array(
 			"CONDITION" => "#^".WIZARD_SITE_DIR."conference/#",
 			"RULE" => "",
 			"ID" => "bitrix:im.conference.center",
 			"PATH" => WIZARD_SITE_DIR."conference/index.php",
+		),
+		array(
+			"CONDITION" => "#^".WIZARD_SITE_DIR."page/#",
+			"RULE" => "",
+			"ID" => "bitrix:intranet.customsection",
+			"PATH" => WIZARD_SITE_DIR."page/index.php",
+		),
+		array(
+			'CONDITION' => '#^'.WIZARD_SITE_DIR.'pub/calendar-event/([0-9]+)/([0-9a-zA-Z]+)/?([^/]*)#',
+			'RULE' => "event_id=\$1&hash=\$2",
+			'ID' => "bitrix:calendar.pub.event",
+			'PATH' => WIZARD_SITE_DIR."pub/calendar_event.php"
 		),
 	);
 	foreach ($arNewUrlRewrite as $arUrl)

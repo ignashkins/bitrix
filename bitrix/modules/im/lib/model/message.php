@@ -29,9 +29,6 @@ Loc::loadMessages(__FILE__);
  * <li> NOTIFY_BUTTONS string optional
  * <li> NOTIFY_READ bool optional default 'N'
  * <li> IMPORT_ID int optional
- * <li> CHAT reference to {@link \Bitrix\Im\ImRelationTable}
- * <li> NOTIFY_MODULE reference to {@link \Bitrix\Module\ModuleTable}
- * <li> AUTHOR reference to {@link \Bitrix\User\UserTable}
  * </ul>
  *
  * @package Bitrix\Im
@@ -145,6 +142,10 @@ class MessageTable extends Main\Entity\DataManager
 			'AUTHOR' => array(
 				'data_type' => 'Bitrix\Main\User',
 				'reference' => array('=this.AUTHOR_ID' => 'ref.ID'),
+			),
+			'STATUS' => array(
+				'data_type' => 'Bitrix\Im\Model\StatusTable',
+				'reference' => array('=this.AUTHOR_ID' => 'ref.USER_ID'),
 			),
 			'RELATION' => array(
 				'data_type' => 'Bitrix\Im\Model\RelationTable',
@@ -325,5 +326,3 @@ class MessageTable extends Main\Entity\DataManager
 		return $builder->build();
 	}
 }
-
-class_alias("Bitrix\\Im\\Model\\MessageTable", "Bitrix\\Im\\MessageTable", false);

@@ -51,7 +51,7 @@ class CWebDavFile extends CWebDavBase
 		"UNDELETE"	=> array("rights" => "W", "min_rights" => "W"),
 	);
 
-	function CWebDavFile($arParams, $base_url)
+	public function __construct($arParams, $base_url)
 	{
 		$io = self::GetIo();
 		$arParams = (is_array($arParams) ? $arParams : array());
@@ -61,7 +61,7 @@ class CWebDavFile extends CWebDavBase
 		$this->real_path = $arParams["FOLDER"];
 		$this->real_path_full = $io->CombinePath($_SERVER['DOCUMENT_ROOT'], $arParams["FOLDER"]);
 
-		$this->CWebDavBase($base_url);
+		parent::__construct($base_url);
 
 		if (! $io->DirectoryExists($this->real_path_full))
 		{
@@ -1801,7 +1801,7 @@ class CWebDavFile extends CWebDavBase
 		if ($res == false)
 			$res = @file_get_contents($this->__prop_file_name($ID, true));
 
-		$res = @unserialize($res, false);
+		$res = @unserialize($res, ['allowed_classes' => false]);
 		$res = (is_array($res) ? $res : array());
 		return $res;
 	}
@@ -1944,9 +1944,9 @@ class CWebDavFile extends CWebDavBase
 
 class CDBResultWebDAVFiles extends CDBResult
 {
-	function CDBResultWebDAVFiles($res)
+	public function __construct($res)
 	{
-		parent::CDBResult($res);
+		parent::__construct($res);
 	}
 
 	function Fetch()

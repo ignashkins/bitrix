@@ -190,7 +190,10 @@ class Marta extends Base
 		if ($messageFields['SYSTEM'] == 'Y')
 			return false;
 
-		\Bitrix\Im\Bot::startWriting(Array('BOT_ID' => self::getBotId()), $messageFields['DIALOG_ID']);
+		if ($messageFields['CHAT_ENTITY_TYPE'] != 'LINES')
+		{
+			\Bitrix\Im\Bot::startWriting(Array('BOT_ID' => self::getBotId()), $messageFields['DIALOG_ID']);
+		}
 
 		$userName = \Bitrix\Im\User::getInstance($messageFields['FROM_USER_ID'])->getName();
 
@@ -240,7 +243,7 @@ class Marta extends Base
 			{
 				$message = Loc::getMessage('IMBOT_BOT_ENABLE_WELCOME', Array('#USER_NAME#' => $userName));
 				$dateNow = new \Bitrix\Main\Type\DateTime();
-				\Bitrix\ImBot\Bot\Marta::setBotOption($messageFields['DIALOG_ID'], 'planner_message', $dateNow->format('Ymd'));
+				self::setBotOption($messageFields['DIALOG_ID'], 'planner_message', $dateNow->format('Ymd'));
 			}
 			else
 			{
@@ -252,7 +255,7 @@ class Marta extends Base
 			if ($messageFields['COMMAND_PARAMS'] == 'welcome')
 			{
 				$message = Loc::getMessage('IMBOT_BOT_DISABLE_WELCOME', Array('#USER_NAME#' => $userName));
-				\Bitrix\ImBot\Bot\Marta::setBotOption($messageFields['DIALOG_ID'], 'planner_message', '20230219');
+				self::setBotOption($messageFields['DIALOG_ID'], 'planner_message', '20230219');
 			}
 			else
 			{
@@ -439,7 +442,7 @@ class Marta extends Base
 		}
 
 		$option = \Bitrix\Main\Config\Option::get(self::MODULE_ID, 'marta_rename_message', serialize(Array()));
-		$messages = unserialize($option);
+		$messages = unserialize($option, ['allowed_classes' => false]);
 
 		$userId = intval($userId);
 		if ($userId)
@@ -507,7 +510,7 @@ class Marta extends Base
 		}
 
 		$option = \Bitrix\Main\Config\Option::get(self::MODULE_ID, 'marta_rename_message', serialize(Array()));
-		$messages = unserialize($option);
+		$messages = unserialize($option, ['allowed_classes' => false]);
 		foreach ($messages as $messageId)
 		{
 			\Bitrix\Im\Bot::updateMessage(Array('BOT_ID' => self::getBotId()), Array(
@@ -892,5 +895,43 @@ class Marta extends Base
 	public static function addWelcomeMessageAgent()
 	{
 		return "";
+	}
+
+	/**
+	 * Returns per user option value.
+	 *
+	 * @param int $userId
+	 * @param string $name
+	 * @param bool $value
+	 *
+	 * @return bool|mixed
+	 */
+	protected static function getBotOption($userId, $name, $value = false)
+	{
+		$class = self::getClassName();
+		if (!$class::BOT_CODE)
+			return false;
+
+		return \CUserOptions::GetOption(self::MODULE_ID, $class::BOT_CODE.'_'.$name, $value, $userId);
+	}
+
+	/**
+	 * Saves option value for certain user.
+	 *
+	 * @param int $userId
+	 * @param string $name
+	 * @param mixed $value
+	 *
+	 * @return bool
+	 */
+	protected static function setBotOption($userId, $name, $value)
+	{
+		$class = self::getClassName();
+		if (!$class::BOT_CODE)
+			return false;
+
+		\CUserOptions::SetOption(self::MODULE_ID, $class::BOT_CODE.'_'.$name, $value, false, $userId);
+
+		return true;
 	}
 }

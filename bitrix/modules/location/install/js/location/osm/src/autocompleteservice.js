@@ -1,17 +1,26 @@
-import {AutocompleteServiceBase} from 'location.core';
+import {AutocompleteServiceBase, Location} from 'location.core';
+import type {AutocompleteServiceParams} from 'location.core';
 
 export default class AutocompleteService extends AutocompleteServiceBase
 {
-	#requester;
+	#autocompleteRequester;
 
-	constructor(params: {})
+	constructor(props)
 	{
-		super();
-		this.#requester = params.requester;
+		super(props);
+		this.#autocompleteRequester = props.autocompleteRequester;
 	}
 
-	autocomplete(text: string, params: Object): Promise<Array<Location>, Error>
+	autocomplete(text: String, autocompleteParams: AutocompleteServiceParams): Promise<Array<Location>, Error>
 	{
-		return this.#requester.request({query: text, params: params});
+		if (text === '')
+		{
+			return new Promise((resolve) =>
+			{
+				resolve([]);
+			});
+		}
+
+		return this.#autocompleteRequester.request({text, autocompleteParams});
 	}
 }

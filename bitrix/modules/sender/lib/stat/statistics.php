@@ -9,17 +9,16 @@ namespace Bitrix\Sender\Stat;
 
 use Bitrix\Main\Context;
 use Bitrix\Main\Entity\ExpressionField;
+use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Type\Date;
 use Bitrix\Main\UserTable;
-use Bitrix\Main\Localization\Loc;
-use Bitrix\Sender\MailingChainTable;
-use Bitrix\Sender\PostingTable;
-use Bitrix\Sender\PostingClickTable;
-use Bitrix\Sender\MailingSubscriptionTable;
-use Bitrix\Sender\Entity;
-use Bitrix\Sender\Message;
-
 use Bitrix\Main\Web\Uri;
+use Bitrix\Sender\Entity;
+use Bitrix\Sender\MailingChainTable;
+use Bitrix\Sender\MailingSubscriptionTable;
+use Bitrix\Sender\Message;
+use Bitrix\Sender\PostingClickTable;
+use Bitrix\Sender\PostingTable;
 
 Loc::loadMessages(__FILE__);
 
@@ -172,12 +171,22 @@ class Statistics
 			$list = $this->filter->getNames();
 			foreach ($list as $name)
 			{
-				if (!isset($userOptionFilters[$name]) || !$userOptionFilters[$name])
+				if (
+					!isset($userOptionFilters[$name])
+					|| !$userOptionFilters[$name]
+					|| !$this->checkFilterValue($userOptionFilters[$name])
+				)
 				{
 					continue;
 				}
-				$this->filter->set($name, (string) $userOptionFilters[$name]);
-				$isFilterSet = true;
+				try
+				{
+					$this->filter->set($name, (string) $userOptionFilters[$name]);
+					$isFilterSet = true;
+				}
+				catch (\Exception $e)
+				{
+				}
 			}
 		}
 
@@ -187,6 +196,12 @@ class Statistics
 		}
 
 		return $this;
+	}
+
+	private function checkFilterValue($filter)
+	{
+		return $filter === null
+			|| is_scalar($filter);
 	}
 
 	protected function saveFilterToUserOption()

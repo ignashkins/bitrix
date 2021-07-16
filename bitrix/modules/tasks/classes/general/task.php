@@ -21,7 +21,6 @@ use Bitrix\Main\Entity\Query;
 use Bitrix\Main\Entity\Query\Join;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\UserTable;
-use Bitrix\Socialnetwork\Item\Workgroup;
 use Bitrix\Tasks\CheckList\Task\TaskCheckListFacade;
 use Bitrix\Tasks\Comments\Internals\Comment;
 use Bitrix\Tasks\Comments\Task\CommentPoster;
@@ -33,15 +32,15 @@ use Bitrix\Tasks\Internals\Task\FavoriteTable;
 use Bitrix\Tasks\Internals\Task\MemberTable;
 use Bitrix\Tasks\Internals\Task\ParameterTable;
 use Bitrix\Tasks\Internals\Task\ProjectDependenceTable;
+use Bitrix\Tasks\Internals\Task\ProjectLastActivityTable;
 use Bitrix\Tasks\Internals\Task\SearchIndexTable;
 use Bitrix\Tasks\Internals\Task\SortingTable;
 use Bitrix\Tasks\Internals\Task\UserOptionTable;
 use Bitrix\Tasks\Internals\Task\ViewedTable;
 use Bitrix\Tasks\Internals\UserOption;
 use Bitrix\Tasks\Kanban\TaskStageTable;
+use Bitrix\Tasks\Scrum\Internal\EntityTable;
 use Bitrix\Tasks\Scrum\Internal\ItemTable;
-use Bitrix\Tasks\Scrum\Service\BacklogService;
-use Bitrix\Tasks\Scrum\Service\ItemService;
 use Bitrix\Tasks\Util\Calendar;
 use Bitrix\Tasks\Util\Replicator;
 use Bitrix\Tasks\Util\Type;
@@ -276,11 +275,9 @@ class CTasks
 		{
 			$responsibleId = (int)$arFields['RESPONSIBLE_ID'];
 
-			$by = 'id';
-			$order = 'asc';
 			$userResult = CUser::GetList(
-				$by,
-				$order,
+				'id',
+				'asc',
 				['ID_EQUAL_EXACT' => $responsibleId],
 				[
 					'FIELDS' => ['ID'],
@@ -749,21 +746,10 @@ class CTasks
 							array('SPAWNED_BY_AGENT' => $spawnedByAgent)
 						);
 
-						foreach ($arFields['AUDITORS'] as $userId)
-						{
-							UserOption::add($ID, $userId, UserOption\Option::MUTED);
-						}
-
-						$participants = array_unique(
-							array_merge(
-								[$arFields['CREATED_BY'], $arFields['RESPONSIBLE_ID']],
-								$arFields['ACCOMPLICES'],
-								$arFields['AUDITORS']
-							)
-						);
+						UserOption\Task::onTaskAdd($arFields);
 
 						Counter\CounterService::addEvent(
-							Counter\CounterDictionary::EVENT_AFTER_TASK_ADD,
+							Counter\Event\EventDictionary::EVENT_AFTER_TASK_ADD,
 							$arFields
 						);
 
@@ -801,6 +787,14 @@ class CTasks
 						CTasks::Index($mergedFields, $arFields["TAGS"]); // search index
 						SearchIndex::setTaskSearchIndex($ID, $mergedFields);
 
+						$participants = array_unique(
+							array_merge(
+								[$arFields['CREATED_BY'], $arFields['RESPONSIBLE_ID']],
+								$arFields['ACCOMPLICES'],
+								$arFields['AUDITORS']
+							)
+						);
+
 						// clear cache
 						if ($arFields["GROUP_ID"])
 						{
@@ -810,10 +804,18 @@ class CTasks
 						{
 							$CACHE_MANAGER->ClearByTag("tasks_user_".$userId);
 						}
-
 						$cache = Cache::createInstance();
 						$cache->clean(\CTasks::CACHE_TASKS_COUNT, \CTasks::CACHE_TASKS_COUNT_DIR_NAME);
 
+						if ($arTask['GROUP_ID'])
+						{
+							ProjectLastActivityTable::update(
+								$arTask['GROUP_ID'],
+								['ACTIVITY_DATE' => DateTime::createFromUserTime($arTask['ACTIVITY_DATE'])]
+							);
+						}
+
+						// adding service comment
 						$addComment = null;
 						$commentPoster = CommentPoster::getInstance($ID, $occurAsUserId);
 						if ($commentPoster)
@@ -872,12 +874,6 @@ class CTasks
 						if ($arFields['GROUP_ID'] && CModule::IncludeModule("socialnetwork"))
 						{
 							CSocNetGroup::SetLastActivity($arFields['GROUP_ID']);
-
-							$group = Workgroup::getById($arFields['GROUP_ID']);
-							if ($group && $group->isScrumProject())
-							{
-								$this->createScrumItem($ID, $arFields);
-							}
 						}
 					}
 				}
@@ -915,7 +911,19 @@ class CTasks
 	{
 		try
 		{
-			Integration\Pull\PushService::addEvent($params['RECIPIENTS'], [
+			$pushRecipients = $params['RECIPIENTS'];
+			$groupId = $params['CURRENT_FIELDS']['GROUP_ID'];
+			if ($groupId > 0)
+			{
+				$pushRecipients = array_unique(
+					array_merge(
+						$pushRecipients,
+						Integration\SocialNetwork\User::getUsersCanPerformOperation($groupId, 'view_all')
+					)
+				);
+			}
+
+			Integration\Pull\PushService::addEvent($pushRecipients, [
 				'module_id' => 'tasks',
 				'command' => 'task_add',
 				'params' => $this->prepareAddPullEventParameters($params),
@@ -1531,36 +1539,26 @@ class CTasks
 						$addedParticipants = array_unique(array_diff($newParticipants, $oldParticipants));
 						$removedParticipants = array_unique(array_diff($oldParticipants, $newParticipants));
 
-						$viewedDate = Bitrix\Tasks\Comments\Task::getLastCommentTime($ID);
-
-						foreach ($addedParticipants as $userId)
+						if ($viewedDate = Bitrix\Tasks\Comments\Task::getLastCommentTime($ID))
 						{
-							if ($viewedDate)
+							foreach ($addedParticipants as $userId)
 							{
 								ViewedTable::set($ID, $userId, $viewedDate);
 							}
-
-							if ($newAuditors && is_array($newAuditors) && in_array($userId, $newAuditors))
-							{
-								UserOption::add($ID, $userId, UserOption\Option::MUTED);
-							}
 						}
+
+						UserOption\Task::onTaskUpdate($arTask, $arFields);
 
 						if (!array_key_exists('FORCE_RECOUNT_COUNTER', $arParams))
 						{
 							Counter\CounterService::addEvent(
-								Counter\CounterDictionary::EVENT_AFTER_TASK_UPDATE,
+								Counter\Event\EventDictionary::EVENT_AFTER_TASK_UPDATE,
 								[
 									'OLD_RECORD' => $arTask,
 									'NEW_RECORD' => $arFields,
 									'PARAMS' => $arParams,
 								]
 							);
-						}
-
-						foreach ($removedParticipants as $userId)
-						{
-							UserOption::deleteByTaskIdAndUserId($ID, $userId);
 						}
 
 						foreach ($participants as $userId)
@@ -1570,7 +1568,8 @@ class CTasks
 						static::clearCache();
 
 						$updateComment = false;
-						$changesForUpdate = static::getChangesForUpdate($changes);
+						$fieldsForComments = array_key_exists('FIELDS_FOR_COMMENTS', $arParams) ? $arParams['FIELDS_FOR_COMMENTS'] : null;
+						$changesForUpdate = static::getChangesForUpdate($changes, $fieldsForComments);
 						if (!empty($changesForUpdate))
 						{
 							$commentPoster = CommentPoster::getInstance($ID, $occurAsUserId);
@@ -1640,34 +1639,6 @@ class CTasks
 
 						Integration\Bizproc\Listener::onTaskUpdate($ID, $arFields, $arTaskCopy);
 
-						if (isset($arFields['GROUP_ID']) && CModule::IncludeModule("socialnetwork"))
-						{
-							$currentGroupId = ($arFields['GROUP_ID'] > 0 ? $arFields['GROUP_ID'] : $arTask['GROUP_ID']);
-							$group = Workgroup::getById($currentGroupId);
-							if ($group && $group->isScrumProject())
-							{
-								if ($arFields['GROUP_ID'] > 0)
-								{
-									$oldGroupId = (int) $arTask['GROUP_ID'];
-									if ($oldGroupId && $arFields['GROUP_ID'] != $oldGroupId)
-									{
-										$this->updateScrumItem(
-											$ID,
-											array_merge($arTask, ['GROUP_ID' => $arFields['GROUP_ID']])
-										);
-									}
-									if (!$oldGroupId)
-									{
-										$this->createScrumItem($ID, $arFields);
-									}
-								}
-								else
-								{
-									$this->deleteScrumItem($ID);
-								}
-							}
-						}
-
 						return true;
 					}
 				}
@@ -1718,10 +1689,18 @@ class CTasks
 	 * @param $changes
 	 * @return array
 	 */
-	private static function getChangesForUpdate($changes): array
+	private static function getChangesForUpdate($changes, $fields): array
 	{
-		$fields = ['STATUS', 'CREATED_BY', 'RESPONSIBLE_ID', 'ACCOMPLICES', 'AUDITORS', 'DEADLINE'];
-		return array_intersect_key($changes, array_flip($fields));
+		if (!is_array($fields))
+		{
+			$fields = ['STATUS', 'CREATED_BY', 'RESPONSIBLE_ID', 'ACCOMPLICES', 'AUDITORS', 'DEADLINE', 'GROUP_ID'];
+		}
+		if (!empty($fields))
+		{
+			$fields = array_flip($fields);
+		}
+
+		return array_intersect_key($changes, $fields);
 	}
 
 	/**
@@ -1843,7 +1822,7 @@ class CTasks
 					$parentTask->getData(false, ['select' => ['ID'], 'bSkipExtraData' => true]);
 				}
 				/** @noinspection PhpDeprecationInspection */
-				catch (\TasksException $e)
+				catch (\TasksException | \CTaskAssertException $e)
 				{
 					/** @noinspection PhpDeprecationInspection */
 					if ($e->getCode() == \TasksException::TE_TASK_NOT_FOUND_OR_NOT_ACCESSIBLE)
@@ -2186,7 +2165,7 @@ class CTasks
 				}
 
 				Counter\CounterService::addEvent(
-					Counter\CounterDictionary::EVENT_AFTER_TASK_DELETE,
+					Counter\Event\EventDictionary::EVENT_AFTER_TASK_DELETE,
 					$taskData
 				);
 
@@ -2513,13 +2492,20 @@ class CTasks
 					break;
 
 				case 'REAL_STATUS':
-					$arSqlSearch[] = CTasks::FilterCreate(
+					$val = self::removeStatusValueForActiveSprint($val);
+					$realStatusFilter = CTasks::FilterCreate(
 						$sAliasPrefix."T.STATUS",
 						$val,
 						"number",
 						$bFullJoin,
 						$cOperationType
 					);
+					if ($realStatusFilter && self::containCompletedInActiveSprintStatus($arFilter))
+					{
+						$realStatusFilter = $realStatusFilter .
+							" OR ({$sAliasPrefix}TSI.ID IS NOT NULL AND (T.STATUS = '5'))";
+					}
+					$arSqlSearch[] = $realStatusFilter;
 					break;
 
 				case 'DEADLINE_COUNTED':
@@ -3087,23 +3073,79 @@ class CTasks
 					);
 					break;
 
+				case 'PROJECT_EXPIRED':
+					$typesIn = array_merge(
+						[Counter\CounterDictionary::COUNTER_GROUP_EXPIRED],
+						Counter\CounterDictionary::MAP_MUTED_EXPIRED
+					);
+					$typesIn = "('" . implode("', '", $typesIn) . "')";
+					$typesEx = "('" . implode("', '", Counter\CounterDictionary::MAP_EXPIRED) . "')";
+
+					$arSqlSearch[] = "
+						{$sAliasPrefix}TSC.ID IS NOT NULL
+						AND {$sAliasPrefix}TSC.TYPE IN {$typesIn}
+						AND NOT EXISTS (
+							SELECT 1
+							FROM b_tasks_scorer
+							WHERE
+								GROUP_ID = {$sAliasPrefix}T.GROUP_ID
+								AND TASK_ID = {$sAliasPrefix}T.ID
+								AND USER_ID = {$userID}
+								AND TYPE IN {$typesEx}
+						)
+					";
+					break;
+
+				case 'PROJECT_NEW_COMMENTS':
+					$typesIn = array_merge(
+						[Counter\CounterDictionary::COUNTER_GROUP_COMMENTS],
+						Counter\CounterDictionary::MAP_MUTED_COMMENTS
+					);
+					$typesIn = "('" . implode("', '", $typesIn) . "')";
+					$typesEx = "('" . implode("', '", Counter\CounterDictionary::MAP_COMMENTS) . "')";
+
+					$arSqlSearch[] = "
+						{$sAliasPrefix}TSC.ID IS NOT NULL
+						AND {$sAliasPrefix}TSC.TYPE IN {$typesIn}
+						AND NOT EXISTS (
+							SELECT 1
+							FROM b_tasks_scorer
+							WHERE
+								GROUP_ID = {$sAliasPrefix}T.GROUP_ID
+								AND TASK_ID = {$sAliasPrefix}T.ID
+								AND USER_ID = {$userID}
+								AND TYPE IN {$typesEx}
+						)
+					";
+					break;
+
 				case 'WITH_COMMENT_COUNTERS':
-					$arSqlSearch[] = "{$sAliasPrefix}TSC.ID IS NOT NULL";
+					$types = array_merge(
+						array_values(Counter\CounterDictionary::MAP_COMMENTS),
+						array_values(Counter\CounterDictionary::MAP_MUTED_COMMENTS)
+					);
+					$types = "('" . implode("', '", $types) . "')";
+					$arSqlSearch[] = "{$sAliasPrefix}TSC.ID IS NOT NULL AND {$sAliasPrefix}TSC.TYPE IN {$types}";
 					break;
 
 				case 'WITH_NEW_COMMENTS':
 					$expiredCommentType = Comment::TYPE_EXPIRED;
+					$expiredSoonCommentType = Comment::TYPE_EXPIRED_SOON;
 					$qr = "
 						(
 							({$sAliasPrefix}TV.VIEWED_DATE IS NOT NULL AND {$sAliasPrefix}FM.POST_DATE > {$sAliasPrefix}TV.VIEWED_DATE)
 							OR ({$sAliasPrefix}TV.VIEWED_DATE IS NULL AND {$sAliasPrefix}FM.POST_DATE >= {$sAliasPrefix}T.CREATED_DATE)
 						)
 						AND {$sAliasPrefix}FM.NEW_TOPIC = 'N'
-						AND {$sAliasPrefix}FM.AUTHOR_ID != {$targetUserId}
 						AND (
-							{$sAliasPrefix}BUF_FM.UF_TASK_COMMENT_TYPE = 0
-							OR {$sAliasPrefix}BUF_FM.UF_TASK_COMMENT_TYPE IS NULL
-							OR {$sAliasPrefix}BUF_FM.UF_TASK_COMMENT_TYPE != {$expiredCommentType} 
+							(
+								{$sAliasPrefix}FM.AUTHOR_ID != {$targetUserId}
+								AND (
+									{$sAliasPrefix}BUF_FM.UF_TASK_COMMENT_TYPE IS NULL
+									OR {$sAliasPrefix}BUF_FM.UF_TASK_COMMENT_TYPE != {$expiredCommentType} 
+								)
+							)
+							OR {$sAliasPrefix}BUF_FM.UF_TASK_COMMENT_TYPE = {$expiredSoonCommentType}
 						)
 					";
 
@@ -3118,9 +3160,11 @@ class CTasks
 
 				case 'IS_MUTED':
 				case 'IS_PINNED':
+				case 'IS_PINNED_IN_GROUP':
 					$optionMap = [
 						'IS_MUTED' => UserOption\Option::MUTED,
 						'IS_PINNED' => UserOption\Option::PINNED,
+						'IS_PINNED_IN_GROUP' => UserOption\Option::PINNED_IN_GROUP,
 					];
 					$arSqlSearch[] = " {$sAliasPrefix}T.ID " . ($val === 'N' ? 'NOT ' : '')
 						.UserOption::getFilterSql($targetUserId, $optionMap[$key], $sAliasPrefix);
@@ -3165,6 +3209,47 @@ class CTasks
 			$sql = '1=1';
 
 		return ('('.$sql.')');
+	}
+
+	private static function removeStatusValueForActiveSprint($values)
+	{
+		if (is_array($values))
+		{
+			foreach ($values as $key => $value)
+			{
+				if ($value == EntityTable::STATE_COMPLETED_IN_ACTIVE_SPRINT)
+				{
+					unset($values[$key]);
+				}
+			}
+		}
+
+		return $values;
+	}
+
+	private static function containCompletedInActiveSprintStatus($filter): bool
+	{
+		$filterValues = static::getFilteredValues($filter);
+		foreach ($filterValues as $filterValue)
+		{
+			if (array_key_exists('REAL_STATUS', $filterValue))
+			{
+				if (!is_array($filterValue['REAL_STATUS']))
+				{
+					$filterValue['REAL_STATUS'] = [$filterValue['REAL_STATUS']];
+				}
+				foreach ($filterValue['REAL_STATUS'] as $realStatus)
+				{
+					if ($realStatus == EntityTable::STATE_COMPLETED_IN_ACTIVE_SPRINT)
+					{
+						return true;
+					}
+				}
+
+			}
+		}
+
+		return false;
 	}
 
 	private static function getSqlForTimestamps($key, $val, $userID, $sAliasPrefix, $bGetZombie)
@@ -3463,6 +3548,38 @@ class CTasks
 		}
 
 		return array_unique($filteredKeys);
+	}
+
+	private static function getFilteredValues($filter): array
+	{
+		$filteredValues = [];
+
+		if (is_array($filter))
+		{
+			foreach ($filter as $key => $value)
+			{
+				if ($key === '::LOGIC' || $key === '::MARKERS')
+				{
+					continue;
+				}
+
+				if (static::isSubFilterKey($key))
+				{
+					$filteredValues = array_merge($filteredValues, self::getFilteredValues($value));
+					continue;
+				}
+
+				$operationFilter = CTasks::MkOperationFilter($key);
+				$operationField = $operationFilter['FIELD'];
+
+				if ($operationField !== '')
+				{
+					$filteredValues[] = [mb_strtoupper($operationField) => $value];
+				}
+			}
+		}
+
+		return $filteredValues;
 	}
 
 	public static function isSubFilterKey($key)
@@ -4340,8 +4457,8 @@ class CTasks
 					$arFilter['!LAST_LOGIN'] = false;
 
 				$dbUser = CUser::GetList(
-					$by = 'ID',
-					$order = 'ASC',
+					'ID',
+					'ASC',
 					$arFilter,
 					array('FIELDS' => $arSelectFields)    // selects only $arSelectFields fields
 				);
@@ -4418,8 +4535,8 @@ class CTasks
 		}
 
 		$dbRes = CUser::GetList(
-			$by = 'ID',
-			$order = 'ASC',
+			'ID',
+			'ASC',
 			array('ID' => $employeeID1),
 			array('SELECT' => array('UF_DEPARTMENT'))
 		);
@@ -4769,6 +4886,14 @@ class CTasks
 				],
 				'default' => 'N',
 			],
+			'IS_PINNED_IN_GROUP' => [
+				'type' => 'enum',
+				'values' => [
+					'Y' => Loc::getMessage('TASKS_FIELDS_Y'),
+					'N' => Loc::getMessage('TASKS_FIELDS_N'),
+				],
+				'default' => 'N',
+			],
 		];
 
 		foreach ($fields as $fieldId => &$fieldData)
@@ -4837,6 +4962,7 @@ class CTasks
             'FAVORITE',
             'SORTING',
 			'IS_PINNED',
+			'IS_PINNED_IN_GROUP',
         ];
     }
 
@@ -4892,6 +5018,7 @@ class CTasks
 			'FORUM_MESSAGE',
 			'USER_OPTION',
 			'COUNTERS',
+			'SCRUM'
 		];
 
 		foreach ($possibleJoins as $join)
@@ -5024,7 +5151,10 @@ class CTasks
 					break;
 
 				case 'USER_OPTION':
-					if (array_key_exists('IS_PINNED', $order))
+					if (
+						array_key_exists('IS_PINNED', $order)
+						|| array_key_exists('IS_PINNED_IN_GROUP', $order)
+					)
 					{
 						$tableName = UserOptionTable::getTableName();
 						$relatedJoins[$join] = "LEFT JOIN {$tableName} {$joinAlias}TUO "
@@ -5034,15 +5164,34 @@ class CTasks
 
 				case 'COUNTERS':
 					if (
-						in_array('NEW_COMMENTS_COUNT', $select, true)
-						|| in_array('WITH_COMMENT_COUNTERS', $filterKeys, true)
+						in_array('WITH_COMMENT_COUNTERS', $filterKeys, true)
+						|| in_array('PROJECT_EXPIRED', $filterKeys, true)
+						|| in_array('PROJECT_NEW_COMMENTS', $filterKeys, true)
 					)
 					{
 						$tableName = Counter\CounterTable::getTableName();
-						$relatedJoins[$join] = "LEFT JOIN {$tableName} {$joinAlias}TSC 
-							ON {$joinAlias}TSC.USER_ID = {$userId}
-							AND {$joinAlias}TSC.TYPE IN ('my_new_comments', 'accomplices_new_comments', 'auditor_new_comments', 'originator_new_comments', 'my_muted_new_comments', 'accomplices_muted_new_comments', 'auditor_muted_new_comments', 'originator_muted_new_comments') 
-							AND {$joinAlias}TSC.TASK_ID = {$sourceAlias}.ID";
+						$relatedJoins[$join] = "LEFT JOIN {$tableName} {$joinAlias}TSC "
+							. "ON {$joinAlias}TSC.TASK_ID = {$sourceAlias}.ID AND {$joinAlias}TSC.USER_ID = {$userId}";
+					}
+					break;
+				case 'SCRUM':
+					if (
+						in_array('REAL_STATUS', $filterKeys, true) &&
+						self::containCompletedInActiveSprintStatus($filter)
+					)
+					{
+						$scrumEntityTableName = EntityTable::getTableName();
+						$activeSprintStatus = EntityTable::SPRINT_ACTIVE;
+						$relatedJoins[$join] = "LEFT JOIN {$scrumEntityTableName} {$joinAlias}TSE 
+							ON {$joinAlias}TSE.GROUP_ID = {$sourceAlias}.GROUP_ID
+							AND {$joinAlias}TSE.STATUS = '{$activeSprintStatus}'
+						";
+
+						$scrumItemTableName = ItemTable::getTableName();
+						$relatedJoins[$join] .= "LEFT JOIN {$scrumItemTableName} {$joinAlias}TSI
+							ON {$joinAlias}TSI.SOURCE_ID = {$sourceAlias}.ID
+							AND {$joinAlias}TSI.ENTITY_ID = {$joinAlias}TSE.ID
+						";
 					}
 					break;
 			}
@@ -5513,7 +5662,7 @@ class CTasks
 			$fieldKeyName = ($fieldKeyData['FIELD_NAME'] === 'REAL_STATUS' ? 'STATUS' : $fieldKeyData['FIELD_NAME']);
 			$fieldKeyOperator = $fieldKeyData['OPERATOR'];
 
-			if (in_array($fieldKeyName, ['IS_MUTED', 'IS_PINNED', 'WITH_NEW_COMMENTS'], true))
+			if (in_array($fieldKeyName, ['IS_MUTED', 'IS_PINNED', 'IS_PINNED_IN_GROUP', 'WITH_NEW_COMMENTS'], true))
 			{
 				continue;
 			}
@@ -6171,7 +6320,7 @@ class CTasks
 	}
 
 
-	function GetDeparmentSql($arDepsIDs, $sAliasPrefix="", $arParams = array(), $behaviour = array())
+	public static function GetDeparmentSql($arDepsIDs, $sAliasPrefix="", $arParams = array(), $behaviour = array())
 	{
 		if (!is_array($arDepsIDs))
 		{
@@ -6241,7 +6390,7 @@ class CTasks
 	 *
 	 * @deprecated
 	 */
-	function AddAccomplices($ID, $arAccompleces = array())
+	public static function AddAccomplices($ID, $arAccompleces = array())
 	{
 		if ($arAccompleces)
 		{
@@ -6265,7 +6414,7 @@ class CTasks
 	 *
 	 * @deprecated
 	 */
-	function AddAuditors($ID, $arAuditors = array())
+	public static function AddAuditors($ID, $arAuditors = array())
 	{
 		if ($arAuditors)
 		{
@@ -6359,7 +6508,7 @@ class CTasks
 	 * @param array $sourceTags
 	 * @param null $effectiveUserId
 	 */
-	public function AddTags($taskId, $userId, $sourceTags = [], $effectiveUserId = null): void
+	public static function AddTags($taskId, $userId, $sourceTags = [], $effectiveUserId = null): void
 	{
 		$tagHandler = new CTaskTags();
 		$tagHandler::DeleteByTaskID($taskId);
@@ -6413,149 +6562,212 @@ class CTasks
 	}
 
 
-	function Index($arTask, $tags)
+	public static function Index($arTask, $tags)
 	{
 		$arTask['SE_TAG'] = $tags;
 		Integration\Search\Task::index($arTask);
 	}
 
-
-	function OnSearchReindex($NS=array(), $oCallback=NULL, $callback_method="")
+	public static function OnSearchReindex($nextStep = [], $callback = null, $callback_method = '')
 	{
-		$arResult = array();
-		$arOrder  = array('ID' => 'ASC');
-		$arFilter = array();
+		$arResult = [];
+		$order  = ['ID' => 'ASC'];
+		$filter = [];
 
-		if (isset($NS['MODULE']) && ($NS['MODULE'] === 'tasks')
-			&& isset($NS['ID']) && ($NS['ID'] > 0)
+		if (
+			isset($nextStep['MODULE'], $nextStep['ID'])
+			&& $nextStep['MODULE'] === 'tasks'
+			&& $nextStep['ID'] > 0
 		)
 		{
-			$arFilter['>ID'] = (int) $NS['ID'];
+			$filter['>ID'] = (int)$nextStep['ID'];
 		}
 		else
-			$arFilter['>ID'] = 0;
-
-
-		$rsTasks = CTasks::GetList($arOrder, $arFilter);
-		while ($arTask = $rsTasks->Fetch())
 		{
-			$rsTags = CTaskTags::GetList(array(), array("TASK_ID" => $arTask["ID"]));
-			$arTags = array();
-			while ($arTag = $rsTags->Fetch())
-			{
-				$arTags[] = $arTag["NAME"];
-			}
-
-			$arTask["ACCOMPLICES"] = $arTask["AUDITORS"] = array();
-			$rsMembers = CTaskMembers::GetList(array(), array("TASK_ID" => $arTask["ID"]));
-			while ($arMember = $rsMembers->Fetch())
-			{
-				if ($arMember["TYPE"] == "A")
-				{
-					$arTask["ACCOMPLICES"][] = $arMember["USER_ID"];
-				}
-				elseif ($arMember["TYPE"] == "U")
-				{
-					$arTask["AUDITORS"][] = $arMember["USER_ID"];
-				}
-			}
-
-			// todo: get path form socnet
-			if ($arTask["GROUP_ID"] > 0)
-			{
-				$path = str_replace("#group_id#", $arTask["GROUP_ID"], COption::GetOptionString("tasks", "paths_task_group_entry", "/workgroups/group/#group_id#/tasks/task/view/#task_id#/", $arTask["SITE_ID"]));
-			}
-			else
-			{
-				$path = str_replace("#user_id#", $arTask["RESPONSIBLE_ID"], COption::GetOptionString("tasks", "paths_task_user_entry", "/company/personal/user/#user_id#/tasks/task/view/#task_id#/", $arTask["SITE_ID"]));
-			}
-			$path = str_replace("#task_id#", $arTask["ID"], $path);
-
-			$arPermissions = CTasks::__GetSearchPermissions($arTask);
-			$Result = array(
-				"ID" => $arTask["ID"],
-				"LAST_MODIFIED" => $arTask["CHANGED_DATE"] ? $arTask["CHANGED_DATE"] : $arTask["CREATED_DATE"],
-				"TITLE" => $arTask["TITLE"],
-				"BODY" => strip_tags($arTask["DESCRIPTION"]) ? strip_tags($arTask["DESCRIPTION"]) : $arTask["TITLE"],
-				"TAGS" => implode(",", $arTags),
-				"URL" => $path,
-				"SITE_ID" => $arTask["SITE_ID"],
-				"PERMISSIONS" => $arPermissions,
-			);
-
-			if ($oCallback)
-			{
-				$index_res = call_user_func(array($oCallback, $callback_method), $Result);
-				if(!$index_res)
-					return $Result["ID"];
-			}
-			else
-				$arResult[] = $Result;
-
-			CTasks::UpdateForumTopicIndex($arTask["FORUM_TOPIC_ID"], "U", $arTask["RESPONSIBLE_ID"], "tasks", "view_all", $path, $arPermissions, $arTask["SITE_ID"]);
+			$filter['>ID'] = 0;
 		}
 
-		if ($oCallback)
+		$tasksResult = self::GetList($order, $filter);
+		while ($task = $tasksResult->Fetch())
+		{
+			$taskId = $task['ID'];
+
+			$members = self::getMembers($taskId);
+			$task['ACCOMPLICES'] = $members[MemberTable::MEMBER_TYPE_ACCOMPLICE];
+			$task['AUDITORS'] = $members[MemberTable::MEMBER_TYPE_AUDITOR];
+
+			$path = self::getPathToTask($task);
+			$permissions = self::__GetSearchPermissions($task);
+
+			$result = [
+				'ID' => $taskId,
+				'TITLE' => $task['TITLE'],
+				'BODY' => (strip_tags($task['DESCRIPTION']) ?: $task['TITLE']),
+				'LAST_MODIFIED' => ($task['CHANGED_DATE'] ?: $task['CREATED_DATE']),
+				'TAGS' => implode(',', self::getTags($taskId)),
+				'URL' => $path,
+				'SITE_ID' => $task['SITE_ID'],
+				'PERMISSIONS' => $permissions,
+			];
+
+			if ($callback)
+			{
+				if (!call_user_func([$callback, $callback_method], $result))
+				{
+					return $result['ID'];
+				}
+			}
+			else
+			{
+				$arResult[] = $result;
+			}
+
+			self::UpdateForumTopicIndex(
+				$task['FORUM_TOPIC_ID'],
+				'U',
+				$task['RESPONSIBLE_ID'],
+				'tasks',
+				'view_all',
+				$path,
+				$permissions,
+				$task['SITE_ID']
+			);
+		}
+
+		if ($callback)
+		{
 			return false;
+		}
 
 		return $arResult;
 	}
 
+	private static function getTags(int $taskId): array
+	{
+		$tags = [];
 
-	function UpdateForumTopicIndex($topic_id, $entity_type, $entity_id, $feature, $operation, $path, $arPermissions, $siteID)
+		$tagsResult = CTaskTags::GetList([], ['TASK_ID' => $taskId]);
+		while ($tag = $tagsResult->Fetch())
+		{
+			$tags[] = $tag['NAME'];
+		}
+
+		return $tags;
+	}
+
+	private static function getMembers(int $taskId): array
+	{
+		$members = array_fill_keys(MemberTable::possibleTypes(), []);
+
+		$membersResult = CTaskMembers::GetList([], ['TASK_ID' => $taskId]);
+		while ($member = $membersResult->Fetch())
+		{
+			$members[$member['TYPE']][] = $member['USER_ID'];
+		}
+
+		return $members;
+	}
+
+	private static function getPathToTask(array $task): string
+	{
+		// todo: get path form socnet
+		if ($task['GROUP_ID'] > 0)
+		{
+			$path = str_replace(
+				'#group_id#',
+				$task['GROUP_ID'],
+				COption::GetOptionString(
+					'tasks',
+					'paths_task_group_entry',
+					'/workgroups/group/#group_id#/tasks/task/view/#task_id#/',
+					$task['SITE_ID']
+				)
+			);
+		}
+		else
+		{
+			$path = str_replace(
+				'#user_id#',
+				$task['RESPONSIBLE_ID'],
+				COption::GetOptionString(
+					'tasks',
+					'paths_task_user_entry',
+					'/company/personal/user/#user_id#/tasks/task/view/#task_id#/',
+					$task['SITE_ID']
+				)
+			);
+		}
+
+		return str_replace('#task_id#', $task['ID'], $path);
+	}
+
+	static function UpdateForumTopicIndex(
+		$topicId,
+		$entityType,
+		$entityId,
+		$feature,
+		$operation,
+		$path,
+		$permissions,
+		$siteId
+	)
 	{
 		global $DB;
 
-		if(!CModule::IncludeModule("forum"))
-			return;
-
-		$topic_id = intval($topic_id);
-
-		$rsForumTopic = $DB->Query("SELECT FORUM_ID FROM b_forum_topic WHERE ID = ".$topic_id);
-		$arForumTopic = $rsForumTopic->Fetch();
-		if(!$arForumTopic)
-			return;
-
-		CSearch::ChangePermission("forum", $arPermissions, false, $arForumTopic["FORUM_ID"], $topic_id);
-
-		$rsForumMessages = $DB->Query("
-			SELECT ID
-			FROM b_forum_message
-			WHERE TOPIC_ID = ".$topic_id."
-		");
-		while($arMessage = $rsForumMessages->Fetch())
+		if (!CModule::IncludeModule('forum'))
 		{
-			CSearch::ChangeSite("forum", array($siteID => $path), $arMessage["ID"]);
+			return;
 		}
 
-		$arParams = array(
-			"feature_id" => "S".$entity_type."_".$entity_id."_".$feature."_".$operation,
-			"socnet_user" => $entity_id,
+		$topicId = (int)$topicId;
+
+		$forumTopicResult = $DB->Query("SELECT FORUM_ID FROM b_forum_topic WHERE ID = {$topicId}");
+		if (!($forumTopic = $forumTopicResult->Fetch()))
+		{
+			return;
+		}
+
+		CSearch::ChangePermission('forum', $permissions, false, $forumTopic['FORUM_ID'], $topicId);
+
+		$forumMessageResult = $DB->Query("SELECT ID FROM b_forum_message WHERE TOPIC_ID = {$topicId}");
+		while ($message = $forumMessageResult->Fetch())
+		{
+			CSearch::ChangeSite('forum', [$siteId => $path], $message['ID']);
+		}
+
+		$params = [
+			'feature_id' => "S{$entityType}_{$entityId}_{$feature}_{$operation}",
+			'socnet_user' => $entityId,
+		];
+
+		CSearch::ChangeIndex(
+			'forum',
+			['PARAMS' => $params],
+			false,
+			$forumTopic['FORUM_ID'],
+			$topicId
 		);
-
-		CSearch::ChangeIndex("forum", array("PARAMS" => $arParams), false, $arForumTopic["FORUM_ID"], $topic_id);
 	}
-
 
 	public static function __GetSearchPermissions($arTask)
 	{
-		$arPermissions = array();
+		$arPermissions = [];
 
 		// check task members
 		if (!isset($arTask['ACCOMPLICES']) || !isset($arTask['AUDITORS']))
 		{
 			if (!isset($arTask['ACCOMPLICES']))
-				$arTask['ACCOMPLICES'] = array();
-			if (!isset($arTask['AUDITORS']))
-				$arTask['AUDITORS'] = array();
-			$rsMembers = CTaskMembers::GetList(array(), array("TASK_ID" => $arTask["ID"]));
-			while ($arMember = $rsMembers->Fetch())
 			{
-				if ($arMember["TYPE"] == "A")
-					$arTask["ACCOMPLICES"][] = $arMember["USER_ID"];
-				elseif ($arMember["TYPE"] == "U")
-					$arTask["AUDITORS"][] = $arMember["USER_ID"];
+				$arTask['ACCOMPLICES'] = [];
 			}
+			if (!isset($arTask['AUDITORS']))
+			{
+				$arTask['AUDITORS'] = [];
+			}
+
+			$members = self::getMembers($arTask['ID']);
+			$arTask['ACCOMPLICES'] = array_merge($arTask['ACCOMPLICES'], $members[MemberTable::MEMBER_TYPE_ACCOMPLICE]);
+			$arTask['AUDITORS'] = array_merge($arTask['AUDITORS'], $members[MemberTable::MEMBER_TYPE_AUDITOR]);
 		}
 
 		// group id is set, then take permissions from socialnetwork settings
@@ -6853,7 +7065,7 @@ class CTasks
 		$event->send();
 	}
 
-	function GetUpdatesCount($arViewed)
+	public static function GetUpdatesCount($arViewed)
 	{
 		global $DB;
 		if ($userID = User::getId())
@@ -6927,7 +7139,7 @@ class CTasks
 	}
 
 
-	function CanCurrentUserViewTopic($topicID)
+	public static function CanCurrentUserViewTopic($topicID)
 	{
 		$isSocNetModuleIncluded = CModule::IncludeModule("socialnetwork");
 
@@ -6954,25 +7166,15 @@ class CTasks
 					}
 				}
 
-				$arTask["ACCOMPLICES"] = $arTask["AUDITORS"] = array();
-				$rsMembers = CTaskMembers::GetList(array(), array("TASK_ID" => $arTask["ID"]));
-				while ($arMember = $rsMembers->Fetch())
-				{
-					if ($arMember["TYPE"] == "A")
-					{
-						$arTask["ACCOMPLICES"][] = $arMember["USER_ID"];
-					}
-					elseif ($arMember["TYPE"] == "U")
-					{
-						$arTask["AUDITORS"][] = $arMember["USER_ID"];
-					}
-				}
+				$members = self::getMembers($arTask['ID']);
+				$arTask['ACCOMPLICES'] = $members[MemberTable::MEMBER_TYPE_ACCOMPLICE];
+				$arTask['AUDITORS'] = $members[MemberTable::MEMBER_TYPE_AUDITOR];
 
 				if (in_array(User::getId(), array_unique(array_merge(array($arTask["CREATED_BY"], $arTask["RESPONSIBLE_ID"]), $arTask["ACCOMPLICES"], $arTask["AUDITORS"]))))
 					return true;
 
 
-				$dbRes = CUser::GetList($by='ID', $order='ASC', array('ID' => $arTask["RESPONSIBLE_ID"]), array('SELECT' => array('UF_DEPARTMENT')));
+				$dbRes = CUser::GetList('ID', 'ASC', array('ID' => $arTask["RESPONSIBLE_ID"]), array('SELECT' => array('UF_DEPARTMENT')));
 
 				if (($arRes = $dbRes->Fetch()) && is_array($arRes['UF_DEPARTMENT']) && count($arRes['UF_DEPARTMENT']) > 0)
 					if (in_array(User::getId(), array_keys(CTasks::GetDepartmentManagers($arRes['UF_DEPARTMENT'], $arTask["RESPONSIBLE_ID"]))))
@@ -7005,7 +7207,7 @@ class CTasks
 
 		if (!isset($cache[$USER_ID]))
 		{
-			$dbRes = CUser::GetList($by='ID', $order='ASC', array('ID' => $USER_ID), array('SELECT' => array('UF_DEPARTMENT')));
+			$dbRes = CUser::GetList('ID', 'ASC', array('ID' => $USER_ID), array('SELECT' => array('UF_DEPARTMENT')));
 
 			if ($arRes = $dbRes->Fetch())
 				$cache[$USER_ID] = $arRes['UF_DEPARTMENT'];
@@ -7737,52 +7939,5 @@ class CTasks
 				)
 			)
 		));
-	}
-
-	private function createScrumItem(int $taskId, array $fields): void
-	{
-		$backlogService = new BacklogService();
-		$backlog = $backlogService->getBacklogByGroupId($fields['GROUP_ID']);
-		if (!$backlogService->getErrors() && !$backlog->isEmpty())
-		{
-			$itemService = new ItemService();
-
-			$scrumItem = ItemTable::createItemObject();
-			$scrumItem->setName($fields['TITLE']);
-			$scrumItem->setCreatedBy($fields['CREATED_BY']);
-			$scrumItem->setEntityId($backlog->getId());
-			$scrumItem->setSourceId($taskId);
-
-			$itemService->createTaskItem($scrumItem);
-		}
-	}
-
-	private function updateScrumItem(int $taskId, $fields): void
-	{
-		$backlogService = new BacklogService();
-		$backlog = $backlogService->getBacklogByGroupId($fields['GROUP_ID']);
-		if (!$backlogService->getErrors() && !$backlog->isEmpty())
-		{
-			$itemService = new ItemService();
-			$scrumItem = $itemService->getItemBySourceId($taskId);
-			if (!$itemService->getErrors() && !$scrumItem->isEmpty())
-			{
-				$scrumItem->setEntityId($backlog->getId());
-				$scrumItem->setSort(0);
-				$scrumItem->setParentId(0);
-				$scrumItem->setModifiedBy($fields['CHANGED_BY']);
-				$itemService->changeItem($scrumItem);
-			}
-		}
-	}
-
-	private function deleteScrumItem(int $taskId): void
-	{
-		$itemService = new ItemService();
-		$scrumItem = $itemService->getItemBySourceId($taskId);
-		if (!$itemService->getErrors() && !$scrumItem->isEmpty())
-		{
-			$itemService->removeItem($scrumItem);
-		}
 	}
 }

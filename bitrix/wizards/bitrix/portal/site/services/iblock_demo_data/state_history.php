@@ -24,7 +24,7 @@ if ($arEnum = $dbEnum->Fetch())
 if($GLOBALS['DB']->type == "MSSQL")
 	$GLOBALS['DB']->Query('SET NOCOUNT ON', true);
 
-$dbrUsers = CUser::GetList($o, $b, Array(), array('SELECT' => array('UF_*')));
+$dbrUsers = CUser::GetList('', '', Array(), array('SELECT' => array('UF_*')));
 while($arUser = $dbrUsers->Fetch())
 {
 	if(!$arUser["UF_DEPARTMENT"] || !$arUser["WORK_POSITION"])
@@ -33,7 +33,7 @@ while($arUser = $dbrUsers->Fetch())
 	$arElementFields = Array(
 	    "ACTIVE" => "Y",
 	    "IBLOCK_ID" => $state_history_IBLOCK_ID,
-	    "ACTIVE_FROM" => ($arUser["UF_STATE_FIRST"]?$arUser["UF_STATE_FIRST"]:ConvertTimeStamp(mktime()-(2500 - $arUser["ID"]*5)*60*60*24)),
+	    "ACTIVE_FROM" => ($arUser["UF_STATE_FIRST"]?$arUser["UF_STATE_FIRST"]:ConvertTimeStamp(time()-(2500 - $arUser["ID"]*5)*60*60*24)),
 	    "NAME" => GetMessage("W_IB_STATE_HIST1")." - ".$arUser["LAST_NAME"]." ".$arUser["NAME"],
 	    "PREVIEW_TEXT" => GetMessage("W_IB_STATE_HIST1"),
 	    "PREVIEW_TEXT_TYPE" => "text",

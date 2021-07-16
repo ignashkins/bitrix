@@ -17,14 +17,16 @@ class Output
 	 */
 	protected static $instances = [];
 
+	protected $idConnector = '';
+	protected $idChat = 0;
+
+	//keyboard
+	protected $keyboardData = [];
+
 	/**
 	 * @param int $chatId
 	 * @param array $params
 	 * @return Output
-	 * @throws \Bitrix\Main\ArgumentException
-	 * @throws \Bitrix\Main\LoaderException
-	 * @throws \Bitrix\Main\ObjectPropertyException
-	 * @throws \Bitrix\Main\SystemException
 	 */
 	public static function getInstance($chatId = 0, $params = []): Output
 	{
@@ -40,10 +42,6 @@ class Output
 	 * @param int $chatId
 	 * @param string $connectorId
 	 * @return Output
-	 * @throws \Bitrix\Main\ArgumentException
-	 * @throws \Bitrix\Main\LoaderException
-	 * @throws \Bitrix\Main\ObjectPropertyException
-	 * @throws \Bitrix\Main\SystemException
 	 */
 	private static function initialization($chatId = 0, $connectorId = ''): Output
 	{
@@ -86,7 +84,7 @@ class Output
 			}
 		}
 
-		return new $class;
+		return new $class($chatId, $connectorId);
 	}
 
 	/**
@@ -95,10 +93,6 @@ class Output
 	 * @param array $messageFields
 	 * @param string $connectorId
 	 * @return array
-	 * @throws \Bitrix\Main\ArgumentException
-	 * @throws \Bitrix\Main\LoaderException
-	 * @throws \Bitrix\Main\ObjectPropertyException
-	 * @throws \Bitrix\Main\SystemException
 	 */
 	public static function sendMessageProcessing($messageFields, $connectorId): array
 	{
@@ -112,9 +106,13 @@ class Output
 
 	/**
 	 * Output constructor.
+	 * @param $idChat
+	 * @param $idConnector
 	 */
-	protected function __construct()
+	protected function __construct($idChat, $idConnector)
 	{
+		$this->idChat = $idChat;
+		$this->idConnector = $idConnector;
 	}
 
 	protected function __clone()
@@ -166,12 +164,56 @@ class Output
 	}
 
 	/**
+	 * Add keyboard data.
+	 *
+	 * @param array $data
+	 * @return bool
+	 */
+	public function setKeyboardData($data = []): bool
+	{
+		$this->keyboardData = $data;
+
+		return true;
+	}
+
+	/**
+	 * Is data loading keyboard.
+	 *
+	 * @return bool
+	 */
+	public function isLoadedKeyboard(): bool
+	{
+		$result = false;
+
+		if(
+			!empty($this->keyboardData) &&
+			is_array($this->keyboardData)
+		)
+		{
+			foreach ($this->keyboardData as $keyboard)
+			{
+				if(
+					!empty($keyboard['COMMAND']) &&
+					!empty($keyboard['SESSION_ID']) &&
+					!empty($keyboard['TEXT_BUTTON'])
+				)
+				{
+					$result = true;
+					break;
+				}
+			}
+		}
+
+		return $result;
+	}
+
+	/**
 	 * The transformation of the description of the outgoing message in native format if possible.
 	 *
 	 * @param $message
 	 * @return array
 	 */
-	protected function nativeMessageProcessing($message): array
+	public function nativeMessageProcessing($message): array
 	{
 		return $message;
 	}

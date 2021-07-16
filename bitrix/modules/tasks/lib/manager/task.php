@@ -827,10 +827,11 @@ final class Task extends \Bitrix\Tasks\Manager
 		unset($task);
 	}
 
-	public static function getList($userId, array $listParameters = array(), array $parameters = array())
+	public static function getList($userId, array $listParameters = [], array $parameters = [])
 	{
 		$data = [];
 		$can = [];
+		$params = [];
 
 		$userId = (int) $userId;
 
@@ -850,8 +851,6 @@ final class Task extends \Bitrix\Tasks\Manager
 				$listParameters['page'],
 				$parameters['PUBLIC_MODE']
 			);
-
-			$params = false;
 			if (!empty($navParams))
 			{
 				$params = ['NAV_PARAMS' => $navParams];
@@ -863,6 +862,10 @@ final class Task extends \Bitrix\Tasks\Manager
 			$params['TARGET_USER_ID'] = $parameters['TARGET_USER_ID'];
 		}
 
+		if (!array_key_exists('select', $listParameters) || !is_array($listParameters['select']))
+		{
+			$listParameters['select'] = [];
+		}
 		$getNewCommentsCount = in_array('NEW_COMMENTS_COUNT', $listParameters['select'], true);
 
 		if (

@@ -68,7 +68,7 @@ class CBPWebHookActivity
 						null,
 						$target,
 						array(
-							'document_id' => $this->GetDocumentId(),
+							//'document_id' => $this->GetDocumentId(),
 						),
 						array(),
 						array(
@@ -144,6 +144,7 @@ class CBPWebHookActivity
 		$dialog->setMap(array(
 			'Handler' => array(
 				'Name' => GetMessage('BPWHA_HANDLER_NAME'),
+				'Description' => GetMessage('BPWHA_HANDLER_NAME'),
 				'FieldName' => 'handler',
 				'Type' => 'text',
 				'Required' => true

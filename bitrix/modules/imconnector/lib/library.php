@@ -1,10 +1,14 @@
 <?php
 namespace Bitrix\ImConnector;
 
-use \Bitrix\Main\Context,
-	\Bitrix\Main\IO\Path,
-	\Bitrix\Main\Localization\Loc,
-	\Bitrix\Main\Text\UtfSafeString;
+use Bitrix\ImConnector\Connectors\Notifications;
+use Bitrix\Main\IO\File;
+use Bitrix\Main\Context;
+use Bitrix\Main\IO\Path;
+use Bitrix\Main\Text\Encoding;
+use Bitrix\Main\Web\HttpClient;
+use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\Text\UtfSafeString;
 
 /**
  * Class to store common information, methods, and constants language constants used in different parts of the module.
@@ -28,12 +32,16 @@ class Library
 	const ID_WECHAT_CONNECTOR = 'wechat';
 	const ID_NETWORK_CONNECTOR = 'network';
 	const ID_FB_COMMENTS_CONNECTOR = 'facebookcomments';
+	public const ID_FBINSTAGRAMDIRECT_CONNECTOR = 'fbinstagramdirect';
 	const ID_IMESSAGE_CONNECTOR = 'imessage';
 	const ID_OLX_CONNECTOR = 'olx';
 
 	const COMPONENT_NAME_REST = 'bitrix:imconnector.rest';
 
 	const SCOPE_REST_IMCONNECTOR = 'imopenlines';
+
+	public const BLOCK_REASON_DEFAULT = 'DEFAULT';
+	public const BLOCK_REASON_USER = 'USER';
 
 	//Components
 	const CACHE_DIR_COMPONENT = "/imconnector/component/";
@@ -70,6 +78,7 @@ class Library
 	const ERROR_FAILED_TO_SAVE_SETTINGS_CONNECTOR = 'FAILED_TO_SAVE_SETTINGS_CONNECTOR';//Failed to save settings connector
 	const ERROR_FAILED_TO_TEST_CONNECTOR = 'FAILED_TO_TEST_CONNECTOR';//Failed to test the connection of the connector
 	const ERROR_FAILED_REGISTER_CONNECTOR = 'FAILED_REGISTER_CONNECTOR';//Failed to register connector
+	const ERROR_CONNECTOR_NOT_SEND_MESSAGE_CHAT = 'CONNECTOR_NOT_SEND_MESSAGE_CHAT';
 
 	const ERROR_IMCONNECTOR_REST_APPLICATION_REGISTRATION_ERROR = 'APPLICATION_REGISTRATION_ERROR';//Application registration error
 	const ERROR_IMCONNECTOR_REST_APPLICATION_REGISTRATION_ERROR_POINT = 'APPLICATION_REGISTRATION_ERROR_POINT';
@@ -84,6 +93,21 @@ class Library
 	/** const error connector server*/
 	const ERROR_CONNECTOR_MESSENGER_INVALID_OAUTH_ACCESS_TOKEN = "CONNECTOR_MESSENGER_INVALID_OAUTH_ACCESS_TOKEN";
 
+	public const ERROR_IMCONNECTOR_PROVIDER_NO_ACTIVE_CONNECTOR = 'IMCONNECTOR_PROVIDER_NO_ACTIVE_CONNECTOR';
+	public const ERROR_IMCONNECTOR_PROVIDER_CONTROLLER_CONNECTOR_URL = 'IMCONNECTOR_PROVIDER_CONTROLLER_CONNECTOR_URL';
+	public const ERROR_IMCONNECTOR_PROVIDER_LICENCE_CODE_PORTAL = 'IMCONNECTOR_PROVIDER_LICENCE_CODE_PORTAL';
+	public const ERROR_IMCONNECTOR_PROVIDER_TYPE_PORTAL = 'IMCONNECTOR_PROVIDER_TYPE_PORTAL';
+	public const ERROR_IMCONNECTOR_PROVIDER_CONNECTOR = 'IMCONNECTOR_PROVIDER_CONNECTOR';
+	public const ERROR_IMCONNECTOR_PROVIDER_LINE = 'IMCONNECTOR_PROVIDER_LINE';
+	public const ERROR_IMCONNECTOR_PROVIDER_NOT_CALL = 'IMCONNECTOR_PROVIDER_NOT_CALL';
+	public const ERROR_IMCONNECTOR_PROVIDER_INCORRECT_INCOMING_DATA = 'IMCONNECTOR_PROVIDER_INCORRECT_INCOMING_DATA';
+	public const ERROR_IMCONNECTOR_NO_CORRECT_PROVIDER = 'IMCONNECTOR_NO_CORRECT_PROVIDER';
+	public const ERROR_IMCONNECTOR_PROVIDER_GENERAL_REQUEST_NOT_DYNAMIC_METHOD = 'IMCONNECTOR_PROVIDER_GENERAL_REQUEST_NOT_DYNAMIC_METHOD';
+	public const ERROR_IMCONNECTOR_PROVIDER_GENERAL_REQUEST_DYNAMIC_METHOD = 'IMCONNECTOR_PROVIDER_GENERAL_REQUEST_DYNAMIC_METHOD';
+	public const ERROR_IMCONNECTOR_COULD_NOT_GET_PROVIDER_OBJECT = 'IMCONNECTOR_COULD_NOT_GET_PROVIDER_OBJECT';
+	public const ERROR_IMCONNECTOR_PROVIDER_DOES_NOT_SUPPORT_THIS_METHOD_CALL = 'PROVIDER_DOES_NOT_SUPPORT_THIS_METHOD_CALL';
+	public const ERROR_IMCONNECTOR_PROVIDER_UNSUPPORTED_TYPE_INCOMING_MESSAGE = 'PROVIDER_UNSUPPORTED_TYPE_INCOMING_MESSAGE';
+
 	/** const event */
 	const EVENT_RECEIVED_MESSAGE = "OnReceivedMessage";
 	const EVENT_RECEIVED_POST = "OnReceivedPost";
@@ -96,6 +120,9 @@ class Library
 	const EVENT_RECEIVED_STATUS_DELIVERY = "OnReceivedStatusDelivery";
 	const EVENT_RECEIVED_STATUS_READING = "OnReceivedStatusReading";
 
+	const EVENT_RECEIVED_CLIENT_COMMAND = "OnReceivedClientCommand";
+
+	public const EVENT_RECEIVED_ERROR = 'OnReceivedError';
 	public const EVENT_RECEIVED_STATUS_BLOCK = 'OnReceivedStatusBlock';
 	public const EVENT_RECEIVED_TYPING_STATUS = 'OnReceivedStatusWrites';
 
@@ -111,21 +138,61 @@ class Library
 
 	const EVENT_DELETE_LINE = 'OnDeleteLine';
 
+	public const CODE_ID_ARTICLE_TIME_LIMIT = '10632966';
 	public const TIME_LIMIT_RESTRICTIONS = [
 		'facebook' => [
 			'LIMIT_START_DATE' => 1583280001, //04 Mar 2020 00:00:01
-			'BLOCK_DATE' => 86400,
-			'BLOCK_REASON' => 'DEFAULT'
+			'BLOCK_DATE' => null,
+			'BLOCK_REASON' => self::BLOCK_REASON_DEFAULT
 		],
 		'whatsappbytwilio' => [
 			'LIMIT_START_DATE' => 1575158401,
 			'BLOCK_DATE' => 86400,
-			'BLOCK_REASON' => 'DEFAULT'
+			'BLOCK_REASON' => self::BLOCK_REASON_DEFAULT
 		],
 	];
 
 	public const AUTO_DELETE_BLOCK = [
-		'imessage', 'vkgroup'
+		'facebook',
+		'whatsappbytwilio',
+
+		'imessage',
+		'vkgroup',
+		'ok'
+	];
+
+	public const portalZoneNotCloud = [
+		'ua',
+		'en',
+		'ru'
+	];
+
+	public const connectorPortalZoneLimit = [
+		'avito' => [
+			'allow' => ['ru'],
+			'deny' => [],
+		],
+		'yandex' => [
+			'allow' => [],
+			'deny' => ['ua'],
+		],
+		'vkgroup' => [
+			'allow' => [],
+			'deny' => ['ua'],
+		],
+		'ok' => [
+			'allow' => ['ru', 'by', 'kz'],
+			'deny' => ['ua'],
+		],
+		'olx' => [
+			'allow' => ['ua', 'pl'],
+			'deny' => [],
+		],
+	];
+
+	public const ENABLE_SETSTATUSREADING = [
+		'vkgroup',
+		'avito'
 	];
 
 	/** @var array A list of connectors, which works without servers */
@@ -140,6 +207,7 @@ class Library
 		'botframework.twilio',
 		'botframework.emailoffice365',
 		self::ID_FBINSTAGRAM_CONNECTOR,
+		Notifications::CONNECTOR_ID,
 	);
 
 	/** @var array A list of connectors that support group chat.*/
@@ -157,6 +225,7 @@ class Library
 		'botframework.slack',
 		'botframework.groupme',
 		self::ID_FBINSTAGRAM_CONNECTOR,
+		Notifications::CONNECTOR_ID,
 	);
 
 	/** @var array */
@@ -184,13 +253,15 @@ class Library
 	);
 
 	/** @var array A list of connectors, where it is not necessary to send the signature.*/
-	public static $listNotNeedSignature = array(
+	public static $listNotNeedSignature = [
+		'livechat',
+		'network',
 		'facebookcomments',
 		'botframework.twilio',
 		self::ID_FBINSTAGRAM_CONNECTOR,
 		'viber',
 		'yandex'
-	);
+	];
 
 	/** @var array A list of connectors, where we use rich links on operator side.*/
 	public static $listConnectorWithRichLinks = array(
@@ -199,7 +270,10 @@ class Library
 
 	/** @var array A list of connectors, where we send writing status.*/
 	public static $listConnectorWritingStatus = [
-		'imessage'
+		'livechat',
+		'network',
+		'imessage',
+		'ok'
 	];
 
 	public static $listSingleThreadGroupChats = array(
@@ -906,7 +980,7 @@ class Library
 	 *
 	 * return void
 	 */
-	static public function loadMessages()
+	public static function loadMessages()
 	{
 		Loc::loadMessages(__FILE__);
 	}
@@ -916,7 +990,7 @@ class Library
 	 *
 	 * @return string
 	 */
-	static public function getCurrentServerUrl()
+	public static function getCurrentServerUrl()
 	{
 		$url  = '';
 
@@ -938,7 +1012,7 @@ class Library
 	 *
 	 * @return string
 	 */
-	static public function getCurrentUri()
+	public static function getCurrentUri()
 	{
 		$server = Context::getCurrent()->getServer();
 		$request = Context::getCurrent()->getRequest();
@@ -953,7 +1027,7 @@ class Library
 	/**
 	 * Loads the language file connector.php.
 	 */
-	static public function loadMessagesConnectorClass()
+	public static function loadMessagesConnectorClass()
 	{
 		Loc::loadMessages(dirname(__DIR__));
 	}
@@ -964,19 +1038,32 @@ class Library
 	 * @param $value
 	 * @return bool
 	 */
-	static public function isEmpty($value)
+	public static function isEmpty($value): bool
 	{
 		if(empty($value))
 		{
-			if(isset($value) && ($value===0 || $value===0.0 || $value==="0"))
-				return false;
+			if(
+				isset($value) &&
+				(
+					$value === 0 ||
+					$value === 0.0 ||
+					$value === '0'
+				)
+			)
+			{
+				$result = false;
+			}
 			else
-				return true;
+			{
+				$result = true;
+			}
 		}
 		else
 		{
-			return false;
+			$result = false;
 		}
+
+		return $result;
 	}
 
 	/**
@@ -985,7 +1072,7 @@ class Library
 	 * @param string $url
 	 * @return string
 	 */
-	static public function getNameFile($url)
+	public static function getNameFile($url, $notNull = false)
 	{
 		$fileName = Path::getName($url);
 
@@ -993,9 +1080,204 @@ class Library
 		{
 			$pos = UtfSafeString::getLastPosition($fileName, '?');
 			if ($pos !== false)
+			{
 				$fileName = mb_substr($fileName, 0, $pos);
+			}
+		}
+
+		if (
+			$fileName == '' &&
+			$notNull === true
+		)
+		{
+			$fileName = uniqid();
 		}
 
 		return $fileName;
+	}
+
+	/**
+	 * @param $data
+	 * @return array|bool|\SplFixedArray|string
+	 */
+	public static function getNameFileIsContentDisposition($data)
+	{
+		$fileName = '';
+
+		if ($data !== '')
+		{
+			$data = rawurldecode($data);
+			if (preg_match("'filename\*=([^;]+)'i", $data, $res))
+			{
+				[$charset, $str] = preg_split("/'[^']*'/", trim($res[1], '"'));
+				$fileName = Encoding::convertEncoding($str, $charset, SITE_CHARSET);
+			}
+			else if (preg_match("'filename=([^;]+)'i", $data, $res))
+			{
+				$fileName = trim($res[1], '"');
+			}
+			else if (preg_match("'filename\*0=([^;]+)'i", $data, $res))
+			{
+				$fileName = trim($res[1], '"');
+
+				$i = 0;
+				while (preg_match("'filename\*".(++$i)."=([^;]+)'i", $data, $res))
+				{
+					$fileName .= trim($res[1], '"');
+				}
+			}
+			else if (preg_match("'filename\*0\*=([^;]+)'i", $data, $res))
+			{
+				$str = trim($res[1], '"');
+
+				$i = 0;
+				while (preg_match("'filename\*".(++$i)."\*?=([^;]+)'i", $data, $res))
+				{
+					$str .= trim($res[1], '"');
+				}
+
+				[$charset, $str] = preg_split("/'[^']*'/", $str);
+				if (!empty($str))
+				{
+					$fileName = $charset ?  Encoding::convertEncoding($str, $charset, SITE_CHARSET) : $str;
+				}
+			}
+		}
+
+		return $fileName;
+	}
+
+	/**
+	 * File download.
+	 *
+	 * @param array $file Description array file.
+	 * @return array|bool
+	 */
+	public static function downloadFile(array $file)
+	{
+		if(empty($file['url']))
+		{
+			$file = false;
+		}
+		else
+		{
+			$httpClient = new HttpClient(
+				[
+					'redirect' => true,
+					'disableSslVerification' => true
+				]
+			);
+
+			$httpClient->setHeader('User-Agent', 'Bitrix Connector Client');
+
+			if(
+				!empty($file['headers'])
+				&& is_array($file['headers'])
+			)
+			{
+				foreach ($file['headers'] as $header)
+				{
+					$httpClient->setHeader($header['name'], $header['value']);
+				}
+			}
+
+			if(Library::isEmpty($file['name']))
+			{
+				$fileName = Library::getNameFile($file['url'], true);
+			}
+			else
+			{
+				$fileName = $file['name'];
+			}
+
+			$tempFilePath = \CFile::GetTempName('', $fileName);
+
+			if(
+				$httpClient->download($file['url'], $tempFilePath)
+				&& $httpClient->getStatus() == '200'
+			)
+			{
+				if(!empty($file['type']))
+				{
+					$type = $file['type'];
+				}
+				else
+				{
+					$type = $httpClient->getHeaders()->get('Content-Type');
+				}
+
+				if(Library::isEmpty($file['name']) )
+				{
+					$contentDisposition = $httpClient->getHeaders()->get('Content-Disposition');
+					if(!empty($contentDisposition))
+					{
+						$fileNameContentDisposition = Library::getNameFileIsContentDisposition($contentDisposition);
+						if(
+							!empty($fileNameContentDisposition)
+							&& is_string($fileNameContentDisposition)
+						)
+						{
+							$fileName = $fileNameContentDisposition;
+						}
+					}
+					else
+					{
+						//Correct handling of links with redirect
+						$effectiveUrl = $httpClient->getEffectiveUrl();
+						if($effectiveUrl !== $file['url'])
+						{
+							$fileName = Library::getNameFile($effectiveUrl);
+						}
+					}
+				}
+
+				if(
+					empty($type)
+					|| $type == 'application/octet-stream'
+					|| $type == 'binary/octet-stream'
+				)
+				{
+					$fileTemp = new File($tempFilePath);
+					$type = $fileTemp->getContentType();
+				}
+
+				//The definition of the file extension, it is not specified.
+				if(
+					!empty(Library::$mimeTypeAssociationExtension[$type])
+					&& mb_strpos($fileName, '.') === false
+				)
+				{
+					$fileName .= Library::$mimeTypeAssociationExtension[$type];
+				}
+
+				if(empty($type))
+				{
+					$type = 'application/octet-stream';
+				}
+
+				if(Library::isEmpty($file['description']))
+				{
+					$description = '';
+				}
+				else
+				{
+					$description = $file['description'];
+				}
+
+				$file = [
+					'name' => $fileName,
+					'tmp_name' => $tempFilePath,
+					'type' => $type,
+					'description' => $description,
+					'MODULE_ID' => Library::MODULE_ID
+				];
+			}
+			else
+			{
+				$file = false;
+			}
+		}
+
+		return $file;
 	}
 }

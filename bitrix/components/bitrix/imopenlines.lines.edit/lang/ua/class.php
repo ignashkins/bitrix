@@ -1,9 +1,15 @@
 <?php
+$MESS["OL_COMPONENT_AUTOMATIC_MESSAGE_CLOSE_TITLE"] = "Закрити діалог";
+$MESS["OL_COMPONENT_AUTOMATIC_MESSAGE_CONTINUE_TITLE"] = "Продовжити діалог";
+$MESS["OL_COMPONENT_AUTOMATIC_MESSAGE_NEW_TITLE"] = "Новий діалог";
+$MESS["OL_COMPONENT_AUTOMATIC_MESSAGE_TITLE"] = "Ми не отримали від вас відповідь. Скажіть, будь ласка, чи залишилися у вас ще питання?";
 $MESS["OL_COMPONENT_CONFIG_EDIT_CRM_CREATE_DEAL"] = "Автоматично створювати угоду";
 $MESS["OL_COMPONENT_CONFIG_EDIT_CRM_CREATE_DEAL_SECOND"] = "У якій воронці створювати угоду";
 $MESS["OL_COMPONENT_CONFIG_EDIT_CRM_CREATE_DEAL_THIRD"] = "Використовувати активну угоду, не створюючи нову";
 $MESS["OL_COMPONENT_CONFIG_EDIT_CRM_CREATE_IN_CHAT"] = "Створити вручну у вікні чату";
 $MESS["OL_COMPONENT_CONFIG_EDIT_CRM_CREATE_LEAD"] = "Автоматично створити новий лід";
+$MESS["OL_COMPONENT_DISABLES_POPUP_HEAD_DEPARTMENT_EXCLUDED_QUEUE_TITLE"] = "Більше не показувати";
+$MESS["OL_COMPONENT_ERROR_SAVE_CONFIG"] = "Помилка збереження конфігурації відкритої лінії.";
 $MESS["OL_COMPONENT_KPI_FIRST_ANSWER_TEXT"] = "Співробітник #OPERATOR# перевищив допустимий час відповіді клієнту на перше повідомлення. Діалог №#DIALOG#.";
 $MESS["OL_COMPONENT_KPI_FURTHER_ANSWER_TEXT"] = "Співробітник #OPERATOR# перевищив допустимий час відповіді клієнту на повідомлення. Діалог №#DIALOG#.";
 $MESS["OL_COMPONENT_LE_BOT_LIST"] = "чат-бот не вибрано";

@@ -73,13 +73,13 @@ if($MOD_RIGHT>="Y" || $USER->IsAdmin())
 	if ($REQUEST_METHOD=="GET" && $RestoreDefaults <> '' && check_bitrix_sessid())
 	{
 		COption::RemoveOption($module_id);
-		$z = CGroup::GetList($v1="id",$v2="asc", array("ACTIVE" => "Y", "ADMIN" => "N"));
+		$z = CGroup::GetList("id", "asc", array("ACTIVE" => "Y", "ADMIN" => "N"));
 		while($zr = $z->Fetch())
 			$APPLICATION->DelGroupRight($module_id, array($zr["ID"]));
 	}
 
 	$sFileTypes = COption::GetOptionString($module_id, "file_types");
-	$arFileTypes = @unserialize($sFileTypes, false);
+	$arFileTypes = @unserialize($sFileTypes, ['allowed_classes' => false]);
 
 	if($REQUEST_METHOD=="POST" && $Update <> '' && check_bitrix_sessid())
 	{

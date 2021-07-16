@@ -1,4 +1,4 @@
-(function (exports,main_polyfill_customevent,pull_component_status,ui_vue_components_smiles,im_view_dialog,im_view_textarea,im_view_quotepanel,imopenlines_component_message,imopenlines_component_form,rest_client,im_provider_rest,main_date,pull_client,im_controller,im_lib_cookie,im_lib_localstorage,im_lib_logger,main_md5,im_const,ui_icons,ui_forms,im_lib_utils,ui_vue,ui_vue_vuex) {
+(function (exports,main_polyfill_customevent,pull_component_status,ui_vue_components_smiles,im_component_dialog,im_component_textarea,im_view_quotepanel,imopenlines_component_message,imopenlines_component_form,rest_client,im_provider_rest,main_date,pull_client,im_controller,im_lib_cookie,im_lib_localstorage,im_lib_uploader,im_lib_logger,im_mixin,main_md5,main_core_events,im_const,main_core_minimal,ui_icons,ui_forms,ui_vue_vuex,im_lib_utils,ui_vue) {
 	'use strict';
 
 	/**
@@ -81,6 +81,7 @@
 	  widgetUserConsentApply: 'imopenlines.widget.user.consent.apply',
 	  widgetVoteSend: 'imopenlines.widget.vote.send',
 	  widgetFormSend: 'imopenlines.widget.form.send',
+	  widgetActionSend: 'imopenlines.widget.action.send',
 	  pullServerTime: 'server.time',
 	  pullConfigGet: 'pull.config.get'
 	});
@@ -100,6 +101,9 @@
 	  spam: 65,
 	  duplicate: 69,
 	  silentlyClose: 75
+	});
+	var EventType = Object.freeze({
+	  requestShowForm: 'IMOL.Widget:requestShowForm'
 	});
 
 	/**
@@ -169,13 +173,15 @@
 	          showConsent: false,
 	          consentUrl: '',
 	          dialogStart: false,
-	          watchTyping: false
+	          watchTyping: false,
+	          showSessionId: false
 	        },
 	        dialog: {
 	          sessionId: 0,
 	          sessionClose: true,
 	          sessionStatus: 0,
 	          userVote: VoteType.none,
+	          closeVote: false,
 	          userConsent: false,
 	          operatorChatId: 0,
 	          operator: {
@@ -324,6 +330,10 @@
 	            state.common.watchTyping = payload.watchTyping;
 	          }
 
+	          if (typeof payload.showSessionId === 'boolean') {
+	            state.common.showSessionId = payload.showSessionId;
+	          }
+
 	          if (payload.operators instanceof Array) {
 	            state.common.operators = payload.operators;
 	          }
@@ -333,6 +343,10 @@
 	          }
 
 	          if (typeof payload.showForm === 'string' && typeof FormType[payload.showForm] !== 'undefined') {
+	            if (payload.showForm === FormType.like && !!state.dialog.closeVote) {
+	              payload.showForm = FormType.none;
+	            }
+
 	            state.common.showForm = payload.showForm;
 	          }
 
@@ -369,6 +383,14 @@
 
 	          if (typeof payload.userVote === 'string' && typeof payload.userVote !== 'undefined') {
 	            state.dialog.userVote = payload.userVote;
+	          }
+
+	          if (typeof payload.closeVote === 'boolean') {
+	            state.dialog.closeVote = payload.closeVote;
+
+	            if (!!payload.closeVote && state.common.showForm === FormType.like) {
+	              state.common.showForm = FormType.none;
+	            }
 	          }
 
 	          if (typeof payload.operatorChatId === 'number') {
@@ -475,12 +497,61 @@
 	  }, {
 	    key: "getActions",
 	    value: function getActions() {
+	      var _this2 = this;
+
 	      return {
 	        show: function show(_ref) {
 	          var commit = _ref.commit;
 	          commit('common', {
 	            showed: true
 	          });
+	        },
+	        setVoteDateFinish: function setVoteDateFinish(_ref2, payload) {
+	          var commit = _ref2.commit,
+	              dispatch = _ref2.dispatch,
+	              state = _ref2.state;
+
+	          if (!payload) {
+	            clearTimeout(_this2.setVoteDateTimeout);
+	            commit('dialog', {
+	              closeVote: false
+	            });
+	            return true;
+	          }
+
+	          var totalDelay = new Date(payload).getTime() - new Date().getTime();
+	          var dayTimestamp = 10000;
+	          clearTimeout(_this2.setVoteDateTimeout);
+
+	          if (payload) {
+	            if (totalDelay && !state.dialog.closeVote) {
+	              commit('dialog', {
+	                closeVote: false
+	              });
+	            }
+
+	            var delay = totalDelay;
+
+	            if (totalDelay > dayTimestamp) {
+	              delay = dayTimestamp;
+	            }
+
+	            _this2.setVoteDateTimeout = setTimeout(function requestCloseVote() {
+	              delay = new Date(payload).getTime() - new Date().getTime();
+
+	              if (delay > 0) {
+	                if (delay > dayTimestamp) {
+	                  delay = dayTimestamp;
+	                }
+
+	                setTimeout(requestCloseVote, delay);
+	              } else {
+	                commit('dialog', {
+	                  closeVote: true
+	                });
+	              }
+	            }, delay);
+	          }
 	        }
 	      };
 	    }
@@ -671,7 +742,8 @@
 	        online: data.online,
 	        consentUrl: data.consentUrl,
 	        connectors: data.connectors || [],
-	        watchTyping: data.watchTyping
+	        watchTyping: data.watchTyping,
+	        showSessionId: data.showSessionId
 	      });
 	      this.store.commit('application/set', {
 	        disk: data.disk
@@ -752,6 +824,7 @@
 	          diskFolderId: data.diskFolderId
 	        }
 	      });
+	      this.store.dispatch('widget/setVoteDateFinish', data.dateCloseVote);
 	    }
 	  }, {
 	    key: "handleImDialogMessagesGetInitSuccess",
@@ -886,6 +959,7 @@
 	        sessionStatus: 0,
 	        userVote: VoteType.none
 	      });
+	      this.store.dispatch('widget/setVoteDateFinish', '');
 	      this.widget.sendEvent({
 	        type: SubscriptionType.sessionStart,
 	        data: {
@@ -946,6 +1020,11 @@
 	        }
 	      }
 	    }
+	  }, {
+	    key: "handleSessionDateCloseVote",
+	    value: function handleSessionDateCloseVote(params, extra, command) {
+	      this.store.dispatch('widget/setVoteDateFinish', params.dateCloseVote);
+	    }
 	  }]);
 	  return WidgetImopenlinesPullCommandHandler;
 	}();
@@ -988,6 +1067,8 @@
 	      return _this.initCore();
 	    }).then(function () {
 	      return _this.initWidget();
+	    }).then(function () {
+	      return _this.initUploader();
 	    }).then(function () {
 	      return _this.initComplete();
 	    });
@@ -1164,6 +1245,140 @@
 	      });
 	    }
 	  }, {
+	    key: "initUploader",
+	    value: function initUploader() {
+	      var _this3 = this;
+
+	      this.uploader = new im_lib_uploader.Uploader({
+	        generatePreview: true,
+	        sender: {
+	          host: this.host,
+	          customHeaders: {
+	            'Livechat-Auth-Id': this.getUserHash()
+	          },
+	          actionUploadChunk: 'imopenlines.widget.disk.upload',
+	          actionCommitFile: 'imopenlines.widget.disk.commit',
+	          actionRollbackUpload: 'imopenlines.widget.disk.rollbackUpload'
+	        }
+	      });
+	      this.uploader.subscribe('onStartUpload', function (event) {
+	        var eventData = event.getData();
+	        im_lib_logger.Logger.log('Uploader: onStartUpload', eventData);
+
+	        _this3.controller.getStore().dispatch('files/update', {
+	          chatId: _this3.getChatId(),
+	          id: eventData.id,
+	          fields: {
+	            status: im_const.FileStatus.upload,
+	            progress: 0
+	          }
+	        });
+	      });
+	      this.uploader.subscribe('onProgress', function (event) {
+	        var eventData = event.getData();
+	        im_lib_logger.Logger.log('Uploader: onProgress', eventData);
+
+	        _this3.controller.getStore().dispatch('files/update', {
+	          chatId: _this3.getChatId(),
+	          id: eventData.id,
+	          fields: {
+	            status: im_const.FileStatus.upload,
+	            progress: eventData.progress === 100 ? 99 : eventData.progress
+	          }
+	        });
+	      });
+	      this.uploader.subscribe('onSelectFile', function (event) {
+	        var eventData = event.getData();
+	        var file = eventData.file;
+	        im_lib_logger.Logger.log('Uploader: onSelectFile', eventData);
+	        var fileType = 'file';
+
+	        if (file.type.toString().startsWith('image')) {
+	          fileType = 'image';
+	        } else if (file.type.toString().startsWith('video')) {
+	          fileType = 'video';
+	        }
+
+	        _this3.controller.getStore().dispatch('files/add', {
+	          chatId: _this3.getChatId(),
+	          authorId: _this3.getUserId(),
+	          name: eventData.file.name,
+	          type: fileType,
+	          extension: file.name.split('.').splice(-1)[0],
+	          size: eventData.file.size,
+	          image: !eventData.previewData ? false : {
+	            width: eventData.previewDataWidth,
+	            height: eventData.previewDataHeight
+	          },
+	          status: im_const.FileStatus.upload,
+	          progress: 0,
+	          authorName: _this3.controller.application.getCurrentUser().name,
+	          urlPreview: eventData.previewData ? URL.createObjectURL(eventData.previewData) : ""
+	        }).then(function (fileId) {
+	          _this3.addMessage('', {
+	            id: fileId,
+	            source: eventData,
+	            previewBlob: eventData.previewData
+	          });
+	        });
+	      });
+	      this.uploader.subscribe('onComplete', function (event) {
+	        var eventData = event.getData();
+	        im_lib_logger.Logger.log('Uploader: onComplete', eventData);
+
+	        _this3.controller.getStore().dispatch('files/update', {
+	          chatId: _this3.getChatId(),
+	          id: eventData.id,
+	          fields: {
+	            status: im_const.FileStatus.wait,
+	            progress: 100
+	          }
+	        });
+
+	        var message = _this3.messagesQueue.find(function (message) {
+	          return message.file.id === eventData.id;
+	        });
+
+	        var fileType = _this3.controller.getStore().getters['files/get'](_this3.getChatId(), message.file.id, true).type;
+
+	        _this3.fileCommit({
+	          chatId: _this3.getChatId(),
+	          uploadId: eventData.result.data.file.id,
+	          messageText: message.text,
+	          messageId: message.id,
+	          fileId: message.file.id,
+	          fileType: fileType
+	        }, message);
+	      });
+	      this.uploader.subscribe('onUploadFileError', function (event) {
+	        var eventData = event.getData();
+	        im_lib_logger.Logger.log('Uploader: onUploadFileError', eventData);
+
+	        var message = _this3.messagesQueue.find(function (message) {
+	          return message.file.id === eventData.id;
+	        });
+
+	        if (typeof message === 'undefined') {
+	          return;
+	        }
+
+	        _this3.fileError(_this3.getChatId(), message.file.id, message.id);
+	      });
+	      this.uploader.subscribe('onCreateFileError', function (event) {
+	        var eventData = event.getData();
+	        im_lib_logger.Logger.log('Uploader: onCreateFileError', eventData);
+
+	        var message = _this3.messagesQueue.find(function (message) {
+	          return message.file.id === eventData.id;
+	        });
+
+	        _this3.fileError(_this3.getChatId(), message.file.id, message.id);
+	      });
+	      return new Promise(function (resolve, reject) {
+	        return resolve();
+	      });
+	    }
+	  }, {
 	    key: "initComplete",
 	    value: function initComplete() {
 	      window.dispatchEvent(new CustomEvent('onBitrixLiveChat', {
@@ -1189,7 +1404,7 @@
 	  }, {
 	    key: "requestWidgetData",
 	    value: function requestWidgetData() {
-	      var _this3 = this;
+	      var _this4 = this;
 
 	      if (!this.isReady()) {
 	        console.error('LiveChatWidget.start: widget code or host is not specified');
@@ -1210,23 +1425,23 @@
 	        this.controller.restClient.callMethod(RestMethod.widgetConfigGet, {
 	          code: this.code
 	        }, function (xhr) {
-	          _this3.configRequestXhr = xhr;
+	          _this4.configRequestXhr = xhr;
 	        }).then(function (result) {
-	          _this3.configRequestXhr = null;
+	          _this4.configRequestXhr = null;
 
-	          _this3.clearError();
+	          _this4.clearError();
 
-	          _this3.controller.executeRestAnswer(RestMethod.widgetConfigGet, result);
+	          _this4.controller.executeRestAnswer(RestMethod.widgetConfigGet, result);
 
-	          if (!_this3.inited) {
-	            _this3.inited = true;
+	          if (!_this4.inited) {
+	            _this4.inited = true;
 
-	            _this3.fireInitEvent();
+	            _this4.fireInitEvent();
 	          }
 	        }).catch(function (result) {
-	          _this3.configRequestXhr = null;
+	          _this4.configRequestXhr = null;
 
-	          _this3.setError(result.error().ex.error, result.error().ex.error_description);
+	          _this4.setError(result.error().ex.error, result.error().ex.error_description);
 	        });
 
 	        if (this.isConfigDataLoaded()) {
@@ -1238,7 +1453,9 @@
 	  }, {
 	    key: "requestData",
 	    value: function requestData() {
-	      var _this4 = this;
+	      var _this5 = this;
+
+	      im_lib_logger.Logger.log('requesting data from widget');
 
 	      if (this.requestDataSend) {
 	        return true;
@@ -1304,9 +1521,9 @@
 	      query[RestMethod.widgetUserGet] = [RestMethod.widgetUserGet, {}];
 	      this.controller.restClient.callBatch(query, function (response) {
 	        if (!response) {
-	          _this4.requestDataSend = false;
+	          _this5.requestDataSend = false;
 
-	          _this4.setError('EMPTY_RESPONSE', 'Server returned an empty response.');
+	          _this5.setError('EMPTY_RESPONSE', 'Server returned an empty response.');
 
 	          return false;
 	        }
@@ -1314,84 +1531,84 @@
 	        var configGet = response[RestMethod.widgetConfigGet];
 
 	        if (configGet && configGet.error()) {
-	          _this4.requestDataSend = false;
+	          _this5.requestDataSend = false;
 
-	          _this4.setError(configGet.error().ex.error, configGet.error().ex.error_description);
+	          _this5.setError(configGet.error().ex.error, configGet.error().ex.error_description);
 
 	          return false;
 	        }
 
-	        _this4.controller.executeRestAnswer(RestMethod.widgetConfigGet, configGet);
+	        _this5.controller.executeRestAnswer(RestMethod.widgetConfigGet, configGet);
 
 	        var userGetResult = response[RestMethod.widgetUserGet];
 
 	        if (userGetResult.error()) {
-	          _this4.requestDataSend = false;
+	          _this5.requestDataSend = false;
 
-	          _this4.setError(userGetResult.error().ex.error, userGetResult.error().ex.error_description);
+	          _this5.setError(userGetResult.error().ex.error, userGetResult.error().ex.error_description);
 
 	          return false;
 	        }
 
-	        _this4.controller.executeRestAnswer(RestMethod.widgetUserGet, userGetResult);
+	        _this5.controller.executeRestAnswer(RestMethod.widgetUserGet, userGetResult);
 
 	        var chatGetResult = response[im_const.RestMethodHandler.imChatGet];
 
 	        if (chatGetResult.error()) {
-	          _this4.requestDataSend = false;
+	          _this5.requestDataSend = false;
 
-	          _this4.setError(chatGetResult.error().ex.error, chatGetResult.error().ex.error_description);
+	          _this5.setError(chatGetResult.error().ex.error, chatGetResult.error().ex.error_description);
 
 	          return false;
 	        }
 
-	        _this4.controller.executeRestAnswer(im_const.RestMethodHandler.imChatGet, chatGetResult);
+	        _this5.controller.executeRestAnswer(im_const.RestMethodHandler.imChatGet, chatGetResult);
 
 	        var dialogGetResult = response[RestMethod.widgetDialogGet];
 
 	        if (dialogGetResult) {
 	          if (dialogGetResult.error()) {
-	            _this4.requestDataSend = false;
+	            _this5.requestDataSend = false;
 
-	            _this4.setError(dialogGetResult.error().ex.error, dialogGetResult.error().ex.error_description);
+	            _this5.setError(dialogGetResult.error().ex.error, dialogGetResult.error().ex.error_description);
 
 	            return false;
 	          }
 
-	          _this4.controller.executeRestAnswer(RestMethod.widgetDialogGet, dialogGetResult);
+	          _this5.controller.executeRestAnswer(RestMethod.widgetDialogGet, dialogGetResult);
 	        }
 
 	        var dialogMessagesGetResult = response[im_const.RestMethodHandler.imDialogMessagesGetInit];
 
 	        if (dialogMessagesGetResult) {
 	          if (dialogMessagesGetResult.error()) {
-	            _this4.requestDataSend = false;
+	            _this5.requestDataSend = false;
 
-	            _this4.setError(dialogMessagesGetResult.error().ex.error, dialogMessagesGetResult.error().ex.error_description);
+	            _this5.setError(dialogMessagesGetResult.error().ex.error, dialogMessagesGetResult.error().ex.error_description);
 
 	            return false;
 	          }
 
-	          _this4.controller.getStore().dispatch('dialogues/saveDialog', {
-	            dialogId: _this4.controller.application.getDialogId(),
-	            chatId: _this4.controller.application.getChatId()
+	          _this5.controller.getStore().dispatch('dialogues/saveDialog', {
+	            dialogId: _this5.controller.application.getDialogId(),
+	            chatId: _this5.controller.application.getChatId()
 	          });
 
-	          _this4.controller.executeRestAnswer(im_const.RestMethodHandler.imDialogMessagesGetInit, dialogMessagesGetResult);
+	          _this5.controller.executeRestAnswer(im_const.RestMethodHandler.imDialogMessagesGetInit, dialogMessagesGetResult);
 	        }
 
 	        var userRegisterResult = response[RestMethod.widgetUserRegister];
 
 	        if (userRegisterResult) {
 	          if (userRegisterResult.error()) {
-	            _this4.requestDataSend = false;
+	            _this5.requestDataSend = false;
 
-	            _this4.setError(userRegisterResult.error().ex.error, userRegisterResult.error().ex.error_description);
+	            _this5.setError(userRegisterResult.error().ex.error, userRegisterResult.error().ex.error_description);
 
 	            return false;
 	          }
 
-	          _this4.controller.executeRestAnswer(RestMethod.widgetUserRegister, userRegisterResult);
+	          _this5.controller.executeRestAnswer(RestMethod.widgetUserRegister, userRegisterResult);
 	        }
 
 	        var timeShift = 0;
@@ -1409,13 +1626,13 @@
 	          config.server.timeShift = timeShift;
 	        }
 
-	        _this4.startPullClient(config).then(function () {
-	          _this4.processSendMessages();
+	        _this5.startPullClient(config).then(function () {
+	          _this5.processSendMessages();
 	        }).catch(function (error) {
-	          _this4.setError(error.ex.error, error.ex.error_description);
+	          _this5.setError(error.ex.error, error.ex.error_description);
 	        });
 
-	        _this4.requestDataSend = false;
+	        _this5.requestDataSend = false;
 	      }, false, false, im_lib_utils.Utils.getLogTrackingParams({
 	        name: 'widget.init.config',
 	        dialog: this.controller.application.getDialogData()
@@ -1424,16 +1641,16 @@
 	  }, {
 	    key: "prepareFileData",
 	    value: function prepareFileData(files) {
-	      var _this5 = this;
+	      var _this6 = this;
 
 	      if (!im_lib_utils.Utils.types.isArray(files)) {
 	        return files;
 	      }
 
 	      return files.map(function (file) {
-	        var hash = (window.md5 || main_md5.md5)(_this5.getUserId() + '|' + file.id + '|' + _this5.getUserHash());
+	        var hash = (window.md5 || main_md5.md5)(_this6.getUserId() + '|' + file.id + '|' + _this6.getUserHash());
 
-	        var urlParam = 'livechat_auth_id=' + hash + '&livechat_user_id=' + _this5.getUserId();
+	        var urlParam = 'livechat_auth_id=' + hash + '&livechat_user_id=' + _this6.getUserId();
 
 	        if (file.urlPreview) {
 	          file.urlPreview = file.urlPreview + '&' + urlParam;
@@ -1470,7 +1687,7 @@
 	  }, {
 	    key: "startPullClient",
 	    value: function startPullClient(config) {
-	      var _this6 = this;
+	      var _this7 = this;
 
 	      var promise = new BX.Promise();
 
@@ -1521,14 +1738,13 @@
 	          if (result.status === pull_client.PullClient.PullStatus.Online) {
 	            promise.resolve(true);
 
-	            _this6.pullConnectedFirstTime();
+	            _this7.pullConnectedFirstTime();
 	          }
 	        }
 	      });
 
 	      if (this.template) {
-	        this.template.$root.$bitrixPullClient = this.pullClient;
-	        this.template.$root.$emit('onBitrixPullClientInited', this.pullClient);
+	        this.template.$Bitrix.PullClient.set(this.pullClient);
 	      }
 
 	      this.pullClient.start(babelHelpers.objectSpread({}, config, {
@@ -1560,14 +1776,25 @@
 	  }, {
 	    key: "eventStatusInteraction",
 	    value: function eventStatusInteraction(data) {
-	      var _this7 = this;
+	      var _this8 = this;
 
 	      if (data.status === pull_client.PullClient.PullStatus.Online) {
 	        this.offline = false;
 
 	        if (this.pullRequestMessage) {
-	          this.getDialogUnread().then(function () {
-	            _this7.processSendMessages();
+	          this.controller.pullBaseHandler.option.skip = true;
+	          im_lib_logger.Logger.warn('Requesting getDialogUnread after going online');
+	          main_core_events.EventEmitter.emitAsync(im_const.EventType.dialog.requestUnread, {
+	            chatId: this.controller.application.getChatId()
+	          }).then(function () {
+	            main_core_events.EventEmitter.emit(im_const.EventType.dialog.scrollOnStart, {
+	              chatId: _this8.controller.application.getChatId()
+	            });
+	            _this8.controller.pullBaseHandler.option.skip = false;
+
+	            _this8.processSendMessages();
+	          }).catch(function () {
+	            _this8.controller.pullBaseHandler.option.skip = false;
 	          });
 	          this.pullRequestMessage = false;
 	        } else {
@@ -1586,8 +1813,6 @@
 	  }, {
 	    key: "attachTemplate",
 	    value: function attachTemplate() {
-	      var _this8 = this;
-
 	      if (this.template) {
 	        this.controller.getStore().commit('widget/common', {
 	          showed: true
@@ -1606,6 +1831,14 @@
 	            type: SubscriptionType.widgetOpen,
 	            data: {}
 	          });
+	          application.template = this;
+
+	          if (main_core_minimal.ZIndexManager !== undefined) {
+	            var stack = main_core_minimal.ZIndexManager.getOrAddStack(document.body);
+	            stack.setBaseIndex(1000000); // some big value
+
+	            this.$bitrix.Data.set('zIndexStack', stack);
+	          }
 	        },
 	        destroyed: function destroyed() {
 	          application.sendEvent({
@@ -1616,8 +1849,7 @@
 	          application.templateAttached = false;
 	          application.rootNode.innerHTML = '';
 	        }
-	      }).then(function (vue) {
-	        _this8.template = vue;
+	      }).then(function () {
 	        return new Promise(function (resolve, reject) {
 	          return resolve();
 	        });
@@ -1654,6 +1886,30 @@
 	        return false;
 	      }
 
+	      var quoteId = this.controller.getStore().getters['dialogues/getQuoteId'](this.controller.application.getDialogId());
+
+	      if (quoteId) {
+	        var quoteMessage = this.controller.getStore().getters['messages/getMessage'](this.controller.application.getChatId(), quoteId);
+
+	        if (quoteMessage) {
+	          var user = null;
+
+	          if (quoteMessage.authorId) {
+	            user = this.controller.getStore().getters['users/get'](quoteMessage.authorId);
+	          }
+
+	          var files = this.controller.getStore().getters['files/getList'](this.controller.application.getChatId());
+	          var message = [];
+	          message.push('-'.repeat(54));
+	          message.push((user && user.name ? user.name : this.getLocalize('BX_LIVECHAT_SYSTEM_MESSAGE')) + ' [' + im_lib_utils.Utils.date.format(quoteMessage.date, null, this.getLocalize()) + ']');
+	          message.push(im_lib_utils.Utils.text.quote(quoteMessage.text, quoteMessage.params, files, this.getLocalize()));
+	          message.push('-'.repeat(54));
+	          message.push(text);
+	          text = message.join("\n");
+	          this.quoteMessageClear();
+	        }
+	      }
+
 	      im_lib_logger.Logger.warn('addMessage', text, file);
 
 	      if (!this.controller.application.isUnreadMessagesLoaded()) {
@@ -1666,7 +1922,6 @@
 	        return true;
 	      }
 
-	      this.controller.getStore().commit('application/increaseDialogExtraCount');
 	      var params = {};
 
 	      if (file) {
@@ -1686,6 +1941,11 @@
 	          });
 	        }
 
+	        main_core_events.EventEmitter.emit(im_const.EventType.dialog.scrollToBottom, {
+	          chatId: _this9.getChatId(),
+	          cancelIfScrollChange: true
+	        });
+
 	        _this9.messagesQueue.push({
 	          id: messageId,
 	          text: text,
@@ -1703,59 +1963,29 @@
 	    }
 	  }, {
 	    key: "uploadFile",
-	    value: function uploadFile(fileInput) {
-	      var _this10 = this;
-
-	      if (!fileInput) {
+	    value: function uploadFile(event) {
+	      if (!event) {
 	        return false;
 	      }
 
-	      im_lib_logger.Logger.warn('addFile', fileInput.files[0].name, fileInput.files[0].size, fileInput.files[0]);
-	      var file = fileInput.files[0];
-	      var fileType = 'file';
-
-	      if (file.type.toString().startsWith('image')) {
-	        fileType = 'image';
+	      if (!this.getChatId()) {
+	        this.requestData();
 	      }
 
-	      if (!this.controller.application.isUnreadMessagesLoaded()) {
-	        this.addMessage('', {
-	          id: 0,
-	          source: fileInput
-	        });
-	        return true;
-	      }
-
-	      this.controller.getStore().dispatch('files/add', {
-	        chatId: this.getChatId(),
-	        authorId: this.getUserId(),
-	        name: file.name,
-	        type: fileType,
-	        extension: file.name.split('.').splice(-1)[0],
-	        size: file.size,
-	        image: false,
-	        status: im_const.FileStatus.upload,
-	        progress: 0,
-	        authorName: this.controller.application.getCurrentUser().name,
-	        urlPreview: ""
-	      }).then(function (fileId) {
-	        return _this10.addMessage('', {
-	          id: fileId,
-	          source: fileInput
-	        });
-	      });
-	      return true;
+	      this.uploader.addFilesFromEvent(event);
 	    }
 	  }, {
 	    key: "cancelUploadFile",
 	    value: function cancelUploadFile(fileId) {
-	      var _this11 = this;
+	      var _this10 = this;
 
 	      var element = this.messagesQueue.find(function (element) {
 	        return element.file && element.file.id === fileId;
 	      });
 
 	      if (element) {
+	        this.uploader.deleteTask(fileId);
+
 	        if (element.xhr) {
 	          element.xhr.abort();
 	        }
@@ -1764,12 +1994,12 @@
 	          chatId: this.getChatId(),
 	          id: element.id
 	        }).then(function () {
-	          _this11.controller.getStore().dispatch('files/delete', {
-	            chatId: _this11.getChatId(),
+	          _this10.controller.getStore().dispatch('files/delete', {
+	            chatId: _this10.getChatId(),
 	            id: element.file.id
 	          });
 
-	          _this11.messagesQueue = _this11.messagesQueue.filter(function (el) {
+	          _this10.messagesQueue = _this10.messagesQueue.filter(function (el) {
 	            return el.id !== element.id;
 	          });
 	        });
@@ -1778,7 +2008,17 @@
 	  }, {
 	    key: "processSendMessages",
 	    value: function processSendMessages() {
-	      var _this12 = this;
+	      var _this11 = this;
+
+	      if (!this.getDiskFolderId()) {
+	        this.requestDiskFolderId().then(function () {
+	          _this11.processSendMessages();
+	        }).catch(function () {
+	          im_lib_logger.Logger.warn('uploadFile', 'Error get disk folder id');
+	          return false;
+	        });
+	        return false;
+	      }
 
 	      if (this.offline) {
 	        return false;
@@ -1790,9 +2030,9 @@
 	        element.sending = true;
 
 	        if (element.file) {
-	          _this12.sendMessageWithFile(element);
+	          _this11.sendMessageWithFile(element);
 	        } else {
-	          _this12.sendMessage(element);
+	          _this11.sendMessage(element);
 	        }
 	      });
 	      return true;
@@ -1800,7 +2040,7 @@
 	  }, {
 	    key: "sendMessage",
 	    value: function sendMessage(message) {
-	      var _this13 = this;
+	      var _this12 = this;
 
 	      this.controller.application.stopWriting();
 	      var quiteId = this.controller.getStore().getters['dialogues/getQuoteId'](this.getDialogId());
@@ -1833,126 +2073,29 @@
 	        },
 	        dialog: this.getDialogData()
 	      })).then(function (response) {
-	        _this13.controller.executeRestAnswer(im_const.RestMethodHandler.imMessageAdd, response, message);
+	        _this12.controller.executeRestAnswer(im_const.RestMethodHandler.imMessageAdd, response, message);
 	      }).catch(function (error) {
-	        _this13.controller.executeRestAnswer(im_const.RestMethodHandler.imMessageAdd, error, message);
+	        _this12.controller.executeRestAnswer(im_const.RestMethodHandler.imMessageAdd, error, message);
 	      });
 	      return true;
 	    }
 	  }, {
 	    key: "sendMessageWithFile",
 	    value: function sendMessageWithFile(message) {
-	      var _this14 = this;
-
 	      this.controller.application.stopWriting();
-	      var fileType = this.controller.getStore().getters['files/get'](this.getChatId(), message.file.id, true).type;
 	      var diskFolderId = this.getDiskFolderId();
-	      var query = {};
-
-	      if (diskFolderId) {
-	        query[im_const.RestMethodHandler.imDiskFileUpload] = [im_const.RestMethod.imDiskFileUpload, {
-	          id: diskFolderId,
-	          data: {
-	            NAME: message.file.source.files[0].name
-	          },
-	          fileContent: message.file.source,
-	          generateUniqueName: true
-	        }];
-	      } else {
-	        query[im_const.RestMethodHandler.imDiskFolderGet] = [im_const.RestMethod.imDiskFolderGet, {
-	          chat_id: this.getChatId()
-	        }];
-	        query[im_const.RestMethodHandler.imDiskFileUpload] = [im_const.RestMethod.imDiskFileUpload, {
-	          id: '$result[' + im_const.RestMethodHandler.imDiskFolderGet + '][ID]',
-	          data: {
-	            NAME: message.file.source.files[0].name
-	          },
-	          fileContent: message.file.source,
-	          generateUniqueName: true
-	        }];
-	      }
-
-	      this.controller.restClient.callBatch(query, function (response) {
-	        if (!response) {
-	          _this14.requestDataSend = false;
-	          console.warn('EMPTY_RESPONSE', 'Server returned an empty response. [1]');
-
-	          _this14.fileError(_this14.getChatId, message.file.id, message.id);
-
-	          return false;
-	        }
-
-	        if (!diskFolderId) {
-	          var diskFolderGet = response[im_const.RestMethodHandler.imDiskFolderGet];
-
-	          if (diskFolderGet && diskFolderGet.error()) {
-	            console.warn(diskFolderGet.error().ex.error, diskFolderGet.error().ex.error_description);
-
-	            _this14.fileError(_this14.getChatId(), message.file.id, message.id);
-
-	            return false;
-	          }
-
-	          _this14.controller.executeRestAnswer(im_const.RestMethodHandler.imDiskFolderGet, diskFolderGet);
-	        }
-
-	        var diskId = 0;
-	        var diskFileUpload = response[im_const.RestMethodHandler.imDiskFileUpload];
-
-	        if (diskFileUpload) {
-	          var result = diskFileUpload.data();
-
-	          if (diskFileUpload.error()) {
-	            console.warn(diskFileUpload.error().ex.error, diskFileUpload.error().ex.error_description);
-
-	            _this14.fileError(_this14.getChatId(), message.file.id, message.id);
-
-	            return false;
-	          } else if (!result) {
-	            console.warn('EMPTY_RESPONSE', 'Server returned an empty response. [2]');
-
-	            _this14.fileError(_this14.getChatId(), message.file.id, message.id);
-
-	            return false;
-	          }
-
-	          diskId = result.ID;
-	        } else {
-	          console.warn('EMPTY_RESPONSE', 'Server returned an empty response. [3]');
-
-	          _this14.fileError(_this14.getChatId(), message.file.id, message.id);
-
-	          return false;
-	        }
-
-	        message.chatId = _this14.getChatId();
-
-	        _this14.controller.getStore().dispatch('files/update', {
-	          chatId: message.chatId,
-	          id: message.file.id,
-	          fields: {
-	            status: im_const.FileStatus.wait,
-	            progress: 95
-	          }
-	        });
-
-	        _this14.fileCommit({
-	          chatId: message.chatId,
-	          uploadId: diskId,
-	          messageText: message.text,
-	          messageId: message.id,
-	          fileId: message.file.id,
-	          fileType: fileType
-	        }, message);
-	      }, false, function (xhr) {
-	        message.xhr = xhr;
-	      }, im_lib_utils.Utils.getLogTrackingParams({
-	        name: im_const.RestMethodHandler.imDiskFileCommit,
-	        data: {
-	          timMessageType: fileType
-	        },
-	        dialog: this.getDialogData()
-	      }));
+	      message.chatId = this.getChatId();
+	      this.uploader.senderOptions.customHeaders['Livechat-Dialog-Id'] = message.chatId;
+	      this.uploader.senderOptions.customHeaders['Livechat-Auth-Id'] = this.getUserHash();
+	      this.uploader.addTask({
+	        taskId: message.file.id,
+	        fileData: message.file.source.file,
+	        fileName: message.file.source.file.name,
+	        generateUniqueName: true,
+	        diskFolderId: diskFolderId,
+	        previewBlob: message.file.previewBlob,
+	        chunkSize: this.localize.isCloud ? im_lib_uploader.Uploader.CLOUD_MAX_CHUNK_SIZE : im_lib_uploader.Uploader.BOX_MIN_CHUNK_SIZE
+	      });
 	    }
 	  }, {
 	    key: "fileError",
@@ -1976,9 +2119,44 @@
 	      }
 	    }
 	  }, {
+	    key: "requestDiskFolderId",
+	    value: function requestDiskFolderId() {
+	      var _this13 = this;
+
+	      if (this.requestDiskFolderPromise) {
+	        return this.requestDiskFolderPromise;
+	      }
+
+	      this.requestDiskFolderPromise = new Promise(function (resolve, reject) {
+	        if (_this13.flagRequestDiskFolderIdSended || _this13.getDiskFolderId()) {
+	          _this13.flagRequestDiskFolderIdSended = false;
+	          resolve();
+	          return true;
+	        }
+
+	        _this13.flagRequestDiskFolderIdSended = true;
+
+	        _this13.controller.restClient.callMethod(im_const.RestMethod.imDiskFolderGet, {
+	          chat_id: _this13.controller.application.getChatId()
+	        }).then(function (response) {
+	          _this13.controller.executeRestAnswer(im_const.RestMethodHandler.imDiskFolderGet, response);
+
+	          _this13.flagRequestDiskFolderIdSended = false;
+	          resolve();
+	        }).catch(function (error) {
+	          _this13.flagRequestDiskFolderIdSended = false;
+
+	          _this13.controller.executeRestAnswer(im_const.RestMethodHandler.imDiskFolderGet, error);
+
+	          reject();
+	        });
+	      });
+	      return this.requestDiskFolderPromise;
+	    }
+	  }, {
 	    key: "fileCommit",
 	    value: function fileCommit(params, message) {
-	      var _this15 = this;
+	      var _this14 = this;
 
 	      this.controller.restClient.callMethod(im_const.RestMethod.imDiskFileCommit, {
 	        chat_id: params.chatId,
@@ -1993,16 +2171,16 @@
 	        },
 	        dialog: this.getDialogData()
 	      })).then(function (response) {
-	        _this15.controller.executeRestAnswer(im_const.RestMethodHandler.imDiskFileCommit, response, message);
+	        _this14.controller.executeRestAnswer(im_const.RestMethodHandler.imDiskFileCommit, response, message);
 	      }).catch(function (error) {
-	        _this15.controller.executeRestAnswer(im_const.RestMethodHandler.imDiskFileCommit, error, message);
+	        _this14.controller.executeRestAnswer(im_const.RestMethodHandler.imDiskFileCommit, error, message);
 	      });
 	      return true;
 	    }
 	  }, {
 	    key: "getDialogHistory",
 	    value: function getDialogHistory(lastId) {
-	      var _this16 = this;
+	      var _this15 = this;
 
 	      var limit = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : this.controller.application.getRequestMessageLimit();
 	      this.controller.restClient.callMethod(im_const.RestMethod.imDialogMessagesGet, {
@@ -2011,13 +2189,13 @@
 	        'LIMIT': limit,
 	        'CONVERT_TEXT': 'Y'
 	      }).then(function (result) {
-	        _this16.controller.executeRestAnswer(im_const.RestMethodHandler.imDialogMessagesGet, result);
+	        _this15.controller.executeRestAnswer(im_const.RestMethodHandler.imDialogMessagesGet, result);
 
-	        _this16.template.$emit(im_const.EventType.dialog.requestHistoryResult, {
+	        _this15.template.$emit(im_const.EventType.dialog.requestHistoryResult, {
 	          count: result.data().messages.length
 	        });
 	      }).catch(function (result) {
-	        _this16.template.$emit(im_const.EventType.dialog.requestHistoryResult, {
+	        _this15.template.$emit(im_const.EventType.dialog.requestHistoryResult, {
 	          error: result.error().ex
 	        });
 	      });
@@ -2025,7 +2203,7 @@
 	  }, {
 	    key: "getDialogUnread",
 	    value: function getDialogUnread(lastId) {
-	      var _this17 = this;
+	      var _this16 = this;
 
 	      var limit = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : this.controller.application.getRequestMessageLimit();
 	      var promise = new BX.Promise();
@@ -2049,20 +2227,20 @@
 	        var _query2;
 
 	        var query = (_query2 = {}, babelHelpers.defineProperty(_query2, im_const.RestMethodHandler.imDialogRead, [im_const.RestMethod.imDialogRead, {
-	          dialog_id: _this17.getDialogId(),
+	          dialog_id: _this16.getDialogId(),
 	          message_id: lastId
 	        }]), babelHelpers.defineProperty(_query2, im_const.RestMethodHandler.imChatGet, [im_const.RestMethod.imChatGet, {
-	          dialog_id: _this17.getDialogId()
+	          dialog_id: _this16.getDialogId()
 	        }]), babelHelpers.defineProperty(_query2, im_const.RestMethodHandler.imDialogMessagesGetUnread, [im_const.RestMethod.imDialogMessagesGet, {
-	          chat_id: _this17.getChatId(),
+	          chat_id: _this16.getChatId(),
 	          first_id: lastId,
 	          limit: limit,
 	          convert_text: 'Y'
 	        }]), _query2);
 
-	        _this17.controller.restClient.callBatch(query, function (response) {
+	        _this16.controller.restClient.callBatch(query, function (response) {
 	          if (!response) {
-	            _this17.template.$emit(im_const.EventType.dialog.requestUnreadResult, {
+	            _this16.template.$emit(im_const.EventType.dialog.requestUnreadResult, {
 	              error: {
 	                error: 'EMPTY_RESPONSE',
 	                error_description: 'Server returned an empty response.'
@@ -2076,19 +2254,19 @@
 	          var chatGetResult = response[im_const.RestMethodHandler.imChatGet];
 
 	          if (!chatGetResult.error()) {
-	            _this17.controller.executeRestAnswer(im_const.RestMethodHandler.imChatGet, chatGetResult);
+	            _this16.controller.executeRestAnswer(im_const.RestMethodHandler.imChatGet, chatGetResult);
 	          }
 
 	          var dialogMessageUnread = response[im_const.RestMethodHandler.imDialogMessagesGetUnread];
 
 	          if (dialogMessageUnread.error()) {
-	            _this17.template.$emit(im_const.EventType.dialog.requestUnreadResult, {
+	            _this16.template.$emit(im_const.EventType.dialog.requestUnreadResult, {
 	              error: dialogMessageUnread.error().ex
 	            });
 	          } else {
-	            _this17.controller.executeRestAnswer(im_const.RestMethodHandler.imDialogMessagesGetUnread, dialogMessageUnread);
+	            _this16.controller.executeRestAnswer(im_const.RestMethodHandler.imDialogMessagesGetUnread, dialogMessageUnread);
 
-	            _this17.template.$emit(im_const.EventType.dialog.requestUnreadResult, {
+	            _this16.template.$emit(im_const.EventType.dialog.requestUnreadResult, {
 	              firstMessageId: dialogMessageUnread.data().messages.length > 0 ? dialogMessageUnread.data().messages[0].id : 0,
 	              count: dialogMessageUnread.data().messages.length
 	            });
@@ -2097,7 +2275,7 @@
 	          promise.fulfill(response);
 	        }, false, false, im_lib_utils.Utils.getLogTrackingParams({
 	          name: im_const.RestMethodHandler.imDialogMessagesGetUnread,
-	          dialog: _this17.getDialogData()
+	          dialog: _this16.getDialogData()
 	        }));
 	      });
 	      return promise;
@@ -2129,16 +2307,6 @@
 	      return this.controller.application.readMessage(messageId);
 	    }
 	  }, {
-	    key: "quoteMessage",
-	    value: function quoteMessage(id) {
-	      this.controller.getStore().dispatch('dialogues/update', {
-	        dialogId: this.controller.application.getDialogId(),
-	        fields: {
-	          quoteId: id
-	        }
-	      });
-	    }
-	  }, {
 	    key: "reactMessage",
 	    value: function reactMessage(id, reaction) {
 	      this.controller.application.reactMessage(id, reaction.type, reaction.action);
@@ -2146,16 +2314,36 @@
 	  }, {
 	    key: "execMessageKeyboardCommand",
 	    value: function execMessageKeyboardCommand(data) {
+	      if (data.action === 'ACTION' && data.params.action === 'LIVECHAT') {
+	        var _data$params = data.params,
+	            _dialogId = _data$params.dialogId,
+	            _messageId = _data$params.messageId;
+	        var values = JSON.parse(data.params.value);
+	        var sessionId = parseInt(values.SESSION_ID);
+
+	        if (sessionId !== this.getSessionId() || this.isSessionClose()) {
+	          alert(this.localize.BX_LIVECHAT_ACTION_EXPIRED);
+	          return false;
+	        }
+
+	        this.controller.restClient.callMethod(RestMethod.widgetActionSend, {
+	          'MESSAGE_ID': _messageId,
+	          'DIALOG_ID': _dialogId,
+	          'ACTION_VALUE': data.params.value
+	        });
+	        return true;
+	      }
+
 	      if (data.action !== 'COMMAND') {
 	        return false;
 	      }
 
-	      var _data$params = data.params,
-	          dialogId = _data$params.dialogId,
-	          messageId = _data$params.messageId,
-	          botId = _data$params.botId,
-	          command = _data$params.command,
-	          params = _data$params.params;
+	      var _data$params2 = data.params,
+	          dialogId = _data$params2.dialogId,
+	          messageId = _data$params2.messageId,
+	          botId = _data$params2.botId,
+	          command = _data$params2.command,
+	          params = _data$params2.params;
 	      this.controller.restClient.callMethod(im_const.RestMethod.imMessageCommand, {
 	        'MESSAGE_ID': messageId,
 	        'DIALOG_ID': dialogId,
@@ -2178,7 +2366,7 @@
 	  }, {
 	    key: "sendDialogVote",
 	    value: function sendDialogVote(result) {
-	      var _this18 = this;
+	      var _this17 = this;
 
 	      if (!this.getSessionId()) {
 	        return false;
@@ -2188,7 +2376,7 @@
 	        'SESSION_ID': this.getSessionId(),
 	        'ACTION': result
 	      }).catch(function (result) {
-	        _this18.controller.getStore().commit('widget/dialog', {
+	        _this17.controller.getStore().commit('widget/dialog', {
 	          userVote: VoteType.none
 	        });
 	      });
@@ -2203,7 +2391,7 @@
 	    key: "sendForm",
 	    value: function sendForm(type, fields) {
 	      var _query3,
-	          _this19 = this;
+	          _this18 = this;
 
 	      im_lib_logger.Logger.info('LiveChatWidgetPrivate.sendForm:', type, fields);
 	      var query = (_query3 = {}, babelHelpers.defineProperty(_query3, RestMethod.widgetFormSend, [RestMethod.widgetFormSend, {
@@ -2213,9 +2401,9 @@
 	      }]), babelHelpers.defineProperty(_query3, RestMethod.widgetUserGet, [RestMethod.widgetUserGet, {}]), _query3);
 	      this.controller.restClient.callBatch(query, function (response) {
 	        if (!response) {
-	          _this19.requestDataSend = false;
+	          _this18.requestDataSend = false;
 
-	          _this19.setError('EMPTY_RESPONSE', 'Server returned an empty response.');
+	          _this18.setError('EMPTY_RESPONSE', 'Server returned an empty response.');
 
 	          return false;
 	        }
@@ -2223,16 +2411,16 @@
 	        var userGetResult = response[RestMethod.widgetUserGet];
 
 	        if (userGetResult.error()) {
-	          _this19.requestDataSend = false;
+	          _this18.requestDataSend = false;
 
-	          _this19.setError(userGetResult.error().ex.error, userGetResult.error().ex.error_description);
+	          _this18.setError(userGetResult.error().ex.error, userGetResult.error().ex.error_description);
 
 	          return false;
 	        }
 
-	        _this19.controller.executeRestAnswer(RestMethod.widgetUserGet, userGetResult);
+	        _this18.controller.executeRestAnswer(RestMethod.widgetUserGet, userGetResult);
 
-	        _this19.sendEvent({
+	        _this18.sendEvent({
 	          type: SubscriptionType.userForm,
 	          data: {
 	            form: type,
@@ -2243,6 +2431,72 @@
 	        name: RestMethod.widgetUserGet,
 	        dialog: this.getDialogData()
 	      }));
+	    }
+	  }, {
+	    key: "getHtmlHistory",
+	    value: function getHtmlHistory() {
+	      var chatId = this.getChatId();
+
+	      if (chatId <= 0) {
+	        console.error('Incorrect chatId value');
+	      }
+
+	      var config = {
+	        chatId: this.getChatId()
+	      };
+	      this.requestControllerAction('imopenlines.widget.history.download', config).then(function (response) {
+	        var contentType = response.headers.get('Content-Type');
+
+	        if (contentType.startsWith('application/json')) {
+	          return response.json();
+	        }
+
+	        return response.blob();
+	      }).then(function (result) {
+	        if (result instanceof Blob) {
+	          var url = window.URL.createObjectURL(result);
+	          var a = document.createElement('a');
+	          a.href = url;
+	          a.download = chatId + '.html';
+	          document.body.appendChild(a);
+	          a.click();
+	          a.remove();
+	        } else if (result.hasOwnProperty('errors')) {
+	          console.error(result.errors[0]);
+	        } else {
+	          console.error('Unknown error.');
+	        }
+	      }).catch(function () {
+	        return console.error('Fetch error.');
+	      });
+	    }
+	    /**
+	     * Basic method to run actions.
+	     * If you need to extend it, check BX.ajax.runAction to extend this method.
+	     */
+
+	  }, {
+	    key: "requestControllerAction",
+	    value: function requestControllerAction(action, config) {
+	      var host = this.host ? this.host : '';
+	      var ajaxEndpoint = '/bitrix/services/main/ajax.php';
+	      var url = new URL(ajaxEndpoint, host);
+	      url.searchParams.set('action', action);
+	      var formData = new FormData();
+
+	      for (var key in config) {
+	        if (config.hasOwnProperty(key)) {
+	          formData.append(key, config[key]);
+	        }
+	      }
+
+	      return fetch(url, {
+	        method: 'POST',
+	        headers: {
+	          'Livechat-Auth-Id': this.getUserHash()
+	        },
+	        body: formData
+	      });
 	    }
 	  }, {
 	    key: "sendConsentDecision",
@@ -2320,7 +2574,7 @@
 	  }, {
 	    key: "showNotification",
 	    value: function showNotification(params) {
-	      if (!this.controller.getStore()) {
+	      if (!this.controller || !this.controller.getStore()) {
 	        console.error('LiveChatWidget.showNotification: method can be called after fired event - onBitrixLiveChat');
 	        return false;
 	      } // TODO show popup notification and set badge on button
@@ -2414,7 +2668,7 @@
 	        customData = this.customData;
 	      } else {
 	        customData = [{
-	          MESSAGE: this.localize.BX_LIVECHAT_EXTRA_SITE + ': ' + location.href
+	          MESSAGE: this.localize.BX_LIVECHAT_EXTRA_SITE + ': [URL]' + location.href + '[/URL]'
 	        }];
 	      }
 
@@ -2472,6 +2726,11 @@
 	      return this.controller.getStore().state.widget.dialog.sessionId;
 	    }
 	  }, {
+	    key: "isSessionClose",
+	    value: function isSessionClose() {
+	      return this.controller.getStore().state.widget.dialog.sessionClose;
+	    }
+	  }, {
 	    key: "getUserHash",
 	    value: function getUserHash() {
 	      return this.controller.getStore().state.widget.user.hash;
@@ -2502,7 +2761,7 @@
 	  }, {
 	    key: "getUserData",
 	    value: function getUserData() {
-	      if (!this.controller.getStore()) {
+	      if (!this.controller || !this.controller.getStore()) {
 	        console.error('LiveChatWidget.getUserData: method can be called after fired event - onBitrixLiveChat');
 	        return false;
 	      }
@@ -2534,7 +2793,7 @@
 	  }, {
 	    key: "setUserRegisterData",
 	    value: function setUserRegisterData(params) {
-	      if (!this.controller.getStore()) {
+	      if (!this.controller || !this.controller.getStore()) {
 	        console.error('LiveChatWidget.getUserData: method can be called after fired event - onBitrixLiveChat');
 	        return false;
 	      }
@@ -2587,7 +2846,7 @@
 	  }, {
 	    key: "setCustomData",
 	    value: function setCustomData(params) {
-	      if (!this.controller.getStore()) {
+	      if (!this.controller || !this.controller.getStore()) {
 	        console.error('LiveChatWidget.getUserData: method can be called after fired event - onBitrixLiveChat');
 	        return false;
 	      }
@@ -2912,7 +3171,8 @@
 	 * @notice Do not mutate or clone this component! It is under development.
 	 */
 
-	ui_vue.Vue.component('bx-livechat', {
+	ui_vue.BitrixVue.component('bx-livechat', {
+	  mixins: [im_mixin.DialogCore, im_mixin.TextareaCore, im_mixin.TextareaUploadFile, im_mixin.DialogReadMessages, im_mixin.DialogClickOnCommand, im_mixin.DialogClickOnUserName, im_mixin.DialogClickOnKeyboardButton, im_mixin.DialogClickOnMessageMenu, im_mixin.DialogClickOnMessageRetry, im_mixin.DialogSetMessageReaction, im_mixin.DialogClickOnUploadCancel],
 	  data: function data() {
 	    return {
 	      viewPortMetaSiteNode: null,
@@ -2933,10 +3193,12 @@
 	      textareaDrag: false,
 	      textareaHeight: 100,
 	      textareaMinimumHeight: 100,
-	      textareaMaximumHeight: im_lib_utils.Utils.device.isMobile() ? 200 : 300
+	      textareaMaximumHeight: im_lib_utils.Utils.device.isMobile() ? 200 : 300,
+	      zIndexStackInstance: null
 	    };
 	  },
 	  created: function created() {
+	    im_lib_logger.Logger.warn('bx-livechat created');
 	    this.onCreated();
 	    document.addEventListener('keydown', this.onWindowKeyDown);
 
@@ -2944,16 +3206,27 @@
 	      window.addEventListener('resize', this.getAvailableSpaceFunc = im_lib_utils.Utils.throttle(this.getAvailableSpace, 50));
 	    }
 
-	    this.$root.$on('requestShowForm', this.onRequestShowForm);
+	    main_core_events.EventEmitter.subscribe(EventType.requestShowForm, this.onRequestShowForm);
+	  },
+	  mounted: function mounted() {
+	    this.zIndexStackInstance = this.$Bitrix.Data.get('zIndexStack');
+
+	    if (this.zIndexStackInstance && !!this.$refs.widgetWrapper) {
+	      this.zIndexStackInstance.register(this.$refs.widgetWrapper);
+	    }
 	  },
 	  beforeDestroy: function beforeDestroy() {
+	    if (this.zIndexStackInstance) {
+	      this.zIndexStackInstance.unregister(this.$refs.widgetWrapper);
+	    }
+
 	    document.removeEventListener('keydown', this.onWindowKeyDown);
 
 	    if (!im_lib_utils.Utils.device.isMobile() && !this.widget.common.pageMode) {
 	      window.removeEventListener('resize', this.getAvailableSpaceFunc);
 	    }
 
-	    this.$root.$off('requestShowForm', this.onRequestShowForm);
+	    main_core_events.EventEmitter.unsubscribe(EventType.requestShowForm, this.onRequestShowForm);
 	    this.onTextareaDragEventRemove();
 	  },
 	  computed: babelHelpers.objectSpread({
@@ -2966,7 +3239,7 @@
 	    DeviceType: function DeviceType() {
 	      return im_const.DeviceType;
 	    },
-	    EventType: function EventType() {
+	    EventType: function EventType$$1() {
 	      return im_const.EventType;
 	    },
 	    textareaHeightStyle: function textareaHeightStyle(state) {
@@ -2974,7 +3247,7 @@
 	        flex: '0 0 ' + this.textareaHeight + 'px'
 	      };
 	    },
-	    textAreaBottomMargin: function textAreaBottomMargin() {
+	    textareaBottomMargin: function textareaBottomMargin() {
 	      if (!this.widget.common.copyright && !this.isBottomLocation) {
 	        return {
 	          marginBottom: '5px'
@@ -3021,7 +3294,7 @@
 	      return [LocationType.bottomLeft, LocationType.topLeft, LocationType.topMiddle].includes(this.widget.common.location);
 	    },
 	    localize: function localize() {
-	      return ui_vue.Vue.getFilteredPhrases('BX_LIVECHAT_', this.$root.$bitrixMessages);
+	      return ui_vue.BitrixVue.getFilteredPhrases('BX_LIVECHAT_', this);
 	    },
 	    widgetMobileDisabled: function widgetMobileDisabled(state) {
 	      if (state.application.device.type === im_const.DeviceType.mobile) {
@@ -3092,33 +3365,6 @@
 	    },
 	    showMessageDialog: function showMessageDialog() {
 	      return this.messageCollection.length > 0;
-	    },
-	    quotePanelData: function quotePanelData() {
-	      var result = {
-	        id: 0,
-	        title: '',
-	        description: '',
-	        color: ''
-	      };
-
-	      if (!this.dialog.quoteId) {
-	        return result;
-	      }
-
-	      var message = this.$store.getters['messages/getMessage'](this.dialog.chatId, this.dialog.quoteId);
-
-	      if (!message) {
-	        return result;
-	      }
-
-	      var user = this.$store.getters['users/get'](message.authorId);
-	      result = {
-	        id: this.dialog.quoteId,
-	        title: user ? user.name : '',
-	        color: user ? user.color : '',
-	        description: message.textConverted ? message.textConverted : this.localize.BX_LIVECHAT_FILE_MESSAGE
-	      };
-	      return result;
 	    }
 	  }, ui_vue_vuex.Vuex.mapState({
 	    widget: function widget(state) {
@@ -3137,9 +3383,54 @@
 	  watch: {
 	    sessionClose: function sessionClose(value) {
 	      im_lib_logger.Logger.log('sessionClose change', value);
+	    },
+	    //Redefined for uploadFile mixin
+	    dialogInited: function dialogInited(newValue) {
+	      return false;
 	    }
 	  },
 	  methods: {
+	    getRestClient: function getRestClient() {
+	      return this.$Bitrix.RestClient.get();
+	    },
+	    getApplication: function getApplication() {
+	      return this.$Bitrix.Application.get();
+	    },
+	    onSendMessage: function onSendMessage(_ref) {
+	      var event = _ref.data;
+	      event.focus = event.focus !== false;
+
+	      if (this.widget.common.showForm === FormType.smile) {
+	        this.$store.commit('widget/common', {
+	          showForm: FormType.none
+	        });
+	      } //show consent window if needed
+
+
+	      if (!this.widget.dialog.userConsent && this.widget.common.consentUrl) {
+	        if (event.text) {
+	          this.storedMessage = event.text;
+	        }
+
+	        this.showConsentWidow();
+	        return false;
+	      }
+
+	      event.text = event.text ? event.text : this.storedMessage;
+
+	      if (!event.text) {
+	        return false;
+	      }
+
+	      this.hideForm();
+	      this.getApplication().addMessage(event.text);
+
+	      if (event.focus) {
+	        main_core_events.EventEmitter.emit(im_const.EventType.textarea.setFocus);
+	      }
+
+	      return true;
+	    },
 	    close: function close(event) {
 	      if (this.widget.common.pageMode) {
 	        return false;
@@ -3202,6 +3493,9 @@
 	        showForm: FormType.history
 	      });
 	    },
+	    onOpenMenu: function onOpenMenu(event) {
+	      this.getApplication().getHtmlHistory();
+	    },
 	    hideForm: function hideForm() {
 	      clearTimeout(this.showFormTimeout);
 
@@ -3220,12 +3514,14 @@
 	      this.$store.commit('widget/common', {
 	        showConsent: false
 	      });
-	      this.$root.$bitrixApplication.sendConsentDecision(true);
+	      this.getApplication().sendConsentDecision(true);
 
 	      if (this.storedMessage || this.storedFile) {
 	        if (this.storedMessage) {
-	          this.onTextareaSend({
-	            focus: this.application.device.type !== im_const.DeviceType.mobile
+	          this.onSendMessage({
+	            data: {
+	              focus: this.application.device.type !== im_const.DeviceType.mobile
+	            }
 	          });
 	          this.storedMessage = '';
 	        }
@@ -3235,7 +3531,7 @@
 	          this.storedFile = '';
 	        }
 	      } else if (this.widget.common.showForm === FormType.none) {
-	        this.$root.$emit(im_const.EventType.textarea.focus);
+	        main_core_events.EventEmitter.emit(im_const.EventType.textarea.setFocus);
 	      }
 	    },
 	    disagreeConsentWidow: function disagreeConsentWidow() {
@@ -3245,10 +3541,10 @@
 	      this.$store.commit('widget/common', {
 	        showConsent: false
 	      });
-	      this.$root.$bitrixApplication.sendConsentDecision(false);
+	      this.getApplication().sendConsentDecision(false);
 
 	      if (this.storedMessage) {
-	        this.$root.$emit(im_const.EventType.textarea.insertText, {
+	        main_core_events.EventEmitter.emit(im_const.EventType.textarea.insertText, {
 	          text: this.storedMessage,
 	          focus: this.application.device.type !== im_const.DeviceType.mobile
 	        });
@@ -3260,7 +3556,7 @@
 	      }
 
 	      if (this.application.device.type !== im_const.DeviceType.mobile) {
-	        this.$root.$emit(im_const.EventType.textarea.focus);
+	        main_core_events.EventEmitter.emit(im_const.EventType.textarea.setFocus);
 	      }
 	    },
 	    logEvent: function logEvent(name) {
@@ -3327,13 +3623,13 @@
 
 	      this.textareaHeight = this.widget.common.textareaHeight || this.textareaHeight;
 	      this.$store.commit('files/initCollection', {
-	        chatId: this.$root.$bitrixApplication.getChatId()
+	        chatId: this.getApplication().getChatId()
 	      });
 	      this.$store.commit('messages/initCollection', {
-	        chatId: this.$root.$bitrixApplication.getChatId()
+	        chatId: this.getApplication().getChatId()
 	      });
 	      this.$store.commit('dialogues/initCollection', {
-	        dialogId: this.$root.$bitrixApplication.getDialogId(),
+	        dialogId: this.getApplication().getDialogId(),
 	        fields: {
 	          entityType: 'LIVECHAT',
 	          type: 'livechat'
@@ -3360,11 +3656,12 @@
 	      }
 	    },
 	    onAfterClose: function onAfterClose() {
-	      this.$root.$bitrixApplication.close();
+	      this.getApplication().close();
 	    },
-	    onRequestShowForm: function onRequestShowForm(event) {
+	    onRequestShowForm: function onRequestShowForm(_ref2) {
 	      var _this2 = this;
 
+	      var event = _ref2.data;
 	      clearTimeout(this.showFormTimeout);
 
 	      if (event.type === FormType.welcome) {
@@ -3394,105 +3691,81 @@
 	      }
 	    },
 	    onDialogRequestHistory: function onDialogRequestHistory(event) {
-	      this.$root.$bitrixApplication.getDialogHistory(event.lastId);
+	      this.getApplication().getDialogHistory(event.lastId);
 	    },
 	    onDialogRequestUnread: function onDialogRequestUnread(event) {
-	      this.$root.$bitrixApplication.getDialogUnread(event.lastId);
+	      this.getApplication().getDialogUnread(event.lastId);
 	    },
-	    onDialogMessageClickByUserName: function onDialogMessageClickByUserName(event) {
+	    onClickOnUserName: function onClickOnUserName(_ref3) {
+	      var event = _ref3.data;
 	      // TODO name push to auto-replace mention holder - User Name -> [USER=274]User Name[/USER]
-	      this.$root.$emit(im_const.EventType.textarea.insertText, {
-	        text: event.user.name + ' '
+	      main_core_events.EventEmitter.emit(im_const.EventType.textarea.insertText, {
+	        text: event.user.name + ', '
 	      });
 	    },
-	    onDialogMessageClickByUploadCancel: function onDialogMessageClickByUploadCancel(event) {
-	      this.$root.$bitrixApplication.cancelUploadFile(event.file.id);
+	    onClickOnUploadCancel: function onClickOnUploadCancel(_ref4) {
+	      var event = _ref4.data;
+	      this.getApplication().cancelUploadFile(event.file.id);
 	    },
-	    onDialogMessageClickByKeyboardButton: function onDialogMessageClickByKeyboardButton(event) {
-	      this.$root.$bitrixApplication.execMessageKeyboardCommand(event);
+	    onClickOnKeyboardButton: function onClickOnKeyboardButton(_ref5) {
+	      var event = _ref5.data;
+	      this.getApplication().execMessageKeyboardCommand(event);
 	    },
-	    onDialogMessageClickByCommand: function onDialogMessageClickByCommand(event) {
+	    onClickOnCommand: function onClickOnCommand(_ref6) {
+	      var event = _ref6.data;
+
 	      if (event.type === 'put') {
-	        this.$root.$emit(im_const.EventType.textarea.insertText, {
+	        main_core_events.EventEmitter.emit(im_const.EventType.textarea.insertText, {
 	          text: event.value + ' '
 	        });
 	      } else if (event.type === 'send') {
-	        this.$root.$bitrixApplication.addMessage(event.value);
+	        this.getApplication().addMessage(event.value);
 	      } else {
 	        im_lib_logger.Logger.warn('Unprocessed command', event);
 	      }
 	    },
-	    onDialogMessageMenuClick: function onDialogMessageMenuClick(event) {
+	    onClickOnMessageMenu: function onClickOnMessageMenu(_ref7) {
+	      var event = _ref7.data;
 	      im_lib_logger.Logger.warn('Message menu:', event);
 	    },
-	    onDialogMessageRetryClick: function onDialogMessageRetryClick(event) {
+	    onClickOnMessageRetry: function onClickOnMessageRetry(_ref8) {
+	      var event = _ref8.data;
 	      im_lib_logger.Logger.warn('Message retry:', event);
-	      this.$root.$bitrixApplication.retrySendMessage(event.message);
+	      this.getApplication().retrySendMessage(event.message);
 	    },
-	    onDialogReadMessage: function onDialogReadMessage(event) {
-	      this.$root.$bitrixApplication.readMessage(event.id);
+	    onReadMessage: function onReadMessage(_ref9) {
+	      var event = _ref9.data;
+	      this.getApplication().readMessage(event.id);
 	    },
-	    onDialogQuoteMessage: function onDialogQuoteMessage(event) {
-	      this.$root.$bitrixApplication.quoteMessage(event.message.id);
+	    onSetMessageReaction: function onSetMessageReaction(_ref10) {
+	      var event = _ref10.data;
+	      this.getApplication().reactMessage(event.message.id, event.reaction);
 	    },
-	    onDialogMessageReactionSet: function onDialogMessageReactionSet(event) {
-	      this.$root.$bitrixApplication.reactMessage(event.message.id, event.reaction);
-	    },
-	    onDialogClick: function onDialogClick(event) {
+	    onClickOnDialog: function onClickOnDialog(_ref11) {
+	      var event = _ref11.data;
+
 	      if (this.widget.common.showForm !== FormType.none) {
 	        this.$store.commit('widget/common', {
 	          showForm: FormType.none
 	        });
 	      }
 	    },
-	    onTextareaKeyUp: function onTextareaKeyUp(event) {
-	      if (this.widget.common.watchTyping && this.widget.dialog.sessionId && !this.widget.dialog.sessionClose && this.widget.dialog.operator.id && this.widget.dialog.operatorChatId && this.$root.$bitrixPullClient.isPublishingEnabled()) {
+	    onTextareaKeyUp: function onTextareaKeyUp(_ref12) {
+	      var event = _ref12.data;
+
+	      if (this.widget.common.watchTyping && this.widget.dialog.sessionId && !this.widget.dialog.sessionClose && this.widget.dialog.operator.id && this.widget.dialog.operatorChatId && this.$Bitrix.PullClient.get().isPublishingEnabled()) {
 	        var infoString = main_md5.md5(this.widget.dialog.sessionId + '/' + this.application.dialog.chatId + '/' + this.widget.user.id);
-	        this.$root.$bitrixPullClient.sendMessage([this.widget.dialog.operator.id], 'imopenlines', 'linesMessageWrite', {
+	        this.$Bitrix.PullClient.get().sendMessage([this.widget.dialog.operator.id], 'imopenlines', 'linesMessageWrite', {
 	          text: event.text,
 	          infoString: infoString,
 	          operatorChatId: this.widget.dialog.operatorChatId
 	        });
 	      }
 	    },
-	    onTextareaSend: function onTextareaSend(event) {
-	      event.focus = event.focus !== false;
-
-	      if (this.widget.common.showForm === FormType.smile) {
-	        this.$store.commit('widget/common', {
-	          showForm: FormType.none
-	        });
-	      }
-
-	      if (!this.widget.dialog.userConsent && this.widget.common.consentUrl) {
-	        if (event.text) {
-	          this.storedMessage = event.text;
-	        }
-
-	        this.showConsentWidow();
-	        return false;
-	      }
-
-	      event.text = event.text ? event.text : this.storedMessage;
-
-	      if (!event.text) {
-	        return false;
-	      }
-
-	      this.hideForm();
-	      this.$root.$bitrixApplication.addMessage(event.text);
-
-	      if (event.focus) {
-	        this.$root.$emit(im_const.EventType.textarea.focus);
-	      }
-
-	      return true;
-	    },
-	    onTextareaWrites: function onTextareaWrites(event) {
-	      this.$root.$bitrixController.application.startWriting();
-	    },
-	    onTextareaFocus: function onTextareaFocus(event) {
+	    onTextareaFocus: function onTextareaFocus(_ref13) {
 	      var _this3 = this;
+
+	      var event = _ref13.data;
 
 	      if (this.widget.common.copyright && this.application.device.type === im_const.DeviceType.mobile) {
 	        this.widget.common.copyright = false;
@@ -3507,13 +3780,16 @@
 
 	      this.textareaFocused = true;
 	    },
-	    onTextareaBlur: function onTextareaBlur(event) {
+	    onTextareaBlur: function onTextareaBlur(_ref14) {
 	      var _this4 = this;
 
-	      if (!this.widget.common.copyright && this.widget.common.copyright !== this.$root.$bitrixApplication.copyright) {
-	        this.widget.common.copyright = this.$root.$bitrixApplication.copyright;
+	      var event = _ref14.data;
+
+	      if (!this.widget.common.copyright && this.widget.common.copyright !== this.getApplication().copyright) {
+	        this.widget.common.copyright = this.getApplication().copyright;
 	        this.$nextTick(function () {
-	          _this4.$root.$emit(im_const.EventType.dialog.scrollToBottom, {
+	          main_core_events.EventEmitter.emit(im_const.EventType.dialog.scrollToBottom, {
+	            chatId: _this4.chatId,
 	            force: true
 	          });
 	        });
@@ -3537,7 +3813,7 @@
 	      this.textareaDragCursorStartPoint = event.clientY;
 	      this.textareaDragHeightStartPoint = this.textareaHeight;
 	      this.onTextareaDragEventAdd();
-	      this.$root.$emit(im_const.EventType.textarea.blur, true);
+	      main_core_events.EventEmitter.emit(im_const.EventType.textarea.setBlur, true);
 	    },
 	    onTextareaContinueDrag: function onTextareaContinueDrag(event) {
 	      if (!this.textareaDrag) {
@@ -3564,7 +3840,8 @@
 	      this.$store.commit('widget/common', {
 	        textareaHeight: this.textareaHeight
 	      });
-	      this.$root.$emit(im_const.EventType.dialog.scrollToBottom, {
+	      main_core_events.EventEmitter.emit(im_const.EventType.dialog.scrollToBottom, {
+	        chatId: this.chatId,
 	        force: true
 	      });
 	    },
@@ -3582,28 +3859,33 @@
 	      document.removeEventListener('mouseup', this.onTextareaStopDrag);
 	      document.removeEventListener('mouseleave', this.onTextareaStopDrag);
 	    },
-	    onTextareaFileSelected: function onTextareaFileSelected(event) {
-	      var fileInput = event && event.fileInput ? event.fileInput : this.storedFile;
+	    onTextareaFileSelected: function onTextareaFileSelected() {
+	      var _ref15 = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {},
+	          event = _ref15.data;
 
-	      if (!fileInput) {
-	        return false;
+	      var fileInputEvent = null;
+
+	      if (event && event.fileChangeEvent && event.fileChangeEvent.target.files.length > 0) {
+	        fileInputEvent = event.fileChangeEvent;
+	      } else {
+	        fileInputEvent = this.storedFile;
 	      }
 
-	      if (fileInput.files[0].size > this.application.disk.maxFileSize) {
-	        // TODO change alert to correct overlay window
-	        alert(this.localize.BX_LIVECHAT_FILE_SIZE_EXCEEDED.replace('#LIMIT#', Math.round(this.application.disk.maxFileSize / 1024 / 1024)));
+	      if (!fileInputEvent) {
 	        return false;
 	      }
 
 	      if (!this.widget.dialog.userConsent && this.widget.common.consentUrl) {
-	        this.storedFile = event.fileInput;
+	        this.storedFile = event.fileChangeEvent;
 	        this.showConsentWidow();
 	        return false;
 	      }
 
-	      this.$root.$bitrixApplication.uploadFile(fileInput);
+	      this.getApplication().uploadFile(fileInputEvent);
 	    },
-	    onTextareaAppButtonClick: function onTextareaAppButtonClick(event) {
+	    onTextareaAppButtonClick: function onTextareaAppButtonClick(_ref16) {
+	      var event = _ref16.data;
+
 	      if (event.appId === FormType.smile) {
 	        if (this.widget.common.showForm === FormType.smile) {
 	          this.$store.commit('widget/common', {
@@ -3615,22 +3897,23 @@
 	          });
 	        }
 	      } else {
-	        this.$root.$emit(im_const.EventType.textarea.focus);
+	        main_core_events.EventEmitter.emit(im_const.EventType.textarea.setFocus);
 	      }
 	    },
+	    onTextareaEdit: function onTextareaEdit(_ref17) {
+	      var event = _ref17.data;
+	      this.logEvent('edit message', event);
+	    },
 	    onPullRequestConfig: function onPullRequestConfig(event) {
-	      this.$root.$bitrixApplication.recoverPullConnection();
+	      this.getApplication().recoverPullConnection();
 	    },
 	    onSmilesSelectSmile: function onSmilesSelectSmile(event) {
-	      this.$root.$emit(im_const.EventType.textarea.insertText, {
+	      main_core_events.EventEmitter.emit(im_const.EventType.textarea.insertText, {
 	        text: event.text
 	      });
 	    },
 	    onSmilesSelectSet: function onSmilesSelectSet() {
-	      this.$root.$emit(im_const.EventType.textarea.focus);
-	    },
-	    onQuotePanelClose: function onQuotePanelClose() {
-	      this.$root.$bitrixApplication.quoteMessageClear();
+	      main_core_events.EventEmitter.emit(im_const.EventType.textarea.setFocus);
 	    },
 	    onWidgetStartDrag: function onWidgetStartDrag(event) {
 	      if (this.widgetDrag) {
@@ -3713,19 +3996,18 @@
 
 	        event.preventDefault();
 	        event.stopPropagation();
-	        this.$root.$emit(im_const.EventType.textarea.focus);
+	        main_core_events.EventEmitter.emit(im_const.EventType.textarea.setFocus);
 	      }
 	    },
 	    onWindowScroll: function onWindowScroll(event) {
-	      var _this5 = this;
-
 	      clearTimeout(this.onWindowScrollTimeout);
 	      this.onWindowScrollTimeout = setTimeout(function () {
-	        _this5.$root.$emit(im_const.EventType.textarea.blur, true);
+	        main_core_events.EventEmitter.emit(im_const.EventType.textarea.setBlur, true);
 	      }, 50);
 	    }
 	  },
-	  template: "\n\t\t<transition enter-active-class=\"bx-livechat-show\" leave-active-class=\"bx-livechat-close\" @after-leave=\"onAfterClose\">\n\t\t\t<div :class=\"widgetClassName\" v-if=\"widget.common.showed\" :style=\"{height: widgetHeightStyle, width: widgetWidthStyle, userSelect: userSelectStyle}\" ref=\"widgetWrapper\">\n\t\t\t\t<div class=\"bx-livechat-box\">\n\t\t\t\t\t<div v-if=\"isBottomLocation\" class=\"bx-livechat-widget-resize-handle\" @mousedown=\"onWidgetStartDrag\"></div>\n\t\t\t\t\t<bx-livechat-head :isWidgetDisabled=\"widgetMobileDisabled\" @like=\"showLikeForm\" @history=\"showHistoryForm\" @close=\"close\"/>\n\t\t\t\t\t<template v-if=\"widgetMobileDisabled\">\n\t\t\t\t\t\t<bx-livechat-body-orientation-disabled/>\n\t\t\t\t\t</template>\n\t\t\t\t\t<template v-else-if=\"application.error.active\">\n\t\t\t\t\t\t<bx-livechat-body-error/>\n\t\t\t\t\t</template>\n\t\t\t\t\t<template v-else-if=\"!widget.common.configId\">\n\t\t\t\t\t\t<div class=\"bx-livechat-body\" key=\"loading-body\">\n\t\t\t\t\t\t\t<bx-livechat-body-loading/>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</template>\t\t\t\n\t\t\t\t\t<template v-else>\n\t\t\t\t\t\t<template v-if=\"!widget.common.dialogStart\">\n\t\t\t\t\t\t\t<div class=\"bx-livechat-body\" key=\"welcome-body\">\n\t\t\t\t\t\t\t\t<bx-livechat-body-operators/>\n\t\t\t\t\t\t\t\t<keep-alive include=\"bx-livechat-smiles\">\n\t\t\t\t\t\t\t\t\t<template v-if=\"widget.common.showForm == FormType.smile\">\n\t\t\t\t\t\t\t\t\t\t<bx-livechat-smiles @selectSmile=\"onSmilesSelectSmile\" @selectSet=\"onSmilesSelectSet\"/>\t\n\t\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t</keep-alive>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</template>\n\t\t\t\t\t\t<template v-else-if=\"widget.common.dialogStart\">\n\t\t\t\t\t\t\t<bx-pull-component-status :canReconnect=\"true\" @reconnect=\"onPullRequestConfig\"/>\n\t\t\t\t\t\t\t<div :class=\"['bx-livechat-body', {'bx-livechat-body-with-message': showMessageDialog}]\" key=\"with-message\">\n\t\t\t\t\t\t\t\t<template v-if=\"showMessageDialog\">\n\t\t\t\t\t\t\t\t\t<div class=\"bx-livechat-dialog\">\n\t\t\t\t\t\t\t\t\t\t<bx-im-view-dialog\n\t\t\t\t\t\t\t\t\t\t\t:userId=\"application.common.userId\" \n\t\t\t\t\t\t\t\t\t\t\t:dialogId=\"application.dialog.dialogId\"\n\t\t\t\t\t\t\t\t\t\t\t:chatId=\"application.dialog.chatId\"\n\t\t\t\t\t\t\t\t\t\t\t:messageLimit=\"application.dialog.messageLimit\"\n\t\t\t\t\t\t\t\t\t\t\t:messageExtraCount=\"application.dialog.messageExtraCount\"\n\t\t\t\t\t\t\t\t\t\t\t:enableReactions=\"true\"\n\t\t\t\t\t\t\t\t\t\t\t:enableDateActions=\"false\"\n\t\t\t\t\t\t\t\t\t\t\t:enableCreateContent=\"false\"\n\t\t\t\t\t\t\t\t\t\t\t:enableGestureQuote=\"true\"\n\t\t\t\t\t\t\t\t\t\t\t:enableGestureMenu=\"true\"\n\t\t\t\t\t\t\t\t\t\t\t:showMessageAvatar=\"false\"\n\t\t\t\t\t\t\t\t\t\t\t:showMessageMenu=\"false\"\n\t\t\t\t\t\t\t\t\t\t\t:listenEventScrollToBottom=\"EventType.dialog.scrollToBottom\"\n\t\t\t\t\t\t\t\t\t\t\t:listenEventRequestHistory=\"EventType.dialog.requestHistoryResult\"\n\t\t\t\t\t\t\t\t\t\t\t:listenEventRequestUnread=\"EventType.dialog.requestUnreadResult\"\n\t\t\t\t\t\t\t\t\t\t\t@readMessage=\"onDialogReadMessage\"\n\t\t\t\t\t\t\t\t\t\t\t@requestHistory=\"onDialogRequestHistory\"\n\t\t\t\t\t\t\t\t\t\t\t@requestUnread=\"onDialogRequestUnread\"\n\t\t\t\t\t\t\t\t\t\t\t@quoteMessage=\"onDialogQuoteMessage\"\n\t\t\t\t\t\t\t\t\t\t\t@clickByCommand=\"onDialogMessageClickByCommand\"\n\t\t\t\t\t\t\t\t\t\t\t@clickByUserName=\"onDialogMessageClickByUserName\"\n\t\t\t\t\t\t\t\t\t\t\t@clickByUploadCancel=\"onDialogMessageClickByUploadCancel\"\n\t\t\t\t\t\t\t\t\t\t\t@clickByKeyboardButton=\"onDialogMessageClickByKeyboardButton\"\n\t\t\t\t\t\t\t\t\t\t\t@clickByMessageMenu=\"onDialogMessageMenuClick\"\n\t\t\t\t\t\t\t\t\t\t\t@clickByMessageRetry=\"onDialogMessageRetryClick\"\n\t\t\t\t\t\t\t\t\t\t\t@setMessageReaction=\"onDialogMessageReactionSet\"\n\t\t\t\t\t\t\t\t\t\t\t@click=\"onDialogClick\"\n\t\t\t\t\t\t\t\t\t\t />\n\t\t\t\t\t\t\t\t\t</div>\t \n\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t<template v-else>\n\t\t\t\t\t\t\t\t\t<bx-livechat-body-loading/>\n\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t<bx-im-view-quote-panel :id=\"quotePanelData.id\" :title=\"quotePanelData.title\" :description=\"quotePanelData.description\" :color=\"quotePanelData.color\" @close=\"onQuotePanelClose\"/>\n\t\t\t\t\t\t\t\t\n\t\t\t\t\t\t\t\t<keep-alive include=\"bx-livechat-smiles\">\n\t\t\t\t\t\t\t\t\t<template v-if=\"widget.common.showForm == FormType.like && widget.common.vote.enable\">\n\t\t\t\t\t\t\t\t\t\t<bx-livechat-form-vote/>\n\t\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t\t<template v-else-if=\"widget.common.showForm == FormType.welcome\">\n\t\t\t\t\t\t\t\t\t\t<bx-livechat-form-welcome/>\t\n\t\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t\t<template v-else-if=\"widget.common.showForm == FormType.offline\">\n\t\t\t\t\t\t\t\t\t\t<bx-livechat-form-offline/>\t\n\t\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t\t<template v-else-if=\"widget.common.showForm == FormType.history\">\n\t\t\t\t\t\t\t\t\t\t<bx-livechat-form-history/>\t\n\t\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t\t<template v-else-if=\"widget.common.showForm == FormType.smile\">\n\t\t\t\t\t\t\t\t\t\t<bx-livechat-smiles @selectSmile=\"onSmilesSelectSmile\" @selectSet=\"onSmilesSelectSet\"/>\t\n\t\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t</keep-alive>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</template>\t\n\t\t\t\t\t\t<div class=\"bx-livechat-textarea\" :style=\"[textareaHeightStyle, textAreaBottomMargin]\" ref=\"textarea\">\n\t\t\t\t\t\t\t<div class=\"bx-livechat-textarea-resize-handle\" @mousedown=\"onTextareaStartDrag\" @touchstart=\"onTextareaStartDrag\"></div>\n\t\t\t\t\t\t\t<bx-im-view-textarea\n\t\t\t\t\t\t\t\t:siteId=\"application.common.siteId\"\n\t\t\t\t\t\t\t\t:userId=\"application.common.userId\"\n\t\t\t\t\t\t\t\t:dialogId=\"application.dialog.dialogId\"\n\t\t\t\t\t\t\t\t:writesEventLetter=\"3\"\n\t\t\t\t\t\t\t\t:enableEdit=\"true\"\n\t\t\t\t\t\t\t\t:enableCommand=\"false\"\n\t\t\t\t\t\t\t\t:enableMention=\"false\"\n\t\t\t\t\t\t\t\t:enableFile=\"application.disk.enabled\"\n\t\t\t\t\t\t\t\t:autoFocus=\"application.device.type !== DeviceType.mobile\"\n\t\t\t\t\t\t\t\t:styles=\"{button: {backgroundColor: widget.common.styles.backgroundColor, iconColor: widget.common.styles.iconColor}}\"\n\t\t\t\t\t\t\t\t:listenEventInsertText=\"EventType.textarea.insertText\"\n\t\t\t\t\t\t\t\t:listenEventFocus=\"EventType.textarea.focus\"\n\t\t\t\t\t\t\t\t:listenEventBlur=\"EventType.textarea.blur\"\n\t\t\t\t\t\t\t\t@writes=\"onTextareaWrites\" \n\t\t\t\t\t\t\t\t@send=\"onTextareaSend\" \n\t\t\t\t\t\t\t\t@focus=\"onTextareaFocus\" \n\t\t\t\t\t\t\t\t@blur=\"onTextareaBlur\"\n\t\t\t\t\t\t\t\t@keyup=\"onTextareaKeyUp\" \n\t\t\t\t\t\t\t\t@edit=\"logEvent('edit message', $event)\"\n\t\t\t\t\t\t\t\t@fileSelected=\"onTextareaFileSelected\"\n\t\t\t\t\t\t\t\t@appButtonClick=\"onTextareaAppButtonClick\"\n\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div v-if=\"!widget.common.copyright && !isBottomLocation\" class=\"bx-livechat-nocopyright-resize-wrap\" style=\"position: relative;\">\n\t\t\t\t\t\t\t<div class=\"bx-livechat-widget-resize-handle\" @mousedown=\"onWidgetStartDrag\"></div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<bx-livechat-form-consent @agree=\"agreeConsentWidow\" @disagree=\"disagreeConsentWidow\"/>\n\t\t\t\t\t\t<template v-if=\"widget.common.copyright\">\n\t\t\t\t\t\t\t<div class=\"bx-livechat-copyright\">\t\n\t\t\t\t\t\t\t\t<template v-if=\"widget.common.copyrightUrl\">\n\t\t\t\t\t\t\t\t\t<a class=\"bx-livechat-copyright-link\" :href=\"widget.common.copyrightUrl\" target=\"_blank\">\n\t\t\t\t\t\t\t\t\t\t<span class=\"bx-livechat-logo-name\">{{localize.BX_LIVECHAT_COPYRIGHT_TEXT}}</span>\n\t\t\t\t\t\t\t\t\t\t<span class=\"bx-livechat-logo-icon\"></span>\n\t\t\t\t\t\t\t\t\t</a>\n\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t<template v-else>\n\t\t\t\t\t\t\t\t\t<span class=\"bx-livechat-logo-name\">{{localize.BX_LIVECHAT_COPYRIGHT_TEXT}}</span>\n\t\t\t\t\t\t\t\t\t<span class=\"bx-livechat-logo-icon\"></span>\n\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t<div v-if=\"!isBottomLocation\" class=\"bx-livechat-widget-resize-handle\" @mousedown=\"onWidgetStartDrag\"></div>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</template>\n\t\t\t\t\t</template>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t</transition>\n\t"
+	  // language=Vue
+	  template: "\n\t\t<transition enter-active-class=\"bx-livechat-show\" leave-active-class=\"bx-livechat-close\" @after-leave=\"onAfterClose\">\n\t\t\t<div :class=\"widgetClassName\" v-if=\"widget.common.showed\" :style=\"{height: widgetHeightStyle, width: widgetWidthStyle, userSelect: userSelectStyle}\" ref=\"widgetWrapper\">\n\t\t\t\t<div class=\"bx-livechat-box\">\n\t\t\t\t\t<div v-if=\"isBottomLocation\" class=\"bx-livechat-widget-resize-handle\" @mousedown=\"onWidgetStartDrag\"></div>\n\t\t\t\t\t<bx-livechat-head :isWidgetDisabled=\"widgetMobileDisabled\" @like=\"showLikeForm\" @openMenu=\"onOpenMenu\" @close=\"close\"/>\n\t\t\t\t\t<template v-if=\"widgetMobileDisabled\">\n\t\t\t\t\t\t<bx-livechat-body-orientation-disabled/>\n\t\t\t\t\t</template>\n\t\t\t\t\t<template v-else-if=\"application.error.active\">\n\t\t\t\t\t\t<bx-livechat-body-error/>\n\t\t\t\t\t</template>\n\t\t\t\t\t<template v-else-if=\"!widget.common.configId\">\n\t\t\t\t\t\t<div class=\"bx-livechat-body\" key=\"loading-body\">\n\t\t\t\t\t\t\t<bx-livechat-body-loading/>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</template>\t\t\t\n\t\t\t\t\t<template v-else>\n\t\t\t\t\t\t<template v-if=\"!widget.common.dialogStart\">\n\t\t\t\t\t\t\t<div class=\"bx-livechat-body\" key=\"welcome-body\">\n\t\t\t\t\t\t\t\t<bx-livechat-body-operators/>\n\t\t\t\t\t\t\t\t<keep-alive include=\"bx-livechat-smiles\">\n\t\t\t\t\t\t\t\t\t<template v-if=\"widget.common.showForm === FormType.smile\">\n\t\t\t\t\t\t\t\t\t\t<bx-livechat-smiles @selectSmile=\"onSmilesSelectSmile\" @selectSet=\"onSmilesSelectSet\"/>\t\n\t\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t</keep-alive>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</template>\n\t\t\t\t\t\t<template v-else-if=\"widget.common.dialogStart\">\n\t\t\t\t\t\t\t<bx-pull-component-status :canReconnect=\"true\" @reconnect=\"onPullRequestConfig\"/>\n\t\t\t\t\t\t\t<div :class=\"['bx-livechat-body', {'bx-livechat-body-with-message': showMessageDialog}]\" key=\"with-message\">\n\t\t\t\t\t\t\t\t<template v-if=\"showMessageDialog\">\n\t\t\t\t\t\t\t\t\t<div class=\"bx-livechat-dialog\">\n\t\t\t\t\t\t\t\t\t\t<bx-im-component-dialog\n\t\t\t\t\t\t\t\t\t\t\t:userId=\"application.common.userId\" \n\t\t\t\t\t\t\t\t\t\t\t:dialogId=\"application.dialog.dialogId\"\n\t\t\t\t\t\t\t\t\t\t\t:messageLimit=\"application.dialog.messageLimit\"\n\t\t\t\t\t\t\t\t\t\t\t:enableReactions=\"true\"\n\t\t\t\t\t\t\t\t\t\t\t:enableDateActions=\"false\"\n\t\t\t\t\t\t\t\t\t\t\t:enableCreateContent=\"false\"\n\t\t\t\t\t\t\t\t\t\t\t:enableGestureQuote=\"true\"\n\t\t\t\t\t\t\t\t\t\t\t:enableGestureMenu=\"true\"\n\t\t\t\t\t\t\t\t\t\t\t:showMessageAvatar=\"false\"\n\t\t\t\t\t\t\t\t\t\t\t:showMessageMenu=\"false\"\n\t\t\t\t\t\t\t\t\t\t\t:skipDataRequest=\"true\"\n\t\t\t\t\t\t\t\t\t\t\t:showLoadingState=\"false\"\n\t\t\t\t\t\t\t\t\t\t\t:showEmptyState=\"false\"\n\t\t\t\t\t\t\t\t\t\t />\n\t\t\t\t\t\t\t\t\t</div>\t \n\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t<template v-else>\n\t\t\t\t\t\t\t\t\t<bx-livechat-body-loading/>\n\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t\t  \n\t\t\t\t\t\t\t\t<keep-alive include=\"bx-livechat-smiles\">\n\t\t\t\t\t\t\t\t\t<template v-if=\"widget.common.showForm === FormType.like && widget.common.vote.enable\">\n\t\t\t\t\t\t\t\t\t\t<bx-livechat-form-vote/>\n\t\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t\t<template v-else-if=\"widget.common.showForm === FormType.welcome\">\n\t\t\t\t\t\t\t\t\t\t<bx-livechat-form-welcome/>\t\n\t\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t\t<template v-else-if=\"widget.common.showForm === FormType.offline\">\n\t\t\t\t\t\t\t\t\t\t<bx-livechat-form-offline/>\t\n\t\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t\t<template v-else-if=\"widget.common.showForm === FormType.history\">\n\t\t\t\t\t\t\t\t\t\t<bx-livechat-form-history/>\t\n\t\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t\t<template v-else-if=\"widget.common.showForm === FormType.smile\">\n\t\t\t\t\t\t\t\t\t\t<bx-livechat-smiles @selectSmile=\"onSmilesSelectSmile\" @selectSet=\"onSmilesSelectSet\"/>\t\n\t\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t</keep-alive>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</template>\t\n\t\t\t\t\t\t<div class=\"bx-livechat-textarea\" :style=\"[textareaHeightStyle, textareaBottomMargin]\" ref=\"textarea\">\n\t\t\t\t\t\t\t<div class=\"bx-livechat-textarea-resize-handle\" @mousedown=\"onTextareaStartDrag\" @touchstart=\"onTextareaStartDrag\"></div>\n\t\t\t\t\t\t\t<bx-im-component-textarea\n\t\t\t\t\t\t\t\t:siteId=\"application.common.siteId\"\n\t\t\t\t\t\t\t\t:userId=\"application.common.userId\"\n\t\t\t\t\t\t\t\t:dialogId=\"application.dialog.dialogId\"\n\t\t\t\t\t\t\t\t:writesEventLetter=\"3\"\n\t\t\t\t\t\t\t\t:enableEdit=\"true\"\n\t\t\t\t\t\t\t\t:enableCommand=\"false\"\n\t\t\t\t\t\t\t\t:enableMention=\"false\"\n\t\t\t\t\t\t\t\t:enableFile=\"application.disk.enabled\"\n\t\t\t\t\t\t\t\t:autoFocus=\"application.device.type !== DeviceType.mobile\"\n\t\t\t\t\t\t\t\t:styles=\"{button: {backgroundColor: widget.common.styles.backgroundColor, iconColor: widget.common.styles.iconColor}}\"\n\t\t\t\t\t\t\t/>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div v-if=\"!widget.common.copyright && !isBottomLocation\" class=\"bx-livechat-nocopyright-resize-wrap\" style=\"position: relative;\">\n\t\t\t\t\t\t\t<div class=\"bx-livechat-widget-resize-handle\" @mousedown=\"onWidgetStartDrag\"></div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<bx-livechat-form-consent @agree=\"agreeConsentWidow\" @disagree=\"disagreeConsentWidow\"/>\n\t\t\t\t\t\t<template v-if=\"widget.common.copyright\">\n\t\t\t\t\t\t\t<div class=\"bx-livechat-copyright\">\t\n\t\t\t\t\t\t\t\t<template v-if=\"widget.common.copyrightUrl\">\n\t\t\t\t\t\t\t\t\t<a class=\"bx-livechat-copyright-link\" :href=\"widget.common.copyrightUrl\" target=\"_blank\">\n\t\t\t\t\t\t\t\t\t\t<span class=\"bx-livechat-logo-name\">{{localize.BX_LIVECHAT_COPYRIGHT_TEXT}}</span>\n\t\t\t\t\t\t\t\t\t\t<span class=\"bx-livechat-logo-icon\"></span>\n\t\t\t\t\t\t\t\t\t</a>\n\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t<template v-else>\n\t\t\t\t\t\t\t\t\t<span class=\"bx-livechat-logo-name\">{{localize.BX_LIVECHAT_COPYRIGHT_TEXT}}</span>\n\t\t\t\t\t\t\t\t\t<span class=\"bx-livechat-logo-icon\"></span>\n\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t<div v-if=\"!isBottomLocation\" class=\"bx-livechat-widget-resize-handle\" @mousedown=\"onWidgetStartDrag\"></div>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</template>\n\t\t\t\t\t</template>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t</transition>\n\t"
 	});
 
 	/**
@@ -3736,20 +4018,13 @@
 	 * @subpackage imopenlines
 	 * @copyright 2001-2019 Bitrix
 	 */
-	ui_vue.Vue.component('bx-livechat-body-error', {
-	  computed: babelHelpers.objectSpread({
-	    localize: function localize() {
-	      return Object.freeze({
-	        BX_LIVECHAT_ERROR_TITLE: this.$root.$bitrixMessages.BX_LIVECHAT_ERROR_TITLE,
-	        BX_LIVECHAT_ERROR_DESC: this.$root.$bitrixMessages.BX_LIVECHAT_ERROR_DESC
-	      });
-	    }
-	  }, ui_vue_vuex.Vuex.mapState({
+	ui_vue.BitrixVue.component('bx-livechat-body-error', {
+	  computed: babelHelpers.objectSpread({}, ui_vue_vuex.Vuex.mapState({
 	    application: function application(state) {
 	      return state.application;
 	    }
 	  })),
-	  template: "\n\t\t<div class=\"bx-livechat-body\" key=\"error-body\">\n\t\t\t<div class=\"bx-livechat-warning-window\">\n\t\t\t\t<div class=\"bx-livechat-warning-icon\"></div>\n\t\t\t\t<template v-if=\"application.error.description\"> \n\t\t\t\t\t<div class=\"bx-livechat-help-title bx-livechat-help-title-sm bx-livechat-warning-msg\" v-html=\"application.error.description\"></div>\n\t\t\t\t</template> \n\t\t\t\t<template v-else>\n\t\t\t\t\t<div class=\"bx-livechat-help-title bx-livechat-help-title-md bx-livechat-warning-msg\">{{localize.BX_LIVECHAT_ERROR_TITLE}}</div>\n\t\t\t\t\t<div class=\"bx-livechat-help-title bx-livechat-help-title-sm bx-livechat-warning-msg\">{{localize.BX_LIVECHAT_ERROR_DESC}}</div>\n\t\t\t\t</template> \n\t\t\t</div>\n\t\t</div>\n\t"
+	  template: "\n\t\t<div class=\"bx-livechat-body\" key=\"error-body\">\n\t\t\t<div class=\"bx-livechat-warning-window\">\n\t\t\t\t<div class=\"bx-livechat-warning-icon\"></div>\n\t\t\t\t<template v-if=\"application.error.description\"> \n\t\t\t\t\t<div class=\"bx-livechat-help-title bx-livechat-help-title-sm bx-livechat-warning-msg\" v-html=\"application.error.description\"></div>\n\t\t\t\t</template> \n\t\t\t\t<template v-else>\n\t\t\t\t\t<div class=\"bx-livechat-help-title bx-livechat-help-title-md bx-livechat-warning-msg\">{{$Bitrix.Loc.getMessage('BX_LIVECHAT_ERROR_TITLE')}}</div>\n\t\t\t\t\t<div class=\"bx-livechat-help-title bx-livechat-help-title-sm bx-livechat-warning-msg\">{{$Bitrix.Loc.getMessage('BX_LIVECHAT_ERROR_DESC')}}</div>\n\t\t\t\t</template> \n\t\t\t</div>\n\t\t</div>\n\t"
 	});
 
 	/**
@@ -3760,7 +4035,7 @@
 	 * @subpackage imopenlines
 	 * @copyright 2001-2019 Bitrix
 	 */
-	ui_vue.Vue.component('bx-livechat-head', {
+	ui_vue.BitrixVue.component('bx-livechat-head', {
 	  /**
 	   * @emits 'close'
 	   * @emits 'like'
@@ -3778,13 +4053,18 @@
 	    like: function like(event) {
 	      this.$emit('like');
 	    },
-	    history: function history(event) {
-	      this.$emit('history');
+	    openMenu: function openMenu(event) {
+	      this.$emit('openMenu', event);
 	    }
 	  },
 	  computed: babelHelpers.objectSpread({
 	    VoteType: function VoteType$$1() {
 	      return VoteType;
+	    },
+	    chatId: function chatId() {
+	      if (this.application) {
+	        return this.application.dialog.chatId;
+	      }
 	    },
 	    customBackgroundStyle: function customBackgroundStyle(state) {
 	      return state.widget.common.styles.backgroundColor ? 'background-color: ' + state.widget.common.styles.backgroundColor + '!important;' : '';
@@ -3796,6 +4076,10 @@
 	      return state.widget.dialog.operator.firstName || state.widget.dialog.operator.lastName;
 	    },
 	    voteActive: function voteActive(state) {
+	      if (!!state.widget.dialog.closeVote) {
+	        return false;
+	      }
+
 	      if (!state.widget.common.vote.beforeFinish && state.widget.dialog.sessionStatus < SessionStatus.waitClient) {
 	        return false;
 	      }
@@ -3818,11 +4102,23 @@
 	      return state.widget.dialog.operator.firstName ? state.widget.dialog.operator.firstName : state.widget.dialog.operator.name;
 	    },
 	    operatorDescription: function operatorDescription(state) {
-	      if (!this.showName) return '';
-	      return state.widget.dialog.operator.workPosition ? state.widget.dialog.operator.workPosition : this.localize.BX_LIVECHAT_USER;
+	      if (!this.showName) {
+	        return '';
+	      }
+
+	      var operatorPosition = state.widget.dialog.operator.workPosition ? state.widget.dialog.operator.workPosition : this.localize.BX_LIVECHAT_USER;
+
+	      if (state.widget.common.showSessionId && state.widget.dialog.sessionId >= 0) {
+	        return this.localize.BX_LIVECHAT_OPERATOR_POSITION_AND_SESSION_ID.replace("#POSITION#", operatorPosition).replace("#ID#", state.widget.dialog.sessionId);
+	      }
+
+	      return this.localize.BX_LIVECHAT_OPERATOR_POSITION_ONLY.replace("#POSITION#", operatorPosition);
 	    },
 	    localize: function localize() {
-	      return ui_vue.Vue.getFilteredPhrases('BX_LIVECHAT_', this.$root.$bitrixMessages);
+	      return ui_vue.BitrixVue.getFilteredPhrases('BX_LIVECHAT_', this);
+	    },
+	    ie11: function ie11() {
+	      return main_core_minimal.Browser.isIE11();
 	    }
 	  }, ui_vue_vuex.Vuex.mapState({
 	    widget: function widget(state) {
@@ -3838,12 +4134,15 @@
 
 	      if (value) {
 	        setTimeout(function () {
-	          _this.$root.$emit(im_const.EventType.dialog.scrollToBottom);
+	          _this.$root.$emit(im_const.EventType.dialog.scrollToBottom, {
+	            chatId: _this.chatId
+	          });
 	        }, 300);
 	      }
 	    }
 	  },
-	  template: "\n\t\t<div class=\"bx-livechat-head-wrap\">\n\t\t\t<template v-if=\"isWidgetDisabled\">\n\t\t\t\t<div class=\"bx-livechat-head\" :style=\"customBackgroundStyle\">\n\t\t\t\t\t<div class=\"bx-livechat-title\">{{chatTitle}}</div>\n\t\t\t\t\t<div class=\"bx-livechat-control-box\">\n\t\t\t\t\t\t<button v-if=\"!widget.common.pageMode\" class=\"bx-livechat-control-btn bx-livechat-control-btn-close\" :title=\"localize.BX_LIVECHAT_CLOSE_BUTTON\" @click=\"close\"></button>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\t\n\t\t\t</template>\n\t\t\t<template v-else-if=\"application.error.active\">\n\t\t\t\t<div class=\"bx-livechat-head\" :style=\"customBackgroundStyle\">\n\t\t\t\t\t<div class=\"bx-livechat-title\">{{chatTitle}}</div>\n\t\t\t\t\t<div class=\"bx-livechat-control-box\">\n\t\t\t\t\t\t<button v-if=\"!widget.common.pageMode\" class=\"bx-livechat-control-btn bx-livechat-control-btn-close\" :title=\"localize.BX_LIVECHAT_CLOSE_BUTTON\" @click=\"close\"></button>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</template>\n\t\t\t<template v-else-if=\"!widget.common.configId\">\n\t\t\t\t<div class=\"bx-livechat-head\" :style=\"customBackgroundStyle\">\n\t\t\t\t\t<div class=\"bx-livechat-title\">{{chatTitle}}</div>\n\t\t\t\t\t<div class=\"bx-livechat-control-box\">\n\t\t\t\t\t\t<button v-if=\"!widget.common.pageMode\" class=\"bx-livechat-control-btn bx-livechat-control-btn-close\" :title=\"localize.BX_LIVECHAT_CLOSE_BUTTON\" @click=\"close\"></button>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</template>\t\t\t\n\t\t\t<template v-else>\n\t\t\t\t<div class=\"bx-livechat-head\" :style=\"customBackgroundStyle\">\n\t\t\t\t\t<template v-if=\"!showName\">\n\t\t\t\t\t\t<div class=\"bx-livechat-title\">{{chatTitle}}</div>\n\t\t\t\t\t</template>\n\t\t\t\t\t<template v-else>\n\t\t\t\t\t\t<div class=\"bx-livechat-user bx-livechat-status-online\">\n\t\t\t\t\t\t\t<template v-if=\"widget.dialog.operator.avatar\">\n\t\t\t\t\t\t\t\t<div class=\"bx-livechat-user-icon\" :style=\"'background-image: url('+encodeURI(widget.dialog.operator.avatar)+')'\">\n\t\t\t\t\t\t\t\t\t<div v-if=\"widget.dialog.operator.online\" class=\"bx-livechat-user-status\" :style=\"customBackgroundOnlineStyle\"></div>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t<template v-else>\n\t\t\t\t\t\t\t\t<div class=\"bx-livechat-user-icon\">\n\t\t\t\t\t\t\t\t\t<div v-if=\"widget.dialog.operator.online\" class=\"bx-livechat-user-status\" :style=\"customBackgroundOnlineStyle\"></div>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div class=\"bx-livechat-user-info\">\n\t\t\t\t\t\t\t<div class=\"bx-livechat-user-name\">{{operatorName}}</div>\n\t\t\t\t\t\t\t<div class=\"bx-livechat-user-position\">{{operatorDescription}}</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</template>\n\t\t\t\t\t<div class=\"bx-livechat-control-box\">\n\t\t\t\t\t\t<span class=\"bx-livechat-control-box-active\" v-if=\"widget.common.dialogStart && widget.dialog.sessionId\">\n\t\t\t\t\t\t\t<button v-if=\"widget.common.vote.enable && voteActive\" :class=\"'bx-livechat-control-btn bx-livechat-control-btn-like bx-livechat-dialog-vote-'+(widget.dialog.userVote)\" :title=\"localize.BX_LIVECHAT_VOTE_BUTTON\" @click=\"like\"></button>\n\t\t\t\t\t\t\t<button v-if=\"false\" class=\"bx-livechat-control-btn bx-livechat-control-btn-mail\" :title=\"localize.BX_LIVECHAT_MAIL_BUTTON_NEW\" @click=\"history\"></button>\n\t\t\t\t\t\t</span>\t\n\t\t\t\t\t\t<button v-if=\"!widget.common.pageMode\" class=\"bx-livechat-control-btn bx-livechat-control-btn-close\" :title=\"localize.BX_LIVECHAT_CLOSE_BUTTON\" @click=\"close\"></button>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</template>\n\t\t</div>\n\t"
+	  //language=Vue
+	  template: "\n\t\t<div class=\"bx-livechat-head-wrap\">\n\t\t\t<template v-if=\"isWidgetDisabled\">\n\t\t\t\t<div class=\"bx-livechat-head\" :style=\"customBackgroundStyle\">\n\t\t\t\t\t<div class=\"bx-livechat-title\">{{chatTitle}}</div>\n\t\t\t\t\t<div class=\"bx-livechat-control-box\">\n\t\t\t\t\t\t<button v-if=\"!widget.common.pageMode\" class=\"bx-livechat-control-btn bx-livechat-control-btn-close\" :title=\"localize.BX_LIVECHAT_CLOSE_BUTTON\" @click=\"close\"></button>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\t\n\t\t\t</template>\n\t\t\t<template v-else-if=\"application.error.active\">\n\t\t\t\t<div class=\"bx-livechat-head\" :style=\"customBackgroundStyle\">\n\t\t\t\t\t<div class=\"bx-livechat-title\">{{chatTitle}}</div>\n\t\t\t\t\t<div class=\"bx-livechat-control-box\">\n\t\t\t\t\t\t<button v-if=\"!widget.common.pageMode\" class=\"bx-livechat-control-btn bx-livechat-control-btn-close\" :title=\"localize.BX_LIVECHAT_CLOSE_BUTTON\" @click=\"close\"></button>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</template>\n\t\t\t<template v-else-if=\"!widget.common.configId\">\n\t\t\t\t<div class=\"bx-livechat-head\" :style=\"customBackgroundStyle\">\n\t\t\t\t\t<div class=\"bx-livechat-title\">{{chatTitle}}</div>\n\t\t\t\t\t<div class=\"bx-livechat-control-box\">\n\t\t\t\t\t\t<button v-if=\"!widget.common.pageMode\" class=\"bx-livechat-control-btn bx-livechat-control-btn-close\" :title=\"localize.BX_LIVECHAT_CLOSE_BUTTON\" @click=\"close\"></button>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</template>\t\t\t\n\t\t\t<template v-else>\n\t\t\t\t<div class=\"bx-livechat-head\" :style=\"customBackgroundStyle\">\n\t\t\t\t\t<template v-if=\"!showName\">\n\t\t\t\t\t\t<div class=\"bx-livechat-title\">{{chatTitle}}</div>\n\t\t\t\t\t</template>\n\t\t\t\t\t<template v-else>\n\t\t\t\t\t\t<div class=\"bx-livechat-user bx-livechat-status-online\">\n\t\t\t\t\t\t\t<template v-if=\"widget.dialog.operator.avatar\">\n\t\t\t\t\t\t\t\t<div class=\"bx-livechat-user-icon\" :style=\"'background-image: url('+encodeURI(widget.dialog.operator.avatar)+')'\">\n\t\t\t\t\t\t\t\t\t<div v-if=\"widget.dialog.operator.online\" class=\"bx-livechat-user-status\" :style=\"customBackgroundOnlineStyle\"></div>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t<template v-else>\n\t\t\t\t\t\t\t\t<div class=\"bx-livechat-user-icon\">\n\t\t\t\t\t\t\t\t\t<div v-if=\"widget.dialog.operator.online\" class=\"bx-livechat-user-status\" :style=\"customBackgroundOnlineStyle\"></div>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div class=\"bx-livechat-user-info\">\n\t\t\t\t\t\t\t<div class=\"bx-livechat-user-name\">{{operatorName}}</div>\n\t\t\t\t\t\t\t<div class=\"bx-livechat-user-position\">{{operatorDescription}}</div>\t\t\t\t\t\t\t\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</template>\n\t\t\t\t\t<div class=\"bx-livechat-control-box\">\n\t\t\t\t\t\t<span class=\"bx-livechat-control-box-active\" v-if=\"widget.common.dialogStart && widget.dialog.sessionId\">\n\t\t\t\t\t\t\t<button v-if=\"widget.common.vote.enable && voteActive\" :class=\"'bx-livechat-control-btn bx-livechat-control-btn-like bx-livechat-dialog-vote-'+(widget.dialog.userVote)\" :title=\"localize.BX_LIVECHAT_VOTE_BUTTON\" @click=\"like\"></button>\n\t\t\t\t\t\t\t<button\n\t\t\t\t\t\t\t\tv-if=\"!ie11 && application.dialog.chatId > 0\"\n\t\t\t\t\t\t\t\tclass=\"bx-livechat-control-btn bx-livechat-control-btn-menu\"\n\t\t\t\t\t\t\t\t@click=\"openMenu\"\n\t\t\t\t\t\t\t\t:title=\"localize.BX_LIVECHAT_DOWNLOAD_HISTORY\"\n\t\t\t\t\t\t\t></button>\n\t\t\t\t\t\t</span>\t\n\t\t\t\t\t\t<button v-if=\"!widget.common.pageMode\" class=\"bx-livechat-control-btn bx-livechat-control-btn-close\" :title=\"localize.BX_LIVECHAT_CLOSE_BUTTON\" @click=\"close\"></button>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</template>\n\t\t</div>\n\t"
 	});
 
 	/**
@@ -3854,15 +4153,8 @@
 	 * @subpackage imopenlines
 	 * @copyright 2001-2019 Bitrix
 	 */
-	ui_vue.Vue.component('bx-livechat-body-loading', {
-	  computed: {
-	    localize: function localize() {
-	      return Object.freeze({
-	        BX_LIVECHAT_LOADING: this.$root.$bitrixMessages.BX_LIVECHAT_LOADING
-	      });
-	    }
-	  },
-	  template: "\n\t\t<div class=\"bx-livechat-loading-window\">\n\t\t\t<svg class=\"bx-livechat-loading-circular\" viewBox=\"25 25 50 50\">\n\t\t\t\t<circle class=\"bx-livechat-loading-path\" cx=\"50\" cy=\"50\" r=\"20\" fill=\"none\" stroke-miterlimit=\"10\"/>\n\t\t\t\t<circle class=\"bx-livechat-loading-inner-path\" cx=\"50\" cy=\"50\" r=\"20\" fill=\"none\" stroke-miterlimit=\"10\"/>\n\t\t\t</svg>\n\t\t\t<h3 class=\"bx-livechat-help-title bx-livechat-help-title-md bx-livechat-loading-msg\">{{localize.BX_LIVECHAT_LOADING}}</h3>\n\t\t</div>\n\t"
+	ui_vue.BitrixVue.component('bx-livechat-body-loading', {
+	  template: "\n\t\t<div class=\"bx-livechat-loading-window\">\n\t\t\t<svg class=\"bx-livechat-loading-circular\" viewBox=\"25 25 50 50\">\n\t\t\t\t<circle class=\"bx-livechat-loading-path\" cx=\"50\" cy=\"50\" r=\"20\" fill=\"none\" stroke-miterlimit=\"10\"/>\n\t\t\t\t<circle class=\"bx-livechat-loading-inner-path\" cx=\"50\" cy=\"50\" r=\"20\" fill=\"none\" stroke-miterlimit=\"10\"/>\n\t\t\t</svg>\n\t\t\t<h3 class=\"bx-livechat-help-title bx-livechat-help-title-md bx-livechat-loading-msg\">{{$Bitrix.Loc.getMessage('BX_LIVECHAT_LOADING')}}</h3>\n\t\t</div>\n\t"
 	});
 
 	/**
@@ -3873,12 +4165,8 @@
 	 * @subpackage imopenlines
 	 * @copyright 2001-2019 Bitrix
 	 */
-	ui_vue.Vue.component('bx-livechat-body-operators', {
-	  computed: babelHelpers.objectSpread({
-	    localize: function localize() {
-	      return ui_vue.Vue.getFilteredPhrases('BX_LIVECHAT_', this.$root.$bitrixMessages);
-	    }
-	  }, ui_vue_vuex.Vuex.mapState({
+	ui_vue.BitrixVue.component('bx-livechat-body-operators', {
+	  computed: babelHelpers.objectSpread({}, ui_vue_vuex.Vuex.mapState({
 	    widget: function widget(state) {
 	      return state.widget;
 	    }
@@ -3894,15 +4182,8 @@
 	 * @subpackage imopenlines
 	 * @copyright 2001-2019 Bitrix
 	 */
-	ui_vue.Vue.component('bx-livechat-body-orientation-disabled', {
-	  computed: {
-	    localize: function localize() {
-	      return Object.freeze({
-	        BX_LIVECHAT_MOBILE_ROTATE: this.$root.$bitrixMessages.BX_LIVECHAT_MOBILE_ROTATE
-	      });
-	    }
-	  },
-	  template: "\n\t\t<div class=\"bx-livechat-body\" key=\"orientation-head\">\n\t\t\t<div class=\"bx-livechat-mobile-orientation-box\">\n\t\t\t\t<div class=\"bx-livechat-mobile-orientation-icon\"></div>\n\t\t\t\t<div class=\"bx-livechat-mobile-orientation-text\">{{localize.BX_LIVECHAT_MOBILE_ROTATE}}</div>\n\t\t\t</div>\n\t\t</div>\n\t"
+	ui_vue.BitrixVue.component('bx-livechat-body-orientation-disabled', {
+	  template: "\n\t\t<div class=\"bx-livechat-body\" key=\"orientation-head\">\n\t\t\t<div class=\"bx-livechat-mobile-orientation-box\">\n\t\t\t\t<div class=\"bx-livechat-mobile-orientation-icon\"></div>\n\t\t\t\t<div class=\"bx-livechat-mobile-orientation-text\">{{$Bitrix.Loc.getMessage('BX_LIVECHAT_MOBILE_ROTATE')}}</div>\n\t\t\t</div>\n\t\t</div>\n\t"
 	});
 
 	/**
@@ -3913,16 +4194,12 @@
 	 * @subpackage imopenlines
 	 * @copyright 2001-2019 Bitrix
 	 */
-	ui_vue.Vue.component('bx-livechat-form-consent', {
+	ui_vue.BitrixVue.component('bx-livechat-form-consent', {
 	  /**
 	   * @emits 'agree' {event: object} -- 'event' - click event
 	   * @emits 'disagree' {event: object} -- 'event' - click event
 	   */
-	  computed: babelHelpers.objectSpread({
-	    localize: function localize() {
-	      return ui_vue.Vue.getFilteredPhrases('BX_LIVECHAT_', this.$root.$bitrixMessages);
-	    }
-	  }, ui_vue_vuex.Vuex.mapState({
+	  computed: babelHelpers.objectSpread({}, ui_vue_vuex.Vuex.mapState({
 	    widget: function widget(state) {
 	      return state.widget;
 	    }
@@ -3990,7 +4267,7 @@
 	      }
 	    }
 	  },
-	  template: "\n\t\t<transition @enter=\"onShow\" @leave=\"onHide\">\n\t\t\t<template v-if=\"widget.common.showConsent && widget.common.consentUrl\">\n\t\t\t\t<div class=\"bx-livechat-consent-window\">\n\t\t\t\t\t<div class=\"bx-livechat-consent-window-title\">{{localize.BX_LIVECHAT_CONSENT_TITLE}}</div>\n\t\t\t\t\t<div class=\"bx-livechat-consent-window-content\">\n\t\t\t\t\t\t<iframe class=\"bx-livechat-consent-window-content-iframe\" ref=\"iframe\" frameborder=\"0\" marginheight=\"0\"  marginwidth=\"0\" allowtransparency=\"allow-same-origin\" seamless=\"true\" :src=\"widget.common.consentUrl\" @keydown=\"onKeyDown\"></iframe>\n\t\t\t\t\t</div>\t\t\t\t\t\t\t\t\n\t\t\t\t\t<div class=\"bx-livechat-consent-window-btn-box\">\n\t\t\t\t\t\t<button class=\"bx-livechat-btn bx-livechat-btn-success\" ref=\"success\" @click=\"agree\" @keydown=\"onKeyDown\" v-focus>{{localize.BX_LIVECHAT_CONSENT_AGREE}}</button>\n\t\t\t\t\t\t<button class=\"bx-livechat-btn bx-livechat-btn-cancel\" ref=\"cancel\" @click=\"disagree\" @keydown=\"onKeyDown\">{{localize.BX_LIVECHAT_CONSENT_DISAGREE}}</button>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</template>\n\t\t</transition>\n\t"
+	  template: "\n\t\t<transition @enter=\"onShow\" @leave=\"onHide\">\n\t\t\t<template v-if=\"widget.common.showConsent && widget.common.consentUrl\">\n\t\t\t\t<div class=\"bx-livechat-consent-window\">\n\t\t\t\t\t<div class=\"bx-livechat-consent-window-title\">{{$Bitrix.Loc.getMessage('BX_LIVECHAT_CONSENT_TITLE')}}</div>\n\t\t\t\t\t<div class=\"bx-livechat-consent-window-content\">\n\t\t\t\t\t\t<iframe class=\"bx-livechat-consent-window-content-iframe\" ref=\"iframe\" frameborder=\"0\" marginheight=\"0\"  marginwidth=\"0\" allowtransparency=\"allow-same-origin\" seamless=\"true\" :src=\"widget.common.consentUrl\" @keydown=\"onKeyDown\"></iframe>\n\t\t\t\t\t</div>\t\t\t\t\t\t\t\t\n\t\t\t\t\t<div class=\"bx-livechat-consent-window-btn-box\">\n\t\t\t\t\t\t<button class=\"bx-livechat-btn bx-livechat-btn-success\" ref=\"success\" @click=\"agree\" @keydown=\"onKeyDown\" v-focus>{{$Bitrix.Loc.getMessage('BX_LIVECHAT_CONSENT_AGREE')}}</button>\n\t\t\t\t\t\t<button class=\"bx-livechat-btn bx-livechat-btn-cancel\" ref=\"cancel\" @click=\"disagree\" @keydown=\"onKeyDown\">{{$Bitrix.Loc.getMessage('BX_LIVECHAT_CONSENT_DISAGREE')}}</button>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</template>\n\t\t</transition>\n\t"
 	});
 
 	/**
@@ -4001,7 +4278,7 @@
 	 * @subpackage imopenlines
 	 * @copyright 2001-2019 Bitrix
 	 */
-	ui_vue.Vue.component('bx-livechat-form-history', {
+	ui_vue.BitrixVue.component('bx-livechat-form-history', {
 	  data: function data() {
 	    return {
 	      fieldEmail: ''
@@ -4013,11 +4290,7 @@
 	      this.fieldEmailTimeout = setTimeout(this.checkEmailField, 300);
 	    }
 	  },
-	  computed: babelHelpers.objectSpread({
-	    localize: function localize() {
-	      return ui_vue.Vue.getFilteredPhrases('BX_LIVECHAT_', this.$root.$bitrixMessages);
-	    }
-	  }, ui_vue_vuex.Vuex.mapState({
+	  computed: babelHelpers.objectSpread({}, ui_vue_vuex.Vuex.mapState({
 	    widget: function widget(state) {
 	      return state.widget;
 	    }
@@ -4035,7 +4308,7 @@
 	      var email = this.checkEmailField() ? this.fieldEmail : '';
 
 	      if (email) {
-	        this.$root.$bitrixApplication.sendForm(FormType.history, {
+	        this.$Bitrix.Application.get().sendForm(FormType.history, {
 	          email: email
 	        });
 	      }
@@ -4068,7 +4341,7 @@
 	      }
 	    }
 	  },
-	  template: "\n\t\t<transition enter-active-class=\"bx-livechat-consent-window-show\" leave-active-class=\"bx-livechat-form-close\" @after-enter=\"formShowed\">\n\t\t\t<div v-if=\"false\" class=\"bx-livechat-alert-box bx-livechat-form-show\" key=\"welcome\">\t\n\t\t\t\t<div class=\"bx-livechat-alert-close\" @click=\"hideForm\"></div>\n\t\t\t\t<div class=\"bx-livechat-alert-form-box\">\n\t\t\t\t\t<h4 class=\"bx-livechat-alert-title bx-livechat-alert-title-sm\">{{localize.BX_LIVECHAT_MAIL_TITLE_NEW}}</h4>\n\t\t\t\t\t<div class=\"bx-livechat-form-item ui-ctl ui-ctl-after-icon ui-ctl-w100 ui-ctl-lg\" ref=\"email\">\n\t\t\t\t\t   <div class=\"ui-ctl-after ui-ctl-icon-mail bx-livechat-form-icon\" :title=\"localize.BX_LIVECHAT_FIELD_MAIL_TOOLTIP\"></div>\n\t\t\t\t\t   <input type=\"text\" class=\"ui-ctl-element ui-ctl-textbox\" :placeholder=\"localize.BX_LIVECHAT_FIELD_MAIL\" v-model=\"fieldEmail\" ref=\"emailInput\" @blur=\"checkEmailField\" @keydown.enter=\"onFieldEnterPress\">\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"bx-livechat-btn-box\">\n\t\t\t\t\t\t<button class=\"bx-livechat-btn bx-livechat-btn-success\" @click=\"sendForm\">{{localize.BX_LIVECHAT_MAIL_BUTTON_NEW}}</button>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</div>\t\n\t\t</transition>\t\n\t"
+	  template: "\n\t\t<transition enter-active-class=\"bx-livechat-consent-window-show\" leave-active-class=\"bx-livechat-form-close\" @after-enter=\"formShowed\">\n\t\t\t<div v-if=\"false\" class=\"bx-livechat-alert-box bx-livechat-form-show\" key=\"welcome\">\t\n\t\t\t\t<div class=\"bx-livechat-alert-close\" @click=\"hideForm\"></div>\n\t\t\t\t<div class=\"bx-livechat-alert-form-box\">\n\t\t\t\t\t<h4 class=\"bx-livechat-alert-title bx-livechat-alert-title-sm\">{{$Bitrix.Loc.getMessage('BX_LIVECHAT_MAIL_TITLE_NEW')}}</h4>\n\t\t\t\t\t<div class=\"bx-livechat-form-item ui-ctl ui-ctl-after-icon ui-ctl-w100 ui-ctl-lg\" ref=\"email\">\n\t\t\t\t\t   <div class=\"ui-ctl-after ui-ctl-icon-mail bx-livechat-form-icon\" :title=\"$Bitrix.Loc.getMessage('BX_LIVECHAT_FIELD_MAIL_TOOLTIP')\"></div>\n\t\t\t\t\t   <input type=\"text\" class=\"ui-ctl-element ui-ctl-textbox\" :placeholder=\"$Bitrix.Loc.getMessage('BX_LIVECHAT_FIELD_MAIL')\" v-model=\"fieldEmail\" ref=\"emailInput\" @blur=\"checkEmailField\" @keydown.enter=\"onFieldEnterPress\">\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"bx-livechat-btn-box\">\n\t\t\t\t\t\t<button class=\"bx-livechat-btn bx-livechat-btn-success\" @click=\"sendForm\">{{$Bitrix.Loc.getMessage('BX_LIVECHAT_MAIL_BUTTON_NEW')}}</button>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</div>\t\n\t\t</transition>\t\n\t"
 	});
 
 	/**
@@ -4092,7 +4365,7 @@
 	      var phone = this.checkPhoneField() ? this.fieldPhone : '';
 
 	      if (name || email || phone) {
-	        this.$root.$bitrixApplication.sendForm(FormType.offline, {
+	        this.$Bitrix.Application.get().sendForm(FormType.offline, {
 	          name: name,
 	          email: email,
 	          phone: phone
@@ -4137,13 +4410,10 @@
 	 * @subpackage imopenlines
 	 * @copyright 2001-2019 Bitrix
 	 */
-	ui_vue.Vue.component('bx-livechat-form-vote', {
+	ui_vue.BitrixVue.component('bx-livechat-form-vote', {
 	  computed: babelHelpers.objectSpread({
 	    VoteType: function VoteType$$1() {
 	      return VoteType;
-	    },
-	    localize: function localize() {
-	      return ui_vue.Vue.getFilteredPhrases('BX_LIVECHAT_', this.$root.$bitrixMessages);
 	    }
 	  }, ui_vue_vuex.Vuex.mapState({
 	    widget: function widget(state) {
@@ -4158,7 +4428,7 @@
 	      this.$store.commit('widget/dialog', {
 	        userVote: vote
 	      });
-	      this.$root.$bitrixApplication.sendDialogVote(vote);
+	      this.$Bitrix.Application.get().sendDialogVote(vote);
 	    },
 	    hideForm: function hideForm(event) {
 	      this.$parent.hideForm();
@@ -4175,7 +4445,7 @@
 	 * @subpackage imopenlines
 	 * @copyright 2001-2019 Bitrix
 	 */
-	ui_vue.Vue.component('bx-livechat-form-welcome', {
+	ui_vue.BitrixVue.component('bx-livechat-form-welcome', {
 	  data: function data() {
 	    return {
 	      fieldName: '',
@@ -4202,7 +4472,7 @@
 	  },
 	  computed: babelHelpers.objectSpread({
 	    localize: function localize() {
-	      return ui_vue.Vue.getFilteredPhrases('BX_LIVECHAT_', this.$root.$bitrixMessages);
+	      return ui_vue.BitrixVue.getFilteredPhrases('BX_LIVECHAT_', this);
 	    }
 	  }, ui_vue_vuex.Vuex.mapState({
 	    widget: function widget(state) {
@@ -4230,7 +4500,7 @@
 	      var phone = this.checkPhoneField() ? this.fieldPhone : '';
 
 	      if (name || email || phone) {
-	        this.$root.$bitrixApplication.sendForm(FormType.welcome, {
+	        this.$Bitrix.Application.get().sendForm(FormType.welcome, {
 	          name: name,
 	          email: email,
 	          phone: phone
@@ -4332,27 +4602,6 @@
 
 	/**
 	 * Bitrix OpenLines widget
-	 * Footer component (Vue component)
-	 *
-	 * @package bitrix
-	 * @subpackage imopenlines
-	 * @copyright 2001-2019 Bitrix
-	 */
-	ui_vue.Vue.component('bx-livechat-footer', {
-	  computed: babelHelpers.objectSpread({
-	    localize: function localize() {
-	      return ui_vue.Vue.getFilteredPhrases('BX_LIVECHAT_COPYRIGHT_', this.$root.$bitrixMessages);
-	    }
-	  }, ui_vue_vuex.Vuex.mapState({
-	    widget: function widget(state) {
-	      return state.widget;
-	    }
-	  })),
-	  template: "\n\t\t<div class=\"bx-livechat-copyright\">\t\n\t\t\t<template v-if=\"widget.common.copyrightUrl\">\n\t\t\t\t<a :href=\"widget.common.copyrightUrl\" target=\"_blank\">\n\t\t\t\t\t<span class=\"bx-livechat-logo-name\">{{localize.BX_LIVECHAT_COPYRIGHT_TEXT}}</span>\n\t\t\t\t\t<span class=\"bx-livechat-logo-icon\"></span>\n\t\t\t\t</a>\n\t\t\t</template>\n\t\t\t<template v-else>\n\t\t\t\t<span class=\"bx-livechat-logo-name\">{{localize.BX_LIVECHAT_COPYRIGHT_TEXT}}</span>\n\t\t\t\t<span class=\"bx-livechat-logo-icon\"></span>\n\t\t\t</template>\n\t\t</div>\n\t"
-	});
-
-	/**
-	 * Bitrix OpenLines widget
 	 * Widget component & controller
 	 *
 	 * @package bitrix
@@ -4368,5 +4617,5 @@
 	  detail: {}
 	}));
 
-}((this.window = this.window || {}),BX,window,window,window,window,window,window,window,BX,BX.Messenger.Provider.Rest,BX,BX,BX.Messenger,BX.Messenger.Lib,BX.Messenger.Lib,BX.Messenger.Lib,BX,BX.Messenger.Const,BX,BX,BX.Messenger.Lib,BX,BX));
+}((this.window = this.window || {}),BX,window,window,BX.Messenger,window,BX,window,window,BX,BX.Messenger.Provider.Rest,BX,BX,BX.Messenger,BX.Messenger.Lib,BX.Messenger.Lib,BX.Messenger.Lib,BX.Messenger.Lib,BX.Messenger.Mixin,BX,BX.Event,BX.Messenger.Const,BX,BX,BX,BX,BX.Messenger.Lib,BX));
 //# sourceMappingURL=widget.bundle.js.map

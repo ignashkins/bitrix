@@ -111,7 +111,10 @@ if ($arParams["CACHE_TIME"] > 0 && $cache->InitCache($arParams["CACHE_TIME"], $c
 	$Vars = $cache->GetVars();
 	foreach($Vars["arResult"] as $k=>$v)
 		$arResult[$k] = $v;
-	CBitrixComponentTemplate::ApplyCachedData($Vars["templateCachedData"]);
+
+	$template = new CBitrixComponentTemplate();
+	$template->ApplyCachedData($Vars["templateCachedData"]);
+
 	$cache->Output();
 }
 else
@@ -172,6 +175,7 @@ else
 	$blogUser->setBlogId($arPost["BLOG_ID"]);
 	$blogUsers = $blogUser->getUsers(\Bitrix\Blog\BlogUser::getPostAuthorsIdsByDbFilter($arFilter));
 
+	$arResult["POSTS"] = [];
 	while ($arPost = $dbPosts->GetNext())
 	{
 		$arResult["IDS"][] = $arPost["ID"];

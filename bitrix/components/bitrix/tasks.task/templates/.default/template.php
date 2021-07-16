@@ -11,6 +11,8 @@ Loc::loadMessages(__FILE__);
 
 \Bitrix\Main\UI\Extension::load("ui.alerts");
 
+$APPLICATION->SetAdditionalCSS("/bitrix/js/intranet/intranet-common.css");
+
 if (!empty($arResult['ERROR']))
 {
 	foreach ($arResult['ERROR'] as $error)
@@ -129,6 +131,11 @@ if ($taskLimitExceeded)
 		<input type="hidden" name="SITE_ID" value="<?=SITE_ID?>" />
 		<input data-bx-id="task-edit-csrf" type="hidden" name="sessid" value="<?=bitrix_sessid()?>" />
 		<input type="hidden" name="EMITTER" value="<?=htmlspecialcharsbx($arResult['COMPONENT_DATA']['ID'])?>" /> <?// a page-unique component id that performs the query ?>
+
+		<input type="hidden" name="CALENDAR_EVENT_ID" value="<?= (int)$arResult['COMPONENT_DATA']['CALENDAR_EVENT_ID'] ?>">
+		<input type="hidden" name="CALENDAR_EVENT_DATA" value="<?= htmlspecialcharsbx(\Bitrix\Main\Web\Json::encode($arResult['COMPONENT_DATA']['CALENDAR_EVENT_DATA'])) ?>">
+
+		<input type="hidden" name="FIRST_GRID_TASK_CREATION_TOUR_GUIDE" value="<?= htmlspecialcharsbx($arResult['COMPONENT_DATA']['FIRST_GRID_TASK_CREATION_TOUR_GUIDE']) ?>">
 
 		<?// todo: move to hit state?>
 		<input type="hidden" name="BACKURL" value="<?=htmlspecialcharsbx(Util::secureBackUrl($arResult['TEMPLATE_DATA']['BACKURL']))?>" />
@@ -995,6 +1002,7 @@ if ($taskLimitExceeded)
 			'EVENT_OPTIONS' => $arResult['COMPONENT_DATA']['EVENT_OPTIONS'],
 			'MODULES' => $arResult['COMPONENT_DATA']['MODULES'],
 		),
+		'calendarSettings' => $arResult['CALENDAR_SETTINGS'],
 		'auxData' => array( // currently no more, no less
 			'COMPANY_WORKTIME' => $arResult['AUX_DATA']['COMPANY_WORKTIME'],
 			'HINT_STATE' => $arResult['AUX_DATA']['HINT_STATE'],

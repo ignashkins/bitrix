@@ -1,6 +1,6 @@
 this.BX = this.BX || {};
 this.BX.Tasks = this.BX.Tasks || {};
-(function (exports,ui_entitySelector,ui_confetti,main_loader,main_popup,ui_draganddrop_draggable,ui_label,ui_dialogs_messagebox,main_core_events,main_core) {
+(function (exports,ui_entitySelector,ui_confetti,main_loader,ui_draganddrop_draggable,pull_client,ui_label,ui_dialogs_messagebox,main_popup,main_core,main_core_events) {
 	'use strict';
 
 	var RequestSender = /*#__PURE__*/function () {
@@ -18,8 +18,21 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    }
 	  }, {
 	    key: "sendRequest",
-	    value: function sendRequest() {
+	    value: function sendRequest(action) {
 	      var _this = this;
+
+	      var data = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+	      return new Promise(function (resolve, reject) {
+	        main_core.ajax.runAction(action, {
+	          signedParameters: _this.signedParameters,
+	          data: data
+	        }).then(resolve, reject);
+	      });
+	    }
+	  }, {
+	    key: "sendRequestToComponent",
+	    value: function sendRequestToComponent() {
+	      var _this2 = this;
 
 	      var data = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 	      var action = arguments.length > 1 ? arguments[1] : undefined;
@@ -27,7 +40,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      return new Promise(function (resolve, reject) {
 	        main_core.ajax.runComponentAction('bitrix:tasks.scrum', action, {
 	          mode: 'class',
-	          signedParameters: _this.signedParameters,
+	          signedParameters: _this2.signedParameters,
 	          data: data
 	        }).then(resolve, reject);
 	      });
@@ -35,112 +48,132 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "batchUpdateItem",
 	    value: function batchUpdateItem(data) {
-	      return this.sendRequest(data, 'batchUpdateItem');
+	      return this.sendRequestToComponent(data, 'batchUpdateItem');
 	    }
 	  }, {
 	    key: "batchRemoveItem",
 	    value: function batchRemoveItem(data) {
-	      return this.sendRequest(data, 'batchRemoveItem');
+	      return this.sendRequestToComponent(data, 'batchRemoveItem');
 	    }
 	  }, {
 	    key: "updateItemSort",
 	    value: function updateItemSort(data) {
-	      return this.sendRequest(data, 'updateItemSort');
+	      return this.sendRequestToComponent(data, 'updateItemSort');
 	    }
 	  }, {
 	    key: "updateSprintSort",
 	    value: function updateSprintSort(data) {
-	      return this.sendRequest(data, 'updateSprintSort');
+	      return this.sendRequestToComponent(data, 'updateSprintSort');
 	    }
 	  }, {
 	    key: "createSprint",
 	    value: function createSprint(data) {
-	      return this.sendRequest(data, 'createSprint');
+	      return this.sendRequestToComponent(data, 'createSprint');
 	    }
 	  }, {
 	    key: "startSprint",
 	    value: function startSprint(data) {
-	      return this.sendRequest(data, 'startSprint');
+	      return this.sendRequestToComponent(data, 'startSprint');
 	    }
 	  }, {
 	    key: "completeSprint",
 	    value: function completeSprint(data) {
-	      return this.sendRequest(data, 'completeSprint');
+	      return this.sendRequestToComponent(data, 'completeSprint');
 	    }
 	  }, {
 	    key: "createTask",
 	    value: function createTask(data) {
-	      return this.sendRequest(data, 'createTask');
+	      return this.sendRequestToComponent(data, 'createTask');
 	    }
 	  }, {
 	    key: "updateItem",
 	    value: function updateItem(data) {
-	      return this.sendRequest(data, 'updateItem');
+	      return this.sendRequestToComponent(data, 'updateItem');
 	    }
 	  }, {
 	    key: "removeItem",
 	    value: function removeItem(data) {
-	      return this.sendRequest(data, 'removeItem');
+	      return this.sendRequestToComponent(data, 'removeItem');
 	    }
 	  }, {
 	    key: "changeTaskResponsible",
 	    value: function changeTaskResponsible(data) {
-	      return this.sendRequest(data, 'changeTaskResponsible');
+	      return this.sendRequestToComponent(data, 'changeTaskResponsible');
+	    }
+	  }, {
+	    key: "getCurrentState",
+	    value: function getCurrentState(data) {
+	      return this.sendRequestToComponent(data, 'getCurrentState');
+	    }
+	  }, {
+	    key: "hasTaskInFilter",
+	    value: function hasTaskInFilter(data) {
+	      return this.sendRequestToComponent(data, 'hasTaskInFilter');
 	    }
 	  }, {
 	    key: "removeSprint",
 	    value: function removeSprint(data) {
-	      return this.sendRequest(data, 'removeSprint');
+	      return this.sendRequestToComponent(data, 'removeSprint');
 	    }
 	  }, {
 	    key: "changeSprintName",
 	    value: function changeSprintName(data) {
-	      return this.sendRequest(data, 'changeSprintName');
+	      return this.sendRequestToComponent(data, 'changeSprintName');
 	    }
 	  }, {
 	    key: "changeSprintDeadline",
 	    value: function changeSprintDeadline(data) {
-	      return this.sendRequest(data, 'changeSprintDeadline');
+	      return this.sendRequestToComponent(data, 'changeSprintDeadline');
 	    }
 	  }, {
 	    key: "getSprintCompletedItems",
 	    value: function getSprintCompletedItems(data) {
-	      return this.sendRequest(data, 'getSprintCompletedItems');
+	      return this.sendRequestToComponent(data, 'getSprintCompletedItems');
+	    }
+	  }, {
+	    key: "getCompletedSprints",
+	    value: function getCompletedSprints(data) {
+	      return this.sendRequestToComponent(data, 'getCompletedSprints');
+	    }
+	  }, {
+	    key: "getItems",
+	    value: function getItems(data) {
+	      return this.sendRequestToComponent(data, 'getItems');
 	    }
 	  }, {
 	    key: "getEpicDescriptionEditor",
 	    value: function getEpicDescriptionEditor(data) {
-	      return this.sendRequest(data, 'getEpicDescriptionEditor');
+	      return this.sendRequestToComponent(data, 'getEpicDescriptionEditor');
 	    }
 	  }, {
 	    key: "getEpicDescription",
 	    value: function getEpicDescription(data) {
-	      return this.sendRequest(data, 'getEpicDescription');
+	      return this.sendRequestToComponent(data, 'getEpicDescription');
 	    }
 	  }, {
 	    key: "getEpicFiles",
 	    value: function getEpicFiles(data) {
-	      return this.sendRequest(data, 'getEpicFiles');
+	      return this.sendRequestToComponent(data, 'getEpicFiles');
 	    }
 	  }, {
 	    key: "getAddEpicFormButtons",
 	    value: function getAddEpicFormButtons(data) {
-	      return this.sendRequest(data, 'getAddEpicFormButtons');
+	      return this.sendRequestToComponent(data, 'getAddEpicFormButtons');
 	    }
 	  }, {
 	    key: "getViewEpicFormButtonsAction",
 	    value: function getViewEpicFormButtonsAction(data) {
-	      return this.sendRequest(data, 'getViewEpicFormButtons');
+	      return this.sendRequestToComponent(data, 'getViewEpicFormButtons');
 	    }
 	  }, {
 	    key: "createEpic",
 	    value: function createEpic(data) {
-	      return this.sendRequest(data, 'createEpic');
+	      return this.sendRequestToComponent(data, 'createEpic');
 	    }
 	  }, {
 	    key: "getEpicsList",
 	    value: function getEpicsList(data) {
-	      return this.sendRequest(data, 'getEpicsList');
+	      return this.sendRequestToComponent(data, 'getEpicsList');
 	    }
 	  }, {
 	    key: "getEpicListUrl",
@@ -150,97 +183,117 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "attachFilesToTask",
 	    value: function attachFilesToTask(data) {
-	      return this.sendRequest(data, 'attachFilesToTask');
+	      return this.sendRequestToComponent(data, 'attachFilesToTask');
 	    }
 	  }, {
 	    key: "attachTagToTask",
 	    value: function attachTagToTask(data) {
-	      return this.sendRequest(data, 'attachTagToTask');
+	      return this.sendRequestToComponent(data, 'attachTagToTask');
 	    }
 	  }, {
 	    key: "batchAttachTagToTask",
 	    value: function batchAttachTagToTask(data) {
-	      return this.sendRequest(data, 'batchAttachTagToTask');
+	      return this.sendRequestToComponent(data, 'batchAttachTagToTask');
 	    }
 	  }, {
 	    key: "deAttachTagToTask",
 	    value: function deAttachTagToTask(data) {
-	      return this.sendRequest(data, 'deAttachTagToTask');
+	      return this.sendRequestToComponent(data, 'deAttachTagToTask');
 	    }
 	  }, {
 	    key: "batchDeattachTagToTask",
 	    value: function batchDeattachTagToTask(data) {
-	      return this.sendRequest(data, 'batchDeattachTagToTask');
+	      return this.sendRequestToComponent(data, 'batchDeattachTagToTask');
 	    }
 	  }, {
 	    key: "updateItemEpic",
 	    value: function updateItemEpic(data) {
-	      return this.sendRequest(data, 'updateItemEpic');
+	      return this.sendRequestToComponent(data, 'updateItemEpic');
 	    }
 	  }, {
 	    key: "batchUpdateItemEpic",
 	    value: function batchUpdateItemEpic(data) {
-	      return this.sendRequest(data, 'batchUpdateItemEpic');
+	      return this.sendRequestToComponent(data, 'batchUpdateItemEpic');
 	    }
 	  }, {
 	    key: "getEpic",
 	    value: function getEpic(data) {
-	      return this.sendRequest(data, 'getEpic');
+	      return this.sendRequestToComponent(data, 'getEpic');
 	    }
 	  }, {
 	    key: "editEpic",
 	    value: function editEpic(data) {
-	      return this.sendRequest(data, 'editEpic');
+	      return this.sendRequestToComponent(data, 'editEpic');
 	    }
 	  }, {
 	    key: "removeEpic",
 	    value: function removeEpic(data) {
-	      return this.sendRequest(data, 'removeEpic');
+	      return this.sendRequestToComponent(data, 'removeEpic');
 	    }
 	  }, {
 	    key: "applyFilter",
 	    value: function applyFilter(data) {
-	      return this.sendRequest(data, 'applyFilter');
+	      return this.sendRequestToComponent(data, 'applyFilter');
 	    }
 	  }, {
 	    key: "getSprintStartButtons",
 	    value: function getSprintStartButtons(data) {
-	      return this.sendRequest(data, 'getSprintStartButtons');
+	      return this.sendRequestToComponent(data, 'getSprintStartButtons');
 	    }
 	  }, {
 	    key: "getSprintCompleteButtons",
 	    value: function getSprintCompleteButtons(data) {
-	      return this.sendRequest(data, 'getSprintCompleteButtons');
+	      return this.sendRequestToComponent(data, 'getSprintCompleteButtons');
 	    }
 	  }, {
 	    key: "getBurnDownChartData",
 	    value: function getBurnDownChartData(data) {
-	      return this.sendRequest(data, 'getBurnDownChartData');
+	      return this.sendRequestToComponent(data, 'getBurnDownChartData');
 	    }
 	  }, {
 	    key: "getTeamSpeedChartData",
 	    value: function getTeamSpeedChartData(data) {
-	      return this.sendRequest(data, 'getTeamSpeedChartData');
+	      return this.sendRequestToComponent(data, 'getTeamSpeedChartData');
 	    }
 	  }, {
 	    key: "getDodPanelData",
 	    value: function getDodPanelData(data) {
-	      return this.sendRequest(data, 'getDodPanelData');
+	      return this.sendRequestToComponent(data, 'getDodPanelData');
 	    }
 	  }, {
 	    key: "getDodComponent",
 	    value: function getDodComponent(data) {
-	      return this.sendRequest(data, 'getDodComponent');
+	      return this.sendRequestToComponent(data, 'getDodComponent');
 	    }
 	  }, {
 	    key: "getDodButtons",
 	    value: function getDodButtons(data) {
-	      return this.sendRequest(data, 'getDodButtons');
+	      return this.sendRequestToComponent(data, 'getDodButtons');
 	    }
 	  }, {
 	    key: "saveDod",
 	    value: function saveDod(data) {
-	      return this.sendRequest(data, 'saveDod');
+	      return this.sendRequestToComponent(data, 'saveDod');
+	    }
+	  }, {
+	    key: "readAllTasksComment",
+	    value: function readAllTasksComment(data) {
+	      return this.sendRequest('tasks.task.comment.readAll', data);
+	    }
+	  }, {
+	    key: "updateBorderColorToLinkedItems",
+	    value: function updateBorderColorToLinkedItems(data) {
+	      return this.sendRequestToComponent(data, 'updateBorderColorToLinkedItems');
+	    }
+	  }, {
+	    key: "getAllUsedItemBorderColors",
+	    value: function getAllUsedItemBorderColors(data) {
+	      return this.sendRequestToComponent(data, 'getAllUsedItemBorderColors');
+	    }
+	  }, {
+	    key: "getSubTaskItems",
+	    value: function getSubTaskItems(data) {
+	      return this.sendRequestToComponent(data, 'getSubTaskItems');
 	    }
 	  }, {
 	    key: "showErrorAlert",
@@ -264,6 +317,557 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }]);
 	  return RequestSender;
 	}();
+
+	var Filter = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(Filter, _EventEmitter);
+
+	  function Filter(params) {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, Filter);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Filter).call(this, params));
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.Filter');
+
+	    _this.filterId = params.filterId;
+	    _this.requestSender = params.requestSender;
+	    _this.searchFieldApplied = false;
+
+	    _this.initUiFilterManager();
+
+	    _this.bindHandlers();
+
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(Filter, [{
+	    key: "initUiFilterManager",
+	    value: function initUiFilterManager() {
+	      /* eslint-disable */
+	      this.filterManager = BX.Main.filterManager.getById(this.filterId);
+	      /* eslint-enable */
+	    }
+	  }, {
+	    key: "bindHandlers",
+	    value: function bindHandlers() {
+	      main_core_events.EventEmitter.subscribe('BX.Main.Filter:apply', this.onApplyFilter.bind(this));
+	    }
+	  }, {
+	    key: "isSearchFieldApplied",
+	    value: function isSearchFieldApplied() {
+	      return this.searchFieldApplied;
+	    }
+	  }, {
+	    key: "getSearchContainer",
+	    value: function getSearchContainer() {
+	      return this.filterManager.getSearch().getContainer();
+	    }
+	  }, {
+	    key: "scrollToSearchContainer",
+	    value: function scrollToSearchContainer() {
+	      var filterSearchContainer = this.getSearchContainer();
+
+	      if (!this.isNodeInViewport(filterSearchContainer)) {
+	        filterSearchContainer.scrollIntoView(true);
+	      }
+	    }
+	  }, {
+	    key: "onApplyFilter",
+	    value: function onApplyFilter(event) {
+	      var _event$getCompatData = event.getCompatData(),
+	          _event$getCompatData2 = babelHelpers.slicedToArray(_event$getCompatData, 5),
+	          filterId = _event$getCompatData2[0],
+	          values = _event$getCompatData2[1],
+	          filterInstance = _event$getCompatData2[2],
+	          promise = _event$getCompatData2[3],
+	          params = _event$getCompatData2[4];
+
+	      if (filterInstance.getSearch().getSearchString()) {
+	        this.searchFieldApplied = true;
+	      } else {
+	        this.searchFieldApplied = false;
+	      }
+
+	      if (this.filterId !== filterId) {
+	        return;
+	      }
+
+	      params.autoResolve = false;
+	      this.emit('applyFilter', {
+	        promise: promise
+	      });
+	    }
+	  }, {
+	    key: "addItemToListTypeField",
+	    value: function addItemToListTypeField(name, item) {
+	      //todo set item to list after epic crud actions
+	      var fieldInstances = this.filterManager.getField(name);
+	      var fieldOptions = this.filterManager.getFieldByName(name);
+
+	      if (!fieldInstances || !fieldOptions) {
+	        return;
+	      }
+
+	      fieldInstances.options.ITEMS.push(item);
+	      fieldOptions.ITEMS.push(item);
+	      var itemsNode = fieldInstances.node.querySelector('[data-name=' + name + ']');
+	      var items = main_core.Dom.attr(itemsNode, 'data-items');
+	      items.push(item);
+	      main_core.Dom.attr(itemsNode, 'data-items', items);
+	    }
+	  }, {
+	    key: "setValueToField",
+	    value: function setValueToField(value) {
+	      var filterApi = this.filterManager.getApi();
+	      var filterFieldsValues = this.filterManager.getFilterFieldsValues();
+	      filterFieldsValues[value.name] = value.value;
+	      filterApi.setFields(filterFieldsValues);
+	      filterApi.apply();
+	    }
+	  }, {
+	    key: "setValuesToField",
+	    value: function setValuesToField(values) {
+	      var resetFields = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+	      var filterApi = this.filterManager.getApi();
+	      var filterFieldsValues = {};
+
+	      if (!resetFields) {
+	        filterFieldsValues = this.filterManager.getFilterFieldsValues();
+	      }
+
+	      values.forEach(function (value) {
+	        filterFieldsValues[value.name] = value.value;
+	      });
+	      filterApi.setFields(filterFieldsValues);
+	      filterApi.apply();
+	    }
+	  }, {
+	    key: "getValueFromField",
+	    value: function getValueFromField(value) {
+	      var filterFieldsValues = this.filterManager.getFilterFieldsValues();
+	      return filterFieldsValues[value.name];
+	    }
+	  }, {
+	    key: "resetFilter",
+	    value: function resetFilter() {
+	      this.filterManager.resetFilter();
+	    }
+	  }, {
+	    key: "applyFilter",
+	    value: function applyFilter() {
+	      this.filterManager.applyFilter();
+	    }
+	  }, {
+	    key: "isNodeInViewport",
+	    value: function isNodeInViewport(element) {
+	      var rect = element.getBoundingClientRect();
+	      return rect.top >= 0 && rect.left >= 0 && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && rect.right <= (window.innerWidth || document.documentElement.clientWidth);
+	    }
+	  }]);
+	  return Filter;
+	}(main_core_events.EventEmitter);
+
+	function _templateObject3() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<span class=\"tasks-counter-counter-button\">\n\t\t\t\t<span class=\"tasks-counter-counter-button-icon\"></span>\n\t\t\t\t<span class=\"tasks-counter-counter-button-text\">", "</span>\n\t\t\t</span>\n\t\t"]);
+
+	  _templateObject3 = function _templateObject3() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject2() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-counter-container\">\n\t\t\t\t", "\n\t\t\t\t<span class=\"tasks-counter-counters\">\n\t\t\t\t\t<span class=\"tasks-comment-icon ui-counter ui-counter-success\">\n\t\t\t\t\t\t<span class=\"ui-counter-inner\">", "</span>\n\t\t\t\t\t</span>\n\t\t\t\t\t<span class=\"tasks-comment-text\">", "</span>\n\t\t\t\t</span>\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject2 = function _templateObject2() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<span class=\"", "\">", "</span>\n\t\t"]);
+
+	  _templateObject = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
+	var Counters = /*#__PURE__*/function () {
+	  function Counters(params) {
+	    babelHelpers.classCallCheck(this, Counters);
+	    this.requestSender = params.requestSender;
+	    this.filter = params.filter;
+	    this.counters = params.counters ? params.counters : null;
+	    this.isOwnerCurrentUser = params.isOwnerCurrentUser;
+	    this.userId = params.userId;
+	    this.groupId = params.groupId;
+	    this.container = null;
+	    this.node = null;
+	  }
+
+	  babelHelpers.createClass(Counters, [{
+	    key: "renderTo",
+	    value: function renderTo(container) {
+	      if (!main_core.Type.isDomNode(container)) {
+	        throw new Error('Counters: HTMLElement for Counters not found');
+	      }
+
+	      this.container = container;
+
+	      if (!this.isEmptyCounters()) {
+	        main_core.Dom.append(this.renderCounters(), this.container);
+	      }
+	    }
+	  }, {
+	    key: "updateState",
+	    value: function updateState(counters) {
+	      this.counters = counters;
+
+	      if (this.isNodeCreated()) {
+	        this.destroy();
+
+	        if (!this.isEmptyCounters()) {
+	          main_core.Dom.append(this.renderCounters(), this.container);
+	        }
+	      } else {
+	        if (!this.isEmptyCounters()) {
+	          main_core.Dom.append(this.renderCounters(), this.container);
+	        }
+	      }
+	    }
+	  }, {
+	    key: "renderTitle",
+	    value: function renderTitle() {
+	      var className = this.isEmptyCounters() ? 'tasks-page-name' : 'tasks-counter-page-name';
+	      var text = this.isOwnerCurrentUser ? main_core.Loc.getMessage('TASKS_SCRUM_COUNTER_TOTAL') : main_core.Loc.getMessage('TASKS_SCRUM_COUNTER_TOTAL_EMPL');
+	      return main_core.Tag.render(_templateObject(), className, text);
+	    }
+	  }, {
+	    key: "renderCounters",
+	    value: function renderCounters() {
+	      var newCommentsInfo = this.counters['new_comments'];
+	      var commentsNumber = parseInt(newCommentsInfo.counter, 10);
+	      this.node = main_core.Tag.render(_templateObject2(), this.renderTitle(), commentsNumber, this.getCommentsLabel(commentsNumber), this.renderReadAllButton());
+	      var commentIcon = this.node.querySelector('.tasks-comment-icon');
+	      var commentText = this.node.querySelector('.tasks-comment-text');
+
+	      var onMouseEnter = function onMouseEnter() {
+	        return main_core.Dom.addClass(commentText, 'tasks-comment-text-hover');
+	      };
+
+	      var onMouseLeave = function onMouseLeave() {
+	        return main_core.Dom.removeClass(commentText, 'tasks-comment-text-hover');
+	      };
+
+	      main_core.Event.bind(commentIcon, 'mouseenter', onMouseEnter);
+	      main_core.Event.bind(commentIcon, 'mouseleave', onMouseLeave);
+	      main_core.Event.bind(commentText, 'mouseenter', onMouseEnter);
+	      main_core.Event.bind(commentText, 'mouseleave', onMouseLeave);
+	      main_core.Event.bind(commentIcon, 'click', this.applyFilterRequiringAttentionToComments.bind(this));
+	      main_core.Event.bind(commentText, 'click', this.applyFilterRequiringAttentionToComments.bind(this));
+	      return this.node;
+	    }
+	  }, {
+	    key: "renderReadAllButton",
+	    value: function renderReadAllButton() {
+	      var title = main_core.Loc.getMessage('TASKS_SCRUM_NEW_COMMENTS_READ_ALL_TITLE');
+	      var readAllButton = main_core.Tag.render(_templateObject3(), title);
+	      main_core.Event.bind(readAllButton, 'click', this.onClickReadAll.bind(this));
+	      return readAllButton;
+	    }
+	  }, {
+	    key: "isEmptyCounters",
+	    value: function isEmptyCounters() {
+	      return !(this.counters && this.counters['new_comments'].counter > 0);
+	    }
+	  }, {
+	    key: "onClickReadAll",
+	    value: function onClickReadAll() {
+	      var _this = this;
+
+	      this.requestSender.readAllTasksComment({
+	        groupId: this.groupId,
+	        userId: this.userId
+	      }).then(function (response) {
+	        main_core.Dom.clean(_this.container);
+
+	        _this.filter.applyFilter();
+	      }).catch(function (response) {
+	        _this.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "isNodeCreated",
+	    value: function isNodeCreated() {
+	      return this.node !== null;
+	    }
+	  }, {
+	    key: "destroy",
+	    value: function destroy() {
+	      main_core.Dom.remove(this.node);
+	      this.node = null;
+	    }
+	  }, {
+	    key: "getCommentsLabel",
+	    value: function getCommentsLabel(count) {
+	      if (count > 5) {
+	        return main_core.Loc.getMessage('TASKS_SCRUM_COUNTER_NEW_COMMENTS_PLURAL_2');
+	      } else if (count === 1) {
+	        return main_core.Loc.getMessage('TASKS_SCRUM_COUNTER_NEW_COMMENTS_PLURAL_0');
+	      } else {
+	        return main_core.Loc.getMessage('TASKS_SCRUM_COUNTER_NEW_COMMENTS_PLURAL_1');
+	      }
+	    }
+	  }, {
+	    key: "applyFilterRequiringAttentionToComments",
+	    value: function applyFilterRequiringAttentionToComments() {
+	      this.filter.setValuesToField([{
+	        name: 'COUNTER_TYPE',
+	        value: 'TASKS_COUNTER_TYPE_12582912'
+	      }, {
+	        name: 'PROBLEM',
+	        value: '12582912'
+	      }], true);
+	    }
+	  }]);
+	  return Counters;
+	}();
+
+	function _templateObject$1() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-switcher-views\">\n\t\t\t\t<a\n\t\t\t\t\thref=\"", "\"\n\t\t\t\t\tclass=\"tasks-scrum-switcher-tab ", "\"\n\t\t\t\t>", "</a>\n\t\t\t\t<a\n\t\t\t\t\thref=\"", "\"\n\t\t\t\t\tclass=\"tasks-scrum-switcher-tab ", "\"\n\t\t\t\t>", "</a>\n\t\t\t\t<a\n\t\t\t\t\thref=\"", "\"\n\t\t\t\t\tclass=\"tasks-scrum-switcher-tab ", "\"\n\t\t\t\t>", "</a>\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject$1 = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
+	var Tabs = /*#__PURE__*/function () {
+	  function Tabs(params) {
+	    babelHelpers.classCallCheck(this, Tabs);
+	    this.views = params.views;
+	  }
+
+	  babelHelpers.createClass(Tabs, [{
+	    key: "render",
+	    value: function render() {
+	      var planTabActiveClass = this.views['plan'].active ? 'tasks-scrum-switcher-tab-active' : '';
+	      var activeTabActiveClass = this.views['activeSprint'].active ? 'tasks-scrum-switcher-tab-active' : '';
+	      var completedTabActiveClass = this.views['completedSprint'].active ? 'tasks-scrum-switcher-tab-active' : '';
+	      return main_core.Tag.render(_templateObject$1(), this.views['plan'].url, planTabActiveClass, main_core.Text.encode(this.views['plan'].name), this.views['activeSprint'].url, activeTabActiveClass, main_core.Text.encode(this.views['activeSprint'].name), this.views['completedSprint'].url, completedTabActiveClass, main_core.Text.encode(this.views['completedSprint'].name));
+	    }
+	  }]);
+	  return Tabs;
+	}();
+
+	var View = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(View, _EventEmitter);
+
+	  function View(params) {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, View);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(View).call(this, params));
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.View');
+
+	    _this.isOwnerCurrentUser = params.isOwnerCurrentUser === 'Y';
+	    _this.requestSender = new RequestSender({
+	      signedParameters: params.signedParameters,
+	      debugMode: params.debugMode
+	    });
+	    _this.filter = new Filter({
+	      filterId: params.filterId,
+	      scrumManager: babelHelpers.assertThisInitialized(_this),
+	      requestSender: _this.requestSender
+	    });
+	    _this.counters = new Counters({
+	      requestSender: _this.requestSender,
+	      filter: _this.filter,
+	      counters: params.counters,
+	      userId: params.userId,
+	      groupId: params.groupId,
+	      isOwnerCurrentUser: params.isOwnerCurrentUser
+	    });
+	    _this.userId = parseInt(params.userId, 10);
+	    _this.groupId = parseInt(params.groupId, 10);
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(View, [{
+	    key: "renderTo",
+	    value: function renderTo(container) {
+	      if (!main_core.Type.isDomNode(container)) {
+	        throw new Error('Scrum: HTMLElement for scrum not found');
+	      }
+	    }
+	  }, {
+	    key: "renderTabsTo",
+	    value: function renderTabsTo(container) {
+	      if (!main_core.Type.isDomNode(container)) {
+	        throw new Error('Scrum: HTMLElement for tabs not found');
+	      }
+
+	      var tabs = new Tabs({
+	        views: this.views
+	      });
+	      main_core.Dom.append(tabs.render(), container);
+	    }
+	  }, {
+	    key: "renderCountersTo",
+	    value: function renderCountersTo(container) {
+	      this.counters.renderTo(container);
+	    }
+	  }, {
+	    key: "renderSprintStatsTo",
+	    value: function renderSprintStatsTo(container) {
+	      if (!main_core.Type.isDomNode(container)) {
+	        throw new Error('Scrum: HTMLElement for Sprint stats not found');
+	      }
+	    }
+	  }, {
+	    key: "renderButtonsTo",
+	    value: function renderButtonsTo(container) {
+	      if (!main_core.Type.isDomNode(container)) {
+	        throw new Error('Scrum: HTMLElement for buttons not found');
+	      }
+	    }
+	  }, {
+	    key: "getCurrentUserId",
+	    value: function getCurrentUserId() {
+	      return this.userId;
+	    }
+	  }, {
+	    key: "getCurrentGroupId",
+	    value: function getCurrentGroupId() {
+	      return this.groupId;
+	    }
+	  }]);
+	  return View;
+	}(main_core_events.EventEmitter);
+
+	function _templateObject$2() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-button-container\">\n\t\t\t\t<button class=\"ui-btn ui-btn-primary ui-btn-xs\">\n\t\t\t\t\t", "\n\t\t\t\t</button>\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject$2 = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
+	var TeamSpeedButton = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(TeamSpeedButton, _EventEmitter);
+
+	  function TeamSpeedButton() {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, TeamSpeedButton);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(TeamSpeedButton).call(this));
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.TeamSpeedButton');
+
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(TeamSpeedButton, [{
+	    key: "render",
+	    value: function render() {
+	      var node = main_core.Tag.render(_templateObject$2(), main_core.Loc.getMessage('TASKS_SCRUM_TEAM_SPEED_BUTTON'));
+	      main_core.Event.bind(node, 'click', this.onClick.bind(this));
+	      return node;
+	    }
+	  }, {
+	    key: "onClick",
+	    value: function onClick() {
+	      this.emit('click');
+	    }
+	  }]);
+	  return TeamSpeedButton;
+	}(main_core_events.EventEmitter);
+
+	function _templateObject$3() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div id=\"files_chooser\">\n\t\t\t<div id=\"diskuf-selectdialog-", "\" class=\"diskuf-files-entity diskuf-selectdialog bx-disk\">\n\t\t\t\t<div class=\"diskuf-files-block\">\n\t\t\t\t\t<div class=\"diskuf-placeholder\">\n\t\t\t\t\t\t<table class=\"files-list\">\n\t\t\t\t\t\t\t<tbody class=\"diskuf-placeholder-tbody\"></tbody>\n\t\t\t\t\t\t</table>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"diskuf-extended\" style=\"display: block\">\n\t\t\t\t\t<input type=\"hidden\" name=\"[", "][]\" value=\"\"/>\n\t\t\t\t\t<div class=\"diskuf-extended-item\">\n\t\t\t\t\t\t<label for=\"file_loader_", "\">\n\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t</label>\n\t\t\t\t\t\t<input class=\"diskuf-fileUploader\" id=\"file_loader_", "\" type=\n\t\t\t\t\t\t\t\"file\" multiple=\"multiple\" size=\"1\" style=\"display: none\"/>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"diskuf-extended-item\">\n\t\t\t\t\t\t<span class=\"diskuf-selector-link\">\n\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t</span>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"diskuf-extended-item\">\n\t\t\t\t\t\t<span class=\"diskuf-selector-link-cloud\" data-bx-doc-handler=\"gdrive\">\n\t\t\t\t\t\t\t<span>", "</span>\n\t\t\t\t\t\t</span>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject$3 = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
+	var DiskManager = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(DiskManager, _EventEmitter);
+
+	  function DiskManager() {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, DiskManager);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(DiskManager).call(this));
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.DiskManager');
+
+	    _this.diskUrls = {
+	      urlSelect: '/bitrix/tools/disk/uf.php?action=selectFile&SITE_ID=' + main_core.Loc.getMessage('SITE_ID'),
+	      urlRenameFile: '/bitrix/tools/disk/uf.php?action=renameFile',
+	      urlDeleteFile: '/bitrix/tools/disk/uf.php?action=deleteFile',
+	      urlUpload: '/bitrix/tools/disk/uf.php?action=uploadFile&ncc=1'
+	    };
+	    _this.attachedIds = [];
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(DiskManager, [{
+	    key: "showAttachmentMenu",
+	    value: function showAttachmentMenu(node) {
+	      var _this2 = this;
+
+	      var controlId = main_core.Text.getRandom();
+	      this.popup = new main_popup.Popup("disk-manager-attachment-menu-".concat(main_core.Text.getRandom()), node, {
+	        content: this.getAttachmentsLoaderContent(controlId),
+	        autoHide: true,
+	        closeByEsc: true,
+	        angle: false
+	      });
+	      this.popup.show();
+	      BX.Disk.UF.add({
+	        UID: controlId,
+	        controlName: "[".concat(controlId, "][]"),
+	        hideSelectDialog: false,
+	        urlSelect: this.diskUrls.urlSelect,
+	        urlRenameFile: this.diskUrls.urlRenameFile,
+	        urlDeleteFile: this.diskUrls.urlDeleteFile,
+	        urlUpload: this.diskUrls.urlUpload
+	      });
+	      BX.onCustomEvent(this.popup.contentContainer.querySelector('#files_chooser'), 'DiskLoadFormController', ['show']);
+	      main_core_events.EventEmitter.subscribe('onFinish', function () {
+	        _this2.popup.close();
+
+	        _this2.emit('onFinish', _this2.attachedIds);
+	      });
+	    }
+	  }, {
+	    key: "getAttachmentsLoaderContent",
+	    value: function getAttachmentsLoaderContent(controlId) {
+	      var filesChooser = main_core.Tag.render(_templateObject$3(), controlId, controlId, controlId, main_core.Loc.getMessage('TASKS_SCRUM_FILES_LOADER_POPUP_FROM_COMPUTER'), controlId, main_core.Loc.getMessage('TASKS_SCRUM_FILES_LOADER_POPUP_FROM_B24'), main_core.Loc.getMessage('TASKS_SCRUM_FILES_LOADER_POPUP_FROM_CLOUD'));
+	      BX.addCustomEvent(filesChooser, 'OnFileUploadSuccess', this.onFileUploadSuccess.bind(this)); //todo show loader
+
+	      return filesChooser;
+	    }
+	  }, {
+	    key: "onFileUploadSuccess",
+	    value: function onFileUploadSuccess(fileResult, uf, file, uploaderFile) {
+	      if (typeof file === 'undefined' || typeof uploaderFile === 'undefined') {
+	        return;
+	      }
+
+	      this.attachedIds.push(fileResult.element_id.toString());
+	    }
+	  }]);
+	  return DiskManager;
+	}(main_core_events.EventEmitter);
 
 	function _templateObject10() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div id=\"", "\" class=\"tasks-scrum-actions-panel-container\">\n\t\t\t\t<div class=\"tasks-scrum-actions-panel\">\n\t\t\t\t\t", "\n\t\t\t\t\t", "\n\t\t\t\t\t", "\n\t\t\t\t\t", "\n\t\t\t\t\t", "\n\t\t\t\t\t", "\n\t\t\t\t\t", "\n\t\t\t\t\t", "\n\t\t\t\t\t", "\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
@@ -335,30 +939,30 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return data;
 	}
 
-	function _templateObject3() {
+	function _templateObject3$1() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t<div id=\"", "\" class=\n\t\t\t\t\t\"tasks-scrum-actions-panel-btn tasks-scrum-actions-panel-btn-move\">\n\t\t\t\t\t<span class=\"tasks-scrum-actions-panel-icon\"></span>\n\t\t\t\t\t<span class=\"tasks-scrum-actions-panel-text\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</span>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-actions-panel-separator\"></div>\n\t\t\t"]);
 
-	  _templateObject3 = function _templateObject3() {
+	  _templateObject3$1 = function _templateObject3() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject2() {
+	function _templateObject2$1() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t<div id=\"", "\" class=\n\t\t\t\t\t\"tasks-scrum-actions-panel-btn tasks-scrum-actions-panel-btn-attachment\">\n\t\t\t\t\t<span class=\"tasks-scrum-actions-panel-icon\"></span>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-actions-panel-separator\"></div>\n\t\t\t"]);
 
-	  _templateObject2 = function _templateObject2() {
+	  _templateObject2$1 = function _templateObject2() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject() {
+	function _templateObject$4() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t<div id=\"", "\" class=\n\t\t\t\t\t\"tasks-scrum-actions-panel-btn tasks-scrum-actions-panel-btn-task\">\n\t\t\t\t\t<span class=\"tasks-scrum-actions-panel-icon\"></span>\n\t\t\t\t\t<span class=\"tasks-scrum-actions-panel-text\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</span>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-actions-panel-separator\"></div>\n\t\t\t"]);
 
-	  _templateObject = function _templateObject() {
+	  _templateObject$4 = function _templateObject() {
 	    return data;
 	  };
 
@@ -407,13 +1011,8 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      var _this = this;
 
 	      main_core.Dom.remove(document.getElementById(this.actionPanelNodeId));
-	      var actionsPanelContainer = this.createActionPanel();
+	      var actionsPanelContainer = this.calculatePanelPosition(this.createActionPanel());
 	      this.setBlockBlurNode(actionsPanelContainer);
-	      var position = main_core.Dom.getPosition(this.bindElement);
-	      actionsPanelContainer.style.top = "".concat(position.top, "px");
-	      actionsPanelContainer.style.left = "".concat(position.left, "px");
-	      actionsPanelContainer.style.width = "".concat(position.width, "px");
-	      actionsPanelContainer.style.zIndex = 1100;
 	      main_core.Dom.append(actionsPanelContainer, document.body);
 
 	      var customBlur = function customBlur(event) {
@@ -464,17 +1063,17 @@ this.BX.Tasks = this.BX.Tasks || {};
 
 	      if (this.itemList.task.activity) {
 	        this.showTaskActionButtonNodeId = 'tasks-scrum-actions-panel-btn-task';
-	        task = main_core.Tag.render(_templateObject(), this.showTaskActionButtonNodeId, main_core.Loc.getMessage('TASKS_SCRUM_ITEM_ACTIONS_TASK'));
+	        task = main_core.Tag.render(_templateObject$4(), this.showTaskActionButtonNodeId, main_core.Loc.getMessage('TASKS_SCRUM_ITEM_ACTIONS_TASK'));
 	      }
 
 	      if (this.itemList.attachment.activity) {
 	        this.showAttachmentActionButtonNodeId = 'tasks-scrum-actions-panel-btn-attachment';
-	        attachment = main_core.Tag.render(_templateObject2(), this.showAttachmentActionButtonNodeId);
+	        attachment = main_core.Tag.render(_templateObject2$1(), this.showAttachmentActionButtonNodeId);
 	      }
 
 	      if (this.itemList.move.activity) {
 	        this.showMoveActionButtonNodeId = 'tasks-scrum-actions-panel-btn-move';
-	        move = main_core.Tag.render(_templateObject3(), this.showMoveActionButtonNodeId, main_core.Loc.getMessage('TASKS_SCRUM_ITEM_ACTIONS_MOVE'));
+	        move = main_core.Tag.render(_templateObject3$1(), this.showMoveActionButtonNodeId, main_core.Loc.getMessage('TASKS_SCRUM_ITEM_ACTIONS_MOVE'));
 	      }
 
 	      if (this.itemList.sprint.activity) {
@@ -553,114 +1152,110 @@ this.BX.Tasks = this.BX.Tasks || {};
 	        main_core.Event.bind(document.getElementById(this.decompositionActionButtonNodeId), 'click', this.itemList.decomposition.callback);
 	      }
 	    }
+	  }, {
+	    key: "calculatePanelPosition",
+	    value: function calculatePanelPosition(panel) {
+	      var position = main_core.Dom.getPosition(this.bindElement);
+	      var top = "".concat(position.top, "px");
+	      var left = "".concat(position.left, "px");
+	      var fakePanel = panel.cloneNode(true);
+	      fakePanel.style.visibility = 'hidden';
+	      fakePanel.style.top = "".concat(position.top, "px");
+	      fakePanel.style.left = "".concat(position.left, "px");
+	      main_core.Dom.append(fakePanel, document.body);
+
+	      if (this.isPanelWiderThanViewport(fakePanel)) {
+	        var fakePanelRect = fakePanel.getBoundingClientRect();
+	        var windowWidth = window.innerWidth || document.documentElement.clientWidth;
+	        left = "".concat(fakePanelRect.left - (fakePanelRect.right - windowWidth + 40), "px");
+	      }
+
+	      main_core.Dom.remove(fakePanel);
+	      panel.style.top = top;
+	      panel.style.left = left;
+	      panel.style.zIndex = 1100;
+	      return panel;
+	    }
+	  }, {
+	    key: "isPanelWiderThanViewport",
+	    value: function isPanelWiderThanViewport(element) {
+	      var rect = element.getBoundingClientRect();
+	      var windowWidth = window.innerWidth || document.documentElement.clientWidth;
+	      return rect.right > windowWidth;
+	    }
 	  }]);
 	  return ActionsPanel;
 	}();
 
-	function _templateObject$1() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div id=\"files_chooser\">\n\t\t\t<div id=\"diskuf-selectdialog-", "\" class=\"diskuf-files-entity diskuf-selectdialog bx-disk\">\n\t\t\t\t<div class=\"diskuf-files-block\">\n\t\t\t\t\t<div class=\"diskuf-placeholder\">\n\t\t\t\t\t\t<table class=\"files-list\">\n\t\t\t\t\t\t\t<tbody class=\"diskuf-placeholder-tbody\"></tbody>\n\t\t\t\t\t\t</table>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"diskuf-extended\" style=\"display: block\">\n\t\t\t\t\t<input type=\"hidden\" name=\"[", "][]\" value=\"\"/>\n\t\t\t\t\t<div class=\"diskuf-extended-item\">\n\t\t\t\t\t\t<label for=\"file_loader_", "\">\n\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t</label>\n\t\t\t\t\t\t<input class=\"diskuf-fileUploader\" id=\"file_loader_", "\" type=\n\t\t\t\t\t\t\t\"file\" multiple=\"multiple\" size=\"1\" style=\"display: none\"/>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"diskuf-extended-item\">\n\t\t\t\t\t\t<span class=\"diskuf-selector-link\">\n\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t</span>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"diskuf-extended-item\">\n\t\t\t\t\t\t<span class=\"diskuf-selector-link-cloud\" data-bx-doc-handler=\"gdrive\">\n\t\t\t\t\t\t\t<span>", "</span>\n\t\t\t\t\t\t</span>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
-
-	  _templateObject$1 = function _templateObject() {
-	    return data;
-	  };
-
-	  return data;
-	}
-	var DiskManager = /*#__PURE__*/function (_EventEmitter) {
-	  babelHelpers.inherits(DiskManager, _EventEmitter);
-
-	  function DiskManager() {
-	    var _this;
-
-	    babelHelpers.classCallCheck(this, DiskManager);
-	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(DiskManager).call(this));
-
-	    _this.setEventNamespace('BX.Tasks.Scrum.DiskManager');
-
-	    _this.diskUrls = {
-	      urlSelect: '/bitrix/tools/disk/uf.php?action=selectFile&SITE_ID=' + main_core.Loc.getMessage('SITE_ID'),
-	      urlRenameFile: '/bitrix/tools/disk/uf.php?action=renameFile',
-	      urlDeleteFile: '/bitrix/tools/disk/uf.php?action=deleteFile',
-	      urlUpload: '/bitrix/tools/disk/uf.php?action=uploadFile&ncc=1'
-	    };
-	    _this.attachedIds = [];
-	    return _this;
-	  }
-
-	  babelHelpers.createClass(DiskManager, [{
-	    key: "showAttachmentMenu",
-	    value: function showAttachmentMenu(node) {
-	      var _this2 = this;
-
-	      var controlId = main_core.Text.getRandom();
-	      this.popup = new main_popup.Popup("disk-manager-attachment-menu-".concat(main_core.Text.getRandom()), node, {
-	        content: this.getAttachmentsLoaderContent(controlId),
-	        autoHide: true,
-	        closeByEsc: true,
-	        angle: false
-	      });
-	      this.popup.show();
-	      BX.Disk.UF.add({
-	        UID: controlId,
-	        controlName: "[".concat(controlId, "][]"),
-	        hideSelectDialog: false,
-	        urlSelect: this.diskUrls.urlSelect,
-	        urlRenameFile: this.diskUrls.urlRenameFile,
-	        urlDeleteFile: this.diskUrls.urlDeleteFile,
-	        urlUpload: this.diskUrls.urlUpload
-	      });
-	      BX.onCustomEvent(this.popup.contentContainer.querySelector('#files_chooser'), 'DiskLoadFormController', ['show']);
-	      main_core_events.EventEmitter.subscribe('onFinish', function () {
-	        _this2.popup.close();
-
-	        _this2.emit('onFinish', _this2.attachedIds);
-	      });
-	    }
-	  }, {
-	    key: "getAttachmentsLoaderContent",
-	    value: function getAttachmentsLoaderContent(controlId) {
-	      var filesChooser = main_core.Tag.render(_templateObject$1(), controlId, controlId, controlId, main_core.Loc.getMessage('TASKS_SCRUM_FILES_LOADER_POPUP_FROM_COMPUTER'), controlId, main_core.Loc.getMessage('TASKS_SCRUM_FILES_LOADER_POPUP_FROM_B24'), main_core.Loc.getMessage('TASKS_SCRUM_FILES_LOADER_POPUP_FROM_CLOUD'));
-	      BX.addCustomEvent(filesChooser, 'OnFileUploadSuccess', this.onFileUploadSuccess.bind(this)); //todo show loader
-
-	      return filesChooser;
-	    }
-	  }, {
-	    key: "onFileUploadSuccess",
-	    value: function onFileUploadSuccess(fileResult, uf, file, uploaderFile) {
-	      if (typeof file === 'undefined' || typeof uploaderFile === 'undefined') {
-	        return;
-	      }
-
-	      this.attachedIds.push(fileResult.element_id.toString());
-	    }
-	  }]);
-	  return DiskManager;
-	}(main_core_events.EventEmitter);
-
-	function _templateObject$2() {
+	function _templateObject$5() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<span id=\"", "\" class=\"task-title-indicators\">\n\t\t\t\t<div class=\"task-attachment-counter ui-label ui-label-sm ui-label-light\">\n\t\t\t\t\t<span class=\"ui-label-inner\">", "</span>\n\t\t\t\t</div>\n\t\t\t\t<div class='task-checklist-counter ui-label ui-label-sm ui-label-light'>\n\t\t\t\t\t<span class='ui-label-inner'>", "/", "</span>\n\t\t\t\t</div>\n\t\t\t\t<div class='task-comments-counter'>\n\t\t\t\t\t<div class='ui-counter ui-counter-success'>\n\t\t\t\t\t\t<div class='ui-counter-inner'>", "</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</span>\n\t\t"]);
 
-	  _templateObject$2 = function _templateObject() {
+	  _templateObject$5 = function _templateObject() {
 	    return data;
 	  };
 
 	  return data;
 	}
 	var TaskCounts = /*#__PURE__*/function () {
-	  function TaskCounts(options) {
+	  function TaskCounts(params) {
 	    babelHelpers.classCallCheck(this, TaskCounts);
-	    this.itemId = options.itemId ? options.itemId : main_core.Text.getRandom();
-	    this.attachedFilesCount = options.attachedFilesCount ? parseInt(options.attachedFilesCount, 10) : 0;
-	    this.checkListComplete = options.checkListComplete ? parseInt(options.checkListComplete, 10) : 0;
-	    this.checkListAll = options.checkListAll ? parseInt(options.checkListAll, 10) : 0;
-	    this.newCommentsCount = options.newCommentsCount ? parseInt(options.newCommentsCount, 10) : 0;
+	    this.setItemId(params.itemId);
+	    this.setAttachedFilesCount(params.attachedFilesCount);
+	    this.setCheckListComplete(params.checkListComplete);
+	    this.setCheckListAll(params.checkListAll);
+	    this.setNewCommentsCount(params.newCommentsCount);
 	  }
 
 	  babelHelpers.createClass(TaskCounts, [{
+	    key: "setItemId",
+	    value: function setItemId(itemId) {
+	      this.itemId = main_core.Type.isInteger(itemId) ? parseInt(itemId, 10) : main_core.Type.isString(itemId) && itemId ? itemId : main_core.Text.getRandom();
+	    }
+	  }, {
+	    key: "setAttachedFilesCount",
+	    value: function setAttachedFilesCount(count) {
+	      this.attachedFilesCount = main_core.Type.isInteger(count) ? parseInt(count, 10) : 0;
+	    }
+	  }, {
+	    key: "getAttachedFilesCount",
+	    value: function getAttachedFilesCount() {
+	      return this.attachedFilesCount;
+	    }
+	  }, {
+	    key: "setCheckListComplete",
+	    value: function setCheckListComplete(count) {
+	      this.checkListComplete = main_core.Type.isInteger(count) ? parseInt(count, 10) : 0;
+	    }
+	  }, {
+	    key: "getCheckListComplete",
+	    value: function getCheckListComplete() {
+	      return this.checkListComplete;
+	    }
+	  }, {
+	    key: "setCheckListAll",
+	    value: function setCheckListAll(count) {
+	      this.checkListAll = main_core.Type.isInteger(count) ? parseInt(count, 10) : 0;
+	    }
+	  }, {
+	    key: "getCheckListAll",
+	    value: function getCheckListAll() {
+	      return this.checkListAll;
+	    }
+	  }, {
+	    key: "setNewCommentsCount",
+	    value: function setNewCommentsCount(count) {
+	      this.newCommentsCount = main_core.Type.isInteger(count) ? parseInt(count, 10) : 0;
+	    }
+	  }, {
+	    key: "getNewCommentsCount",
+	    value: function getNewCommentsCount() {
+	      return this.newCommentsCount;
+	    }
+	  }, {
 	    key: "renderIndicators",
 	    value: function renderIndicators() {
 	      this.indicatorsNodeId = 'tasks-scrum-item-indicators-' + this.itemId;
-	      return main_core.Tag.render(_templateObject$2(), this.indicatorsNodeId, this.attachedFilesCount, this.checkListComplete, this.checkListAll, this.newCommentsCount);
+	      return main_core.Tag.render(_templateObject$5(), this.indicatorsNodeId, this.attachedFilesCount, this.checkListComplete, this.checkListAll, this.newCommentsCount);
 	    }
 	  }, {
 	    key: "onAfterAppend",
@@ -767,7 +1362,13 @@ this.BX.Tasks = this.BX.Tasks || {};
 
 	      var currentStoryPoints = this.storyPoints !== '' ? parseFloat(this.storyPoints) : 0;
 	      var inputStoryPoints = parseFloat(storyPoints);
-	      this.storyPoints = String(currentStoryPoints + inputStoryPoints);
+	      var result = currentStoryPoints + inputStoryPoints;
+
+	      if (main_core.Type.isFloat(result)) {
+	        result = result.toFixed(1);
+	      }
+
+	      this.storyPoints = String(result);
 	    }
 	  }, {
 	    key: "subtractPoints",
@@ -778,7 +1379,13 @@ this.BX.Tasks = this.BX.Tasks || {};
 
 	      var currentStoryPoints = this.storyPoints !== '' ? parseFloat(this.storyPoints) : 0;
 	      var inputStoryPoints = parseFloat(storyPoints);
-	      this.storyPoints = String(currentStoryPoints - inputStoryPoints);
+	      var result = currentStoryPoints - inputStoryPoints;
+
+	      if (main_core.Type.isFloat(result)) {
+	        result = result.toFixed(1);
+	      }
+
+	      this.storyPoints = String(result);
 	    }
 	  }, {
 	    key: "clearPoints",
@@ -811,8 +1418,28 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return StoryPoints;
 	}();
 
-	function _templateObject6$1() {
+	function _templateObject8$1() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-item-tags-container\">\n\t\t\t\t", "\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject8$1 = function _templateObject8() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject7$1() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-item-tags-container\">\n\t\t\t\t", "\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject7$1 = function _templateObject7() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject6$1() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-item-subtasks-tick\">\n\t\t\t\t<div class=\"ui-btn ui-btn-sm ui-btn-light ui-btn-icon-angle-down\"></div>\n\t\t\t</div>\n\t\t"]);
 
 	  _templateObject6$1 = function _templateObject6() {
 	    return data;
@@ -822,7 +1449,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	}
 
 	function _templateObject5$1() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-item-tags-container\">\n\t\t\t\t", "\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-item-subtasks-btn\">\n\t\t\t\t<span class=\"tasks-scrum-item-subtasks-icon\"></span>\n\t\t\t\t<span class=\"tasks-scrum-item-subtasks-count\">\n\t\t\t\t\t", "\n\t\t\t\t</span>\n\t\t\t</div>\n\t\t"]);
 
 	  _templateObject5$1 = function _templateObject5() {
 	    return data;
@@ -841,30 +1468,30 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return data;
 	}
 
-	function _templateObject3$1() {
+	function _templateObject3$2() {
 	  var data = babelHelpers.taggedTemplateLiteral(["<div class=\"ui-icon ui-icon-common-user tasks-scrum-item-responsible\"><i></i></div>"]);
 
-	  _templateObject3$1 = function _templateObject3() {
+	  _templateObject3$2 = function _templateObject3() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject2$1() {
+	function _templateObject2$2() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-item-name-field ui-ctl ui-ctl-xs ui-ctl-textbox ui-ctl-no-border\">\n\t\t\t\t<div class=\"ui-ctl-element\" contenteditable=\"false\">\n\t\t\t\t\t", "\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject2$1 = function _templateObject2() {
+	  _templateObject2$2 = function _templateObject2() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject$3() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t<div data-item-id=\"", "\" data-sort=\"", "\" class=\"tasks-scrum-item\">\n\t\t\t<div class=\"tasks-scrum-item-inner\">\n\t\t\t\t<div class=\"tasks-scrum-item-group-mode-container\">\n\t\t\t\t\t<input type=\"checkbox\">\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-item-name\">\n\t\t\t\t\t", "\n\t\t\t\t\t", "\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-item-params\">\n\t\t\t\t\t", "\n\t\t\t\t\t", "\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t\t", "\n\t\t</div>\n\t\t"]);
+	function _templateObject$6() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div data-item-id=\"", "\" data-sort=\n\t\t\t\t\"", "\" class=\"", "\">\n\t\t\t\t<div class=\"tasks-scrum-item-inner\">\n\t\t\t\t\t<div class=\"tasks-scrum-item-group-mode-container\">\n\t\t\t\t\t\t<input type=\"checkbox\">\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-item-name\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-item-params\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t\t", "\n\t\t\t\t\t\t", "\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject$3 = function _templateObject() {
+	  _templateObject$6 = function _templateObject() {
 	    return data;
 	  };
 
@@ -874,58 +1501,471 @@ this.BX.Tasks = this.BX.Tasks || {};
 	var Item = /*#__PURE__*/function (_EventEmitter) {
 	  babelHelpers.inherits(Item, _EventEmitter);
 
-	  function Item() {
+	  function Item(params) {
 	    var _this;
 
-	    var item = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 	    babelHelpers.classCallCheck(this, Item);
-	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Item).call(this, item));
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Item).call(this, params));
 
 	    _this.setEventNamespace('BX.Tasks.Scrum.Item');
 
-	    _this.itemId = item.itemId ? item.itemId : main_core.Text.getRandom();
-	    _this.name = item.name;
-	    _this.itemType = item.itemType;
-	    _this.sort = main_core.Type.isInteger(item.sort) ? parseInt(item.sort, 10) : 0;
-	    _this.entityId = main_core.Type.isInteger(item.entityId) ? parseInt(item.entityId, 10) : 0;
-	    _this.entityType = item.entityType;
-	    _this.parentId = main_core.Type.isInteger(item.parentId) ? parseInt(item.parentId, 10) : 0;
-	    _this.sourceId = main_core.Type.isInteger(item.sourceId) ? parseInt(item.sourceId, 10) : 0;
-	    _this.parentSourceId = main_core.Type.isInteger(item.parentSourceId) ? parseInt(item.parentSourceId, 10) : 0;
-	    _this.storyPoints = new StoryPoints();
+	    _this.setItemParams(params);
 
-	    _this.storyPoints.setPoints(item.storyPoints);
-
-	    _this.responsible = main_core.Type.isPlainObject(item.responsible) ? item.responsible : {};
-	    _this.completed = item.completed === 'Y';
-	    _this.epic = main_core.Type.isPlainObject(item.epic) ? item.epic : null;
-	    _this.tags = main_core.Type.isArray(item.tags) ? item.tags : [];
-	    _this.actionsMap = {
-	      taskEdit: 'task_edit',
-	      taskRemove: 'task_remove'
-	    };
-
-	    _this.setAllowedActions(item.allowedActions);
-
-	    _this.taskCounts = _this.itemType === 'task' ? new TaskCounts(item) : null; //todo create taskChild
-
-	    _this.itemNode = null;
 	    _this.groupMode = false;
 	    _this.previewMode = false;
 	    return _this;
 	  }
 
 	  babelHelpers.createClass(Item, [{
+	    key: "setItemParams",
+	    value: function setItemParams(params) {
+	      this.setItemNode();
+	      this.setItemId(params.itemId);
+	      this.setTmpId(params.tmpId);
+	      this.setName(params.name);
+	      this.setItemType(params.itemType);
+	      this.setSort(params.sort);
+	      this.setEntityId(params.entityId);
+	      this.setEntityType(params.entityType);
+	      this.setParentId(params.parentId);
+	      this.setSourceId(params.sourceId);
+	      this.setInfo(params.info);
+	      this.setParentTask(params.isParentTask);
+	      this.setSubTasksCount(params.subTasksCount);
+	      this.setLinkedTask(params.isLinkedTask);
+	      this.setParentTaskId(params.parentTaskId);
+	      this.setSubTask(params.isSubTask);
+	      this.setSubTasksInfo(params.subTasksInfo);
+	      this.setResponsible(params.responsible);
+	      this.setCompleted(params.completed);
+	      this.setDisableStatus(this.isCompleted());
+	      this.setAllowedActions(params.allowedActions);
+	      this.setEpic(params.epic);
+	      this.setTags(params.tags);
+	      this.setTaskCounts(params);
+	      this.setStoryPoints(params.storyPoints);
+	    }
+	  }, {
+	    key: "setItemId",
+	    value: function setItemId(itemId) {
+	      this.itemId = main_core.Type.isInteger(itemId) ? parseInt(itemId, 10) : main_core.Type.isString(itemId) && itemId ? itemId : main_core.Text.getRandom();
+
+	      if (this.isNodeCreated()) {
+	        this.getItemNode().dataset.itemId = this.itemId;
+	      }
+	    }
+	  }, {
+	    key: "getItemId",
+	    value: function getItemId() {
+	      return this.itemId;
+	    }
+	  }, {
+	    key: "setTmpId",
+	    value: function setTmpId(tmpId) {
+	      this.tmpId = main_core.Type.isString(tmpId) ? tmpId : '';
+	    }
+	  }, {
+	    key: "getTmpId",
+	    value: function getTmpId() {
+	      return this.tmpId;
+	    }
+	  }, {
+	    key: "setName",
+	    value: function setName(name) {
+	      this.name = main_core.Type.isString(name) ? name : 'Name';
+
+	      if (this.isNodeCreated()) {
+	        var nameNode = this.getItemNode().querySelector('.tasks-scrum-item-name-field');
+	        nameNode.querySelector('.ui-ctl-element').textContent = main_core.Text.encode(this.name);
+	      }
+	    }
+	  }, {
+	    key: "getName",
+	    value: function getName() {
+	      return this.name;
+	    }
+	  }, {
+	    key: "setItemType",
+	    value: function setItemType(type) {
+	      this.itemType = main_core.Type.isString(type) ? type : 'task';
+	    }
+	  }, {
+	    key: "getItemType",
+	    value: function getItemType() {
+	      return this.itemType;
+	    }
+	  }, {
+	    key: "setSort",
+	    value: function setSort(sort) {
+	      this.setPreviousSort(this.sort);
+	      this.sort = main_core.Type.isInteger(sort) ? parseInt(sort, 10) : 0;
+
+	      if (this.isNodeCreated()) {
+	        main_core.Dom.attr(this.getItemNode(), 'data-sort', this.sort);
+	      }
+	    }
+	  }, {
+	    key: "getSort",
+	    value: function getSort() {
+	      return this.sort;
+	    }
+	  }, {
+	    key: "setPreviousSort",
+	    value: function setPreviousSort(sort) {
+	      this.previousSort = main_core.Type.isInteger(sort) ? parseInt(sort, 10) : 0;
+	    }
+	  }, {
+	    key: "getPreviousSort",
+	    value: function getPreviousSort() {
+	      return this.previousSort;
+	    }
+	  }, {
+	    key: "setEntityId",
+	    value: function setEntityId(entityId) {
+	      this.entityId = main_core.Type.isInteger(entityId) ? parseInt(entityId, 10) : 0;
+	    }
+	  }, {
+	    key: "getEntityId",
+	    value: function getEntityId() {
+	      return this.entityId;
+	    }
+	  }, {
+	    key: "setEntityType",
+	    value: function setEntityType(entityType) {
+	      this.entityType = new Set(['backlog', 'sprint']).has(entityType) ? entityType : 'backlog';
+	    }
+	  }, {
+	    key: "getEntityType",
+	    value: function getEntityType() {
+	      return this.entityType;
+	    }
+	  }, {
+	    key: "setParentId",
+	    value: function setParentId(parentId) {
+	      this.parentId = main_core.Type.isInteger(parentId) ? parseInt(parentId, 10) : 0;
+	    }
+	  }, {
+	    key: "getParentId",
+	    value: function getParentId() {
+	      return this.parentId;
+	    }
+	  }, {
+	    key: "setSourceId",
+	    value: function setSourceId(sourceId) {
+	      this.sourceId = main_core.Type.isInteger(sourceId) ? parseInt(sourceId, 10) : 0;
+	    }
+	  }, {
+	    key: "getSourceId",
+	    value: function getSourceId() {
+	      return this.sourceId;
+	    }
+	  }, {
+	    key: "setResponsible",
+	    value: function setResponsible(responsible) {
+	      this.responsible = main_core.Type.isPlainObject(responsible) ? responsible : null;
+
+	      if (this.responsible && this.isNodeCreated()) {
+	        this.updateResponsible();
+	      }
+	    }
+	  }, {
+	    key: "getResponsible",
+	    value: function getResponsible() {
+	      return this.responsible;
+	    }
+	  }, {
+	    key: "setStoryPoints",
+	    value: function setStoryPoints(storyPoints) {
+	      if (!this.storyPoints) {
+	        this.storyPoints = new StoryPoints();
+	      }
+
+	      this.storyPoints.setPoints(storyPoints);
+	      this.updateStoryPointsNode();
+	    }
+	  }, {
+	    key: "getStoryPoints",
+	    value: function getStoryPoints() {
+	      if (this.isParentTask()) {
+	        var storyPoints = new StoryPoints();
+	        Object.values(this.getSubTasksInfo()).map(function (subTaskInfo) {
+	          storyPoints.addPoints(subTaskInfo.storyPoints.getPoints());
+	        });
+	        return storyPoints;
+	      } else {
+	        return this.storyPoints;
+	      }
+	    }
+	  }, {
+	    key: "updateStoryPointsNode",
+	    value: function updateStoryPointsNode() {
+	      if (this.isNodeCreated()) {
+	        var storyPointsNode = this.getItemNode().querySelector('.tasks-scrum-item-story-points');
+	        storyPointsNode.querySelector('.ui-ctl-element').textContent = main_core.Text.encode(this.getStoryPoints().getPoints());
+	        this.sendEventToUpdateStoryPoints();
+	      }
+	    }
+	  }, {
+	    key: "setSubTasksInfo",
+	    value: function setSubTasksInfo(subTasksInfo) {
+	      if (main_core.Type.isUndefined(subTasksInfo)) {
+	        this.subTasksInfo = [];
+	        return;
+	      }
+
+	      Object.values(subTasksInfo).map(function (subTaskInfo) {
+	        var storyPoints = new StoryPoints();
+	        storyPoints.setPoints(subTaskInfo.storyPoints);
+	        subTaskInfo.storyPoints = storyPoints;
+	      });
+	      this.subTasksInfo = subTasksInfo;
+	    }
+	  }, {
+	    key: "getSubTasksInfo",
+	    value: function getSubTasksInfo() {
+	      return this.subTasksInfo;
+	    }
+	  }, {
+	    key: "updateSubTasksPoints",
+	    value: function updateSubTasksPoints(sourceId, storyPoints) {
+	      var newSubTasksInfo = this.getSubTasksInfo();
+
+	      if (main_core.Type.isArray(newSubTasksInfo)) {
+	        newSubTasksInfo = {};
+	        newSubTasksInfo[sourceId] = {
+	          sourceId: sourceId,
+	          completed: 'N',
+	          storyPoints: storyPoints.getPoints()
+	        };
+	        this.setSubTasksInfo(newSubTasksInfo);
+	        this.updateStoryPointsNode();
+	        return;
+	      }
+
+	      var subTasksInfo = this.getSubTasksInfo();
+
+	      if (subTasksInfo.hasOwnProperty(sourceId)) {
+	        subTasksInfo[sourceId].storyPoints = storyPoints;
+	      } else {
+	        subTasksInfo[sourceId] = {
+	          sourceId: sourceId,
+	          completed: 'N',
+	          storyPoints: storyPoints
+	        };
+	      }
+
+	      this.updateStoryPointsNode();
+	    }
+	  }, {
+	    key: "getCompletedSubTasksStoryPoints",
+	    value: function getCompletedSubTasksStoryPoints() {
+	      var storyPoints = new StoryPoints();
+
+	      if (this.isCompleted()) {
+	        storyPoints.setPoints(this.storyPoints.getPoints());
+	      }
+
+	      Object.values(this.getSubTasksInfo()).map(function (subTaskInfo) {
+	        if (subTaskInfo.completed === 'Y') {
+	          storyPoints.addPoints(subTaskInfo.storyPoints.getPoints());
+	        }
+	      });
+	      return storyPoints;
+	    }
+	  }, {
+	    key: "getUncompletedSubTasksStoryPoints",
+	    value: function getUncompletedSubTasksStoryPoints() {
+	      var storyPoints = new StoryPoints();
+
+	      if (!this.isCompleted()) {
+	        storyPoints.setPoints(this.storyPoints.getPoints());
+	      }
+
+	      Object.values(this.getSubTasksInfo()).map(function (subTaskInfo) {
+	        if (subTaskInfo.completed === 'N') {
+	          storyPoints.addPoints(subTaskInfo.storyPoints.getPoints());
+	        }
+	      });
+	      return storyPoints;
+	    }
+	  }, {
+	    key: "setCompleted",
+	    value: function setCompleted(value) {
+	      this.completed = value === 'Y';
+
+	      if (this.isNodeCreated()) {
+	        this.updateCompletedStatus();
+	      }
+	    }
+	  }, {
+	    key: "setAllowedActions",
+	    value: function setAllowedActions(allowedActions) {
+	      this.allowedActions = main_core.Type.isPlainObject(allowedActions) ? allowedActions : {};
+	    }
+	  }, {
+	    key: "setEpic",
+	    value: function setEpic(epic) {
+	      this.epic = main_core.Type.isPlainObject(epic) ? epic : null;
+	    }
+	  }, {
+	    key: "getEpic",
+	    value: function getEpic() {
+	      return this.epic;
+	    }
+	  }, {
+	    key: "setTags",
+	    value: function setTags(tags) {
+	      this.tags = main_core.Type.isArray(tags) ? tags : [];
+	    }
+	  }, {
+	    key: "getTags",
+	    value: function getTags() {
+	      return this.tags;
+	    }
+	  }, {
+	    key: "setParentTask",
+	    value: function setParentTask(value) {
+	      this.parentTask = value === 'Y';
+	    }
+	  }, {
+	    key: "isParentTask",
+	    value: function isParentTask() {
+	      return this.parentTask;
+	    }
+	  }, {
+	    key: "setSubTasksCount",
+	    value: function setSubTasksCount(count) {
+	      this.subTasksCount = main_core.Type.isInteger(count) ? parseInt(count, 10) : 0;
+	    }
+	  }, {
+	    key: "getSubTasksCount",
+	    value: function getSubTasksCount() {
+	      return this.subTasksCount;
+	    }
+	  }, {
+	    key: "setLinkedTask",
+	    value: function setLinkedTask(value) {
+	      this.linkedTask = value === 'Y';
+	    }
+	  }, {
+	    key: "isLinkedTask",
+	    value: function isLinkedTask() {
+	      return this.linkedTask;
+	    }
+	  }, {
+	    key: "setParentTaskId",
+	    value: function setParentTaskId(id) {
+	      this.parentTaskId = main_core.Type.isInteger(id) ? parseInt(id, 10) : 0;
+	    }
+	  }, {
+	    key: "getParentTaskId",
+	    value: function getParentTaskId() {
+	      return this.parentTaskId;
+	    }
+	  }, {
+	    key: "setSubTask",
+	    value: function setSubTask(value) {
+	      this.subTask = value === 'Y';
+	    }
+	  }, {
+	    key: "isSubTask",
+	    value: function isSubTask() {
+	      return this.subTask;
+	    }
+	  }, {
+	    key: "setTaskCounts",
+	    value: function setTaskCounts(params) {
+	      this.taskCounts = this.itemType === 'task' ? new TaskCounts(params) : null;
+	    }
+	  }, {
+	    key: "getTaskCounts",
+	    value: function getTaskCounts() {
+	      return this.taskCounts;
+	    }
+	  }, {
+	    key: "setInfo",
+	    value: function setInfo(info) {
+	      if (main_core.Type.isUndefined(info)) {
+	        this.info = {
+	          color: '',
+	          borderColor: ''
+	        };
+	        return;
+	      }
+
+	      this.info = info;
+	      this.setBorderColor(this.info.borderColor);
+	    }
+	  }, {
+	    key: "getInfo",
+	    value: function getInfo() {
+	      return this.info;
+	    }
+	  }, {
+	    key: "setBorderColor",
+	    value: function setBorderColor(color) {
+	      this.info.borderColor = main_core.Type.isString(color) ? color : '';
+
+	      if (this.isNodeCreated()) {
+	        if (this.getBorderColor()) {
+	          main_core.Dom.style(this.getItemNode(), 'border', '2px solid ' + this.getBorderColor());
+	        } else {
+	          main_core.Dom.style(this.getItemNode(), 'border', null);
+	        }
+	      }
+	    }
+	  }, {
+	    key: "getBorderColor",
+	    value: function getBorderColor() {
+	      return main_core.Type.isString(this.info.borderColor) ? this.info.borderColor : '';
+	    }
+	  }, {
+	    key: "isCompleted",
+	    value: function isCompleted() {
+	      return this.completed;
+	    }
+	  }, {
+	    key: "updateCompletedStatus",
+	    value: function updateCompletedStatus() {
+	      var nameNode = this.getItemNode().querySelector('.tasks-scrum-item-name');
+	      var nameTextNode = nameNode.querySelector('.ui-ctl-element');
+
+	      if (this.isCompleted()) {
+	        main_core.Dom.style(nameTextNode, 'textDecoration', 'line-through');
+	      } else {
+	        main_core.Dom.style(nameTextNode, 'textDecoration', null);
+	      }
+
+	      this.sendEventToUpdateStoryPoints();
+	    }
+	  }, {
+	    key: "isDisabled",
+	    value: function isDisabled() {
+	      return this.disableStatus;
+	    }
+	  }, {
+	    key: "setMoveActivity",
+	    value: function setMoveActivity(value) {
+	      this.moveActivity = Boolean(value);
+	    }
+	  }, {
+	    key: "isMovable",
+	    value: function isMovable() {
+	      return this.moveActivity;
+	    }
+	  }, {
 	    key: "setDisableStatus",
 	    value: function setDisableStatus(status) {
-	      this.disableStatus = status;
+	      this.disableStatus = Boolean(status);
 
-	      if (this.itemNode) {
-	        if (status) {
-	          this.hideNode(this.itemNode.querySelector('.tasks-scrum-dragndrop'));
-	        } else {
-	          this.showNode(this.itemNode.querySelector('.tasks-scrum-dragndrop'));
-	        }
+	      if (!this.isNodeCreated()) {
+	        return;
+	      }
+
+	      if (status) {
+	        this.hideNode(this.getItemNode().querySelector('.tasks-scrum-dragndrop'));
+	      } else {
+	        this.showNode(this.getItemNode().querySelector('.tasks-scrum-dragndrop'));
 	      }
 	    }
 	  }, {
@@ -933,13 +1973,19 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    value: function activateGroupMode() {
 	      var _this2 = this;
 
-	      var groupModeContainer = this.itemNode.querySelector('.tasks-scrum-item-group-mode-container');
+	      this.groupMode = true;
+
+	      if (!this.isNodeCreated()) {
+	        return;
+	      }
+
+	      var groupModeContainer = this.getItemNode().querySelector('.tasks-scrum-item-group-mode-container');
 	      var groupModeCheckbox = groupModeContainer.querySelector('input');
 	      groupModeCheckbox.checked = false;
 	      main_core.Event.bind(groupModeCheckbox, 'change', function (event) {
-	        main_core.Dom.toggleClass(_this2.itemNode, 'tasks-scrum-item-group-mode');
+	        main_core.Dom.toggleClass(_this2.getItemNode(), 'tasks-scrum-item-group-mode');
 
-	        if (_this2.itemNode.classList.contains('tasks-scrum-item-group-mode')) {
+	        if (_this2.getItemNode().classList.contains('tasks-scrum-item-group-mode')) {
 	          _this2.emit('addItemToGroupMode');
 	        } else {
 	          _this2.emit('removeItemFromGroupMode');
@@ -948,26 +1994,21 @@ this.BX.Tasks = this.BX.Tasks || {};
 	        _this2.showActionsPanel(event);
 	      });
 	      this.showNode(groupModeContainer);
-	      this.groupMode = true; // todo tmp block drag
-
-	      main_core.Dom.removeClass(this.itemNode, 'tasks-scrum-item-drag');
+	      this.deactivateDragNDrop();
 	    }
 	  }, {
 	    key: "deactivateGroupMode",
 	    value: function deactivateGroupMode() {
-	      if (!this.itemNode) {
+	      if (!this.isNodeCreated()) {
 	        return;
 	      }
 
-	      main_core.Dom.removeClass(this.itemNode, 'tasks-scrum-item-group-mode');
-	      var groupModeContainer = this.itemNode.querySelector('.tasks-scrum-item-group-mode-container');
+	      main_core.Dom.removeClass(this.getItemNode(), 'tasks-scrum-item-group-mode');
+	      var groupModeContainer = this.getItemNode().querySelector('.tasks-scrum-item-group-mode-container');
 	      this.hideNode(groupModeContainer);
 	      main_core.Event.unbindAll(groupModeContainer.querySelector('input'));
-	      this.groupMode = false; // todo tmp block drag
-
-	      if (!this.itemNode.classList.contains('tasks-scrum-item-drag')) {
-	        main_core.Dom.addClass(this.itemNode, 'tasks-scrum-item-drag');
-	      }
+	      this.groupMode = false;
+	      this.activateDragNDrop();
 	    }
 	  }, {
 	    key: "isGroupMode",
@@ -999,51 +2040,61 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      return previewItem;
 	    }
 	  }, {
-	    key: "setCompleted",
-	    value: function setCompleted(value) {
-	      this.completed = Boolean(value);
-	    }
-	  }, {
-	    key: "isCompleted",
-	    value: function isCompleted() {
-	      return this.completed;
-	    }
-	  }, {
-	    key: "setMoveActivity",
-	    value: function setMoveActivity(value) {
-	      this.moveActivity = value;
-	    }
-	  }, {
 	    key: "activateDecompositionMode",
-	    value: function activateDecompositionMode() {
+	    value: function activateDecompositionMode(color) {
 	      this.decompositionMode = true;
-	      main_core.Dom.addClass(this.itemNode, 'tasks-scrum-item-decomposition-mode');
+
+	      if (this.getBorderColor() === '') {
+	        this.setBorderColor(color);
+	      }
+
+	      if (this.getBorderColor()) {
+	        main_core.Dom.style(this.getItemNode(), 'border', '2px solid ' + this.getBorderColor());
+	      }
+
+	      this.deactivateDragNDrop();
 	    }
 	  }, {
 	    key: "deactivateDecompositionMode",
 	    value: function deactivateDecompositionMode() {
 	      this.decompositionMode = false;
-	      main_core.Dom.removeClass(this.itemNode, 'tasks-scrum-item-decomposition-mode');
+
+	      if (this.getBorderColor() === '') {
+	        this.setBorderColor();
+	        main_core.Dom.style(this.getItemNode(), 'border', null);
+	      }
+
+	      this.activateDragNDrop();
 	    }
 	  }, {
-	    key: "isDisabled",
-	    value: function isDisabled() {
-	      return Boolean(this.disableStatus);
+	    key: "activateDragNDrop",
+	    value: function activateDragNDrop() {
+	      if (this.isNodeCreated()) {
+	        if (!this.getItemNode().classList.contains('tasks-scrum-item-drag')) {
+	          main_core.Dom.addClass(this.getItemNode(), 'tasks-scrum-item-drag');
+	        }
+	      }
 	    }
 	  }, {
-	    key: "getItemId",
-	    value: function getItemId() {
-	      return this.itemId;
+	    key: "deactivateDragNDrop",
+	    value: function deactivateDragNDrop() {
+	      if (this.isNodeCreated()) {
+	        main_core.Dom.removeClass(this.getItemNode(), 'tasks-scrum-item-drag');
+	      }
 	    }
 	  }, {
-	    key: "getName",
-	    value: function getName() {
-	      return this.name;
+	    key: "isDecompositionMode",
+	    value: function isDecompositionMode() {
+	      return this.decompositionMode;
 	    }
 	  }, {
-	    key: "getItemType",
-	    value: function getItemType() {
-	      return this.itemType;
+	    key: "setItemNode",
+	    value: function setItemNode(node) {
+	      try {
+	        this.itemNode = node instanceof HTMLElement ? node : null;
+	      } catch (e) {
+	        this.itemNode = null;
+	      }
 	    }
 	  }, {
 	    key: "getItemNode",
@@ -1051,96 +2102,158 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      return this.itemNode;
 	    }
 	  }, {
-	    key: "getStoryPoints",
-	    value: function getStoryPoints() {
-	      return this.storyPoints;
-	    }
-	  }, {
-	    key: "setStoryPoints",
-	    value: function setStoryPoints(storyPoints) {
-	      this.storyPoints.setPoints(storyPoints);
-	    }
-	  }, {
-	    key: "getSort",
-	    value: function getSort() {
-	      return this.sort;
-	    }
-	  }, {
-	    key: "setSort",
-	    value: function setSort(sort) {
-	      this.sort = parseInt(sort, 10);
-	    }
-	  }, {
-	    key: "getParentId",
-	    value: function getParentId() {
-	      return this.parentId;
-	    }
-	  }, {
-	    key: "setParentId",
-	    value: function setParentId(parentId) {
-	      this.parentId = parseInt(parentId, 10);
-	    }
-	  }, {
-	    key: "getSourceId",
-	    value: function getSourceId() {
-	      return this.sourceId;
-	    }
-	  }, {
-	    key: "setSourceId",
-	    value: function setSourceId(sourceId) {
-	      this.sourceId = parseInt(sourceId, 10);
-	    }
-	  }, {
-	    key: "getParentSourceId",
-	    value: function getParentSourceId() {
-	      return this.parentSourceId;
-	    }
-	  }, {
-	    key: "setParentSourceId",
-	    value: function setParentSourceId(sourceId) {
-	      this.parentSourceId = parseInt(sourceId, 10);
+	    key: "isNodeCreated",
+	    value: function isNodeCreated() {
+	      return this.itemNode !== null;
 	    }
 	  }, {
 	    key: "setParentEntity",
 	    value: function setParentEntity(entityId, entityType) {
-	      this.entityId = entityId;
-	      this.entityType = entityType;
+	      this.setEntityId(entityId);
+	      this.setEntityType(entityType);
 	    }
 	  }, {
-	    key: "getEntityId",
-	    value: function getEntityId() {
-	      return this.entityId;
+	    key: "isEditAllowed",
+	    value: function isEditAllowed() {
+	      return Boolean(this.allowedActions['task_edit']);
 	    }
 	  }, {
-	    key: "setAllowedActions",
-	    value: function setAllowedActions(allowedActions) {
-	      this.allowedActions = main_core.Type.isPlainObject(allowedActions) ? allowedActions : {};
+	    key: "isRemoveAllowed",
+	    value: function isRemoveAllowed() {
+	      return Boolean(this.allowedActions['task_remove']);
+	    }
+	  }, {
+	    key: "updateYourself",
+	    value: function updateYourself(tmpItem) {
+	      if (tmpItem.getName() !== this.getName()) {
+	        this.setName(tmpItem.getName());
+	      }
+
+	      if (tmpItem.getEntityId() !== this.getEntityId()) {
+	        this.setEntityId(tmpItem.getEntityId());
+	      }
+
+	      if (tmpItem.getResponsible().id !== this.getResponsible().id) {
+	        this.setResponsible(tmpItem.getResponsible());
+	      }
+
+	      if (tmpItem.getStoryPoints().getPoints() !== this.getStoryPoints().getPoints()) {
+	        this.setStoryPoints(tmpItem.getStoryPoints().getPoints());
+	      }
+
+	      if (this.getTaskCounts() && tmpItem.getTaskCounts()) {
+	        this.getTaskCounts().updateIndicators({
+	          attachedFilesCount: tmpItem.getTaskCounts().getAttachedFilesCount(),
+	          checkListComplete: tmpItem.getTaskCounts().getCheckListComplete(),
+	          checkListAll: tmpItem.getTaskCounts().getCheckListAll(),
+	          newCommentsCount: tmpItem.getTaskCounts().getNewCommentsCount()
+	        });
+	      }
+
+	      if (tmpItem.isCompleted() !== this.isCompleted()) {
+	        this.setCompleted(tmpItem.isCompleted() ? 'Y' : 'N');
+	      }
+
+	      this.setParentId(tmpItem.getParentId());
+	      this.setEpicAndTags(tmpItem.getEpic(), tmpItem.getTags());
+	      this.setInfo(tmpItem.getInfo());
+	      this.setParentTask(tmpItem.isParentTask() ? 'Y' : 'N');
+	      this.setSubTasksCount(tmpItem.getSubTasksCount());
+	      this.setLinkedTask(tmpItem.isLinkedTask() ? 'Y' : 'N');
+	      this.setParentTaskId(tmpItem.getParentTaskId());
+	      this.setSubTask(tmpItem.isSubTask() ? 'Y' : 'N');
+
+	      if (this.isNodeCreated()) {
+	        this.updateParentTaskNodes();
+	      }
 	    }
 	  }, {
 	    key: "removeYourself",
 	    value: function removeYourself() {
-	      main_core.Dom.remove(this.itemNode);
-	      this.itemNode = null;
+	      main_core.Dom.remove(this.getItemNode());
+	      this.setItemNode();
 	    }
 	  }, {
 	    key: "render",
 	    value: function render() {
-	      return main_core.Tag.render(_templateObject$3(), main_core.Text.encode(this.itemId), main_core.Text.encode(this.sort), this.renderName(), this.taskCounts && this.itemType === 'task' ? this.taskCounts.renderIndicators() : '', this.renderResponsible(), this.renderStoryPoints(), this.renderTags());
+	      var itemClassName = 'tasks-scrum-item';
+
+	      if (this.isSubTask()) {
+	        itemClassName += ' tasks-scrum-subtask-item';
+	      }
+
+	      this.itemNode = main_core.Tag.render(_templateObject$6(), main_core.Text.encode(this.itemId), main_core.Text.encode(this.sort), itemClassName, this.renderName(), this.taskCounts && this.itemType === 'task' ? this.taskCounts.renderIndicators() : '', this.renderSubTasksCounter(), this.renderResponsible(), this.renderStoryPoints(), this.renderSubTasksTick(), this.renderTags());
+
+	      if (this.isNodeCreated() && this.getBorderColor()) {
+	        main_core.Dom.style(this.itemNode, 'border', '2px solid ' + this.getBorderColor());
+	      }
+
+	      return this.itemNode;
 	    }
 	  }, {
 	    key: "renderName",
 	    value: function renderName() {
-	      return main_core.Tag.render(_templateObject2$1(), main_core.Text.encode(this.name));
+	      return main_core.Tag.render(_templateObject2$2(), main_core.Text.encode(this.name));
 	    }
 	  }, {
 	    key: "renderResponsible",
 	    value: function renderResponsible() {
-	      return main_core.Tag.render(_templateObject3$1());
+	      return main_core.Tag.render(_templateObject3$2());
 	    }
 	  }, {
 	    key: "renderStoryPoints",
 	    value: function renderStoryPoints() {
 	      return main_core.Tag.render(_templateObject4$1(), main_core.Text.encode(this.getStoryPoints().getPoints()));
+	    }
+	  }, {
+	    key: "renderSubTasksCounter",
+	    value: function renderSubTasksCounter() {
+	      var _this3 = this;
+
+	      if (!this.isParentTask()) {
+	        return '';
+	      }
+
+	      var subTasksCounter = main_core.Tag.render(_templateObject5$1(), this.getSubTasksCount());
+	      main_core.Event.bind(subTasksCounter, 'click', function () {
+	        _this3.emit('showTask');
+	      });
+	      return subTasksCounter;
+	    }
+	  }, {
+	    key: "renderSubTasksTick",
+	    value: function renderSubTasksTick() {
+	      var _this4 = this;
+
+	      if (!this.isParentTask() || this.isPreviewMode()) {
+	        return '';
+	      }
+
+	      if (this.getEntityType() === 'backlog') {
+	        return '';
+	      }
+
+	      var subTasksTick = main_core.Tag.render(_templateObject6$1());
+	      main_core.Event.bind(subTasksTick, 'click', function () {
+	        if (!_this4.isDecompositionMode()) {
+	          _this4.emit('toggleSubTasks');
+	        }
+	      });
+	      return subTasksTick;
+	    }
+	  }, {
+	    key: "toggleSubTasksTick",
+	    value: function toggleSubTasksTick() {
+	      if (!this.isNodeCreated()) {
+	        return;
+	      }
+
+	      var subTasksTick = this.getItemNode().querySelector('.tasks-scrum-item-subtasks-tick');
+
+	      if (subTasksTick) {
+	        subTasksTick.firstElementChild.classList.toggle('ui-btn-icon-angle-up');
+	        subTasksTick.firstElementChild.classList.toggle('ui-btn-icon-angle-down');
+	      }
 	    }
 	  }, {
 	    key: "renderTags",
@@ -1149,12 +2262,12 @@ this.BX.Tasks = this.BX.Tasks || {};
 	        return '';
 	      }
 
-	      return main_core.Tag.render(_templateObject5$1(), this.getEpicTag(), this.getListTagNodes());
+	      return main_core.Tag.render(_templateObject7$1(), this.getEpicTag(), this.getListTagNodes());
 	    }
 	  }, {
 	    key: "getEpicTag",
 	    value: function getEpicTag() {
-	      var _this3 = this;
+	      var _this5 = this;
 
 	      if (this.epic === null) {
 	        return '';
@@ -1191,22 +2304,22 @@ this.BX.Tasks = this.BX.Tasks || {};
 
 	      main_core.Dom.style(container, 'backgroundColor', this.epic.info.color);
 	      main_core.Event.bind(container, 'click', function (event) {
-	        if (_this3.isGroupMode()) {
-	          _this3.clickToGroupModeCheckbox();
+	        if (_this5.isGroupMode()) {
+	          _this5.clickToGroupModeCheckbox();
 
-	          _this3.showActionsPanel(event);
+	          _this5.showActionsPanel(event);
 
 	          return;
 	        }
 
-	        _this3.emit('filterByEpic', _this3.epic.id);
+	        _this5.emit('filterByEpic', _this5.epic.id);
 	      });
 	      return container;
 	    }
 	  }, {
 	    key: "getListTagNodes",
 	    value: function getListTagNodes() {
-	      var _this4 = this;
+	      var _this6 = this;
 
 	      return this.tags.map(function (tag) {
 	        var tagLabel = new ui_label.Label({
@@ -1218,27 +2331,28 @@ this.BX.Tasks = this.BX.Tasks || {};
 	        });
 	        var container = tagLabel.getContainer();
 	        main_core.Event.bind(container, 'click', function (event) {
-	          if (_this4.isGroupMode()) {
-	            _this4.clickToGroupModeCheckbox();
+	          if (_this6.isGroupMode()) {
+	            _this6.clickToGroupModeCheckbox();
 
-	            _this4.showActionsPanel(event);
+	            _this6.showActionsPanel(event);
 
 	            return;
 	          }
 
-	          _this4.emit('filterByTag', tag);
+	          _this6.emit('filterByTag', tag);
 	        });
 	        return container;
 	      });
-	    }
+	    } // todo remove all method
+
 	  }, {
 	    key: "onAfterAppend",
 	    value: function onAfterAppend(container) {
-	      var _this5 = this;
+	      var _this7 = this;
 
-	      this.itemNode = container.querySelector('[data-item-id="' + this.itemId + '"]');
+	      this.setItemNode(container.querySelector('[data-item-id="' + this.itemId + '"]'));
 
-	      if (!this.itemNode) {
+	      if (!this.isNodeCreated()) {
 	        return;
 	      }
 
@@ -1249,39 +2363,90 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      this.updateResponsible();
 
 	      if (this.isPreviewMode()) {
-	        main_core.Event.bind(this.itemNode, 'click', function () {
-	          return _this5.emit('showTask');
+	        main_core.Event.bind(this.getItemNode(), 'click', function () {
+	          return _this7.emit('showTask');
 	        });
 	        return;
-	      } // todo tmp block drag
-
-
-	      if (!this.itemNode.classList.contains('tasks-scrum-item-drag')) {
-	        main_core.Dom.addClass(this.itemNode, 'tasks-scrum-item-drag');
 	      }
 
-	      main_core.Event.unbindAll(this.itemNode);
-	      main_core.Event.bind(this.itemNode, 'click', this.onItemClick.bind(this));
-	      var nameNode = this.itemNode.querySelector('.tasks-scrum-item-name');
+	      if (!this.isDecompositionMode()) {
+	        this.activateDragNDrop();
+	      }
+
+	      if (this.isSubTask()) {
+	        this.deactivateDragNDrop();
+	      }
+
+	      main_core.Event.unbindAll(this.getItemNode());
+	      main_core.Event.bind(this.getItemNode(), 'click', this.onItemClick.bind(this));
+	      var nameNode = this.getItemNode().querySelector('.tasks-scrum-item-name');
 	      main_core.Event.unbindAll(nameNode);
 	      main_core.Event.bind(nameNode, 'click', this.onNameClick.bind(this));
-	      var responsibleNode = this.itemNode.querySelector('.tasks-scrum-item-responsible');
+	      var responsibleNode = this.getItemNode().querySelector('.tasks-scrum-item-responsible');
 	      main_core.Event.unbindAll(responsibleNode);
 	      main_core.Event.bind(responsibleNode, 'click', this.onResponsibleClick.bind(this));
-	      var storyPointsNode = this.itemNode.querySelector('.tasks-scrum-item-story-points');
+	      var storyPointsNode = this.getItemNode().querySelector('.tasks-scrum-item-story-points');
 	      main_core.Event.unbindAll(storyPointsNode);
 	      main_core.Event.bind(storyPointsNode, 'click', this.onStoryPointsClick.bind(this));
 
-	      if (this.completed) {
+	      if (this.isCompleted()) {
 	        var nameTextNode = nameNode.querySelector('.ui-ctl-element');
 	        main_core.Dom.style(nameTextNode, 'textDecoration', 'line-through');
-	        this.setDisableStatus(true);
 	      }
+
+	      this.updateParentTaskNodes();
 	    }
 	  }, {
 	    key: "isShowIndicators",
 	    value: function isShowIndicators() {
 	      return Boolean(this.attachedFilesCount || this.checkListAll || this.newCommentsCount);
+	    }
+	  }, {
+	    key: "updateParentTaskNodes",
+	    value: function updateParentTaskNodes() {
+	      if (this.isParentTask()) {
+	        var subTasksCounterNode = this.getItemNode().querySelector('.tasks-scrum-item-subtasks-btn');
+
+	        if (subTasksCounterNode) {
+	          main_core.Dom.replace(subTasksCounterNode, this.renderSubTasksCounter());
+	        } else {
+	          var paramsNode = this.getItemNode().querySelector('.tasks-scrum-item-params');
+
+	          var _subTasksCounterNode = this.renderSubTasksCounter();
+
+	          main_core.Dom.insertBefore(_subTasksCounterNode, paramsNode.firstElementChild);
+	        }
+
+	        var subTasksTickNode = this.getItemNode().querySelector('.tasks-scrum-item-subtasks-tick');
+
+	        if (subTasksTickNode) {
+	          var newSubTasksTickNode = this.renderSubTasksTick();
+
+	          if (newSubTasksTickNode) {
+	            main_core.Dom.replace(subTasksTickNode, newSubTasksTickNode);
+	          } else {
+	            main_core.Dom.remove(subTasksTickNode);
+	          }
+	        } else {
+	          var _paramsNode = this.getItemNode().querySelector('.tasks-scrum-item-params');
+
+	          var _newSubTasksTickNode = this.renderSubTasksTick();
+
+	          main_core.Dom.append(_newSubTasksTickNode, _paramsNode);
+	        }
+	      } else {
+	        var _subTasksCounterNode2 = this.getItemNode().querySelector('.tasks-scrum-item-subtasks-btn');
+
+	        if (_subTasksCounterNode2) {
+	          main_core.Dom.remove(_subTasksCounterNode2);
+	        }
+
+	        var _subTasksTickNode = this.getItemNode().querySelector('.tasks-scrum-item-subtasks-tick');
+
+	        if (_subTasksTickNode) {
+	          main_core.Dom.remove(_subTasksTickNode);
+	        }
+	      }
 	    }
 	  }, {
 	    key: "onItemClick",
@@ -1296,74 +2461,30 @@ this.BX.Tasks = this.BX.Tasks || {};
 	        return;
 	      }
 
+	      if (event.target.closest('.tasks-scrum-item-subtasks-tick')) {
+	        return;
+	      }
+
 	      this.clickToGroupModeCheckbox();
 	      this.showActionsPanel(event);
 	    }
 	  }, {
 	    key: "isClickOnEditableName",
 	    value: function isClickOnEditableName(event) {
-	      return event.target.classList.contains('ui-ctl-element') && this.allowedActions[this.actionsMap.taskEdit];
+	      return event.target.classList.contains('ui-ctl-element');
 	    }
 	  }, {
 	    key: "onNameClick",
 	    value: function onNameClick(event) {
-	      var _this6 = this;
-
-	      if (this.isGroupMode()) {
-	        this.clickToGroupModeCheckbox();
-	        this.showActionsPanel(event);
-	        return;
+	      if (event.target.classList.contains('ui-ctl-element')) {
+	        this.emit('showTask');
 	      }
-
-	      if (!this.allowedActions[this.actionsMap.taskEdit]) {
-	        return;
-	      }
-
-	      var targetNode = event.target;
-
-	      if (main_core.Dom.hasClass(targetNode, 'ui-ctl-element') && targetNode.contentEditable === 'true') {
-	        return;
-	      }
-
-	      if (!main_core.Dom.hasClass(targetNode, 'ui-ctl-element') || this.isDisabled()) {
-	        return;
-	      }
-
-	      var nameNode = event.currentTarget;
-	      var borderNode = nameNode.querySelector('.ui-ctl');
-	      var valueNode = nameNode.querySelector('.ui-ctl-element');
-	      valueNode.textContent = valueNode.textContent.trim();
-	      var oldValue = valueNode.textContent;
-	      main_core.Dom.addClass(this.itemNode, 'tasks-scrum-item-edit-mode');
-	      main_core.Dom.toggleClass(borderNode, 'ui-ctl-no-border');
-	      valueNode.contentEditable = 'true';
-	      this.placeCursorAtEnd(valueNode);
-	      main_core.Event.bind(valueNode, 'keydown', this.blockEnterInput.bind(valueNode));
-	      main_core.Event.bindOnce(valueNode, 'blur', function () {
-	        main_core.Event.unbind(valueNode, 'keydown', _this6.blockEnterInput.bind(valueNode));
-	        main_core.Dom.removeClass(_this6.itemNode, 'tasks-scrum-item-edit-mode');
-	        main_core.Dom.addClass(borderNode, 'ui-ctl-no-border');
-	        valueNode.contentEditable = 'false';
-	        var newValue = valueNode.textContent.trim();
-
-	        if (oldValue === newValue) {
-	          return;
-	        }
-
-	        _this6.emit('updateItem', {
-	          itemId: _this6.itemId,
-	          itemType: _this6.itemType,
-	          name: newValue
-	        });
-
-	        _this6.name = newValue;
-	      }, true);
 	    }
 	  }, {
 	    key: "clickToGroupModeCheckbox",
 	    value: function clickToGroupModeCheckbox() {
 	      if (this.isGroupMode()) {
-	        var groupModeContainer = this.itemNode.querySelector('.tasks-scrum-item-group-mode-container');
+	        var groupModeContainer = this.getItemNode().querySelector('.tasks-scrum-item-group-mode-container');
 	        var groupModeCheckbox = groupModeContainer.querySelector('input');
 	        groupModeCheckbox.click();
 	      }
@@ -1371,7 +2492,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "onResponsibleClick",
 	    value: function onResponsibleClick(event) {
-	      var _this7 = this;
+	      var _this8 = this;
 
 	      if (this.isGroupMode()) {
 	        this.clickToGroupModeCheckbox();
@@ -1384,45 +2505,46 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      }
 
 	      var responsibleNode = event.currentTarget;
-	      var selector = new BX.Tasks.Integration.Socialnetwork.NetworkSelector({
-	        scope: responsibleNode,
-	        id: 'tasks-scrum-change-responsible-' + this.itemId,
-	        mode: 'user',
-	        query: false,
-	        useSearch: true,
-	        useAdd: false,
-	        parent: this,
-	        popupOffsetLeft: 10
-	      });
-	      selector.bindEvent('item-selected', function (data) {
-	        _this7.responsible = {
-	          id: data.id,
-	          name: data.nameFormatted,
-	          photo: {
-	            src: data.avatar
+	      var dialog = new ui_entitySelector.Dialog({
+	        targetNode: responsibleNode,
+	        enableSearch: true,
+	        context: 'TASKS',
+	        events: {
+	          'Item:onSelect': function ItemOnSelect(event) {
+	            dialog.hide();
+	            var selectedItem = event.getData().item;
+	            _this8.responsible = {
+	              id: selectedItem.getId(),
+	              name: selectedItem.getTitle(),
+	              photo: {
+	                src: selectedItem.getAvatar()
+	              }
+	            };
+
+	            _this8.updateResponsible();
+
+	            _this8.emit('changeTaskResponsible');
 	          }
-	        };
-
-	        _this7.updateResponsible();
-
-	        selector.close();
-
-	        _this7.emit('changeTaskResponsible');
+	        },
+	        entities: [{
+	          id: 'user',
+	          options: {
+	            inviteEmployeeLink: false
+	          }
+	        }, {
+	          id: 'department'
+	        }]
 	      });
-	      selector.open();
+	      dialog.show();
 	    }
 	  }, {
 	    key: "onStoryPointsClick",
 	    value: function onStoryPointsClick(event) {
-	      var _this8 = this;
+	      var _this9 = this;
 
-	      if (this.isGroupMode()) {
+	      if (this.isGroupMode() || this.isDisabled() || this.isCompleted() || this.isParentTask()) {
 	        this.clickToGroupModeCheckbox();
 	        this.showActionsPanel(event);
-	        return;
-	      }
-
-	      if (this.isDisabled()) {
 	        return;
 	      }
 
@@ -1441,7 +2563,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      this.placeCursorAtEnd(valueNode);
 	      main_core.Event.bind(valueNode, 'keydown', this.blockEnterInput.bind(valueNode));
 	      main_core.Event.bindOnce(valueNode, 'blur', function () {
-	        main_core.Event.unbind(valueNode, 'keydown', _this8.blockEnterInput.bind(valueNode));
+	        main_core.Event.unbind(valueNode, 'keydown', _this9.blockEnterInput.bind(valueNode));
 	        main_core.Dom.toggleClass(borderNode, 'ui-ctl-no-border');
 	        valueNode.contentEditable = 'false';
 	        var newValue = valueNode.textContent.trim();
@@ -1451,18 +2573,20 @@ this.BX.Tasks = this.BX.Tasks || {};
 	          return;
 	        }
 
-	        _this8.setStoryPoints(newValue);
-
-	        _this8.emit('updateItem', {
-	          itemId: _this8.itemId,
-	          itemType: _this8.itemType,
+	        _this9.emit('updateItem', {
+	          itemId: _this9.getItemId(),
+	          entityId: _this9.getEntityId(),
+	          itemType: _this9.getItemType(),
 	          storyPoints: newValue
 	        });
 
-	        _this8.emit('updateStoryPoints');
-
-	        _this8.emit('updateActiveSprintStoryPoints');
+	        _this9.setStoryPoints(newValue);
 	      }, true);
+	    }
+	  }, {
+	    key: "sendEventToUpdateStoryPoints",
+	    value: function sendEventToUpdateStoryPoints() {
+	      this.emit('updateStoryPoints');
 	    }
 	  }, {
 	    key: "blockEnterInput",
@@ -1475,7 +2599,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "showActionsPanel",
 	    value: function showActionsPanel(event) {
-	      var _this9 = this;
+	      var _this10 = this;
 
 	      if (this.actionsPanel && this.actionsPanel.isShown() && !this.isGroupMode()) {
 	        return;
@@ -1486,80 +2610,80 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      }
 
 	      this.actionsPanel = new ActionsPanel({
-	        bindElement: this.itemNode,
+	        bindElement: this.getItemNode(),
 	        itemList: {
 	          task: {
 	            activity: this.itemType === 'task' && !this.isGroupMode(),
 	            callback: function callback() {
-	              _this9.emit('showTask');
+	              _this10.emit('showTask');
 
-	              _this9.actionsPanel.destroy();
+	              _this10.actionsPanel.destroy();
 	            }
 	          },
 	          attachment: {
-	            activity: !this.disableStatus && this.allowedActions[this.actionsMap.taskEdit] && !this.isGroupMode(),
+	            activity: !this.isDisabled() && this.isEditAllowed() && !this.isGroupMode(),
 	            callback: function callback(event) {
 	              var diskManager = new DiskManager({
 	                ufDiskFilesFieldName: 'UF_TASK_WEBDAV_FILES'
 	              });
 	              diskManager.subscribeOnce('onFinish', function (baseEvent) {
-	                _this9.emit('attachFilesToTask', baseEvent.getData());
+	                _this10.emit('attachFilesToTask', baseEvent.getData());
 
-	                _this9.actionsPanel.destroy();
+	                _this10.actionsPanel.destroy();
 	              });
 	              diskManager.showAttachmentMenu(event.currentTarget);
 	            }
 	          },
 	          move: {
-	            activity: !this.decompositionMode && this.moveActivity,
+	            activity: !this.decompositionMode && this.isMovable() && !this.isSubTask(),
 	            callback: function callback(event) {
-	              _this9.emit('move', event.currentTarget);
+	              _this10.emit('move', event.currentTarget);
 	            }
 	          },
 	          sprint: {
-	            activity: !this.disableStatus && !this.decompositionMode,
+	            activity: !this.isDisabled() && !this.decompositionMode && !this.isSubTask(),
 	            callback: function callback(event) {
-	              _this9.emit('moveToSprint', event.currentTarget);
+	              _this10.emit('moveToSprint', event.currentTarget);
 	            }
 	          },
 	          backlog: {
-	            activity: this.entityType === 'sprint' && !this.decompositionMode,
+	            activity: this.entityType === 'sprint' && !this.decompositionMode && !this.isSubTask(),
 	            callback: function callback() {
-	              _this9.emit('moveToBacklog');
+	              _this10.emit('moveToBacklog');
 
-	              _this9.actionsPanel.destroy();
+	              _this10.actionsPanel.destroy();
 	            }
 	          },
 	          tags: {
-	            activity: !this.disableStatus && !this.decompositionMode,
+	            activity: true,
 	            callback: function callback(event) {
-	              _this9.emit('showTagSearcher', event.currentTarget);
+	              _this10.emit('showTagSearcher', event.currentTarget);
 	            }
 	          },
 	          epic: {
-	            activity: !this.disableStatus && !this.decompositionMode,
+	            activity: true,
 	            callback: function callback(event) {
-	              _this9.emit('showEpicSearcher', event.currentTarget);
+	              _this10.emit('showEpicSearcher', event.currentTarget);
 	            }
 	          },
 	          decomposition: {
-	            activity: !this.disableStatus && !this.decompositionMode && !this.isGroupMode(),
+	            activity: !this.isDisabled() && !this.decompositionMode && !this.isGroupMode() && !this.isSubTask(),
 	            callback: function callback(event) {
-	              _this9.emit('startDecomposition');
+	              _this10.emit('startDecomposition');
 
-	              _this9.actionsPanel.destroy();
+	              _this10.actionsPanel.destroy();
 	            }
 	          },
 	          remove: {
-	            activity: !this.decompositionMode && this.allowedActions[this.actionsMap.taskRemove],
+	            activity: this.isRemoveAllowed(),
 	            callback: function callback() {
-	              var message = _this9.isGroupMode() ? main_core.Loc.getMessage('TASKS_SCRUM_CONFIRM_TEXT_REMOVE_TASKS') : main_core.Loc.getMessage('TASKS_SCRUM_CONFIRM_TEXT_REMOVE_TASK');
+	              var message = _this10.isGroupMode() ? main_core.Loc.getMessage('TASKS_SCRUM_CONFIRM_TEXT_REMOVE_TASKS') : main_core.Loc.getMessage('TASKS_SCRUM_CONFIRM_TEXT_REMOVE_TASK');
 	              ui_dialogs_messagebox.MessageBox.confirm(message, function (messageBox) {
-	                _this9.emit('remove');
+	                _this10.emit('remove');
 
 	                messageBox.close();
 
-	                _this9.actionsPanel.destroy();
+	                _this10.actionsPanel.destroy();
 	              }, main_core.Loc.getMessage('TASKS_SCRUM_BUTTON_TEXT_REMOVE'));
 	            }
 	          }
@@ -1577,15 +2701,6 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      }
 	    }
 	  }, {
-	    key: "setItemId",
-	    value: function setItemId(itemId) {
-	      this.itemId = main_core.Type.isInteger(itemId) ? parseInt(itemId, 10) : main_core.Type.isString(itemId) ? itemId : main_core.Text.getRandom();
-
-	      if (this.itemNode) {
-	        this.itemNode.dataset.itemId = this.itemId;
-	      }
-	    }
-	  }, {
 	    key: "setEpicAndTags",
 	    value: function setEpicAndTags(epic, tags) {
 	      this.epic = main_core.Type.isPlainObject(epic) || epic === null ? epic : this.epic;
@@ -1593,47 +2708,29 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      this.updateTagsContainer();
 	    }
 	  }, {
-	    key: "setTags",
-	    value: function setTags(tags) {
-	      this.tags = main_core.Type.isArray(tags) ? tags : [];
-	    }
-	  }, {
-	    key: "getTags",
-	    value: function getTags() {
-	      return this.tags;
-	    }
-	  }, {
-	    key: "getEpic",
-	    value: function getEpic() {
-	      return this.epic;
-	    }
-	  }, {
-	    key: "gerResponsible",
-	    value: function gerResponsible() {
-	      return this.responsible;
-	    }
-	  }, {
-	    key: "setResponsible",
-	    value: function setResponsible(responsible) {
-	      this.responsible = responsible;
-	      this.updateResponsible();
-	    }
-	  }, {
 	    key: "updateTagsContainer",
 	    value: function updateTagsContainer() {
-	      var newContainer = main_core.Tag.render(_templateObject6$1(), this.getEpicTag(), this.getListTagNodes());
-	      var tagsContainerNode = this.itemNode.querySelector('.tasks-scrum-item-tags-container');
+	      if (!this.getItemNode()) {
+	        return;
+	      }
+
+	      var newContainer = main_core.Tag.render(_templateObject8$1(), this.getEpicTag(), this.getListTagNodes());
+	      var tagsContainerNode = this.getItemNode().querySelector('.tasks-scrum-item-tags-container');
 
 	      if (tagsContainerNode) {
 	        main_core.Dom.replace(tagsContainerNode, newContainer);
 	      } else {
-	        main_core.Dom.append(newContainer, this.itemNode);
+	        main_core.Dom.append(newContainer, this.getItemNode());
 	      }
 	    }
 	  }, {
 	    key: "updateResponsible",
 	    value: function updateResponsible() {
-	      var responsibleNode = this.itemNode.querySelector('.tasks-scrum-item-responsible');
+	      if (!this.getItemNode()) {
+	        return;
+	      }
+
+	      var responsibleNode = this.getItemNode().querySelector('.tasks-scrum-item-responsible');
 
 	      if (!responsibleNode) {
 	        return;
@@ -1675,24 +2772,136 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    value: function hideNode(node) {
 	      main_core.Dom.style(node, 'display', 'none');
 	    }
+	  }], [{
+	    key: "buildItem",
+	    value: function buildItem(params) {
+	      return new Item(params);
+	    }
 	  }]);
 	  return Item;
 	}(main_core_events.EventEmitter);
 
-	function _templateObject2$2() {
+	function _templateObject$7() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<a class=\"ui-link ui-link-dashed ui-link-secondary tasks-scrum-group-actions\">\n\t\t\t\t", "\n\t\t\t</a>\n\t\t"]);
+
+	  _templateObject$7 = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
+	var GroupActionsButton = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(GroupActionsButton, _EventEmitter);
+
+	  function GroupActionsButton() {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, GroupActionsButton);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(GroupActionsButton).call(this));
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.GroupActionsButton');
+
+	    _this.element = null;
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(GroupActionsButton, [{
+	    key: "render",
+	    value: function render() {
+	      this.element = main_core.Tag.render(_templateObject$7(), main_core.Loc.getMessage('TASKS_SCRUM_BACKLOG_LIST_ACTIONS_GROUP'));
+	      main_core.Event.bind(this.element, 'click', this.onClick.bind(this, this.element));
+	      return this.element;
+	    }
+	  }, {
+	    key: "deactivateGroupMode",
+	    value: function deactivateGroupMode() {
+	      if (this.element && this.element.classList.contains('tasks-scrum-group-actions-active')) {
+	        main_core.Dom.toggleClass(this.element, 'tasks-scrum-group-actions');
+	        main_core.Dom.toggleClass(this.element, 'tasks-scrum-group-actions-active');
+	        main_core.Dom.toggleClass(this.element, 'ui-link-secondary');
+	        main_core.Dom.toggleClass(this.element, 'ui-link-dashed');
+	        this.emit('deactivateGroupMode');
+	      }
+	    }
+	  }, {
+	    key: "onClick",
+	    value: function onClick(element) {
+	      main_core.Dom.toggleClass(element, 'tasks-scrum-group-actions');
+	      main_core.Dom.toggleClass(element, 'tasks-scrum-group-actions-active');
+	      main_core.Dom.toggleClass(element, 'ui-link-secondary');
+	      main_core.Dom.toggleClass(element, 'ui-link-dashed');
+
+	      if (element.classList.contains('tasks-scrum-group-actions-active')) {
+	        this.emit('activateGroupMode');
+	      } else {
+	        this.emit('deactivateGroupMode');
+	      }
+	    }
+	  }, {
+	    key: "removeYourself",
+	    value: function removeYourself() {
+	      main_core.Dom.remove(this.element);
+	      this.element = null;
+	    }
+	  }]);
+	  return GroupActionsButton;
+	}(main_core_events.EventEmitter);
+
+	function _templateObject$8() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-items-list\" data-entity-id=\"", "\">\n\t\t\t\t", "\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject$8 = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
+	var ListItems = /*#__PURE__*/function () {
+	  function ListItems(entity) {
+	    babelHelpers.classCallCheck(this, ListItems);
+	    this.entity = entity;
+	    this.node = null;
+	  }
+
+	  babelHelpers.createClass(ListItems, [{
+	    key: "render",
+	    value: function render() {
+	      var _this = this;
+
+	      this.node = main_core.Tag.render(_templateObject$8(), this.entity.getId(), this.entity.isCompleted() ? '' : this.entity.getInput().render(), babelHelpers.toConsumableArray(this.entity.getItems().values()).map(function (item) {
+	        item.setEntityType(_this.entity.getEntityType());
+	        return item.render();
+	      }));
+	      return this.node;
+	    }
+	  }, {
+	    key: "getNode",
+	    value: function getNode() {
+	      return this.node;
+	    }
+	  }, {
+	    key: "setEntityId",
+	    value: function setEntityId(entityId) {
+	      this.node.dataset.entityId = parseInt(entityId, 10);
+	    }
+	  }]);
+	  return ListItems;
+	}();
+
+	function _templateObject2$3() {
 	  var data = babelHelpers.taggedTemplateLiteral(["<span class=\"ui-selector-footer-conjunction\"></span>"]);
 
-	  _templateObject2$2 = function _templateObject2() {
+	  _templateObject2$3 = function _templateObject2() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject$4() {
+	function _templateObject$9() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t<span onclick=\"", "\" class=\"ui-selector-footer-link ui-selector-footer-link-add\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</span>\n\t\t\t\t"]);
 
-	  _templateObject$4 = function _templateObject() {
+	  _templateObject$9 = function _templateObject() {
 	    return data;
 	  };
 
@@ -1847,14 +3056,14 @@ this.BX.Tasks = this.BX.Tasks || {};
 	          'Item:onSelect': function ItemOnSelect(event) {
 	            choiceWasMade = true;
 	            var selectedItem = event.getData().item;
-	            var tag = selectedItem.title;
+	            var tag = selectedItem.getTitle();
 
 	            _this2.emit('attachTagToTask', tag);
 	          },
 	          'Item:onDeselect': function ItemOnDeselect(event) {
 	            choiceWasMade = true;
 	            var deselectedItem = event.getData().item;
-	            var tag = deselectedItem.title;
+	            var tag = deselectedItem.getTitle();
 
 	            _this2.emit('deAttachTagToTask', tag);
 	          }
@@ -1863,13 +3072,16 @@ this.BX.Tasks = this.BX.Tasks || {};
 	          events: {
 	            onInput: function onInput(event) {
 	              var selector = event.getData().selector;
-	              var dialog = selector.getDialog();
-	              var label = dialog.getContainer().querySelector('.ui-selector-footer-conjunction');
-	              label.textContent = main_core.Text.encode(selector.getTextBoxValue());
+
+	              if (selector) {
+	                var dialog = selector.getDialog();
+	                var label = dialog.getContainer().querySelector('.ui-selector-footer-conjunction');
+	                label.textContent = main_core.Text.encode(selector.getTextBoxValue());
+	              }
 	            }
 	          }
 	        },
-	        footer: [main_core.Tag.render(_templateObject$4(), createTag, main_core.Loc.getMessage('TASKS_SCRUM_SEARCHER_ACTIONS_TAG_ADD')), main_core.Tag.render(_templateObject2$2())]
+	        footer: [main_core.Tag.render(_templateObject$9(), createTag, main_core.Loc.getMessage('TASKS_SCRUM_SEARCHER_ACTIONS_TAG_ADD')), main_core.Tag.render(_templateObject2$3())]
 	      });
 	      actionsPanel.setBlockBlurNode(this.tagDialog.getContainer());
 	      this.tagDialog.subscribe('onHide', function () {
@@ -1913,7 +3125,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	          'Item:onSelect': function ItemOnSelect(event) {
 	            choiceWasMade = true;
 	            var selectedItem = event.getData().item;
-	            var epicId = selectedItem.id;
+	            var epicId = selectedItem.getId();
 
 	            _this3.emit('updateItemEpic', epicId);
 	          },
@@ -1962,10 +3174,10 @@ this.BX.Tasks = this.BX.Tasks || {};
 	          events: {
 	            'Item:onSelect': function ItemOnSelect(event) {
 	              var selectedItem = event.getData().item;
-	              var selectedHashTag = '#' + selectedItem.title;
-	              var hashTags = TagSearcher.getHashTagsFromText(input.value);
-	              var enteredHashTag = hashTags.length > 0 ? hashTags.pop().trim() : '';
-	              input.value = input.value.replace(new RegExp('#([' + enteredHashTag + ']+|)(?:$)', 'g'), selectedHashTag);
+	              var selectedHashTag = '#' + selectedItem.getTitle();
+	              var hashTags = TagSearcher.getHashTagNamesFromText(input.value);
+	              var enteredHashTag = hashTags.length > 0 ? hashTags.pop() : '';
+	              input.value = input.value.replace(new RegExp('#' + enteredHashTag, 'g'), selectedHashTag);
 	              input.focus();
 	              selectedItem.deselect();
 	            }
@@ -2008,12 +3220,12 @@ this.BX.Tasks = this.BX.Tasks || {};
 	          events: {
 	            'Item:onSelect': function ItemOnSelect(event) {
 	              var selectedItem = event.getData().item;
-	              var selectedHashEpic = '@' + selectedItem.title;
-	              input.value = input.value.replace(new RegExp('(?:^|\\s)(?:@)([^\\s]*)', 'g'), '');
+	              var selectedHashEpic = '@' + selectedItem.getTitle();
+	              input.value = input.value.replace(new RegExp(TagSearcher.epicRegExp, 'g'), '');
 	              input.value = input.value + ' ' + selectedHashEpic;
 	              input.focus();
 	              selectedItem.deselect();
-	              inputObject.setEpicId(selectedItem.id);
+	              inputObject.setEpicId(selectedItem.getId());
 	            }
 	          }
 	        });
@@ -2033,54 +3245,15 @@ this.BX.Tasks = this.BX.Tasks || {};
 	        this.epicDialog.hide();
 	      }
 	    }
-	  }, {
-	    key: "cleanEpicTagsInText",
-	    value: function cleanEpicTagsInText(inputText) {
-	      var regex = new RegExp('(?:^|\\s)(?:@)(\\S+)', 'g');
-	      var matches = [];
-	      var match;
-
-	      while (match = regex.exec(inputText)) {
-	        matches.push(match[0]);
-	      }
-
-	      return matches;
-	    }
 	  }], [{
-	    key: "getHashTagsFromText",
-	    value: function getHashTagsFromText(inputText) {
-	      var regex = new RegExp('(?:^|\\s)(?:#)(\\S+)', 'g');
-	      var matches = [];
-	      var match;
-
-	      while (match = regex.exec(inputText)) {
-	        matches.push(match[0]);
-	      }
-
-	      return matches;
-	    }
-	  }, {
-	    key: "getHashEpicFromText",
-	    value: function getHashEpicFromText(inputText) {
-	      var regex = new RegExp('(?:^|\\s)(?:@)(\\S+)', 'g');
-	      var matches = [];
-	      var match;
-
-	      while (match = regex.exec(inputText)) {
-	        matches.push(match[0]);
-	      }
-
-	      return matches;
-	    }
-	  }, {
 	    key: "getHashTagNamesFromText",
 	    value: function getHashTagNamesFromText(inputText) {
-	      var regex = new RegExp('(?:^|\\s)(?:#)(\\S+|)', 'g');
+	      var regex = new RegExp(TagSearcher.tagRegExp, 'g');
 	      var matches = [];
 	      var match;
 
 	      while (match = regex.exec(inputText)) {
-	        matches.push(match[1]);
+	        matches.push(match[0].substring(1));
 	      }
 
 	      return matches;
@@ -2088,12 +3261,12 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "getHashEpicNamesFromText",
 	    value: function getHashEpicNamesFromText(inputText) {
-	      var regex = new RegExp('(?:^|\\s)(?:@)(\\S+|)', 'g');
+	      var regex = new RegExp(TagSearcher.epicRegExp, 'g');
 	      var matches = [];
 	      var match;
 
 	      while (match = regex.exec(inputText)) {
-	        matches.push(match[1]);
+	        matches.push(match[0].substring(1));
 	      }
 
 	      return matches;
@@ -2101,11 +3274,13 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }]);
 	  return TagSearcher;
 	}(main_core_events.EventEmitter);
+	babelHelpers.defineProperty(TagSearcher, "tagRegExp", '#[^#@](?:[^#@]*[^\s#@])?');
+	babelHelpers.defineProperty(TagSearcher, "epicRegExp", '@[^#@](?:[^#@]*[^\s#@])?');
 
-	function _templateObject$5() {
+	function _templateObject$a() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div id=\"", "\" class=\"tasks-scrum-input\">\n\t\t\t\t<div class=\"ui-ctl ui-ctl-w100 ui-ctl-textbox\">\n\t\t\t\t\t<input type=\"text\" class=\"ui-ctl-element\" placeholder=\n\t\t\t\t\t\t\"", "\" autocomplete=\"off\">\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject$5 = function _templateObject() {
+	  _templateObject$a = function _templateObject() {
 	    return data;
 	  };
 
@@ -2131,7 +3306,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  babelHelpers.createClass(Input, [{
 	    key: "render",
 	    value: function render() {
-	      return main_core.Tag.render(_templateObject$5(), main_core.Text.encode(this.nodeId), main_core.Text.encode(this.placeholder));
+	      return main_core.Tag.render(_templateObject$a(), main_core.Text.encode(this.nodeId), main_core.Text.encode(this.placeholder));
 	    }
 	  }, {
 	    key: "disable",
@@ -2228,7 +3403,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      }
 
 	      if (enteredHashTags.length > 0 && this.isTagsSearchMode()) {
-	        var enteredHashTagName = enteredHashTags.pop().trim();
+	        var enteredHashTagName = enteredHashTags.pop();
 	        this.emit('tagsSearchOpen', enteredHashTagName);
 	      } else {
 	        this.emit('tagsSearchClose');
@@ -2246,7 +3421,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      }
 
 	      if (enteredHashEpics.length > 0 && this.isEpicSearchMode()) {
-	        var enteredHashTagName = enteredHashEpics.pop().trim();
+	        var enteredHashTagName = enteredHashEpics.pop();
 	        this.emit('epicSearchOpen', enteredHashTagName);
 	      } else {
 	        this.emit('epicSearchClose');
@@ -2276,134 +3451,39 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return Input;
 	}(main_core_events.EventEmitter);
 
-	function _templateObject$6() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<a class=\"ui-link ui-link-dashed ui-link-secondary tasks-scrum-group-actions\">\n\t\t\t\t", "\n\t\t\t</a>\n\t\t"]);
-
-	  _templateObject$6 = function _templateObject() {
-	    return data;
-	  };
-
-	  return data;
-	}
-	var GroupActionsButton = /*#__PURE__*/function (_EventEmitter) {
-	  babelHelpers.inherits(GroupActionsButton, _EventEmitter);
-
-	  function GroupActionsButton() {
-	    var _this;
-
-	    babelHelpers.classCallCheck(this, GroupActionsButton);
-	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(GroupActionsButton).call(this));
-
-	    _this.setEventNamespace('BX.Tasks.Scrum.GroupActionsButton');
-
-	    _this.element = null;
-	    return _this;
-	  }
-
-	  babelHelpers.createClass(GroupActionsButton, [{
-	    key: "render",
-	    value: function render() {
-	      this.element = main_core.Tag.render(_templateObject$6(), main_core.Loc.getMessage('TASKS_SCRUM_BACKLOG_LIST_ACTIONS_GROUP'));
-	      main_core.Event.bind(this.element, 'click', this.onClick.bind(this, this.element));
-	      return this.element;
-	    }
-	  }, {
-	    key: "deactivateGroupMode",
-	    value: function deactivateGroupMode() {
-	      if (this.element && this.element.classList.contains('tasks-scrum-group-actions-active')) {
-	        main_core.Dom.toggleClass(this.element, 'tasks-scrum-group-actions');
-	        main_core.Dom.toggleClass(this.element, 'tasks-scrum-group-actions-active');
-	        main_core.Dom.toggleClass(this.element, 'ui-link-secondary');
-	        main_core.Dom.toggleClass(this.element, 'ui-link-dashed');
-	        this.emit('deactivateGroupMode');
-	      }
-	    }
-	  }, {
-	    key: "onClick",
-	    value: function onClick(element) {
-	      main_core.Dom.toggleClass(element, 'tasks-scrum-group-actions');
-	      main_core.Dom.toggleClass(element, 'tasks-scrum-group-actions-active');
-	      main_core.Dom.toggleClass(element, 'ui-link-secondary');
-	      main_core.Dom.toggleClass(element, 'ui-link-dashed');
-
-	      if (element.classList.contains('tasks-scrum-group-actions-active')) {
-	        this.emit('activateGroupMode');
-	      } else {
-	        this.emit('deactivateGroupMode');
-	      }
-	    }
-	  }, {
-	    key: "removeYourself",
-	    value: function removeYourself() {
-	      main_core.Dom.remove(this.element);
-	      this.element = null;
-	    }
-	  }]);
-	  return GroupActionsButton;
-	}(main_core_events.EventEmitter);
-
-	function _templateObject$7() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-items-list\" data-entity-id=\"", "\">\n\t\t\t\t", "\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
-
-	  _templateObject$7 = function _templateObject() {
-	    return data;
-	  };
-
-	  return data;
-	}
-	var ListItems = /*#__PURE__*/function () {
-	  function ListItems(entity) {
-	    babelHelpers.classCallCheck(this, ListItems);
-	    this.entity = entity;
-	    this.element = null;
-	  }
-
-	  babelHelpers.createClass(ListItems, [{
-	    key: "render",
-	    value: function render() {
-	      this.element = main_core.Tag.render(_templateObject$7(), this.entity.getId(), this.entity.isCompleted() ? '' : this.entity.getInput().render(), babelHelpers.toConsumableArray(this.entity.getItems().values()).map(function (item) {
-	        return item.render();
-	      }));
-	      return this.element;
-	    }
-	  }, {
-	    key: "getElement",
-	    value: function getElement() {
-	      return this.element;
-	    }
-	  }, {
-	    key: "setEntityId",
-	    value: function setEntityId(entityId) {
-	      this.element.dataset.entityId = parseInt(entityId, 10);
-	    }
-	  }]);
-	  return ListItems;
-	}();
-
 	var Entity = /*#__PURE__*/function (_EventEmitter) {
 	  babelHelpers.inherits(Entity, _EventEmitter);
 
-	  function Entity() {
+	  function Entity(params) {
 	    var _this;
 
-	    var entityData = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 	    babelHelpers.classCallCheck(this, Entity);
-	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Entity).call(this, entityData));
-	    _this.id = main_core.Type.isInteger(entityData.id) ? parseInt(entityData.id, 10) : 0;
-	    _this.views = entityData.views;
-	    _this.numberTasks = main_core.Type.isInteger(entityData.numberTasks) ? parseInt(entityData.numberTasks, 10) : 0;
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Entity).call(this, params));
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.Entity');
+
+	    _this.setEntityParams(params);
+
+	    _this.storyPoints = new StoryPoints();
 	    _this.items = new Map();
 	    _this.groupMode = false;
 	    _this.groupModeItems = new Map();
 	    _this.node = null;
 	    _this.groupActionsButton = null;
 	    _this.listItems = null;
-	    _this.storyPoints = new StoryPoints();
 	    _this.input = new Input();
 	    return _this;
 	  }
 
 	  babelHelpers.createClass(Entity, [{
+	    key: "setEntityParams",
+	    value: function setEntityParams(params) {
+	      this.setId(params.id);
+	      this.setViews(params.views);
+	      this.setNumberTasks(params.numberTasks);
+	      this.exactSearchApplied = params.isExactSearchApplied === 'Y';
+	    }
+	  }, {
 	    key: "addGroupActionsButton",
 	    value: function addGroupActionsButton(groupActionsButton) {
 	      this.groupActionsButton = groupActionsButton;
@@ -2416,14 +3496,14 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      this.listItems = listItems;
 	    }
 	  }, {
+	    key: "getListItems",
+	    value: function getListItems() {
+	      return this.listItems;
+	    }
+	  }, {
 	    key: "getNode",
 	    value: function getNode() {
 	      return this.node;
-	    }
-	  }, {
-	    key: "getId",
-	    value: function getId() {
-	      return this.id;
 	    }
 	  }, {
 	    key: "setId",
@@ -2433,6 +3513,21 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      if (this.listItems) {
 	        this.listItems.setEntityId(this.id);
 	      }
+	    }
+	  }, {
+	    key: "getId",
+	    value: function getId() {
+	      return this.id;
+	    }
+	  }, {
+	    key: "setViews",
+	    value: function setViews(views) {
+	      this.views = main_core.Type.isPlainObject(views) ? views : {};
+	    }
+	  }, {
+	    key: "getViews",
+	    value: function getViews() {
+	      return this.views;
 	    }
 	  }, {
 	    key: "getEntityType",
@@ -2452,12 +3547,38 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "getListItemsNode",
 	    value: function getListItemsNode() {
-	      return this.listItems ? this.listItems.getElement() : null;
+	      return this.listItems ? this.listItems.getNode() : null;
+	    }
+	  }, {
+	    key: "isEmpty",
+	    value: function isEmpty() {
+	      return this.items.size === 0;
 	    }
 	  }, {
 	    key: "getItems",
 	    value: function getItems() {
 	      return this.items;
+	    }
+	  }, {
+	    key: "recalculateItemsSort",
+	    value: function recalculateItemsSort() {
+	      var _this2 = this;
+
+	      var listItemsNode = this.getListItemsNode();
+
+	      if (!listItemsNode) {
+	        return;
+	      }
+
+	      var sort = 1;
+	      listItemsNode.querySelectorAll('.tasks-scrum-item').forEach(function (node) {
+	        var item = _this2.getItems().get(parseInt(node.dataset.itemId, 10));
+
+	        if (item) {
+	          item.setSort(sort);
+	          sort++;
+	        }
+	      });
 	    }
 	  }, {
 	    key: "getInput",
@@ -2467,14 +3588,17 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "setItem",
 	    value: function setItem(newItem) {
-	      var _this2 = this;
+	      var _this3 = this;
 
 	      this.items.set(newItem.getItemId(), newItem);
 	      this.subscribeToItem(newItem);
 	      babelHelpers.toConsumableArray(this.items.values()).map(function (item) {
-	        _this2.setItemMoveActivity(item);
+	        _this3.setItemMoveActivity(item);
 	      });
-	      this.addNumberTasks(1);
+
+	      if (!newItem.isSubTask()) {
+	        this.addNumberTasks(1);
+	      }
 	    }
 	  }, {
 	    key: "setItemMoveActivity",
@@ -2484,26 +3608,34 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "removeItem",
 	    value: function removeItem(item) {
-	      var _this3 = this;
+	      var _this4 = this;
 
 	      if (this.items.has(item.getItemId())) {
 	        this.items.delete(item.getItemId());
 	        item.unsubscribeAll();
 	        babelHelpers.toConsumableArray(this.items.values()).map(function (item) {
-	          _this3.setItemMoveActivity(item);
+	          _this4.setItemMoveActivity(item);
 	        });
-	        this.subtractNumberTasks(1);
+
+	        if (!item.isSubTask()) {
+	          this.subtractNumberTasks(1);
+	        }
 	      }
 	    }
 	  }, {
-	    key: "getNumberTasks",
-	    value: function getNumberTasks() {
-	      return this.numberTasks ? this.numberTasks : this.getItems().size;
+	    key: "isNodeCreated",
+	    value: function isNodeCreated() {
+	      return this.node !== null;
 	    }
 	  }, {
 	    key: "setNumberTasks",
 	    value: function setNumberTasks(numberTasks) {
 	      this.numberTasks = main_core.Type.isInteger(numberTasks) ? parseInt(numberTasks, 10) : 0;
+	    }
+	  }, {
+	    key: "getNumberTasks",
+	    value: function getNumberTasks() {
+	      return this.numberTasks ? this.numberTasks : this.getItems().size;
 	    }
 	  }, {
 	    key: "addNumberTasks",
@@ -2525,38 +3657,48 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      return true;
 	    }
 	  }, {
+	    key: "setExactSearchApplied",
+	    value: function setExactSearchApplied(value) {
+	      this.exactSearchApplied = Boolean(value);
+	    }
+	  }, {
+	    key: "isExactSearchApplied",
+	    value: function isExactSearchApplied() {
+	      return this.exactSearchApplied;
+	    }
+	  }, {
 	    key: "onAfterAppend",
 	    value: function onAfterAppend() {
-	      var _this4 = this;
+	      var _this5 = this;
 
 	      babelHelpers.toConsumableArray(this.items.values()).map(function (item) {
-	        _this4.subscribeToItem(item);
+	        _this5.subscribeToItem(item);
 
-	        _this4.setItemMoveActivity(item);
+	        _this5.setItemMoveActivity(item);
 	      });
 
 	      if (!this.isCompleted()) {
 	        this.input.onAfterAppend();
 	        this.input.subscribe('tagsSearchOpen', function (baseEvent) {
-	          _this4.emit('tagsSearchOpen', {
+	          _this5.emit('tagsSearchOpen', {
 	            inputObject: baseEvent.getTarget(),
 	            enteredHashTagName: baseEvent.getData()
 	          });
 	        });
 	        this.input.subscribe('tagsSearchClose', function () {
-	          return _this4.emit('tagsSearchClose');
+	          return _this5.emit('tagsSearchClose');
 	        });
 	        this.input.subscribe('epicSearchOpen', function (baseEvent) {
-	          _this4.emit('epicSearchOpen', {
+	          _this5.emit('epicSearchOpen', {
 	            inputObject: baseEvent.getTarget(),
 	            enteredHashEpicName: baseEvent.getData()
 	          });
 	        });
 	        this.input.subscribe('epicSearchClose', function () {
-	          return _this4.emit('epicSearchClose');
+	          return _this5.emit('epicSearchClose');
 	        });
 	        this.input.subscribe('createTaskItem', function (baseEvent) {
-	          _this4.emit('createTaskItem', {
+	          _this5.emit('createTaskItem', {
 	            inputObject: baseEvent.getTarget(),
 	            value: baseEvent.getData()
 	          });
@@ -2568,98 +3710,109 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "subscribeToItem",
 	    value: function subscribeToItem(item) {
-	      var _this5 = this;
+	      var _this6 = this;
 
 	      if (!this.getListItemsNode()) {
 	        return;
 	      }
 
 	      item.onAfterAppend(this.getListItemsNode());
+	      item.setEntityType(this.getEntityType());
 	      item.subscribe('updateItem', function (baseEvent) {
-	        _this5.emit('updateItem', baseEvent.getData());
+	        _this6.emit('updateItem', baseEvent.getData());
 	      });
 	      item.subscribe('updateStoryPoints', function () {
-	        return _this5.updateStoryPoints();
+	        if (item.isSubTask()) {
+	          var parentItem = _this6.getItemBySourceId(item.getParentTaskId());
+
+	          if (parentItem) {
+	            parentItem.updateSubTasksPoints(item.getSourceId(), item.getStoryPoints());
+	          }
+	        }
+
+	        _this6.updateStoryPoints();
 	      });
 	      item.subscribe('showTask', function (baseEvent) {
-	        return _this5.emit('showTask', baseEvent.getTarget());
+	        return _this6.emit('showTask', baseEvent.getTarget());
 	      });
 	      item.subscribe('move', function (baseEvent) {
-	        _this5.emit('moveItem', {
+	        _this6.emit('moveItem', {
 	          item: baseEvent.getTarget(),
 	          button: baseEvent.getData()
 	        });
 	      });
 	      item.subscribe('moveToSprint', function (baseEvent) {
-	        _this5.emit('moveToSprint', {
+	        _this6.emit('moveToSprint', {
 	          item: baseEvent.getTarget(),
 	          button: baseEvent.getData()
 	        });
 	      });
 	      item.subscribe('attachFilesToTask', function (baseEvent) {
-	        _this5.emit('attachFilesToTask', {
+	        _this6.emit('attachFilesToTask', {
 	          item: baseEvent.getTarget(),
 	          attachedIds: baseEvent.getData()
 	        });
 	      });
 	      item.subscribe('showTagSearcher', function (baseEvent) {
-	        _this5.emit('showTagSearcher', {
+	        _this6.emit('showTagSearcher', {
 	          item: baseEvent.getTarget(),
 	          button: baseEvent.getData()
 	        });
 	      });
 	      item.subscribe('showEpicSearcher', function (baseEvent) {
-	        _this5.emit('showEpicSearcher', {
+	        _this6.emit('showEpicSearcher', {
 	          item: baseEvent.getTarget(),
 	          button: baseEvent.getData()
 	        });
 	      });
 	      item.subscribe('startDecomposition', function (baseEvent) {
-	        _this5.emit('startDecomposition', baseEvent.getTarget());
+	        _this6.emit('startDecomposition', baseEvent.getTarget());
 	      });
 	      item.subscribe('remove', function (baseEvent) {
-	        if (_this5.isGroupMode()) {
-	          _this5.getGroupModeItems().forEach(function (groupModeItem) {
-	            _this5.removeItem(groupModeItem);
+	        if (_this6.isGroupMode()) {
+	          _this6.getGroupModeItems().forEach(function (groupModeItem) {
+	            _this6.removeItem(groupModeItem);
 
 	            groupModeItem.removeYourself();
 	          });
 	        } else {
 	          var _item = baseEvent.getTarget();
 
-	          _this5.removeItem(_item);
+	          _this6.removeItem(_item);
 
 	          _item.removeYourself();
 	        }
 
-	        _this5.emit('removeItem', item);
+	        _this6.emit('removeItem', item);
 	      });
 	      item.subscribe('changeTaskResponsible', function (baseEvent) {
 	        var item = baseEvent.getTarget();
 
-	        _this5.emit('changeTaskResponsible', item);
+	        _this6.emit('changeTaskResponsible', item);
 	      });
 	      item.subscribe('filterByEpic', function (baseEvent) {
-	        _this5.emit('filterByEpic', baseEvent.getData());
+	        _this6.emit('filterByEpic', baseEvent.getData());
 	      });
 	      item.subscribe('filterByTag', function (baseEvent) {
-	        _this5.emit('filterByTag', baseEvent.getData());
+	        _this6.emit('filterByTag', baseEvent.getData());
 	      });
 	      item.subscribe('addItemToGroupMode', function (baseEvent) {
-	        _this5.addItemToGroupMode(baseEvent.getTarget());
+	        _this6.addItemToGroupMode(baseEvent.getTarget());
 	      });
 	      item.subscribe('removeItemFromGroupMode', function (baseEvent) {
-	        _this5.removeItemFromGroupMode(baseEvent.getTarget());
+	        _this6.removeItemFromGroupMode(baseEvent.getTarget());
 	      });
 	    }
 	  }, {
 	    key: "updateStoryPoints",
 	    value: function updateStoryPoints() {
-	      var _this6 = this;
+	      var _this7 = this;
 
 	      this.storyPoints.clearPoints();
 	      babelHelpers.toConsumableArray(this.getItems().values()).map(function (item) {
-	        _this6.storyPoints.addPoints(item.getStoryPoints().getPoints());
+	        if (!item.isSubTask()) {
+	          _this7.storyPoints.addPoints(item.getStoryPoints().getPoints());
+	        }
 	      });
 	    }
 	  }, {
@@ -2671,7 +3824,25 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "getItemByItemId",
 	    value: function getItemByItemId(itemId) {
-	      return this.items.get(parseInt(itemId, 10));
+	      return this.items.get(main_core.Type.isInteger(itemId) ? parseInt(itemId, 10) : itemId);
+	    }
+	  }, {
+	    key: "getItemBySourceId",
+	    value: function getItemBySourceId(sourceId) {
+	      return babelHelpers.toConsumableArray(this.items.values()).find(function (item) {
+	        return item.getSourceId() === sourceId;
+	      });
+	    }
+	  }, {
+	    key: "getItemsByParentTaskId",
+	    value: function getItemsByParentTaskId(parentTaskId) {
+	      var items = new Map();
+	      babelHelpers.toConsumableArray(this.items.values()).map(function (item) {
+	        if (item.getParentTaskId() === parentTaskId) {
+	          items.set(item.getItemId(), item);
+	        }
+	      });
+	      return items;
 	    }
 	  }, {
 	    key: "getStoryPoints",
@@ -2750,10 +3921,312 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return Entity;
 	}(main_core_events.EventEmitter);
 
-	function _templateObject$8() {
+	function _templateObject$b() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-backlog-title\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t\t<div class=\"tasks-scrum-backlog-epics-title ui-btn ui-btn-xs ui-btn-secondary\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t\t<div title=\"Definition of Done\" class=\"tasks-scrum-entity-title-btn tasks-scrum-entity-title-btn-dod\">\n\t\t\t\t<span class=\"tasks-scrum-entity-dod-icon\"></span>\n\t\t\t</div>\n\t\t\t<div class=\"tasks-scrum-backlog-title-spacer\"></div>\n\t\t\t<div class=\"tasks-scrum-entity-title-btn tasks-scrum-entity-title-btn-task\">\n\t\t\t\t<span class=\"tasks-scrum-entity-tasks-icon\"></span>\n\t\t\t\t<span class=\"tasks-scrum-entity-tasks-title\">\n\t\t\t\t\t", "\n\t\t\t\t</span>\n\t\t\t</div>\n\t\t\t<div class=\"tasks-scrum-backlog-story-point-title\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t\t<div class=\"tasks-scrum-backlog-story-point\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject$b = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
+	var Header = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(Header, _EventEmitter);
+
+	  function Header(entity) {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, Header);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Header).call(this, entity));
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.BacklogHeader');
+
+	    _this.entity = entity;
+	    _this.element = null;
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(Header, [{
+	    key: "render",
+	    value: function render() {
+	      var _this2 = this;
+
+	      this.element = main_core.Tag.render(_templateObject$b(), main_core.Loc.getMessage('TASKS_SCRUM_BACKLOG_TITLE'), main_core.Loc.getMessage('TASKS_SCRUM_BACKLOG_EPICS_TITLE'), this.entity.getNumberTasks(), main_core.Loc.getMessage('TASKS_SCRUM_BACKLOG_TITLE_STORY_POINTS'), main_core.Text.encode(this.entity.getStoryPoints().getPoints()));
+	      main_core.Event.bind(this.getElementByClassName(this.element, 'tasks-scrum-backlog-epics-title'), 'click', function () {
+	        _this2.emit('openListEpicGrid');
+	      });
+	      main_core.Event.bind(this.getElementByClassName(this.element, 'tasks-scrum-entity-title-btn-dod'), 'click', function () {
+	        _this2.emit('openDefinitionOfDone');
+	      });
+	      return this.element;
+	    }
+	  }, {
+	    key: "setStoryPoints",
+	    value: function setStoryPoints(storyPoints) {
+	      this.getElementByClassName(this.element, 'tasks-scrum-backlog-story-point').textContent = main_core.Text.encode(storyPoints);
+	    }
+	  }, {
+	    key: "updateNumberTasks",
+	    value: function updateNumberTasks() {
+	      var parentNode = this.getElementByClassName(this.element, 'tasks-scrum-entity-title-btn-task');
+	      parentNode.querySelector('.tasks-scrum-entity-tasks-title').textContent = this.entity.getNumberTasks();
+	    }
+	  }, {
+	    key: "getElementByClassName",
+	    value: function getElementByClassName(elements, className) {
+	      var element = null;
+	      elements.forEach(function (elem) {
+	        if (elem.classList.contains(className)) {
+	          element = elem;
+	        }
+	      });
+	      return element;
+	    }
+	  }]);
+	  return Header;
+	}(main_core_events.EventEmitter);
+
+	function _templateObject$c() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<a class=\"ui-link ui-link-dashed ui-link-secondary tasks-scrum-action-epic\">\n\t\t\t\t", "\n\t\t\t</a>\n\t\t"]);
+
+	  _templateObject$c = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
+	var EpicCreationButton = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(EpicCreationButton, _EventEmitter);
+
+	  function EpicCreationButton() {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, EpicCreationButton);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(EpicCreationButton).call(this));
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.EpicCreationButton');
+
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(EpicCreationButton, [{
+	    key: "render",
+	    value: function render() {
+	      var element = main_core.Tag.render(_templateObject$c(), main_core.Loc.getMessage('TASKS_SCRUM_BACKLOG_LIST_ACTIONS_EPIC_ADD'));
+	      main_core.Event.bind(element, 'click', this.onClick.bind(this));
+	      return element;
+	    }
+	  }, {
+	    key: "onClick",
+	    value: function onClick() {
+	      this.emit('openAddEpicForm');
+	    }
+	  }]);
+	  return EpicCreationButton;
+	}(main_core_events.EventEmitter);
+
+	function _templateObject$d() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-backlog\">\n\t\t\t\t<div class=\"tasks-scrum-backlog-header\">\n\t\t\t\t\t", "\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-backlog-actions\">\n\t\t\t\t\t", "\n\t\t\t\t\t", "\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-backlog-items\">\n\t\t\t\t\t", "\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-backlog-items-loader\"></div>\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject$d = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
+	var Backlog = /*#__PURE__*/function (_Entity) {
+	  babelHelpers.inherits(Backlog, _Entity);
+
+	  function Backlog(params) {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, Backlog);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Backlog).call(this, params));
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.Backlog');
+
+	    _this.setBacklogParams(params);
+
+	    _this.header = null;
+	    _this.epicCreationButton = null;
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(Backlog, [{
+	    key: "setBacklogParams",
+	    value: function setBacklogParams(params) {
+	      var _this2 = this;
+
+	      params.items.forEach(function (itemData) {
+	        var item = new Item(itemData);
+
+	        _this2.items.set(item.itemId, item);
+	      });
+	      this.pageNumberItems = parseInt(params.pageNumberItems, 10);
+	    }
+	  }, {
+	    key: "addHeader",
+	    value: function addHeader(header) {
+	      var _this3 = this;
+
+	      this.header = header;
+	      this.header.subscribe('openListEpicGrid', function () {
+	        return _this3.emit('openListEpicGrid');
+	      });
+	      this.header.subscribe('openDefinitionOfDone', function () {
+	        return _this3.emit('openDefinitionOfDone');
+	      });
+	    }
+	  }, {
+	    key: "addEpicCreationButton",
+	    value: function addEpicCreationButton(epicCreationButton) {
+	      var _this4 = this;
+
+	      this.epicCreationButton = epicCreationButton;
+	      this.epicCreationButton.subscribe('openAddEpicForm', function () {
+	        return _this4.emit('openAddEpicForm');
+	      });
+	    }
+	  }, {
+	    key: "getEntityType",
+	    value: function getEntityType() {
+	      return 'backlog';
+	    }
+	  }, {
+	    key: "isDisabled",
+	    value: function isDisabled() {
+	      return false;
+	    }
+	  }, {
+	    key: "getPageNumberItems",
+	    value: function getPageNumberItems() {
+	      return this.pageNumberItems;
+	    }
+	  }, {
+	    key: "incrementPageNumberItems",
+	    value: function incrementPageNumberItems() {
+	      this.pageNumberItems++;
+	    }
+	  }, {
+	    key: "render",
+	    value: function render() {
+	      this.node = main_core.Tag.render(_templateObject$d(), this.header ? this.header.render() : '', this.epicCreationButton ? this.epicCreationButton.render() : '', this.groupActionsButton ? this.groupActionsButton.render() : '', this.listItems ? this.listItems.render() : '');
+	      this.backlogItemsLoaderNode = this.node.querySelector('.tasks-scrum-backlog-items-loader');
+	      this.bindBacklogItemsLoader(this.backlogItemsLoaderNode);
+	      return this.node;
+	    }
+	  }, {
+	    key: "setItem",
+	    value: function setItem(newItem) {
+	      babelHelpers.get(babelHelpers.getPrototypeOf(Backlog.prototype), "setItem", this).call(this, newItem);
+	      this.updateStoryPoints();
+	    }
+	  }, {
+	    key: "removeItem",
+	    value: function removeItem(item) {
+	      babelHelpers.get(babelHelpers.getPrototypeOf(Backlog.prototype), "removeItem", this).call(this, item);
+	      this.updateStoryPoints();
+	    }
+	  }, {
+	    key: "addNumberTasks",
+	    value: function addNumberTasks(value) {
+	      babelHelpers.get(babelHelpers.getPrototypeOf(Backlog.prototype), "addNumberTasks", this).call(this, value);
+
+	      if (this.header) {
+	        this.header.updateNumberTasks();
+	      }
+	    }
+	  }, {
+	    key: "subtractNumberTasks",
+	    value: function subtractNumberTasks(value) {
+	      babelHelpers.get(babelHelpers.getPrototypeOf(Backlog.prototype), "subtractNumberTasks", this).call(this, value);
+
+	      if (this.header) {
+	        this.header.updateNumberTasks();
+	      }
+	    }
+	  }, {
+	    key: "updateStoryPoints",
+	    value: function updateStoryPoints() {
+	      babelHelpers.get(babelHelpers.getPrototypeOf(Backlog.prototype), "updateStoryPoints", this).call(this);
+
+	      if (this.header) {
+	        this.header.setStoryPoints(this.getStoryPoints().getPoints());
+	      }
+	    }
+	  }, {
+	    key: "onActivateGroupMode",
+	    value: function onActivateGroupMode(baseEvent) {
+	      babelHelpers.get(babelHelpers.getPrototypeOf(Backlog.prototype), "onActivateGroupMode", this).call(this, baseEvent);
+	      main_core.Dom.addClass(this.node.querySelector('.tasks-scrum-backlog-items'), 'tasks-scrum-backlog-items-group-mode');
+	    }
+	  }, {
+	    key: "onDeactivateGroupMode",
+	    value: function onDeactivateGroupMode(baseEvent) {
+	      babelHelpers.get(babelHelpers.getPrototypeOf(Backlog.prototype), "onDeactivateGroupMode", this).call(this, baseEvent);
+	      main_core.Dom.removeClass(this.node.querySelector('.tasks-scrum-backlog-items'), 'tasks-scrum-backlog-items-group-mode');
+	    }
+	  }, {
+	    key: "bindBacklogItemsLoader",
+	    value: function bindBacklogItemsLoader(loader) {
+	      var _this5 = this;
+
+	      this.setActiveLoadBacklogItems(false);
+	      var observer = new IntersectionObserver(function (entries) {
+	        if (entries[0].isIntersecting === true) {
+	          if (!_this5.isActiveLoadBacklogItems()) {
+	            _this5.emit('loadBacklogItems');
+	          }
+	        }
+	      }, {
+	        threshold: [0]
+	      });
+	      observer.observe(loader);
+	    }
+	  }, {
+	    key: "setActiveLoadBacklogItems",
+	    value: function setActiveLoadBacklogItems(value) {
+	      this.activeLoadBacklogItems = Boolean(value);
+	    }
+	  }, {
+	    key: "isActiveLoadBacklogItems",
+	    value: function isActiveLoadBacklogItems() {
+	      return this.activeLoadBacklogItems;
+	    }
+	  }, {
+	    key: "showItemsLoader",
+	    value: function showItemsLoader() {
+	      var listPosition = main_core.Dom.getPosition(this.backlogItemsLoaderNode);
+	      var loader = new main_loader.Loader({
+	        target: this.backlogItemsLoaderNode,
+	        size: 60,
+	        mode: 'inline',
+	        color: 'rgba(82, 92, 105, 0.9)',
+	        offset: {
+	          left: "".concat(listPosition.width / 2 - 30, "px")
+	        }
+	      });
+	      loader.show();
+	      return loader;
+	    }
+	  }], [{
+	    key: "buildBacklog",
+	    value: function buildBacklog(backlogData) {
+	      var backlog = new Backlog(backlogData);
+	      backlog.addHeader(new Header(backlog));
+	      backlog.addEpicCreationButton(new EpicCreationButton());
+	      backlog.addGroupActionsButton(new GroupActionsButton());
+	      backlog.addListItems(new ListItems(backlog));
+	      return backlog;
+	    }
+	  }]);
+	  return Backlog;
+	}(Entity);
+
+	function _templateObject$e() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div id=\"", "\" class=\"tasks-scrum-sprint-date\">\n\t\t\t\t<div class=\"tasks-scrum-sprint-date-start\">", "</div>\n\t\t\t\t<div class=\"tasks-scrum-sprint-date-separator\">-</div>\n\t\t\t\t<div class=\"tasks-scrum-sprint-date-end\">", "</div>\n\t\t\t\t<input type=\"hidden\" name=\"dateStart\">\n\t\t\t\t<input type=\"hidden\" name=\"dateEnd\">\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject$8 = function _templateObject() {
+	  _templateObject$e = function _templateObject() {
 	    return data;
 	  };
 
@@ -2778,35 +4251,33 @@ this.BX.Tasks = this.BX.Tasks || {};
 
 	  babelHelpers.createClass(SprintDate, [{
 	    key: "createDate",
-	    value: function createDate(startTimestamp, endTimestamp) {
+	    value: function createDate() {
 	      if (this.sprint.isActive() || this.sprint.isCompleted()) {
 	        return '';
 	      }
-	      /* eslint-disable */
 
-
-	      var dateStart = BX.date.format('j F', startTimestamp);
-	      var dateEnd = BX.date.format('j F', endTimestamp);
-	      /* eslint-enable */
-
-	      return this.renderNode(this.nodeId, dateStart, dateEnd);
+	      return this.renderNode(this.nodeId, this.getFormattedDateStart(), this.getFormattedDateEnd());
 	    }
 	  }, {
 	    key: "renderNode",
 	    value: function renderNode(nodeId, dateStart, dateEnd) {
-	      return main_core.Tag.render(_templateObject$8(), nodeId, dateStart, dateEnd);
+	      return main_core.Tag.render(_templateObject$e(), nodeId, dateStart, dateEnd);
 	    }
 	  }, {
 	    key: "updateDateStartNode",
 	    value: function updateDateStartNode(timestamp) {
-	      var dateStartNode = this.node.querySelector('.tasks-scrum-sprint-date-start');
-	      dateStartNode.textContent = BX.date.format('j F', timestamp);
+	      if (this.node) {
+	        var dateStartNode = this.node.querySelector('.tasks-scrum-sprint-date-start');
+	        dateStartNode.textContent = BX.date.format('j F', timestamp);
+	      }
 	    }
 	  }, {
 	    key: "updateDateEndNode",
 	    value: function updateDateEndNode(timestamp) {
-	      var dateEndNode = this.node.querySelector('.tasks-scrum-sprint-date-end');
-	      dateEndNode.textContent = BX.date.format('j F', timestamp);
+	      if (this.node) {
+	        var dateEndNode = this.node.querySelector('.tasks-scrum-sprint-date-end');
+	        dateEndNode.textContent = BX.date.format('j F', timestamp);
+	      }
 	    }
 	  }, {
 	    key: "onAfterAppend",
@@ -2903,6 +4374,25 @@ this.BX.Tasks = this.BX.Tasks || {};
 	        return weekCount + ' ' + main_core.Loc.getMessage('TASKS_SCRUM_DATE_WEEK_NAME_2');
 	      }
 	    }
+	  }, {
+	    key: "getFormattedTitleDatePeriod",
+	    value: function getFormattedTitleDatePeriod() {
+	      return this.getFormattedDateStart() + ' - ' + this.getFormattedDateEnd();
+	    }
+	  }, {
+	    key: "getFormattedDateStart",
+	    value: function getFormattedDateStart() {
+	      /* eslint-disable */
+	      return BX.date.format('j F', this.sprint.getDateStart());
+	      /* eslint-enable */
+	    }
+	  }, {
+	    key: "getFormattedDateEnd",
+	    value: function getFormattedDateEnd() {
+	      /* eslint-disable */
+	      return BX.date.format('j F', this.sprint.getDateEnd());
+	      /* eslint-enable */
+	    }
 	  }]);
 	  return SprintDate;
 	}(main_core_events.EventEmitter);
@@ -2915,6 +4405,10 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  babelHelpers.createClass(StatsCalculator, [{
 	    key: "calculatePercentage",
 	    value: function calculatePercentage(first, second) {
+	      if (first === 0) {
+	        return 0;
+	      }
+
 	      var result = Math.round(second * 100 / first);
 	      return isNaN(result) ? 0 : result;
 	    }
@@ -2936,6 +4430,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    _this.setSprintData(sprint);
 
 	    _this.statsCalculator = new StatsCalculator();
+	    _this.weekendDaysTime = sprint.getWeekendDaysTime();
 	    _this.headerNode = null;
 	    _this.headerClass = 'tasks-scrum-sprint-header-stats';
 	    _this.kanbanMode = false;
@@ -2967,9 +4462,21 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "setSprintData",
 	    value: function setSprintData(sprint) {
+	      this.setSprintDate(sprint);
 	      this.setStoryPoints(sprint.getTotalStoryPoints().getPoints());
 	      this.setCompletedStoryPoints(sprint.getTotalCompletedStoryPoints().getPoints());
+	      this.setUncompletedStoryPoints(sprint.getTotalUncompletedStoryPoints().getPoints());
 	      this.setEndDate(sprint.getDateEnd());
+	    }
+	  }, {
+	    key: "setSprintDate",
+	    value: function setSprintDate(sprint) {
+	      this.sprintDate = new SprintDate(sprint);
+	    }
+	  }, {
+	    key: "getSprintDate",
+	    value: function getSprintDate() {
+	      return this.sprintDate;
 	    }
 	  }, {
 	    key: "setStoryPoints",
@@ -3000,6 +4507,20 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      return this.completedStoryPoints;
 	    }
 	  }, {
+	    key: "setUncompletedStoryPoints",
+	    value: function setUncompletedStoryPoints(storyPoints) {
+	      if (main_core.Type.isUndefined(storyPoints) || isNaN(parseFloat(storyPoints))) {
+	        this.uncompletedStoryPoints = 0;
+	      } else {
+	        this.uncompletedStoryPoints = parseFloat(storyPoints);
+	      }
+	    }
+	  }, {
+	    key: "getUncompletedStoryPoints",
+	    value: function getUncompletedStoryPoints() {
+	      return this.completedStoryPoints;
+	    }
+	  }, {
 	    key: "setEndDate",
 	    value: function setEndDate(endDate) {
 	      if (main_core.Type.isUndefined(endDate) || isNaN(parseInt(endDate, 10))) {
@@ -3017,10 +4538,10 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return StatsHeader;
 	}(main_core_events.EventEmitter);
 
-	function _templateObject$9() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"", "\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
+	function _templateObject$f() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"", "\" title=\"", "\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject$9 = function _templateObject() {
+	  _templateObject$f = function _templateObject() {
 	    return data;
 	  };
 
@@ -3039,8 +4560,9 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    value: function render() {
 	      var percentage = this.statsCalculator.calculatePercentage(this.getStoryPoints(), this.getCompletedStoryPoints());
 	      var completedDate = this.getCompletedDate(this.getEndDate());
-	      var label = main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_STATS_COMPLETED_LABEL').replace('#percent#', '<b>' + percentage + '%</b>').replace('#date#', completedDate);
-	      this.headerNode = main_core.Tag.render(_templateObject$9(), this.headerClass, label);
+	      var label = main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_STATS_COMPLETED_LABEL').replace('#percent#', percentage).replace('#date#', completedDate);
+	      var title = this.getSprintDate().getFormattedTitleDatePeriod();
+	      this.headerNode = main_core.Tag.render(_templateObject$f(), this.headerClass, title, label);
 	      return this.headerNode;
 	    }
 	  }, {
@@ -3052,10 +4574,10 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return CompletedStatsHeader;
 	}(StatsHeader);
 
-	function _templateObject$a() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"", "\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
+	function _templateObject$g() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"", "\" title=\"", "\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject$a = function _templateObject() {
+	  _templateObject$g = function _templateObject() {
 	    return data;
 	  };
 
@@ -3074,8 +4596,9 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    value: function render() {
 	      var percentage = this.statsCalculator.calculatePercentage(this.getStoryPoints(), this.getCompletedStoryPoints());
 	      var expiredDay = this.getExpiredDay(this.getEndDate());
-	      var label = main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_STATS_EXPIRED_LABEL').replace('#percent#', '<b>' + percentage + '%</b>').replace('#date#', expiredDay);
-	      this.headerNode = main_core.Tag.render(_templateObject$a(), this.headerClass, label);
+	      var label = main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_STATS_EXPIRED_LABEL').replace('#percent#', percentage).replace('#date#', expiredDay);
+	      var title = this.getSprintDate().getFormattedTitleDatePeriod();
+	      this.headerNode = main_core.Tag.render(_templateObject$g(), this.headerClass, title, label);
 	      return this.headerNode;
 	    }
 	  }, {
@@ -3087,10 +4610,10 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return ExpiredStatsHeader;
 	}(StatsHeader);
 
-	function _templateObject$b() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"", "\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
+	function _templateObject$h() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"", "\" title=\"", "\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject$b = function _templateObject() {
+	  _templateObject$h = function _templateObject() {
 	    return data;
 	  };
 
@@ -3109,14 +4632,35 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    value: function render() {
 	      var remainingDays = this.getRemainingDays(this.getEndDate());
 	      var percentage = this.statsCalculator.calculatePercentage(this.getStoryPoints(), this.getCompletedStoryPoints());
-	      var label = main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_STATS_ACTIVE_LABEL').replace('#days#', '<b>' + remainingDays + '</b>').replace('#percent#', '<b>' + percentage + '%</b>');
-	      this.headerNode = main_core.Tag.render(_templateObject$b(), this.headerClass, label);
+	      var label = '';
+
+	      if (main_core.Type.isInteger(remainingDays) && remainingDays <= 1) {
+	        label = main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_STATS_ACTIVE_LAST_LABEL').replace('#percent#', percentage);
+	      } else {
+	        label = main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_STATS_ACTIVE_LABEL').replace('#days#', remainingDays).replace('#percent#', percentage);
+	      }
+
+	      var title = this.getSprintDate().getFormattedTitleDatePeriod();
+	      this.headerNode = main_core.Tag.render(_templateObject$h(), this.headerClass, title, label);
 	      return this.headerNode;
 	    }
 	  }, {
 	    key: "getRemainingDays",
 	    value: function getRemainingDays(endDate) {
-	      return BX.date.format('ddiff', new Date(), endDate);
+	      var dateWithWeekendOffset = new Date();
+	      dateWithWeekendOffset.setSeconds(dateWithWeekendOffset.getSeconds() + this.weekendDaysTime);
+	      dateWithWeekendOffset.setHours(0, 0, 0, 0);
+	      var dateEnd = new Date(endDate * 1000);
+	      var msPerMinute = 60 * 1000;
+	      var msPerHour = msPerMinute * 60;
+	      var msPerDay = msPerHour * 24;
+	      var daysRemaining = Math.round((dateEnd - dateWithWeekendOffset) / msPerDay);
+
+	      if (daysRemaining <= 1) {
+	        return daysRemaining;
+	      } else {
+	        return BX.date.format('ddiff', dateWithWeekendOffset, dateEnd);
+	      }
 	    }
 	  }]);
 	  return ActiveStatsHeader;
@@ -3144,8 +4688,18 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return StatsHeaderBuilder;
 	}();
 
-	function _templateObject5$2() {
+	function _templateObject6$2() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t<div id=\"", "\" class=\"tasks-scrum-sprint-header-button\">\n\t\t\t\t\t<button class=\"", "\">", "</button>\n\t\t\t\t</div>\n\t\t\t"]);
+
+	  _templateObject6$2 = function _templateObject6() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject5$2() {
+	  var data = babelHelpers.taggedTemplateLiteral(["<div class=\"tasks-scrum-sprint-header-remove\"></div>"]);
 
 	  _templateObject5$2 = function _templateObject5() {
 	    return data;
@@ -3155,7 +4709,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	}
 
 	function _templateObject4$2() {
-	  var data = babelHelpers.taggedTemplateLiteral(["<div class=\"tasks-scrum-sprint-header-remove\"></div>"]);
+	  var data = babelHelpers.taggedTemplateLiteral(["<div class=\"tasks-scrum-sprint-header-empty\"></div>"]);
 
 	  _templateObject4$2 = function _templateObject4() {
 	    return data;
@@ -3164,30 +4718,30 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return data;
 	}
 
-	function _templateObject3$2() {
-	  var data = babelHelpers.taggedTemplateLiteral(["<div class=\"tasks-scrum-sprint-header-empty\"></div>"]);
-
-	  _templateObject3$2 = function _templateObject3() {
-	    return data;
-	  };
-
-	  return data;
-	}
-
-	function _templateObject2$3() {
+	function _templateObject3$3() {
 	  var data = babelHelpers.taggedTemplateLiteral(["<div class=\"tasks-scrum-sprint-dragndrop\"></div>"]);
 
-	  _templateObject2$3 = function _templateObject2() {
+	  _templateObject3$3 = function _templateObject3() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject$c() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div id=\"", "\" class=\"tasks-scrum-sprint-header ", "\">\n\t\t\t\t", "\n\t\t\t\t<div class=\"tasks-scrum-sprint-header-name-container\">\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-header-name\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-sprint-header-edit\"></div>\n\t\t\t\t", "\n\t\t\t\t<div class=\"tasks-scrum-sprint-header-params\">\n\t\t\t\t\t", "\n\t\t\t\t\t", "\n\t\t\t\t\t", "\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-header-tick\">\n\t\t\t\t\t\t<div class=\"ui-btn ui-btn-sm ui-btn-light ", "\"></div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
+	function _templateObject2$4() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-sprint-header-params\">\n\t\t\t\t", "\n\t\t\t\t", "\n\t\t\t\t", "\n\t\t\t\t<div class=\"tasks-scrum-sprint-header-tick\">\n\t\t\t\t\t<div class=\"ui-btn ui-btn-sm ui-btn-light ", "\"></div>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject$c = function _templateObject() {
+	  _templateObject2$4 = function _templateObject2() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject$i() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-sprint-header ", "\">\n\t\t\t\t", "\n\t\t\t\t<div class=\"tasks-scrum-sprint-header-name-container\">\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-header-name\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-sprint-header-edit\"></div>\n\t\t\t\t", "\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject$i = function _templateObject() {
 	    return data;
 	  };
 
@@ -3205,6 +4759,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    _this.setEventNamespace('BX.Tasks.Scrum.SprintHeader');
 
 	    _this.sprint = sprint;
+	    _this.node = null;
 	    _this.statsHeader = null;
 	    _this.sprintDate = null;
 	    return _this;
@@ -3227,7 +4782,9 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    }
 	  }, {
 	    key: "initStyle",
-	    value: function initStyle() {
+	    value: function initStyle(sprint) {
+	      this.sprint = sprint;
+
 	      if (this.sprint.isActive()) {
 	        this.headerClass = 'tasks-scrum-sprint-header-active';
 	        this.buttonClass = 'ui-btn ui-btn-success ui-btn-xs';
@@ -3235,31 +4792,41 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      } else if (this.sprint.isCompleted()) {
 	        this.headerClass = 'tasks-scrum-sprint-header-completed';
 	        main_core.Dom.remove(this.buttonNode);
+	        this.sprint.hideContent();
 	      } else if (this.sprint.isPlanned()) {
 	        this.headerClass = 'tasks-scrum-sprint-header-planned';
 	        this.buttonClass = 'ui-btn ui-btn-primary ui-btn-xs';
 	        this.buttonText = main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_TITLE_START_BUTTON');
 	      }
 
-	      if (this.headerNode) {
+	      if (this.node) {
+	        this.addHeaderStats(StatsHeaderBuilder.build(this.sprint));
+	        this.addHeaderDate(new SprintDate(this.sprint));
+
 	        if (this.sprint.isDisabled()) {
-	          main_core.Dom.remove(this.headerNode.querySelector('.tasks-scrum-sprint-header-remove'));
+	          main_core.Dom.remove(this.node.querySelector('.tasks-scrum-sprint-header-remove'));
 	        }
 
-	        this.headerNode.className = '';
-	        main_core.Dom.addClass(this.headerNode, 'tasks-scrum-sprint-header ' + this.headerClass);
+	        this.node.className = '';
+	        main_core.Dom.addClass(this.node, 'tasks-scrum-sprint-header ' + this.headerClass);
 	        var button = this.buttonNode.querySelector('button');
 	        button.className = '';
 	        main_core.Dom.addClass(button, this.buttonClass);
 	        button.firstChild.replaceWith(this.buttonText);
+	        main_core.Dom.replace(this.node.querySelector('.tasks-scrum-sprint-header-params'), this.renderParams());
 	      }
 	    }
 	  }, {
 	    key: "render",
 	    value: function render() {
-	      this.headerNodeId = 'tasks-scrum-sprint-header-' + this.sprint.getId();
+	      this.node = main_core.Tag.render(_templateObject$i(), this.headerClass, this.renderDragnDrop(), main_core.Text.encode(this.sprint.getName()), this.renderRemove(), this.renderParams());
+	      return this.node;
+	    }
+	  }, {
+	    key: "renderParams",
+	    value: function renderParams() {
 	      var tickAngleClass = this.sprint.isCompleted() ? 'ui-btn-icon-angle-down' : 'ui-btn-icon-angle-up';
-	      return main_core.Tag.render(_templateObject$c(), this.headerNodeId, this.headerClass, this.renderDragnDrop(), main_core.Text.encode(this.sprint.getName()), this.renderRemove(), this.renderStatsHeader(), this.sprintDate ? this.sprintDate.createDate(this.sprint.getDateStart(), this.sprint.getDateEnd()) : '', this.createButton(), tickAngleClass);
+	      return main_core.Tag.render(_templateObject2$4(), this.renderStatsHeader(), this.sprintDate ? this.sprintDate.createDate() : '', this.createButton(), tickAngleClass);
 	    }
 	  }, {
 	    key: "getStatsHeader",
@@ -3270,16 +4837,16 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    key: "renderDragnDrop",
 	    value: function renderDragnDrop() {
 	      if (this.sprint.isPlanned()) {
-	        return main_core.Tag.render(_templateObject2$3());
+	        return main_core.Tag.render(_templateObject3$3());
 	      } else {
-	        return main_core.Tag.render(_templateObject3$2());
+	        return main_core.Tag.render(_templateObject4$2());
 	      }
 	    }
 	  }, {
 	    key: "renderRemove",
 	    value: function renderRemove() {
 	      if (this.sprint.isPlanned()) {
-	        return main_core.Tag.render(_templateObject4$2());
+	        return main_core.Tag.render(_templateObject5$2());
 	      } else {
 	        return '';
 	      }
@@ -3288,6 +4855,13 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    key: "renderStatsHeader",
 	    value: function renderStatsHeader() {
 	      return this.statsHeader ? this.statsHeader.render() : '';
+	    }
+	  }, {
+	    key: "updateNameNode",
+	    value: function updateNameNode(name) {
+	      if (this.node) {
+	        this.node.querySelector('.tasks-scrum-sprint-header-name').textContent = main_core.Text.encode(name);
+	      }
 	    }
 	  }, {
 	    key: "updateStatsHeader",
@@ -3315,7 +4889,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	        return '';
 	      } else {
 	        this.buttonNodeId = 'tasks-scrum-sprint-header-button-' + this.sprint.getId();
-	        return main_core.Tag.render(_templateObject5$2(), this.buttonNodeId, this.buttonClass, this.buttonText);
+	        return main_core.Tag.render(_templateObject6$2(), this.buttonNodeId, this.buttonClass, this.buttonText);
 	      }
 	    }
 	  }, {
@@ -3323,21 +4897,19 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    value: function onAfterAppend() {
 	      var _this3 = this;
 
-	      this.headerNode = document.getElementById(this.headerNodeId);
-
 	      if (!this.sprint.isCompleted()) {
 	        this.buttonNode = document.getElementById(this.buttonNodeId);
 	        main_core.Event.bind(this.buttonNode, 'click', this.onButtonClick.bind(this));
 	      }
 
-	      var nameNode = this.headerNode.querySelector('.tasks-scrum-sprint-header-name-container');
-	      var editButtonNode = this.headerNode.querySelector('.tasks-scrum-sprint-header-edit');
+	      var nameNode = this.node.querySelector('.tasks-scrum-sprint-header-name-container');
+	      var editButtonNode = this.node.querySelector('.tasks-scrum-sprint-header-edit');
 	      main_core.Event.bind(editButtonNode, 'click', function () {
 	        return _this3.emit('changeName', nameNode);
 	      });
 
 	      if (this.sprint.isPlanned()) {
-	        var removeNode = this.headerNode.querySelector('.tasks-scrum-sprint-header-remove');
+	        var removeNode = this.node.querySelector('.tasks-scrum-sprint-header-remove');
 	        main_core.Event.bind(removeNode, 'click', function () {
 	          ui_dialogs_messagebox.MessageBox.confirm(main_core.Loc.getMessage('TASKS_SCRUM_CONFIRM_TEXT_REMOVE_SPRINT'), function (messageBox) {
 	            _this3.emit('removeSprint');
@@ -3347,7 +4919,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	        });
 	      }
 
-	      var tickButtonNode = this.headerNode.querySelector('.tasks-scrum-sprint-header-tick');
+	      var tickButtonNode = this.node.querySelector('.tasks-scrum-sprint-header-tick');
 	      main_core.Event.bind(tickButtonNode, 'click', function () {
 	        tickButtonNode.firstElementChild.classList.toggle('ui-btn-icon-angle-up');
 	        tickButtonNode.firstElementChild.classList.toggle('ui-btn-icon-angle-down');
@@ -3380,10 +4952,10 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return SprintHeader;
 	}(main_core_events.EventEmitter);
 
-	function _templateObject$d() {
+	function _templateObject$j() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<a class=\"ui-link\">\n\t\t\t\t", "\n\t\t\t</a>\n\t\t"]);
 
-	  _templateObject$d = function _templateObject() {
+	  _templateObject$j = function _templateObject() {
 	    return data;
 	  };
 
@@ -3398,7 +4970,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  babelHelpers.createClass(EventsHeader, [{
 	    key: "render",
 	    value: function render() {
-	      this.element = main_core.Tag.render(_templateObject$d(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_TITLE_EVENT'));
+	      this.element = main_core.Tag.render(_templateObject$j(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_TITLE_EVENT'));
 	      return this.element;
 	    }
 	  }]);
@@ -3425,30 +4997,30 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return data;
 	}
 
-	function _templateObject3$3() {
+	function _templateObject3$4() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-sprint-story-point-done-title\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t\t<div class=\"tasks-scrum-sprint-story-point tasks-scrum-sprint-story-point-done\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject3$3 = function _templateObject3() {
+	  _templateObject3$4 = function _templateObject3() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject2$4() {
+	function _templateObject2$5() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-sprint-story-point-in-work-title\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t\t<div class=\"tasks-scrum-sprint-story-point tasks-scrum-sprint-story-point-in-work\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject2$4 = function _templateObject2() {
+	  _templateObject2$5 = function _templateObject2() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject$e() {
+	function _templateObject$k() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-sprint-story-point-title\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t\t<div class=\"tasks-scrum-sprint-story-point\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject$e = function _templateObject() {
+	  _templateObject$k = function _templateObject() {
 	    return data;
 	  };
 
@@ -3475,9 +5047,9 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    value: function render() {
 	      var _this2 = this;
 
-	      this.totalStoryPointsNode = main_core.Tag.render(_templateObject$e(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_TITLE_STORY_POINTS'), this.sprint.getStoryPoints().getPoints());
-	      this.inWorkStoryPointsNode = this.sprint.isActive() ? main_core.Tag.render(_templateObject2$4(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_TITLE_STORY_POINTS_IN_WORK'), this.sprint.getUncompletedStoryPoints().getPoints()) : '';
-	      this.doneStoryPointsNode = this.sprint.isPlanned() ? '' : main_core.Tag.render(_templateObject3$3(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_TITLE_STORY_POINTS_DONE'), this.sprint.getCompletedStoryPoints().getPoints());
+	      this.totalStoryPointsNode = main_core.Tag.render(_templateObject$k(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_TITLE_STORY_POINTS'), this.sprint.getTotalStoryPoints().getPoints());
+	      this.inWorkStoryPointsNode = this.sprint.isActive() ? main_core.Tag.render(_templateObject2$5(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_TITLE_STORY_POINTS_IN_WORK'), this.sprint.getTotalUncompletedStoryPoints().getPoints()) : '';
+	      this.doneStoryPointsNode = this.sprint.isPlanned() ? '' : main_core.Tag.render(_templateObject3$4(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_TITLE_STORY_POINTS_DONE'), this.sprint.getTotalCompletedStoryPoints().getPoints());
 	      this.element = main_core.Tag.render(_templateObject4$3(), this.renderBurnDownChartIcon(), this.sprint.getNumberTasks(), this.totalStoryPointsNode, this.inWorkStoryPointsNode, this.doneStoryPointsNode);
 	      main_core.Event.bind(this.getElementByClassName(this.element, 'tasks-scrum-entity-title-btn-burn-down-chart'), 'click', function () {
 	        return _this2.emit('showSprintBurnDownChart');
@@ -3502,16 +5074,28 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "setStoryPoints",
 	    value: function setStoryPoints(storyPoints) {
+	      if (!this.totalStoryPointsNode) {
+	        return;
+	      }
+
 	      this.getElementByClassName(this.totalStoryPointsNode, 'tasks-scrum-sprint-story-point').textContent = main_core.Text.encode(storyPoints);
 	    }
 	  }, {
 	    key: "setCompletedStoryPoints",
 	    value: function setCompletedStoryPoints(storyPoints) {
+	      if (!this.doneStoryPointsNode) {
+	        return;
+	      }
+
 	      this.getElementByClassName(this.doneStoryPointsNode, 'tasks-scrum-sprint-story-point-done').textContent = main_core.Text.encode(storyPoints);
 	    }
 	  }, {
 	    key: "setUncompletedStoryPoints",
 	    value: function setUncompletedStoryPoints(storyPoints) {
+	      if (!this.inWorkStoryPointsNode) {
+	        return;
+	      }
+
 	      this.getElementByClassName(this.inWorkStoryPointsNode, 'tasks-scrum-sprint-story-point-in-work').textContent = main_core.Text.encode(storyPoints);
 	    }
 	  }, {
@@ -3529,30 +5113,40 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return StoryPointsHeader;
 	}(main_core_events.EventEmitter);
 
-	function _templateObject3$4() {
+	function _templateObject4$4() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t<input type=\"text\" class=\"tasks-scrum-sprint-header-name\" value=\"", "\">\n\t\t\t"]);
 
-	  _templateObject3$4 = function _templateObject3() {
+	  _templateObject4$4 = function _templateObject4() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject2$5() {
+	function _templateObject3$5() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<a href=\"", "\">\n\t\t\t\t", "\n\t\t\t</a>\n\t\t"]);
 
-	  _templateObject2$5 = function _templateObject2() {
+	  _templateObject3$5 = function _templateObject3() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject$f() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-sprint\" data-sprint-sort=\"", "\" data-sprint-id=\"", "\">\n\t\t\t\t", "\n\t\t\t\t<div class=\"tasks-scrum-sprint-content\">\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-sub-header\">\n\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-header-event\">\n\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-header-event-params\">\n\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-actions\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-items\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
+	function _templateObject2$6() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-sprint-header-event-params\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject$f = function _templateObject() {
+	  _templateObject2$6 = function _templateObject2() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject$l() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-sprint\" data-sprint-sort=\"", "\" data-sprint-id=\"", "\">\n\t\t\t\t", "\n\t\t\t\t<div class=\"tasks-scrum-sprint-content\">\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-sub-header\">\n\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-header-event\">\n\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-actions\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-items\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject$l = function _templateObject() {
 	    return data;
 	  };
 
@@ -3561,48 +5155,16 @@ this.BX.Tasks = this.BX.Tasks || {};
 	var Sprint = /*#__PURE__*/function (_Entity) {
 	  babelHelpers.inherits(Sprint, _Entity);
 
-	  function Sprint() {
+	  function Sprint(params) {
 	    var _this;
 
-	    var sprintData = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 	    babelHelpers.classCallCheck(this, Sprint);
-	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Sprint).call(this, sprintData));
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Sprint).call(this, params));
 
 	    _this.setEventNamespace('BX.Tasks.Scrum.Sprint');
 
-	    _this.name = sprintData.name;
-	    _this.dateStart = main_core.Type.isInteger(sprintData.dateStart) ? parseInt(sprintData.dateStart, 10) : 0;
-	    _this.dateEnd = main_core.Type.isInteger(sprintData.dateEnd) ? parseInt(sprintData.dateEnd, 10) : 0;
-	    _this.status = sprintData.status ? sprintData.status : 'planned';
-	    _this.sort = main_core.Type.isInteger(sprintData.sort) ? parseInt(sprintData.sort, 10) : 1;
-	    _this.totalStoryPoints = new StoryPoints();
+	    _this.setSprintParams(params);
 
-	    _this.totalStoryPoints.addPoints(sprintData.totalStoryPoints);
-
-	    _this.totalCompletedStoryPoints = new StoryPoints();
-
-	    _this.totalCompletedStoryPoints.addPoints(sprintData.totalCompletedStoryPoints);
-
-	    _this.totalUncompletedStoryPoints = new StoryPoints();
-
-	    _this.totalUncompletedStoryPoints.addPoints(sprintData.totalUncompletedStoryPoints);
-
-	    _this.completedStoryPoints = new StoryPoints();
-	    _this.uncompletedStoryPoints = new StoryPoints();
-	    _this.completedTasks = main_core.Type.isInteger(sprintData.completedTasks) ? parseInt(sprintData.completedTasks, 10) : 0;
-	    _this.unCompletedTasks = main_core.Type.isInteger(sprintData.unCompletedTasks) ? parseInt(sprintData.unCompletedTasks, 10) : 0;
-	    _this.defaultSprintDuration = main_core.Type.isInteger(sprintData.defaultSprintDuration) ? parseInt(sprintData.defaultSprintDuration, 10) : 0;
-
-	    if (sprintData.items) {
-	      sprintData.items.forEach(function (itemData) {
-	        var item = new Item(itemData);
-	        item.setDisableStatus(_this.isDisabled());
-
-	        _this.items.set(item.itemId, item);
-	      });
-	    }
-
-	    _this.info = sprintData.info;
 	    _this.sprintHeader = null;
 	    _this.eventsHeader = null;
 	    _this.storyPointsHeader = null;
@@ -3610,12 +5172,31 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }
 
 	  babelHelpers.createClass(Sprint, [{
+	    key: "setSprintParams",
+	    value: function setSprintParams(params) {
+	      this.setTmpId(params.tmpId);
+	      this.setName(params.name);
+	      this.setSort(params.sort);
+	      this.setDateStart(params.dateStart);
+	      this.setDateEnd(params.dateEnd);
+	      this.setWeekendDaysTime(params.weekendDaysTime);
+	      this.setDefaultSprintDuration(params.defaultSprintDuration);
+	      this.setStatus(params.status);
+	      this.setTotalStoryPoints(params.totalStoryPoints);
+	      this.setTotalCompletedStoryPoints(params.totalCompletedStoryPoints);
+	      this.setTotalUncompletedStoryPoints(params.totalUncompletedStoryPoints);
+	      this.setCompletedTasks(params.completedTasks);
+	      this.setUncompletedTasks(params.uncompletedTasks);
+	      this.setItems(params.items);
+	      this.setInfo(params.info);
+	    }
+	  }, {
 	    key: "addSprintHeader",
 	    value: function addSprintHeader(sprintHeader) {
 	      var _this2 = this;
 
 	      this.sprintHeader = sprintHeader;
-	      this.sprintHeader.initStyle();
+	      this.sprintHeader.initStyle(this);
 	      this.sprintHeader.subscribe('changeName', this.onChangeName.bind(this));
 	      this.sprintHeader.subscribe('removeSprint', this.onRemoveSprint.bind(this));
 	      this.sprintHeader.subscribe('completeSprint', function () {
@@ -3646,23 +5227,23 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    key: "initStyle",
 	    value: function initStyle() {
 	      if (this.sprintHeader) {
-	        this.sprintHeader.initStyle();
+	        this.sprintHeader.initStyle(this);
 	      }
 	    }
 	  }, {
 	    key: "isActive",
 	    value: function isActive() {
-	      return this.status === 'active';
+	      return this.getStatus() === 'active';
 	    }
 	  }, {
 	    key: "isPlanned",
 	    value: function isPlanned() {
-	      return this.status === 'planned';
+	      return this.getStatus() === 'planned';
 	    }
 	  }, {
 	    key: "isCompleted",
 	    value: function isCompleted() {
-	      return this.status === 'completed';
+	      return this.getStatus() === 'completed';
 	    }
 	  }, {
 	    key: "isDisabled",
@@ -3672,15 +5253,18 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "isExpired",
 	    value: function isExpired() {
-	      var sprintEndTime = new Date(this.dateEnd * 1000).getTime();
-	      var currentTime = new Date();
-	      currentTime.setHours(currentTime.getHours() + 8);
-	      return this.isActive() && sprintEndTime < currentTime.getTime();
+	      var sprintEnd = new Date(this.dateEnd * 1000);
+	      return this.isActive() && sprintEnd.getTime() < new Date().getTime();
 	    }
 	  }, {
 	    key: "hasInput",
 	    value: function hasInput() {
 	      return !this.isDisabled();
+	    }
+	  }, {
+	    key: "getEntityType",
+	    value: function getEntityType() {
+	      return 'sprint';
 	    }
 	  }, {
 	    key: "setItem",
@@ -3696,14 +5280,13 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      this.updateStoryPoints();
 	    }
 	  }, {
-	    key: "getSort",
-	    value: function getSort() {
-	      return this.sort;
-	    }
-	  }, {
-	    key: "setSort",
-	    value: function setSort(sort) {
-	      this.sort = parseInt(sort, 10);
+	    key: "setName",
+	    value: function setName(name) {
+	      this.name = main_core.Type.isString(name) ? name : '';
+
+	      if (this.isNodeCreated() && this.sprintHeader) {
+	        this.sprintHeader.updateNameNode(this.name);
+	      }
 	    }
 	  }, {
 	    key: "getName",
@@ -3711,9 +5294,47 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      return this.name;
 	    }
 	  }, {
+	    key: "setTmpId",
+	    value: function setTmpId(tmpId) {
+	      this.tmpId = main_core.Type.isString(tmpId) ? tmpId : '';
+	    }
+	  }, {
+	    key: "getTmpId",
+	    value: function getTmpId() {
+	      return this.tmpId;
+	    }
+	  }, {
+	    key: "setSort",
+	    value: function setSort(sort) {
+	      this.sort = main_core.Type.isInteger(sort) ? parseInt(sort, 10) : 1;
+	    }
+	  }, {
+	    key: "getSort",
+	    value: function getSort() {
+	      return this.sort;
+	    }
+	  }, {
+	    key: "setDateStart",
+	    value: function setDateStart(dateStart) {
+	      this.dateStart = main_core.Type.isInteger(dateStart) ? parseInt(dateStart, 10) : 0;
+
+	      if (this.isNodeCreated() && this.sprintHeader) {
+	        this.sprintHeader.updateDateStartNode(this.dateStart);
+	      }
+	    }
+	  }, {
 	    key: "getDateStart",
 	    value: function getDateStart() {
 	      return parseInt(this.dateStart, 10);
+	    }
+	  }, {
+	    key: "setDateEnd",
+	    value: function setDateEnd(dateEnd) {
+	      this.dateEnd = main_core.Type.isInteger(dateEnd) ? parseInt(dateEnd, 10) : 0;
+
+	      if (this.isNodeCreated() && this.sprintHeader) {
+	        this.sprintHeader.updateDateEndNode(this.dateEnd);
+	      }
 	    }
 	  }, {
 	    key: "getDateEnd",
@@ -3721,9 +5342,25 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      return parseInt(this.dateEnd, 10);
 	    }
 	  }, {
-	    key: "getEntityType",
-	    value: function getEntityType() {
-	      return 'sprint';
+	    key: "setWeekendDaysTime",
+	    value: function setWeekendDaysTime(weekendDaysTime) {
+	      this.weekendDaysTime = main_core.Type.isInteger(weekendDaysTime) ? parseInt(weekendDaysTime, 10) : 0;
+	    }
+	  }, {
+	    key: "getWeekendDaysTime",
+	    value: function getWeekendDaysTime() {
+	      return this.weekendDaysTime;
+	    }
+	  }, {
+	    key: "getStoryPoints",
+	    value: function getStoryPoints() {
+	      return this.totalStoryPoints;
+	    }
+	  }, {
+	    key: "setTotalStoryPoints",
+	    value: function setTotalStoryPoints(totalStoryPoints) {
+	      this.totalStoryPoints = new StoryPoints();
+	      this.totalStoryPoints.addPoints(totalStoryPoints);
 	    }
 	  }, {
 	    key: "getTotalStoryPoints",
@@ -3731,9 +5368,21 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      return this.totalStoryPoints;
 	    }
 	  }, {
+	    key: "setTotalCompletedStoryPoints",
+	    value: function setTotalCompletedStoryPoints(totalCompletedStoryPoints) {
+	      this.totalCompletedStoryPoints = new StoryPoints();
+	      this.totalCompletedStoryPoints.addPoints(totalCompletedStoryPoints);
+	    }
+	  }, {
 	    key: "getTotalCompletedStoryPoints",
 	    value: function getTotalCompletedStoryPoints() {
 	      return this.totalCompletedStoryPoints;
+	    }
+	  }, {
+	    key: "setTotalUncompletedStoryPoints",
+	    value: function setTotalUncompletedStoryPoints(totalUncompletedStoryPoints) {
+	      this.totalUncompletedStoryPoints = new StoryPoints();
+	      this.totalUncompletedStoryPoints.addPoints(totalUncompletedStoryPoints);
 	    }
 	  }, {
 	    key: "getTotalUncompletedStoryPoints",
@@ -3741,14 +5390,27 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      return this.totalUncompletedStoryPoints;
 	    }
 	  }, {
-	    key: "getCompletedStoryPoints",
-	    value: function getCompletedStoryPoints() {
-	      return this.completedStoryPoints;
+	    key: "setItems",
+	    value: function setItems(items) {
+	      var _this4 = this;
+
+	      if (!main_core.Type.isArray(items)) {
+	        return;
+	      }
+
+	      items.forEach(function (itemParams) {
+	        var item = new Item(itemParams);
+	        item.setDisableStatus(_this4.isDisabled());
+
+	        _this4.items.set(item.itemId, item);
+	      });
 	    }
 	  }, {
-	    key: "getUncompletedStoryPoints",
-	    value: function getUncompletedStoryPoints() {
-	      return this.uncompletedStoryPoints;
+	    key: "setInfo",
+	    value: function setInfo(info) {
+	      this.info = main_core.Type.isPlainObject(info) ? info : {
+	        sprintGoal: ''
+	      };
 	    }
 	  }, {
 	    key: "addNumberTasks",
@@ -3771,7 +5433,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "setCompletedTasks",
 	    value: function setCompletedTasks(completedTasks) {
-	      this.completedTasks = parseInt(completedTasks, 10);
+	      this.completedTasks = main_core.Type.isInteger(completedTasks) ? parseInt(completedTasks, 10) : 0;
 	    }
 	  }, {
 	    key: "getCompletedTasks",
@@ -3779,14 +5441,19 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      return this.completedTasks;
 	    }
 	  }, {
-	    key: "setUnCompletedTasks",
-	    value: function setUnCompletedTasks(unCompletedTasks) {
-	      this.unCompletedTasks = parseInt(unCompletedTasks, 10);
+	    key: "setUncompletedTasks",
+	    value: function setUncompletedTasks(uncompletedTasks) {
+	      this.uncompletedTasks = main_core.Type.isInteger(uncompletedTasks) ? parseInt(uncompletedTasks, 10) : 0;
 	    }
 	  }, {
-	    key: "getUnCompletedTasks",
-	    value: function getUnCompletedTasks() {
-	      return this.unCompletedTasks;
+	    key: "getUncompletedTasks",
+	    value: function getUncompletedTasks() {
+	      return this.uncompletedTasks;
+	    }
+	  }, {
+	    key: "setDefaultSprintDuration",
+	    value: function setDefaultSprintDuration(defaultSprintDuration) {
+	      this.defaultSprintDuration = main_core.Type.isInteger(defaultSprintDuration) ? parseInt(defaultSprintDuration, 10) : 0;
 	    }
 	  }, {
 	    key: "getDefaultSprintDuration",
@@ -3824,17 +5491,56 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "setStatus",
 	    value: function setStatus(status) {
-	      var _this4 = this;
+	      var _this5 = this;
 
-	      this.status = status;
+	      var availableStatus = new Set(['planned', 'active', 'completed']);
+	      this.status = availableStatus.has(status) ? status : 'planned';
 	      this.initStyle();
 	      this.items.forEach(function (item) {
-	        item.setDisableStatus(_this4.isDisabled());
+	        item.setDisableStatus(_this5.isDisabled());
 	      });
 
 	      if (this.isDisabled()) {
-	        this.input.removeYourself();
-	        this.groupActionsButton.removeYourself();
+	        if (this.input) {
+	          this.input.removeYourself();
+	        }
+
+	        if (this.groupActionsButton) {
+	          this.groupActionsButton.removeYourself();
+	        }
+	      }
+	    }
+	  }, {
+	    key: "getStatus",
+	    value: function getStatus() {
+	      return this.status;
+	    }
+	  }, {
+	    key: "updateYourself",
+	    value: function updateYourself(tmpSprint) {
+	      if (tmpSprint.getName() !== this.getName()) {
+	        this.setName(tmpSprint.getName());
+	      }
+
+	      if (tmpSprint.getDateStart() !== this.getDateStart()) {
+	        this.setDateStart(tmpSprint.getDateStart());
+	      }
+
+	      if (tmpSprint.getDateEnd() !== this.getDateEnd()) {
+	        this.setDateEnd(tmpSprint.getDateEnd());
+	      }
+
+	      this.setTotalStoryPoints(tmpSprint.getTotalStoryPoints().getPoints());
+	      this.setTotalCompletedStoryPoints(tmpSprint.getTotalCompletedStoryPoints().getPoints());
+	      this.setTotalUncompletedStoryPoints(tmpSprint.getTotalUncompletedStoryPoints().getPoints());
+
+	      if (tmpSprint.getStatus() !== this.getStatus()) {
+	        this.setStatus(tmpSprint.getStatus());
+	      }
+
+	      if (this.node) {
+	        this.addStoryPointsHeader(new StoryPointsHeader(this));
+	        main_core.Dom.replace(this.node.querySelector('.tasks-scrum-sprint-header-event-params'), this.renderParams());
 	      }
 	    }
 	  }, {
@@ -3847,24 +5553,25 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "render",
 	    value: function render() {
-	      this.node = main_core.Tag.render(_templateObject$f(), this.sort, this.getId(), this.sprintHeader ? this.sprintHeader.render() : '', this.eventsHeader ? '' : ''
+	      this.node = main_core.Tag.render(_templateObject$l(), this.sort, this.getId(), this.sprintHeader ? this.sprintHeader.render() : '', this.eventsHeader ? '' : ''
 	      /*todo*/
-	      , this.isCompleted() ? this.renderLinkToCompletedSprint() : '', this.storyPointsHeader ? this.storyPointsHeader.render() : '', this.groupActionsButton && !this.isDisabled() ? this.groupActionsButton.render() : '', this.listItems ? this.listItems.render() : '');
+	      , this.isCompleted() ? this.renderLinkToCompletedSprint() : '', this.renderParams(), this.groupActionsButton && !this.isDisabled() ? this.groupActionsButton.render() : '', this.listItems ? this.listItems.render() : '');
 	      return this.node;
+	    }
+	  }, {
+	    key: "renderParams",
+	    value: function renderParams() {
+	      return main_core.Tag.render(_templateObject2$6(), this.storyPointsHeader ? this.storyPointsHeader.render() : '');
 	    }
 	  }, {
 	    key: "renderLinkToCompletedSprint",
 	    value: function renderLinkToCompletedSprint() {
-	      return main_core.Tag.render(_templateObject2$5(), main_core.Text.encode(this.views.completedSprint.url), main_core.Loc.getMessage('TASKS_SCRUM_COMPLETED_SPRINT_LINK'));
+	      return main_core.Tag.render(_templateObject3$5(), main_core.Text.encode(this.getViews().completedSprint.url), main_core.Loc.getMessage('TASKS_SCRUM_COMPLETED_SPRINT_LINK'));
 	    }
 	  }, {
 	    key: "onAfterAppend",
 	    value: function onAfterAppend() {
-	      this.contentNode = this.node.querySelector('.tasks-scrum-sprint-content');
-
-	      if (!this.isCompleted()) {
-	        this.showContent();
-	      }
+	      this.updateVisibility();
 
 	      if (this.sprintHeader) {
 	        this.sprintHeader.onAfterAppend();
@@ -3875,21 +5582,48 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "updateStoryPoints",
 	    value: function updateStoryPoints() {
-	      var _this5 = this;
+	      var _this6 = this;
 
 	      babelHelpers.get(babelHelpers.getPrototypeOf(Sprint.prototype), "updateStoryPoints", this).call(this);
-	      this.completedStoryPoints.clearPoints();
-	      babelHelpers.toConsumableArray(this.getItems().values()).map(function (item) {
-	        if (item.isCompleted()) {
-	          _this5.completedStoryPoints.addPoints(item.getStoryPoints().getPoints());
-	        }
-	      });
-	      this.uncompletedStoryPoints.clearPoints();
-	      babelHelpers.toConsumableArray(this.getItems().values()).map(function (item) {
-	        if (!item.isCompleted()) {
-	          _this5.uncompletedStoryPoints.addPoints(item.getStoryPoints().getPoints());
-	        }
-	      });
+
+	      if (!this.isCompleted()) {
+	        this.totalStoryPoints.clearPoints();
+	        babelHelpers.toConsumableArray(this.getItems().values()).map(function (item) {
+	          if (!item.isSubTask()) {
+	            _this6.totalStoryPoints.addPoints(item.getStoryPoints().getPoints());
+	          }
+	        });
+	        this.totalCompletedStoryPoints.clearPoints();
+	        babelHelpers.toConsumableArray(this.getItems().values()).map(function (item) {
+	          if (item.isCompleted()) {
+	            if (!item.isSubTask()) {
+	              _this6.totalCompletedStoryPoints.addPoints(item.getStoryPoints().getPoints());
+	            }
+	          } else {
+	            if (item.isParentTask()) {
+	              _this6.totalCompletedStoryPoints.addPoints(item.getCompletedSubTasksStoryPoints().getPoints());
+	            }
+	          }
+	        });
+	        this.totalUncompletedStoryPoints.clearPoints();
+	        babelHelpers.toConsumableArray(this.getItems().values()).map(function (item) {
+	          if (!item.isCompleted()) {
+	            if (!item.isSubTask()) {
+	              var storyPoints = item.getStoryPoints().getPoints();
+
+	              if (item.isParentTask()) {
+	                storyPoints = item.getUncompletedSubTasksStoryPoints().getPoints();
+	              }
+
+	              _this6.totalUncompletedStoryPoints.addPoints(storyPoints);
+	            }
+	          } else {
+	            if (item.isParentTask()) {
+	              _this6.totalUncompletedStoryPoints.addPoints(item.getUncompletedSubTasksStoryPoints().getPoints());
+	            }
+	          }
+	        });
+	      }
 
 	      if (this.storyPointsHeader) {
 	        if (this.isActive()) {
@@ -3901,32 +5635,6 @@ this.BX.Tasks = this.BX.Tasks || {};
 	          this.storyPointsHeader.setStoryPoints(this.storyPoints.getPoints());
 	        }
 	      }
-
-	      if (this.isPlanned()) {
-	        this.getTotalStoryPoints().setPoints(this.storyPoints.getPoints());
-	        this.getTotalCompletedStoryPoints().setPoints(this.completedStoryPoints.getPoints());
-	      }
-
-	      if (this.sprintHeader) {
-	        this.sprintHeader.updateStatsHeader();
-	      }
-	    }
-	  }, {
-	    key: "updateTotalStoryPoints",
-	    value: function updateTotalStoryPoints(item) {
-	      if (!this.isActive()) {
-	        return;
-	      }
-
-	      var differencePoints = item.getStoryPoints().getDifferencePoints();
-
-	      if (differencePoints > 0) {
-	        this.addTotalStoryPoints(item);
-	      } else {
-	        this.subtractTotalStoryPoints(item);
-	      }
-
-	      this.updateActiveSprintStoryPointsHeader();
 
 	      if (this.sprintHeader) {
 	        this.sprintHeader.updateStatsHeader();
@@ -3968,26 +5676,35 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "subscribeToItem",
 	    value: function subscribeToItem(item) {
-	      var _this6 = this;
+	      var _this7 = this;
 
 	      babelHelpers.get(babelHelpers.getPrototypeOf(Sprint.prototype), "subscribeToItem", this).call(this, item);
 	      item.subscribe('moveToBacklog', function (baseEvent) {
-	        _this6.emit('moveToBacklog', {
-	          sprint: _this6,
+	        _this7.emit('moveToBacklog', {
+	          sprint: _this7,
 	          item: baseEvent.getTarget()
 	        });
 	      });
-	      item.subscribe('updateActiveSprintStoryPoints', function (baseEvent) {
-	        _this6.updateTotalStoryPoints(baseEvent.getTarget());
+	      item.subscribe('updateCompletedStatus', function (baseEvent) {
+	        babelHelpers.toConsumableArray(_this7.getItems().values()).map(function (item) {
+	          if (item.isCompleted()) {
+	            _this7.setCompletedTasks(_this7.getCompletedTasks() + 1);
+	          } else {
+	            _this7.setUncompletedTasks(_this7.getUncompletedTasks() - 1);
+	          }
+	        });
+	      });
+	      item.subscribe('toggleSubTasks', function (baseEvent) {
+	        _this7.emit('toggleSubTasks', baseEvent.getTarget());
 	      });
 	    }
 	  }, {
 	    key: "onChangeName",
 	    value: function onChangeName(baseEvent) {
-	      var _this7 = this;
+	      var _this8 = this;
 
 	      var createInput = function createInput(value) {
-	        return main_core.Tag.render(_templateObject3$4(), main_core.Text.encode(value));
+	        return main_core.Tag.render(_templateObject4$4(), main_core.Text.encode(value));
 	      };
 
 	      var inputNode = createInput(this.name);
@@ -3995,12 +5712,12 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      main_core.Event.bind(inputNode, 'change', function (event) {
 	        var newValue = event.target['value'];
 
-	        _this7.emit('changeSprintName', {
-	          sprintId: _this7.getId(),
+	        _this8.emit('changeSprintName', {
+	          sprintId: _this8.getId(),
 	          name: newValue
 	        });
 
-	        _this7.name = newValue;
+	        _this8.name = newValue;
 	        inputNode.blur();
 	      }, true);
 
@@ -4011,7 +5728,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      main_core.Event.bind(inputNode, 'keydown', blockEnterInput);
 	      main_core.Event.bindOnce(inputNode, 'blur', function () {
 	        main_core.Event.unbind(inputNode, 'keydown', blockEnterInput);
-	        nameNode.textContent = main_core.Text.encode(_this7.name);
+	        nameNode.textContent = main_core.Text.encode(_this8.name);
 	        main_core.Dom.replace(inputNode, nameNode);
 	      }, true);
 	      main_core.Dom.replace(nameNode, inputNode);
@@ -4021,15 +5738,29 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "onRemoveSprint",
 	    value: function onRemoveSprint() {
-	      var _this8 = this;
+	      var _this9 = this;
 
 	      babelHelpers.toConsumableArray(this.items.values()).map(function (item) {
-	        _this8.emit('moveToBacklog', {
-	          sprint: _this8,
+	        _this9.emit('moveToBacklog', {
+	          sprint: _this9,
 	          item: item
 	        });
 	      });
 	      this.removeYourself();
+	    }
+	  }, {
+	    key: "removeSprint",
+	    value: function removeSprint() {
+	      var _this10 = this;
+
+	      babelHelpers.toConsumableArray(this.items.values()).map(function (item) {
+	        _this10.emit('moveToBacklog', {
+	          sprint: _this10,
+	          item: item
+	        });
+	      });
+	      main_core.Dom.remove(this.node);
+	      this.node = null;
 	    }
 	  }, {
 	    key: "onChangeSprintDeadline",
@@ -4060,7 +5791,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "toggleVisibilityContent",
 	    value: function toggleVisibilityContent() {
-	      if (this.contentNode.style.display === 'block') {
+	      if (this.getContentNode().style.display === 'block') {
 	        this.hideContent();
 	      } else {
 	        this.showContent();
@@ -4073,12 +5804,57 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "showContent",
 	    value: function showContent() {
-	      this.contentNode.style.display = 'block';
+	      if (this.getContentNode()) {
+	        this.getContentNode().style.display = 'block';
+	      }
 	    }
 	  }, {
 	    key: "hideContent",
 	    value: function hideContent() {
-	      this.contentNode.style.display = 'none';
+	      if (this.getContentNode()) {
+	        this.getContentNode().style.display = 'none';
+	      }
+	    }
+	  }, {
+	    key: "updateVisibility",
+	    value: function updateVisibility() {
+	      if (this.isCompleted()) {
+	        if (this.isEmpty()) {
+	          this.hideContent();
+	        } else {
+	          this.showContent();
+	        }
+
+	        this.showSprint();
+
+	        if (this.isExactSearchApplied()) {
+	          if (this.isEmpty()) {
+	            this.hideSprint();
+	          }
+	        }
+	      } else {
+	        this.showContent();
+
+	        if (this.isExactSearchApplied()) {
+	          if (this.isEmpty()) {
+	            this.hideSprint();
+	          } else {
+	            this.showSprint();
+	          }
+	        } else {
+	          this.showSprint();
+	        }
+	      }
+	    }
+	  }, {
+	    key: "showSprint",
+	    value: function showSprint() {
+	      this.node.style.display = 'block';
+	    }
+	  }, {
+	    key: "hideSprint",
+	    value: function hideSprint() {
+	      this.node.style.display = 'none';
 	    }
 	  }, {
 	    key: "onActivateGroupMode",
@@ -4091,6 +5867,13 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    value: function onDeactivateGroupMode(baseEvent) {
 	      babelHelpers.get(babelHelpers.getPrototypeOf(Sprint.prototype), "onDeactivateGroupMode", this).call(this, baseEvent);
 	      main_core.Dom.removeClass(this.node.querySelector('.tasks-scrum-sprint-items'), 'tasks-scrum-sprint-items-group-mode');
+	    }
+	  }, {
+	    key: "getContentNode",
+	    value: function getContentNode() {
+	      if (this.node) {
+	        return this.node.querySelector('.tasks-scrum-sprint-content');
+	      }
 	    }
 	  }], [{
 	    key: "buildSprint",
@@ -4122,7 +5905,10 @@ this.BX.Tasks = this.BX.Tasks || {};
 
 
 	    _this.sidePanelManager = BX.SidePanel.Instance;
+	    _this.contentSidePanelManager = new BX.SidePanel.Manager({});
 	    /* eslint-enable */
+
+	    _this.contentSidePanels = new Set();
 
 	    _this.bindEvents();
 
@@ -4153,37 +5939,55 @@ this.BX.Tasks = this.BX.Tasks || {};
 
 	        _this2.emit('onCloseSidePanel', sidePanel);
 	      });
-	      /* eslint-disable */
+	      main_core_events.EventEmitter.subscribe('SidePanel.Slider:onCloseComplete', function (event) {
+	        var _event$getCompatData5 = event.getCompatData(),
+	            _event$getCompatData6 = babelHelpers.slicedToArray(_event$getCompatData5, 1),
+	            sliderEvent = _event$getCompatData6[0];
 
-	      BX.addCustomEvent(window, 'onAfterPopupShow', function (popupWindow) {
-	        var topSlider = _this2.sidePanelManager.getTopSlider();
+	        var sidePanel = sliderEvent.getSlider();
 
-	        var topSidePanelZIndex = topSlider ? topSlider.getZindex() : 1000;
-	        var popupWindowZIndex = popupWindow.getZindex();
-	        var zIndex = topSidePanelZIndex > popupWindowZIndex ? topSidePanelZIndex + 1 : popupWindowZIndex + 1;
-	        main_core.Dom.style(popupWindow.getPopupContainer(), 'zIndex', zIndex);
+	        if (_this2.contentSidePanels.has(sidePanel.getUrl())) {
+	          _this2.contentSidePanels.delete(sidePanel.getUrl());
+
+	          if (!_this2.contentSidePanels.size) {
+	            _this2.resetBodyWidthHack();
+
+	            _this2.addEscapePressHandler();
+	          }
+	        }
 	      });
-	      /* eslint-enable */
 	    }
 	  }, {
 	    key: "isPreviousSidePanelExist",
 	    value: function isPreviousSidePanelExist(currentSidePanel) {
-	      return Boolean(this.sidePanelManager.getPreviousSlider(currentSidePanel));
+	      var manager = this.contentSidePanels.has(currentSidePanel.getUrl()) ? this.contentSidePanelManager : this.sidePanelManager;
+	      return Boolean(manager.getPreviousSlider(currentSidePanel));
 	    }
 	  }, {
 	    key: "reloadTopSidePanel",
 	    value: function reloadTopSidePanel() {
-	      this.sidePanelManager.getTopSlider().reload();
+	      var contentSidePanel = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+	      var manager = contentSidePanel ? this.contentSidePanelManager : this.sidePanelManager;
+
+	      if (manager.getTopSlider()) {
+	        manager.getTopSlider().reload();
+	      }
 	    }
 	  }, {
 	    key: "closeTopSidePanel",
 	    value: function closeTopSidePanel() {
-	      this.sidePanelManager.getTopSlider().close();
+	      var contentSidePanel = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : false;
+	      var manager = contentSidePanel ? this.contentSidePanelManager : this.sidePanelManager;
+
+	      if (manager.getTopSlider()) {
+	        manager.getTopSlider().close();
+	      }
 	    }
 	  }, {
 	    key: "reloadPreviousSidePanel",
 	    value: function reloadPreviousSidePanel(currentSidePanel) {
-	      var previousSidePanel = this.sidePanelManager.getPreviousSlider(currentSidePanel);
+	      var manager = this.contentSidePanels.has(currentSidePanel.getUrl()) ? this.contentSidePanelManager : this.sidePanelManager;
+	      var previousSidePanel = manager.getPreviousSlider(currentSidePanel);
 	      previousSidePanel.reload();
 	    }
 	  }, {
@@ -4194,7 +5998,49 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "openSidePanel",
 	    value: function openSidePanel(id, options) {
-	      this.sidePanelManager.open(id, options);
+	      this.applyBodyWidthHack();
+	      this.removeEscapePressHandler();
+	      this.contentSidePanelManager.open(id, options);
+	      this.contentSidePanels.add(id);
+	    }
+	  }, {
+	    key: "existFrameTopSlider",
+	    value: function existFrameTopSlider() {
+	      return Boolean(this.sidePanelManager.getTopSlider());
+	    }
+	  }, {
+	    key: "addEscapePressHandler",
+	    value: function addEscapePressHandler() {
+	      var sidePanel = this.sidePanelManager.getTopSlider();
+
+	      if (sidePanel) {
+	        var frameWindow = sidePanel.getFrameWindow();
+	        frameWindow.addEventListener('keydown', sidePanel.handleFrameKeyDown);
+	      }
+	    }
+	  }, {
+	    key: "removeEscapePressHandler",
+	    value: function removeEscapePressHandler() {
+	      var sidePanel = this.sidePanelManager.getTopSlider();
+
+	      if (sidePanel) {
+	        var frameWindow = sidePanel.getFrameWindow();
+	        frameWindow.removeEventListener('keydown', sidePanel.handleFrameKeyDown);
+	      }
+	    }
+	  }, {
+	    key: "applyBodyWidthHack",
+	    value: function applyBodyWidthHack() {
+	      if (this.existFrameTopSlider()) {
+	        main_core.Dom.addClass(document.body, 'tasks-scrum-side-panel-padding');
+	      }
+	    }
+	  }, {
+	    key: "resetBodyWidthHack",
+	    value: function resetBodyWidthHack() {
+	      if (this.existFrameTopSlider()) {
+	        main_core.Dom.removeClass(document.body, 'tasks-scrum-side-panel-padding');
+	      }
 	    }
 	  }]);
 	  return SidePanel;
@@ -4311,30 +6157,30 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return BurnDownChart;
 	}();
 
-	function _templateObject8$1() {
+	function _templateObject8$2() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-block\">\n\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-title\">\n\t\t\t\t\t", "\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-content\">\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-info-box tasks-scrum-sprint-sidepanel-info-box-w100\">\n\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-info-title\">\n\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-info-content\">\n\t\t\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-info-value\">\n\t\t\t\t\t\t\t\t", "%\n\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-info-dif ", "\">\n\t\t\t\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-info-dif-arrow\"></span>\n\t\t\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-info-dif-block\">\n\t\t\t\t\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-info-dif-val\">", "</span>\n\t\t\t\t\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-info-dif-icon\">%</span>\n\t\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t\t", "\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject8$1 = function _templateObject8() {
+	  _templateObject8$2 = function _templateObject8() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject7$1() {
+	function _templateObject7$2() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-speed\">\n\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-subtitle\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</span>\n\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-result\">", "</span>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-graph\"></div>\n\t\t\t"]);
 
-	  _templateObject7$1 = function _templateObject7() {
+	  _templateObject7$2 = function _templateObject7() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject6$2() {
+	function _templateObject6$3() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-block\">\n\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-title tasks-scrum-sprint-sidepanel-title-icon\">\n\t\t\t\t\t", "\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-content\">\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-field\">\n\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-label\">\n\t\t\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-text\">\n\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div class=\"ui-ctl ui-ctl-after-icon ui-ctl-dropdown ui-ctl-w100\">\n\t\t\t\t\t\t\t<div class=\"ui-ctl-after ui-ctl-icon-angle\"></div>\n\t\t\t\t\t\t\t<select class=\"ui-ctl-element\">\n\t\t\t\t\t\t\t\t<option value=\"backlog\">\n\t\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t\t</option>\n\t\t\t\t\t\t\t\t<option value=\"0\">\n\t\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t\t</option>\n\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t</select>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-uncompleted\">\n\t\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-subtitle\">\n\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t</span>\n\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-uncompleted-list\">\n\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject6$2 = function _templateObject6() {
+	  _templateObject6$3 = function _templateObject6() {
 	    return data;
 	  };
 
@@ -4351,40 +6197,40 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return data;
 	}
 
-	function _templateObject4$4() {
+	function _templateObject4$5() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-sprint-sidepanel\">\n\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-header\">\n\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-header-title\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</span>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-chart\"></div>\n\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-buttons\"></div>\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject4$4 = function _templateObject4() {
+	  _templateObject4$5 = function _templateObject4() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject3$5() {
+	function _templateObject3$6() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-sprint-sidepanel\">\n\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-header\">\n\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-header-title\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</span>\n\t\t\t\t</div>\n\t\t\t\t", "\n\t\t\t\t", "\n\t\t\t\t", "\n\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-buttons\"></div>\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject3$5 = function _templateObject3() {
+	  _templateObject3$6 = function _templateObject3() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject2$6() {
+	function _templateObject2$7() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-epic-item\" style=\"background: ", ";\">\n\t\t\t\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t\t\t\t"]);
 
-	  _templateObject2$6 = function _templateObject2() {
+	  _templateObject2$7 = function _templateObject2() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject$g() {
+	function _templateObject$m() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-sprint-sidepanel\">\n\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-header\">\n\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-header-title\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</span>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-block\">\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-title\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-content\">\n\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-info\">\n\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-info-box\">\n\t\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-info-title\">\n\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-info-content\">\n\t\t\t\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-info-value\">\n\t\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-info-box tasks-scrum-sprint-sidepanel-info-box-story\">\n\t\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-info-title\">\n\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-info-content\">\n\t\t\t\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-info-value\">\n\t\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t\t\t<span class=\"tasks-scrum-sprint-sidepanel-info-extra\">\n\t\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-epic\">\n\t\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-epic-title\">\n\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-epic-list\">\n\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-block\">\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-title\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-content\">\n\t\t\t\t\t\t<div class=\"ui-ctl ui-ctl-textarea ui-ctl-resize-y\">\n\t\t\t\t\t\t\t<textarea class=\"ui-ctl-element\"></textarea>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-sprint-sidepanel-buttons\"></div>\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject$g = function _templateObject() {
+	  _templateObject$m = function _templateObject() {
 	    return data;
 	  };
 
@@ -4407,8 +6253,9 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    value: function showStartSidePanel(sprint) {
 	      var _this = this;
 
-	      this.sidePanelId = 'tasks-scrum-start-' + main_core.Text.getRandom();
+	      this.sidePanelId = 'tasks-scrum-sprint-start-side-panel';
 	      this.currentSprint = sprint;
+	      this.sidePanel.unsubscribeAll('onLoadSidePanel');
 	      this.sidePanel.subscribeOnce('onLoadSidePanel', this.onLoadStartPanel.bind(this));
 	      this.sidePanel.openSidePanel(this.sidePanelId, {
 	        contentCallback: function contentCallback() {
@@ -4425,8 +6272,9 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    value: function showCompleteSidePanel(sprint) {
 	      var _this2 = this;
 
-	      this.sidePanelId = 'tasks-scrum-start-' + main_core.Text.getRandom();
+	      this.sidePanelId = 'tasks-scrum-sprint-complete-side-panel';
 	      this.currentSprint = sprint;
+	      this.sidePanel.unsubscribeAll('onLoadSidePanel');
 	      this.sidePanel.subscribeOnce('onLoadSidePanel', this.onLoadCompletePanel.bind(this));
 	      this.sidePanel.openSidePanel(this.sidePanelId, {
 	        contentCallback: function contentCallback() {
@@ -4443,8 +6291,9 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    value: function showBurnDownChart(sprint) {
 	      var _this3 = this;
 
-	      this.sidePanelId = 'tasks-scrum-burn-down-chart-' + main_core.Text.getRandom();
+	      this.sidePanelId = 'tasks-scrum-sprint-burn-down-chart';
 	      this.currentSprint = sprint;
+	      this.sidePanel.unsubscribeAll('onLoadSidePanel');
 	      this.sidePanel.subscribeOnce('onLoadSidePanel', this.onLoadSprintBurnDownPanel.bind(this));
 	      this.sidePanel.subscribe('onCloseSidePanel', this.onCloseBurnDownChart.bind(this));
 	      this.sidePanel.openSidePanel(this.sidePanelId, {
@@ -4466,8 +6315,8 @@ this.BX.Tasks = this.BX.Tasks || {};
 	        differenceStoryPoints = this.getDifferenceStoryPointsBetweenSprints(this.currentSprint, this.lastCompletedSprint);
 	      }
 
-	      return main_core.Tag.render(_templateObject$g(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_START_HEADER'), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_START_TITLE'), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_START_TASK_COUNT_TITLE'), parseInt(this.currentSprint.getNumberTasks()), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_START_STORY_POINTS_COUNT_TITLE'), main_core.Text.encode(this.currentSprint.getTotalStoryPoints().getPoints()), differenceStoryPoints, main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_START_EPICS_TITLE'), babelHelpers.toConsumableArray(this.currentSprint.getEpics().values()).map(function (epic) {
-	        return main_core.Tag.render(_templateObject2$6(), main_core.Text.encode(epic.info.color), main_core.Text.encode(epic.name));
+	      return main_core.Tag.render(_templateObject$m(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_START_HEADER'), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_START_TITLE'), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_START_TASK_COUNT_TITLE'), parseInt(this.currentSprint.getNumberTasks()), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_START_STORY_POINTS_COUNT_TITLE'), main_core.Text.encode(this.currentSprint.getTotalStoryPoints().getPoints()), differenceStoryPoints, main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_START_EPICS_TITLE'), babelHelpers.toConsumableArray(this.currentSprint.getEpics().values()).map(function (epic) {
+	        return main_core.Tag.render(_templateObject2$7(), main_core.Text.encode(epic.info.color), main_core.Text.encode(epic.name));
 	      }), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_GOAL_TITLE'));
 	    }
 	  }, {
@@ -4479,17 +6328,20 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      this.form = sidePanel.getContainer().querySelector('.tasks-scrum-sprint-sidepanel');
 	      this.onLoadStartButtons().then(function (buttonsContainer) {
 	        main_core.Event.bind(buttonsContainer.querySelector('[name=save]'), 'click', _this4.onStartSprint.bind(_this4));
+	        main_core.Event.bind(buttonsContainer.querySelector('[name=cancel]'), 'click', function () {
+	          return sidePanel.close();
+	        });
 	      });
 	    }
 	  }, {
 	    key: "buildCompletePanel",
 	    value: function buildCompletePanel() {
-	      return main_core.Tag.render(_templateObject3$5(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_HEADER'), this.buildSprintGoal(), this.buildSprintActions(), this.buildSprintPlan());
+	      return main_core.Tag.render(_templateObject3$6(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_HEADER'), this.buildSprintGoal(), this.buildSprintActions(), this.buildSprintPlan());
 	    }
 	  }, {
 	    key: "buildBurnDownPanel",
 	    value: function buildBurnDownPanel() {
-	      return main_core.Tag.render(_templateObject4$4(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_IDEAL_BURN_DOWN_CHART_HEADER'));
+	      return main_core.Tag.render(_templateObject4$5(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_IDEAL_BURN_DOWN_CHART_HEADER'));
 	    }
 	  }, {
 	    key: "buildSprintGoal",
@@ -4508,7 +6360,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    value: function buildSprintActions() {
 	      var _this5 = this;
 
-	      var uncompletedTasks = this.currentSprint.getUnCompletedTasks();
+	      var uncompletedTasks = this.currentSprint.getUncompletedTasks();
 
 	      if (uncompletedTasks === 0) {
 	        return '';
@@ -4520,12 +6372,14 @@ this.BX.Tasks = this.BX.Tasks || {};
 	          listSprintsOptions += "<option value=\"".concat(sprint.getId(), "\">").concat(main_core.Text.encode(sprint.getName()), "</option>");
 	        }
 	      });
-	      return main_core.Tag.render(_templateObject6$2(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_ACTIONS_TITLE'), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_ACTIONS_SELECT'), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_POPUP_MOVE_SELECTOR_BACKLOG'), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_POPUP_NEW_SPRINT'), listSprintsOptions, main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_ACTIONS_ITEM_LIST'), babelHelpers.toConsumableArray(this.currentSprint.getUncompletedItems().values()).map(function (item) {
-	        var previewItem = item.getPreviewVersion();
+	      return main_core.Tag.render(_templateObject6$3(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_ACTIONS_TITLE'), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_ACTIONS_SELECT'), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_POPUP_MOVE_SELECTOR_BACKLOG'), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_POPUP_NEW_SPRINT'), listSprintsOptions, main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_ACTIONS_ITEM_LIST'), babelHelpers.toConsumableArray(this.currentSprint.getUncompletedItems().values()).map(function (item) {
+	        if (!item.isSubTask()) {
+	          var previewItem = item.getPreviewVersion();
 
-	        _this5.uncompletedItems.set(previewItem.getItemId(), previewItem);
+	          _this5.uncompletedItems.set(previewItem.getItemId(), previewItem);
 
-	        return previewItem.render();
+	          return previewItem.render();
+	        }
 	      }));
 	    }
 	  }, {
@@ -4546,10 +6400,10 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      var renderSpeed = function renderSpeed(speedInfoMessage) {
 	        return ''; //todo chart
 
-	        return main_core.Tag.render(_templateObject7$1(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_TEAM_SPEED'), speedInfoMessage);
+	        return main_core.Tag.render(_templateObject7$2(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_TEAM_SPEED'), speedInfoMessage);
 	      };
 
-	      return main_core.Tag.render(_templateObject8$1(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_PLAN_TITLE'), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_PLAN_DONE'), percentage, percentageNodeClass, absoluteValue, renderSpeed());
+	      return main_core.Tag.render(_templateObject8$2(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_PLAN_TITLE'), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_COMPLETE_PLAN_DONE'), percentage, percentageNodeClass, absoluteValue, renderSpeed());
 	    }
 	  }, {
 	    key: "onLoadCompletePanel",
@@ -4567,6 +6421,9 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      });
 	      this.onLoadCompleteButtons().then(function (buttonsContainer) {
 	        main_core.Event.bind(buttonsContainer.querySelector('[name=save]'), 'click', _this6.onCompleteSprint.bind(_this6, sidePanel));
+	        main_core.Event.bind(buttonsContainer.querySelector('[name=cancel]'), 'click', function () {
+	          return sidePanel.close();
+	        });
 	      });
 	    }
 	  }, {
@@ -4575,8 +6432,10 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      var _this7 = this;
 
 	      var sidePanel = baseEvent.getData();
+	      sidePanel.showLoader();
 	      this.form = sidePanel.getContainer().querySelector('.tasks-scrum-sprint-sidepanel');
 	      this.getBurnDownChartData().then(function (data) {
+	        sidePanel.closeLoader();
 	        setTimeout(function () {
 	          _this7.burnDownChart = new BurnDownChart(data);
 
@@ -4593,9 +6452,11 @@ this.BX.Tasks = this.BX.Tasks || {};
 
 	      if (this.sidePanelId === sidePanel.getUrl()) {
 	        setTimeout(function () {
-	          _this8.burnDownChart.destroyBurnDownChart();
+	          if (_this8.burnDownChart) {
+	            _this8.burnDownChart.destroyBurnDownChart();
 
-	          _this8.burnDownChart = null;
+	            _this8.burnDownChart = null;
+	          }
 	        }, 300);
 	      }
 	    }
@@ -4621,6 +6482,10 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    key: "getDifferenceStoryPointsBetweenSprints",
 	    value: function getDifferenceStoryPointsBetweenSprints(firstSprint, secondSprint) {
 	      var difference = parseFloat(firstSprint.getTotalStoryPoints().getPoints() - secondSprint.getTotalStoryPoints().getPoints());
+
+	      if (main_core.Type.isFloat(difference)) {
+	        difference = difference.toFixed(1);
+	      }
 
 	      if (difference === 0) {
 	        return '';
@@ -4774,421 +6639,1119 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return SprintSidePanel;
 	}();
 
-	var ActiveSprint = /*#__PURE__*/function () {
-	  function ActiveSprint(options) {
-	    var _this = this;
-
-	    babelHelpers.classCallCheck(this, ActiveSprint);
-	    this.pathToTask = options.pathToTask;
-	    this.activeSprintData = main_core.Type.isPlainObject(options.activeSprintData) ? options.activeSprintData : null;
-
-	    if (this.activeSprintData) {
-	      this.requestSender = new RequestSender({
-	        signedParameters: options.signedParameters
-	      });
-	      this.finishStatus = this.activeSprintData.finishStatus;
-	      this.sprint = new Sprint(this.activeSprintData);
-	      this.sprints = new Map();
-	      options.sprints.forEach(function (sprintData) {
-	        var sprint = new Sprint(sprintData);
-
-	        _this.sprints.set(sprint.getId(), sprint);
-	      });
-	      this.views = options.views;
-	      this.itemsInFinishStage = new Map();
-	      this.initDomNodes();
-	      this.createSprintStats();
-	      this.bindHandlers();
-	    }
-
-	    this.sidePanel = new SidePanel();
+	var EntityStorage = /*#__PURE__*/function () {
+	  function EntityStorage() {
+	    babelHelpers.classCallCheck(this, EntityStorage);
+	    this.backlog = null;
+	    this.sprints = new Map();
 	  }
 
-	  babelHelpers.createClass(ActiveSprint, [{
-	    key: "initDomNodes",
-	    value: function initDomNodes() {
-	      this.sprintStatsContainer = document.getElementById('tasks-scrum-active-sprint-stats');
-	      var buttonsContainer = document.getElementById('tasks-scrum-actions-complete-sprint');
-	      this.chartSprintButtonNode = buttonsContainer.firstElementChild;
-	      this.completeSprintButtonNode = buttonsContainer.lastElementChild;
-	    }
-	  }, {
-	    key: "createSprintStats",
-	    value: function createSprintStats() {
-	      this.statsHeader = StatsHeaderBuilder.build(this.sprint);
-	      this.statsHeader.setKanbanStyle();
-	      main_core.Dom.append(this.statsHeader.render(), this.sprintStatsContainer);
-	    }
-	  }, {
-	    key: "bindHandlers",
-	    value: function bindHandlers() {
-	      main_core.Event.bind(this.chartSprintButtonNode, 'click', this.onShowSprintBurnDownChart.bind(this));
-	      main_core.Event.bind(this.completeSprintButtonNode, 'click', this.onCompleteSprint.bind(this));
+	  babelHelpers.createClass(EntityStorage, [{
+	    key: "addBacklog",
+	    value: function addBacklog(backlog) {
+	      if (!(backlog instanceof Backlog)) {
+	        throw new Error('EntityStorage: Backlog is in wrong format');
+	      }
 
-	      if (window.Kanban) {
-	        this.onKanbanRender(window.Kanban);
-	        BX.addCustomEvent(window.Kanban, 'Kanban.Grid:onItemMoved', this.onItemMoved.bind(this));
+	      this.backlog = backlog;
+	    }
+	  }, {
+	    key: "addSprint",
+	    value: function addSprint(sprint) {
+	      this.sprints.set(sprint.getId(), sprint);
+	    }
+	  }, {
+	    key: "removeSprint",
+	    value: function removeSprint(sprintId) {
+	      this.sprints.delete(sprintId);
+	    }
+	  }, {
+	    key: "getBacklog",
+	    value: function getBacklog() {
+	      if (this.backlog === null) {
+	        throw new Error('EntityStorage: Backlog not found');
+	      }
+
+	      return this.backlog;
+	    }
+	  }, {
+	    key: "getSprints",
+	    value: function getSprints() {
+	      return this.sprints;
+	    }
+	  }, {
+	    key: "getSprintsAvailableForFilling",
+	    value: function getSprintsAvailableForFilling(entityFrom) {
+	      var sprints = new Set();
+	      this.sprints.forEach(function (sprint) {
+	        if (!sprint.isCompleted() && entityFrom.getId() !== sprint.getId()) {
+	          sprints.add(sprint);
+	        }
+	      });
+	      return sprints;
+	    }
+	  }, {
+	    key: "getAllEntities",
+	    value: function getAllEntities() {
+	      var entities = new Map();
+	      entities.set(this.backlog.getId(), this.backlog);
+	      babelHelpers.toConsumableArray(this.sprints.values()).map(function (sprint) {
+	        return entities.set(sprint.getId(), sprint);
+	      });
+	      return entities;
+	    }
+	  }, {
+	    key: "getAllItems",
+	    value: function getAllItems() {
+	      var items = new Map(this.backlog.getItems());
+	      babelHelpers.toConsumableArray(this.sprints.values()).map(function (sprint) {
+	        return items = new Map([].concat(babelHelpers.toConsumableArray(items), babelHelpers.toConsumableArray(sprint.getItems())));
+	      });
+	      return items;
+	    }
+	  }, {
+	    key: "recalculateItemsSort",
+	    value: function recalculateItemsSort() {
+	      this.backlog.recalculateItemsSort();
+	      this.sprints.forEach(function (sprint) {
+	        return sprint.recalculateItemsSort();
+	      });
+	    }
+	  }, {
+	    key: "findEntityByEntityId",
+	    value: function findEntityByEntityId(entityId) {
+	      entityId = parseInt(entityId, 10);
+
+	      if (this.backlog.getId() === entityId) {
+	        return this.backlog;
+	      }
+
+	      return babelHelpers.toConsumableArray(this.sprints.values()).find(function (sprint) {
+	        return sprint.getId() === entityId;
+	      });
+	    }
+	  }, {
+	    key: "findItemByItemId",
+	    value: function findItemByItemId(itemId) {
+	      itemId = parseInt(itemId, 10);
+	      var backlogItems = this.backlog.getItems();
+
+	      if (backlogItems.has(itemId)) {
+	        return backlogItems.get(itemId);
+	      }
+
+	      var sprint = babelHelpers.toConsumableArray(this.sprints.values()).find(function (sprint) {
+	        return sprint.getItems().has(itemId);
+	      });
+
+	      if (sprint) {
+	        return sprint.getItems().get(itemId);
+	      }
+
+	      return null;
+	    }
+	  }, {
+	    key: "findItemBySourceId",
+	    value: function findItemBySourceId(sourceId) {
+	      sourceId = parseInt(sourceId, 10);
+	      var items = new Map(this.backlog.getItems());
+	      babelHelpers.toConsumableArray(this.sprints.values()).map(function (sprint) {
+	        return items = new Map([].concat(babelHelpers.toConsumableArray(items), babelHelpers.toConsumableArray(sprint.getItems())));
+	      });
+	      return babelHelpers.toConsumableArray(items.values()).find(function (item) {
+	        return item.getSourceId() === sourceId;
+	      });
+	    }
+	  }, {
+	    key: "findEntityByItemId",
+	    value: function findEntityByItemId(itemId) {
+	      itemId = parseInt(itemId, 10);
+	      var backlogItems = this.backlog.getItems();
+
+	      if (backlogItems.has(itemId)) {
+	        return this.backlog;
+	      }
+
+	      return babelHelpers.toConsumableArray(this.sprints.values()).find(function (sprint) {
+	        return sprint.getItems().has(itemId);
+	      });
+	    }
+	  }]);
+	  return EntityStorage;
+	}();
+
+	var ItemStyleDesigner = /*#__PURE__*/function () {
+	  function ItemStyleDesigner(params) {
+	    babelHelpers.classCallCheck(this, ItemStyleDesigner);
+	    this.requestSender = params.requestSender;
+	    this.entityStorage = params.entityStorage;
+	    this.listAllUsedColors = new Set();
+	    this.updateBorderColorForLinkedItems();
+	  }
+
+	  babelHelpers.createClass(ItemStyleDesigner, [{
+	    key: "updateBorderColorForLinkedItems",
+	    value: function updateBorderColorForLinkedItems() {
+	      var _this = this;
+
+	      var itemIdsToUpdateColor = new Set();
+	      this.entityStorage.getAllItems().forEach(function (item) {
+	        if (item.isLinkedTask() && !item.getBorderColor()) {
+	          itemIdsToUpdateColor.add(item.getItemId());
+	        }
+	      });
+
+	      if (itemIdsToUpdateColor.size) {
+	        this.getAllUsedColors().then(function () {
+	          var items = new Map();
+	          itemIdsToUpdateColor.forEach(function (itemId) {
+	            items.set(itemId, _this.getRandomColor(_this.getAllColors()));
+	          });
+
+	          _this.requestSender.updateBorderColorToLinkedItems({
+	            items: Object.fromEntries(items)
+	          }).then(function (response) {
+	            var updatedItems = response.data;
+	            Object.keys(updatedItems).forEach(function (itemId) {
+	              var borderColor = updatedItems[itemId];
+
+	              var item = _this.entityStorage.findItemByItemId(itemId);
+
+	              item.setBorderColor(borderColor);
+	            });
+	          }).catch(function (response) {
+	            _this.requestSender.showErrorAlert(response);
+	          });
+	        });
 	      }
 	    }
 	  }, {
-	    key: "onCompleteSprint",
-	    value: function onCompleteSprint() {
+	    key: "getRandomColorForItemBorder",
+	    value: function getRandomColorForItemBorder() {
 	      var _this2 = this;
 
-	      var sprintSidePanel = new SprintSidePanel({
-	        sprints: this.sprints,
-	        sidePanel: this.sidePanel,
-	        requestSender: this.requestSender,
-	        views: this.views
-	      });
-	      sprintSidePanel.showCompleteSidePanel(this.sprint);
-	      this.sprint.subscribe('showTask', function (baseEvent) {
-	        var item = baseEvent.getData();
-
-	        _this2.sidePanel.openSidePanelByUrl(_this2.pathToTask.replace('#task_id#', item.getSourceId()));
+	      return this.getAllUsedColors().then(function () {
+	        return _this2.getRandomColor(_this2.getAllColors());
 	      });
 	    }
-	    /**
-	     * Handles Kanban render.
-	     * @param {BX.Tasks.Kanban.Grid} kanbanGrid
-	     * @returns {void}
-	     */
-
 	  }, {
-	    key: "onKanbanRender",
-	    value: function onKanbanRender(kanbanGrid) {
-	      var items = kanbanGrid.getItems();
-	      var hasOwnProperty = Object.prototype.hasOwnProperty;
+	    key: "getAllColors",
+	    value: function getAllColors() {
+	      var colorPicker = this.getColorPicker();
+	      var allColors = [];
+	      colorPicker.getDefaultColors().forEach(function (defaultColors) {
+	        allColors = [].concat(babelHelpers.toConsumableArray(allColors), babelHelpers.toConsumableArray(defaultColors));
+	      });
+	      return allColors;
+	    }
+	  }, {
+	    key: "getRandomColor",
+	    value: function getRandomColor(allColors) {
+	      var randomColor = allColors[Math.floor(Math.random() * allColors.length)];
 
-	      for (var itemId in kanbanGrid.getItems()) {
-	        if (hasOwnProperty.call(items, itemId)) {
-	          var item = items[itemId];
+	      if (this.isThisBorderColorAlreadyUse(randomColor)) {
+	        return this.getRandomColor(allColors);
+	      } else {
+	        return randomColor;
+	      }
+	    }
+	  }, {
+	    key: "isThisBorderColorAlreadyUse",
+	    value: function isThisBorderColorAlreadyUse(color) {
+	      var isAlreadyUse = false;
+	      this.listAllUsedColors.forEach(function (usedColor) {
+	        if (usedColor === color) {
+	          isAlreadyUse = true;
+	        }
+	      });
+	      return isAlreadyUse;
+	    }
+	  }, {
+	    key: "getAllUsedColors",
+	    value: function getAllUsedColors() {
+	      var _this3 = this;
 
-	          if (item.getColumn().getType() === this.finishStatus) {
-	            this.itemsInFinishStage.set(itemId, '');
+	      var entityIds = new Set();
+	      this.entityStorage.getAllEntities().forEach(function (entity) {
+	        if (!entity.isCompleted()) {
+	          entityIds.add(entity.getId());
+	        }
+	      });
+	      return this.requestSender.getAllUsedItemBorderColors({
+	        entityIds: babelHelpers.toConsumableArray(entityIds.values())
+	      }).then(function (response) {
+	        _this3.listAllUsedColors = new Set([response.data]);
+	      }).catch(function (response) {
+	        _this3.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "getColorPicker",
+	    value: function getColorPicker() {
+	      /* eslint-disable */
+	      return new BX.ColorPicker();
+	      /* eslint-enable */
+	    }
+	  }]);
+	  return ItemStyleDesigner;
+	}();
+
+	function _templateObject4$6() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-sprints\">\n\t\t\t\t", "\n\t\t\t\t", "\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject4$6 = function _templateObject4() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject3$7() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t<div id=\"", "\" class=\"tasks-scrum-sprint-list\">\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-active-list\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-planned-list\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-completed-list\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-completed-loader\"></div>\n\t\t\t\t</div>\n\t\t\t"]);
+
+	  _templateObject3$7 = function _templateObject3() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject2$8() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t<div id=\"", "\">\n\t\t\t\t\t<label class=\"ui-ctl ui-ctl-file-drop tasks-scrum-sprint-sprint-add-drop\">\n\t\t\t\t\t\t<div class=\"ui-ctl-label-text\">\n\t\t\t\t\t\t\t<small>", "</small>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</label>\n\t\t\t\t</div>\n\t\t\t"]);
+
+	  _templateObject2$8 = function _templateObject2() {
+	    return data;
+	  };
+
+	  return data;
+	}
+
+	function _templateObject$n() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t<div id=\"", "\" class=\n\t\t\t\t\t\"tasks-scrum-sprint-create ui-btn ui-btn-md ui-btn-themes ui-btn-light-border ui-btn-icon-add\">\n\t\t\t\t\t<span>", "</span>\n\t\t\t\t</div>\n\t\t\t"]);
+
+	  _templateObject$n = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
+	var DomBuilder = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(DomBuilder, _EventEmitter);
+
+	  function DomBuilder(params) {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, DomBuilder);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(DomBuilder).call(this, params));
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.DomBuilder');
+
+	    _this.requestSender = params.requestSender;
+	    _this.entityStorage = params.entityStorage;
+	    _this.defaultSprintDuration = params.defaultSprintDuration;
+	    _this.pageNumberToCompletedSprints = parseInt(params.pageNumberToCompletedSprints, 10);
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(DomBuilder, [{
+	    key: "renderTo",
+	    value: function renderTo(container) {
+	      this.scrumContainer = container;
+	      this.append(this.entityStorage.getBacklog().render(), this.scrumContainer);
+	      this.entityStorage.getBacklog().onAfterAppend();
+	      this.append(this.renderSprintsContainer(), this.scrumContainer);
+	      this.entityStorage.getSprints().forEach(function (sprint) {
+	        sprint.onAfterAppend();
+	      });
+	      this.sprintCreatingButtonNode = document.getElementById(this.sprintCreatingButtonNodeId);
+	      this.sprintCreatingDropZoneNode = document.getElementById(this.sprintCreatingDropZoneNodeId);
+	      this.sprintListNode = document.getElementById(this.sprintListNodeId);
+	      main_core.Event.bind(this.sprintCreatingButtonNode, 'click', this.createSprint.bind(this));
+	      this.setDraggable();
+	    }
+	  }, {
+	    key: "getSprintCreatingDropZoneNode",
+	    value: function getSprintCreatingDropZoneNode() {
+	      return this.sprintCreatingDropZoneNode;
+	    }
+	  }, {
+	    key: "getSprintPlannedListNode",
+	    value: function getSprintPlannedListNode() {
+	      return this.sprintListNode.querySelector('.tasks-scrum-sprint-planned-list');
+	    }
+	  }, {
+	    key: "setDraggable",
+	    value: function setDraggable() {
+	      var _this2 = this;
+
+	      var itemContainers = [];
+	      itemContainers.push(this.entityStorage.getBacklog().getListItemsNode());
+
+	      if (this.sprintCreatingDropZoneNode) {
+	        itemContainers.push(this.sprintCreatingDropZoneNode);
+	      }
+
+	      this.entityStorage.getSprints().forEach(function (sprint) {
+	        if (!sprint.isDisabled()) {
+	          itemContainers.push(sprint.getListItemsNode());
+	        }
+	      });
+	      this.draggableItems = new ui_draganddrop_draggable.Draggable({
+	        container: itemContainers,
+	        draggable: '.tasks-scrum-item-drag',
+	        // todo add tmp class
+	        dragElement: '.tasks-scrum-item',
+	        type: ui_draganddrop_draggable.Draggable.DROP_PREVIEW,
+	        delay: 200
+	      });
+	      this.draggableItems.subscribe('start', function (baseEvent) {
+	        var dragEndEvent = baseEvent.getData();
+
+	        _this2.emit('itemMoveStart', dragEndEvent);
+	      });
+	      this.draggableItems.subscribe('end', function (baseEvent) {
+	        var dragEndEvent = baseEvent.getData();
+
+	        _this2.emit('itemMoveEnd', dragEndEvent);
+	      });
+	      this.draggableSprints = new ui_draganddrop_draggable.Draggable({
+	        container: this.sprintListNode.querySelector('.tasks-scrum-sprint-planned-list'),
+	        draggable: '.tasks-scrum-sprint',
+	        dragElement: '.tasks-scrum-sprint-dragndrop',
+	        type: ui_draganddrop_draggable.Draggable.DROP_PREVIEW
+	      });
+	      this.draggableSprints.subscribe('end', function (baseEvent) {
+	        var dragEndEvent = baseEvent.getData();
+
+	        _this2.emit('sprintMove', dragEndEvent);
+	      });
+	    }
+	  }, {
+	    key: "renderSprintsContainer",
+	    value: function renderSprintsContainer() {
+	      var _this3 = this;
+
+	      var createCreatingButton = function createCreatingButton() {
+	        _this3.sprintCreatingButtonNodeId = 'tasks-scrum-sprint-creating-button';
+	        return main_core.Tag.render(_templateObject$n(), _this3.sprintCreatingButtonNodeId, main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_ADD'));
+	      };
+
+	      var createCreatingDropZone = function createCreatingDropZone() {
+	        if (_this3.entityStorage.getSprints().size) {
+	          return '';
+	        }
+
+	        _this3.sprintCreatingDropZoneNodeId = 'tasks-scrum-sprint-creating-drop-zone';
+	        return main_core.Tag.render(_templateObject2$8(), _this3.sprintCreatingDropZoneNodeId, main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_ADD_DROP'));
+	      };
+
+	      var createSprintsList = function createSprintsList() {
+	        _this3.sprintListNodeId = 'tasks-scrum-sprint-list';
+	        return main_core.Tag.render(_templateObject3$7(), _this3.sprintListNodeId, babelHelpers.toConsumableArray(_this3.entityStorage.getSprints().values()).map(function (sprint) {
+	          if (sprint.isActive()) {
+	            return sprint.render();
+	          } else {
+	            return '';
+	          }
+	        }), babelHelpers.toConsumableArray(_this3.entityStorage.getSprints().values()).map(function (sprint) {
+	          if (sprint.isPlanned()) {
+	            return sprint.render();
+	          } else {
+	            return '';
+	          }
+	        }), babelHelpers.toConsumableArray(_this3.entityStorage.getSprints().values()).map(function (sprint) {
+	          if (sprint.isCompleted()) {
+	            return sprint.render();
+	          } else {
+	            return '';
+	          }
+	        }));
+	      };
+
+	      var sprintsNode = main_core.Tag.render(_templateObject4$6(), createCreatingButton(), createCreatingDropZone(), createSprintsList());
+	      this.completedSprintLoader = sprintsNode.querySelector('.tasks-scrum-sprint-completed-loader');
+	      this.bindLoadCompletedSprints(this.completedSprintLoader);
+	      return sprintsNode;
+	    }
+	  }, {
+	    key: "bindLoadCompletedSprints",
+	    value: function bindLoadCompletedSprints(loader) {
+	      var _this4 = this;
+
+	      var observer = new IntersectionObserver(function (entries) {
+	        if (entries[0].isIntersecting === true) {
+	          if (!_this4.isActiveLoadCompletedSprints) {
+	            _this4.onLoadCompletedSprints();
+	          }
+	        }
+	      }, {
+	        threshold: [0]
+	      });
+	      observer.observe(loader);
+	    }
+	  }, {
+	    key: "onLoadCompletedSprints",
+	    value: function onLoadCompletedSprints() {
+	      var _this5 = this;
+
+	      this.isActiveLoadCompletedSprints = true;
+	      var loader = this.showLoader(this.completedSprintLoader);
+	      var requestData = {
+	        pageNumber: this.pageNumberToCompletedSprints + 1
+	      };
+	      this.requestSender.getCompletedSprints(requestData).then(function (response) {
+	        var data = response.data;
+
+	        if (main_core.Type.isArray(data) && data.length) {
+	          _this5.pageNumberToCompletedSprints++;
+	          _this5.isActiveLoadCompletedSprints = false;
+
+	          _this5.createSprints(data);
+	        }
+
+	        loader.hide();
+	      }).catch(function (response) {
+	        loader.hide();
+	        _this5.isActiveLoadCompletedSprints = false;
+
+	        _this5.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "createSprints",
+	    value: function createSprints(sprints) {
+	      var _this6 = this;
+
+	      var sprintListNode = this.sprintListNode.querySelector('.tasks-scrum-sprint-completed-list');
+	      sprints.forEach(function (sprintData) {
+	        var sprint = Sprint.buildSprint(sprintData);
+
+	        if (!_this6.entityStorage.findEntityByEntityId(sprint.getId())) {
+	          _this6.entityStorage.addSprint(sprint);
+
+	          _this6.append(sprint.render(), sprintListNode);
+
+	          sprint.onAfterAppend();
+
+	          _this6.emit('createSprint', sprint);
+	        }
+	      });
+	    }
+	  }, {
+	    key: "showLoader",
+	    value: function showLoader(container) {
+	      var listPosition = this.getPosition(container);
+	      var loader = new main_loader.Loader({
+	        target: container,
+	        size: 60,
+	        mode: 'inline',
+	        color: 'rgba(82, 92, 105, 0.9)',
+	        offset: {
+	          left: "".concat(listPosition.width / 2 - 30, "px")
+	        }
+	      });
+	      loader.show();
+	      return loader;
+	    }
+	  }, {
+	    key: "createSprint",
+	    value: function createSprint() {
+	      var _this7 = this;
+
+	      this.remove(this.sprintCreatingDropZoneNode);
+	      var countSprints = this.entityStorage.getSprints().size;
+	      var title = main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_NAME').replace('%s', countSprints + 1);
+	      var storyPoints = 0;
+	      var dateStart = Math.floor(Date.now() / 1000);
+	      var dateEnd = Math.floor(Date.now() / 1000) + parseInt(this.defaultSprintDuration, 10);
+	      var sprintListNode = this.sprintListNode.querySelector('.tasks-scrum-sprint-planned-list');
+	      var sort = sprintListNode.children.length ? sprintListNode.children.length + 1 : 1;
+	      var sprint = Sprint.buildSprint({
+	        name: title,
+	        sort: sort,
+	        dateStart: dateStart,
+	        dateEnd: dateEnd,
+	        storyPoints: storyPoints
+	      });
+	      this.append(sprint.render(), sprintListNode);
+	      var requestData = {
+	        tmpId: main_core.Text.getRandom(),
+	        name: title,
+	        sort: sort,
+	        dateStart: dateStart,
+	        dateEnd: dateEnd
+	      };
+	      this.emit('beforeCreateSprint', requestData);
+	      return this.requestSender.createSprint(requestData).then(function (response) {
+	        sprint.setId(response.data.sprintId);
+	        sprint.onAfterAppend();
+	        sprint.getNode().scrollIntoView(true);
+
+	        _this7.entityStorage.addSprint(sprint);
+
+	        _this7.draggableItems.addContainer(sprint.getListItemsNode());
+
+	        _this7.emit('createSprint', sprint);
+
+	        return sprint;
+	      }).catch(function (response) {
+	        _this7.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "createSprintNode",
+	    value: function createSprintNode(sprint) {
+	      this.remove(this.sprintCreatingDropZoneNode);
+	      var sprintListNode = this.sprintListNode.querySelector('.tasks-scrum-sprint-planned-list');
+	      this.append(sprint.render(), sprintListNode);
+	      sprint.onAfterAppend();
+	      this.entityStorage.addSprint(sprint);
+	      this.draggableItems.addContainer(sprint.getListItemsNode());
+	      this.emit('createSprintNode', sprint);
+	    }
+	  }, {
+	    key: "moveSprintToActiveListNode",
+	    value: function moveSprintToActiveListNode(sprint) {
+	      var sprintListNode = this.sprintListNode.querySelector('.tasks-scrum-sprint-active-list');
+	      this.append(sprint.getNode(), sprintListNode);
+	    }
+	  }, {
+	    key: "moveSprintToCompletedListNode",
+	    value: function moveSprintToCompletedListNode(sprint) {
+	      var sprintListNode = this.sprintListNode.querySelector('.tasks-scrum-sprint-completed-list');
+
+	      if (sprintListNode.firstElementChild) {
+	        this.insertBefore(sprint.getNode(), sprintListNode.firstElementChild);
+	      } else {
+	        this.append(sprint.getNode(), sprintListNode);
+	      }
+	    }
+	  }, {
+	    key: "append",
+	    value: function append(current, target) {
+	      main_core.Dom.append(current, target);
+	    }
+	  }, {
+	    key: "insertBefore",
+	    value: function insertBefore(current, target) {
+	      main_core.Dom.insertBefore(current, target);
+	    }
+	  }, {
+	    key: "remove",
+	    value: function remove(element) {
+	      main_core.Dom.remove(element);
+	    }
+	  }, {
+	    key: "getPosition",
+	    value: function getPosition(element) {
+	      return main_core.Dom.getPosition(element);
+	    }
+	  }, {
+	    key: "appendItemAfterItem",
+	    value: function appendItemAfterItem(newItemNode, bindItemNode) {
+	      if (bindItemNode.nextElementSibling) {
+	        main_core.Dom.insertBefore(newItemNode, bindItemNode.nextElementSibling);
+	      } else {
+	        main_core.Dom.append(newItemNode, bindItemNode.parentElement);
+	      }
+	    }
+	  }]);
+	  return DomBuilder;
+	}(main_core_events.EventEmitter);
+
+	var SubTasksManager = /*#__PURE__*/function () {
+	  function SubTasksManager(params) {
+	    babelHelpers.classCallCheck(this, SubTasksManager);
+	    this.requestSender = params.requestSender;
+	    this.domBuilder = params.domBuilder;
+	    this.listSubTasks = new Map();
+	    this.visibilityList = new Set();
+	  }
+
+	  babelHelpers.createClass(SubTasksManager, [{
+	    key: "toggleSubTasks",
+	    value: function toggleSubTasks(sprint, item) {
+	      var _this = this;
+
+	      if (this.listSubTasks.has(item.getItemId())) {
+	        if (this.isShown(item)) {
+	          this.hideSubTaskItems(sprint, item);
+	        } else {
+	          this.showSubTaskItems(sprint, item);
+	        }
+
+	        item.toggleSubTasksTick();
+	        return Promise.resolve();
+	      } else {
+	        return this.requestSender.getSubTaskItems({
+	          entityId: sprint.getId(),
+	          taskId: item.getSourceId()
+	        }).then(function (response) {
+	          var listItemParams = response.data;
+	          var listSubTaskItems = new Map();
+	          listItemParams.forEach(function (itemParams) {
+	            var subTaskItem = _this.buildSubTaskItem(itemParams);
+
+	            listSubTaskItems.set(subTaskItem.getItemId(), subTaskItem);
+	          });
+
+	          _this.listSubTasks.set(item.getItemId(), listSubTaskItems);
+
+	          if (_this.isShown(item)) {
+	            _this.hideSubTaskItems(sprint, item);
+	          } else {
+	            _this.showSubTaskItems(sprint, item);
+	          }
+
+	          item.toggleSubTasksTick();
+	        }).catch(function (response) {
+	          _this.requestSender.showErrorAlert(response);
+	        });
+	      }
+	    }
+	  }, {
+	    key: "buildSubTaskItem",
+	    value: function buildSubTaskItem(itemParams) {
+	      return new Item(itemParams);
+	    }
+	  }, {
+	    key: "showSubTaskItems",
+	    value: function showSubTaskItems(sprint, parentItem) {
+	      var _this2 = this;
+
+	      var parentItemNode = parentItem.getItemNode();
+	      var listSubTasks = this.listSubTasks.get(parentItem.getItemId());
+
+	      if (!listSubTasks) {
+	        return;
+	      }
+
+	      listSubTasks.forEach(function (subTaskItem) {
+	        sprint.setItem(subTaskItem);
+
+	        _this2.domBuilder.appendItemAfterItem(subTaskItem.render(), parentItemNode);
+
+	        subTaskItem.onAfterAppend(sprint.getListItemsNode());
+	      });
+	      this.setVisibility(parentItem);
+	    }
+	  }, {
+	    key: "hideSubTaskItems",
+	    value: function hideSubTaskItems(sprint, parentItem) {
+	      var _this3 = this;
+
+	      var listSubTasks = this.listSubTasks.get(parentItem.getItemId());
+
+	      if (!listSubTasks) {
+	        return;
+	      }
+
+	      listSubTasks.forEach(function (subTaskItem) {
+	        if (subTaskItem.isParentTask()) {
+	          _this3.hideSubTaskItems(sprint, subTaskItem);
+	        }
+
+	        sprint.removeItem(subTaskItem);
+	        subTaskItem.removeYourself();
+	      });
+	      this.cleanVisibility(parentItem);
+	    }
+	  }, {
+	    key: "addSubTask",
+	    value: function addSubTask(parentItem, item) {
+	      if (this.listSubTasks.has(parentItem.getItemId())) {
+	        var listSubTasks = this.listSubTasks.get(parentItem.getItemId());
+	        listSubTasks.set(item.getItemId(), item);
+	        this.listSubTasks.set(parentItem.getItemId(), listSubTasks);
+	      } else {
+	        var _listSubTasks = new Map();
+
+	        _listSubTasks.set(item.getItemId(), item);
+
+	        return this.listSubTasks.set(parentItem.getItemId(), _listSubTasks);
+	      }
+	    }
+	  }, {
+	    key: "getSubTasks",
+	    value: function getSubTasks(parentItem) {
+	      return this.listSubTasks.get(parentItem.getItemId());
+	    }
+	  }, {
+	    key: "isShown",
+	    value: function isShown(item) {
+	      return this.visibilityList.has(item.getItemId());
+	    }
+	  }, {
+	    key: "setVisibility",
+	    value: function setVisibility(item) {
+	      this.visibilityList.add(item.getItemId());
+	    }
+	  }, {
+	    key: "cleanVisibility",
+	    value: function cleanVisibility(item) {
+	      this.visibilityList.delete(item.getItemId());
+	    }
+	  }, {
+	    key: "cleanSubTasks",
+	    value: function cleanSubTasks(item) {
+	      this.listSubTasks.delete(item.getItemId());
+	    }
+	  }]);
+	  return SubTasksManager;
+	}();
+
+	function _templateObject$o() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-decomposition-structure\">\n\t\t\t\t<button class=\"ui-btn ui-btn-sm ui-btn-primary\">\n\t\t\t\t\t", "\n\t\t\t\t</button>\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject$o = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
+	var Decomposition = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(Decomposition, _EventEmitter);
+
+	  function Decomposition(params) {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, Decomposition);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Decomposition).call(this, params));
+	    _this.entity = params.entity;
+	    _this.itemStyleDesigner = params.itemStyleDesigner;
+	    _this.subTasksCreator = params.subTasksCreator;
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.Decomposition');
+
+	    _this.items = new Set();
+	    _this.input = new Input();
+
+	    _this.input.setPlaceholder(main_core.Loc.getMessage('TASKS_SCRUM_TASK_ADD_DECOMPOSITION_INPUT_PLACEHOLDER'));
+
+	    _this.input.subscribe('tagsSearchOpen', function (baseEvent) {
+	      _this.emit('tagsSearchOpen', {
+	        inputObject: baseEvent.getTarget(),
+	        enteredHashTagName: baseEvent.getData()
+	      });
+	    });
+
+	    _this.input.subscribe('tagsSearchClose', function () {
+	      return _this.emit('tagsSearchClose');
+	    });
+
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(Decomposition, [{
+	    key: "decomposeItem",
+	    value: function decomposeItem(item) {
+	      var _this2 = this;
+
+	      this.addDecomposedItem(item);
+
+	      if (this.isBacklogDecomposition()) {
+	        this.onDecomposeItem(item, item.getItemNode());
+	      } else {
+	        if (!this.subTasksCreator.isShown(item)) {
+	          this.subTasksCreator.toggleSubTasks(this.entity, item).then(function () {
+	            var lastSubTask = _this2.getSubTasks(item)[0];
+
+	            var targetItemNode = lastSubTask ? lastSubTask.getItemNode() : item.getItemNode();
+
+	            _this2.onDecomposeItem(item, targetItemNode);
+	          });
+	        } else {
+	          var lastSubTask = this.getSubTasks(item)[0];
+	          this.onDecomposeItem(item, lastSubTask.getItemNode());
+	        }
+	      }
+	    }
+	  }, {
+	    key: "onDecomposeItem",
+	    value: function onDecomposeItem(item, targetItemNode) {
+	      var _this3 = this;
+
+	      main_core.Dom.insertAfter(this.input.render(), targetItemNode);
+	      this.input.setNode();
+	      var inputNode = this.input.getInputNode();
+	      main_core.Event.bind(inputNode, 'input', this.input.onTagSearch.bind(this.input));
+	      main_core.Event.bind(inputNode, 'keydown', this.onCreateItem.bind(this));
+	      inputNode.focus();
+	      var button = this.createButton();
+	      main_core.Dom.insertAfter(button, this.input.getNode());
+	      main_core.Event.bind(button.querySelector('button'), 'click', function () {
+	        if (_this3.isBacklogDecomposition() && _this3.isFirstDecomposition() && !item.isLinkedTask()) {
+	          item.setBorderColor();
+	        }
+
+	        if (!_this3.isBacklogDecomposition()) {
+	          if (_this3.subTasksCreator.isShown(item)) {
+	            _this3.subTasksCreator.hideSubTaskItems(_this3.entity, item);
+	          }
+
+	          _this3.subTasksCreator.cleanSubTasks(item);
+	        }
+
+	        _this3.deactivateDecompositionMode();
+
+	        _this3.input.removeYourself();
+
+	        main_core.Dom.remove(button);
+	      });
+	      this.setResponsible(item.getResponsible());
+	    }
+	  }, {
+	    key: "getSubTasks",
+	    value: function getSubTasks(parentItem) {
+	      return Array.from(this.subTasksCreator.getSubTasks(parentItem).values());
+	    }
+	  }, {
+	    key: "getLastDecomposedItemNode",
+	    value: function getLastDecomposedItemNode(parentItem) {
+	      if (this.isBacklogDecomposition()) {
+	        var decomposedItems = this.getDecomposedItems();
+	        var lastDecomposedItem = Array.from(decomposedItems).pop();
+	        return lastDecomposedItem.getItemNode();
+	      } else {
+	        var subTasks = this.getSubTasks(parentItem);
+
+	        if (subTasks.length) {
+	          var lastSubTask = this.isFirstDecomposition() ? subTasks[0] : subTasks.pop();
+	          return lastSubTask.getItemNode();
+	        } else {
+	          return parentItem.getItemNode();
+	        }
+	      }
+	    }
+	  }, {
+	    key: "isBacklogDecomposition",
+	    value: function isBacklogDecomposition() {
+	      return this.entity.getEntityType() === 'backlog';
+	    }
+	  }, {
+	    key: "addDecomposedItem",
+	    value: function addDecomposedItem(item) {
+	      this.activateDecompositionMode(item);
+	      item.subscribe('changeTaskResponsible', this.saveSelectedResponsible.bind(this));
+	      this.items.add(item);
+	    }
+	  }, {
+	    key: "getDecomposedItems",
+	    value: function getDecomposedItems() {
+	      return this.items;
+	    }
+	  }, {
+	    key: "activateDecompositionMode",
+	    value: function activateDecompositionMode(item) {
+	      var _this4 = this;
+
+	      if (this.isBacklogDecomposition()) {
+	        this.itemStyleDesigner.getRandomColorForItemBorder().then(function (randomColor) {
+	          item.activateDecompositionMode(randomColor);
+
+	          _this4.setBorderColor(item.getBorderColor());
+	        });
+	      } else {
+	        item.activateDecompositionMode();
+	      }
+	    }
+	  }, {
+	    key: "deactivateDecompositionMode",
+	    value: function deactivateDecompositionMode() {
+	      this.items.forEach(function (item) {
+	        item.deactivateDecompositionMode();
+	      });
+	      this.items.clear();
+	    }
+	  }, {
+	    key: "createButton",
+	    value: function createButton() {
+	      return main_core.Tag.render(_templateObject$o(), main_core.Loc.getMessage('TASKS_SCRUM_DECOMPOSITION_BUTTON'));
+	    }
+	  }, {
+	    key: "onCreateItem",
+	    value: function onCreateItem(event) {
+	      if (event.isComposing || event.keyCode === 13) {
+	        if (!this.input.isTagsSearchMode()) {
+	          var inputNode = event.target;
+
+	          if (inputNode.value) {
+	            var parentItem = this.getParentItem();
+
+	            if (this.isBacklogDecomposition()) {
+	              if (this.isFirstDecomposition() && !parentItem.isLinkedTask()) {
+	                this.emit('updateParentItem', {
+	                  itemId: parentItem.getItemId(),
+	                  entityId: parentItem.getEntityId(),
+	                  itemType: parentItem.getItemType(),
+	                  info: parentItem.getInfo()
+	                });
+	              }
+	            }
+
+	            this.emit('createItem', inputNode.value);
+	            inputNode.value = '';
+	            inputNode.focus();
 	          }
 	        }
 	      }
 	    }
-	    /**
-	     * Hook on item moved.
-	     * @param {BX.Tasks.Kanban.Item} kanbanItem
-	     * @param {BX.Tasks.Kanban.Column} targetColumn
-	     * @param {BX.Tasks.Kanban.Item} [beforeItem]
-	     * @returns {void}
-	     */
-
 	  }, {
-	    key: "onItemMoved",
-	    value: function onItemMoved(kanbanItem, targetColumn, beforeItem) {
-	      if (targetColumn.type === this.finishStatus) {
-	        if (!this.itemsInFinishStage.has(kanbanItem.getId())) {
-	          this.updateStatsAfterMovedToFinish(kanbanItem, this.sprint);
-	        }
-	      } else {
-	        if (this.itemsInFinishStage.has(kanbanItem.getId())) {
-	          this.updateStatsAfterMovedFromFinish(kanbanItem, this.sprint);
-	        }
-	      }
-
-	      this.statsHeader.updateStats(this.sprint);
+	    key: "isFirstDecomposition",
+	    value: function isFirstDecomposition() {
+	      return this.items.size === 1;
 	    }
 	  }, {
-	    key: "updateStatsAfterMovedToFinish",
-	    value: function updateStatsAfterMovedToFinish(kanbanItem, sprint) {
-	      this.itemsInFinishStage.set(kanbanItem.getId(), kanbanItem.getStoryPoints());
-	      sprint.getTotalCompletedStoryPoints().addPoints(kanbanItem.getStoryPoints());
-	      sprint.getTotalUncompletedStoryPoints().subtractPoints(kanbanItem.getStoryPoints());
-	      sprint.setCompletedTasks(sprint.getCompletedTasks() + 1);
-	      sprint.setUnCompletedTasks(sprint.getUnCompletedTasks() - 1);
-	      sprint.getItems().forEach(function (scrumItem) {
-	        if (scrumItem.getSourceId() === parseInt(kanbanItem.getId(), 10)) {
-	          scrumItem.setCompleted(true);
-	        }
-	      });
+	    key: "getParentItem",
+	    value: function getParentItem() {
+	      var iterator = this.items.values();
+	      return iterator.next().value;
 	    }
 	  }, {
-	    key: "updateStatsAfterMovedFromFinish",
-	    value: function updateStatsAfterMovedFromFinish(kanbanItem, sprint) {
-	      this.itemsInFinishStage.delete(kanbanItem.getId());
-	      sprint.getTotalCompletedStoryPoints().subtractPoints(kanbanItem.getStoryPoints());
-	      sprint.getTotalUncompletedStoryPoints().addPoints(kanbanItem.getStoryPoints());
-	      sprint.setCompletedTasks(sprint.getCompletedTasks() - 1);
-	      sprint.setUnCompletedTasks(sprint.getUnCompletedTasks() + 1);
-	      sprint.getItems().forEach(function (scrumItem) {
-	        if (scrumItem.getSourceId() === parseInt(kanbanItem.getId(), 10)) {
-	          scrumItem.setCompleted(false);
-	        }
-	      });
+	    key: "saveSelectedResponsible",
+	    value: function saveSelectedResponsible(baseEvent) {
+	      var item = baseEvent.getTarget();
+	      this.setResponsible(item.getResponsible());
 	    }
 	  }, {
-	    key: "onShowSprintBurnDownChart",
-	    value: function onShowSprintBurnDownChart() {
-	      var sprintSidePanel = new SprintSidePanel({
-	        sidePanel: this.sidePanel,
-	        requestSender: this.requestSender,
-	        views: this.views
-	      });
-	      sprintSidePanel.showBurnDownChart(this.sprint);
+	    key: "getResponsible",
+	    value: function getResponsible() {
+	      return this.responsible;
+	    }
+	  }, {
+	    key: "setResponsible",
+	    value: function setResponsible(responsible) {
+	      this.responsible = responsible;
+	    }
+	  }, {
+	    key: "setBorderColor",
+	    value: function setBorderColor(color) {
+	      this.borderColor = main_core.Type.isString(color) ? color : '';
+	    }
+	  }, {
+	    key: "getBorderColor",
+	    value: function getBorderColor() {
+	      return this.borderColor;
 	    }
 	  }]);
-	  return ActiveSprint;
-	}();
-
-	function _templateObject$h() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-backlog-title\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t\t<div class=\"tasks-scrum-backlog-epics-title ui-btn ui-btn-xs ui-btn-secondary\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t\t<div title=\"Definition of Done\" class=\"tasks-scrum-entity-title-btn tasks-scrum-entity-title-btn-dod\">\n\t\t\t\t<span class=\"tasks-scrum-entity-dod-icon\"></span>\n\t\t\t</div>\n\t\t\t<div class=\"tasks-scrum-backlog-title-spacer\"></div>\n\t\t\t<div class=\"tasks-scrum-entity-title-btn tasks-scrum-entity-title-btn-task\">\n\t\t\t\t<span class=\"tasks-scrum-entity-tasks-icon\"></span>\n\t\t\t\t<span class=\"tasks-scrum-entity-tasks-title\">\n\t\t\t\t\t", "\n\t\t\t\t</span>\n\t\t\t</div>\n\t\t\t<div class=\"tasks-scrum-backlog-story-point-title\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t\t<div class=\"tasks-scrum-backlog-story-point\">\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
-
-	  _templateObject$h = function _templateObject() {
-	    return data;
-	  };
-
-	  return data;
-	}
-	var Header = /*#__PURE__*/function (_EventEmitter) {
-	  babelHelpers.inherits(Header, _EventEmitter);
-
-	  function Header(entity) {
-	    var _this;
-
-	    babelHelpers.classCallCheck(this, Header);
-	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Header).call(this, entity));
-
-	    _this.setEventNamespace('BX.Tasks.Scrum.BacklogHeader');
-
-	    _this.entity = entity;
-	    _this.element = null;
-	    return _this;
-	  }
-
-	  babelHelpers.createClass(Header, [{
-	    key: "render",
-	    value: function render() {
-	      var _this2 = this;
-
-	      this.element = main_core.Tag.render(_templateObject$h(), main_core.Loc.getMessage('TASKS_SCRUM_BACKLOG_TITLE'), main_core.Loc.getMessage('TASKS_SCRUM_BACKLOG_EPICS_TITLE'), this.entity.getNumberTasks(), main_core.Loc.getMessage('TASKS_SCRUM_BACKLOG_TITLE_STORY_POINTS'), main_core.Text.encode(this.entity.getStoryPoints().getPoints()));
-	      main_core.Event.bind(this.getElementByClassName(this.element, 'tasks-scrum-backlog-epics-title'), 'click', function () {
-	        _this2.emit('openListEpicGrid');
-	      });
-	      main_core.Event.bind(this.getElementByClassName(this.element, 'tasks-scrum-entity-title-btn-dod'), 'click', function () {
-	        _this2.emit('openDefinitionOfDone');
-	      });
-	      return this.element;
-	    }
-	  }, {
-	    key: "setStoryPoints",
-	    value: function setStoryPoints(storyPoints) {
-	      this.getElementByClassName(this.element, 'tasks-scrum-backlog-story-point').textContent = main_core.Text.encode(storyPoints);
-	    }
-	  }, {
-	    key: "updateNumberTasks",
-	    value: function updateNumberTasks() {
-	      var parentNode = this.getElementByClassName(this.element, 'tasks-scrum-entity-title-btn-task');
-	      parentNode.querySelector('.tasks-scrum-entity-tasks-title').textContent = this.entity.getNumberTasks();
-	    }
-	  }, {
-	    key: "getElementByClassName",
-	    value: function getElementByClassName(elements, className) {
-	      var element = null;
-	      elements.forEach(function (elem) {
-	        if (elem.classList.contains(className)) {
-	          element = elem;
-	        }
-	      });
-	      return element;
-	    }
-	  }]);
-	  return Header;
+	  return Decomposition;
 	}(main_core_events.EventEmitter);
 
-	function _templateObject$i() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<a class=\"ui-link ui-link-dashed ui-link-secondary tasks-scrum-action-epic\">\n\t\t\t\t", "\n\t\t\t</a>\n\t\t"]);
+	var FilterHandler = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(FilterHandler, _EventEmitter);
 
-	  _templateObject$i = function _templateObject() {
-	    return data;
-	  };
-
-	  return data;
-	}
-	var EpicCreationButton = /*#__PURE__*/function (_EventEmitter) {
-	  babelHelpers.inherits(EpicCreationButton, _EventEmitter);
-
-	  function EpicCreationButton() {
+	  function FilterHandler(params) {
 	    var _this;
 
-	    babelHelpers.classCallCheck(this, EpicCreationButton);
-	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(EpicCreationButton).call(this));
+	    babelHelpers.classCallCheck(this, FilterHandler);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(FilterHandler).call(this, params));
+	    _this.filter = params.filter;
+	    _this.requestSender = params.requestSender;
+	    _this.entityStorage = params.entityStorage;
 
-	    _this.setEventNamespace('BX.Tasks.Scrum.EpicCreationButton');
+	    _this.filter.subscribe('applyFilter', _this.onApplyFilter.bind(babelHelpers.assertThisInitialized(_this)));
 
 	    return _this;
 	  }
 
-	  babelHelpers.createClass(EpicCreationButton, [{
-	    key: "render",
-	    value: function render() {
-	      var element = main_core.Tag.render(_templateObject$i(), main_core.Loc.getMessage('TASKS_SCRUM_BACKLOG_LIST_ACTIONS_EPIC_ADD'));
-	      main_core.Event.bind(element, 'click', this.onClick.bind(this));
-	      return element;
-	    }
-	  }, {
-	    key: "onClick",
-	    value: function onClick() {
-	      this.emit('openAddEpicForm');
-	    }
-	  }]);
-	  return EpicCreationButton;
-	}(main_core_events.EventEmitter);
-
-	function _templateObject$j() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-backlog\">\n\t\t\t\t<div class=\"tasks-scrum-backlog-header\">\n\t\t\t\t\t", "\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-backlog-actions\">\n\t\t\t\t\t", "\n\t\t\t\t\t", "\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-backlog-items\">\n\t\t\t\t\t", "\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
-
-	  _templateObject$j = function _templateObject() {
-	    return data;
-	  };
-
-	  return data;
-	}
-	var Backlog = /*#__PURE__*/function (_Entity) {
-	  babelHelpers.inherits(Backlog, _Entity);
-
-	  function Backlog() {
-	    var _this;
-
-	    var backlogData = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-	    babelHelpers.classCallCheck(this, Backlog);
-	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Backlog).call(this, backlogData));
-
-	    _this.setEventNamespace('BX.Tasks.Scrum.Backlog');
-
-	    backlogData.items.forEach(function (itemData) {
-	      var item = new Item(itemData);
-
-	      _this.items.set(item.itemId, item);
-	    });
-	    _this.header = null;
-	    _this.epicCreationButton = null;
-	    return _this;
-	  }
-
-	  babelHelpers.createClass(Backlog, [{
-	    key: "addHeader",
-	    value: function addHeader(header) {
+	  babelHelpers.createClass(FilterHandler, [{
+	    key: "onApplyFilter",
+	    value: function onApplyFilter(baseEvent) {
 	      var _this2 = this;
 
-	      this.header = header;
-	      this.header.subscribe('openListEpicGrid', function () {
-	        return _this2.emit('openListEpicGrid');
-	      });
-	      this.header.subscribe('openDefinitionOfDone', function () {
-	        return _this2.emit('openDefinitionOfDone');
+	      this.fadeOutAll();
+	      var filterInfo = baseEvent.getData();
+	      this.updateExactSearchStatusToEntities();
+	      this.requestSender.applyFilter().then(function (response) {
+	        filterInfo.promise.fulfill();
+	        var filteredItemsData = response.data;
+
+	        _this2.entityStorage.getAllItems().forEach(function (item) {
+	          var entity = _this2.entityStorage.findEntityByEntityId(item.getEntityId());
+
+	          entity.removeItem(item);
+	          item.removeYourself();
+	        });
+
+	        filteredItemsData.forEach(function (itemData) {
+	          var item = Item.buildItem(itemData);
+
+	          var entity = _this2.entityStorage.findEntityByEntityId(item.getEntityId());
+
+	          main_core.Dom.append(item.render(), entity.getListItemsNode());
+	          entity.setItem(item);
+	          item.onAfterAppend(entity.getListItemsNode());
+	        });
+
+	        _this2.entityStorage.getBacklog().updateStoryPoints();
+
+	        _this2.entityStorage.getSprints().forEach(function (sprint) {
+	          if (!sprint.isCompleted()) {
+	            sprint.updateStoryPoints();
+	          }
+	        });
+
+	        _this2.updateVisibilityToEntities();
+
+	        _this2.fadeInAll();
+	      }).catch(function (response) {
+	        filterInfo.promise.reject();
+
+	        _this2.fadeInAll();
+
+	        _this2.requestSender.showErrorAlert(response);
 	      });
 	    }
 	  }, {
-	    key: "addEpicCreationButton",
-	    value: function addEpicCreationButton(epicCreationButton) {
+	    key: "updateExactSearchStatusToEntities",
+	    value: function updateExactSearchStatusToEntities() {
 	      var _this3 = this;
 
-	      this.epicCreationButton = epicCreationButton;
-	      this.epicCreationButton.subscribe('openAddEpicForm', function () {
-	        return _this3.emit('openAddEpicForm');
+	      this.entityStorage.getSprints().forEach(function (sprint) {
+	        sprint.setExactSearchApplied(_this3.filter.isSearchFieldApplied());
 	      });
 	    }
 	  }, {
-	    key: "getEntityType",
-	    value: function getEntityType() {
-	      return 'backlog';
+	    key: "updateVisibilityToEntities",
+	    value: function updateVisibilityToEntities() {
+	      this.entityStorage.getSprints().forEach(function (sprint) {
+	        sprint.updateVisibility();
+	      });
 	    }
 	  }, {
-	    key: "isDisabled",
-	    value: function isDisabled() {
-	      return false;
+	    key: "fadeOutAll",
+	    value: function fadeOutAll() {
+	      this.entityStorage.getBacklog().fadeOut();
+	      this.entityStorage.getSprints().forEach(function (sprint) {
+	        sprint.fadeOut();
+	      });
 	    }
 	  }, {
-	    key: "render",
-	    value: function render() {
-	      this.node = main_core.Tag.render(_templateObject$j(), this.header ? this.header.render() : '', this.epicCreationButton ? this.epicCreationButton.render() : '', this.groupActionsButton ? this.groupActionsButton.render() : '', this.listItems ? this.listItems.render() : '');
-	      return this.node;
-	    }
-	  }, {
-	    key: "setItem",
-	    value: function setItem(newItem) {
-	      babelHelpers.get(babelHelpers.getPrototypeOf(Backlog.prototype), "setItem", this).call(this, newItem);
-	      this.updateStoryPoints();
-	    }
-	  }, {
-	    key: "removeItem",
-	    value: function removeItem(item) {
-	      babelHelpers.get(babelHelpers.getPrototypeOf(Backlog.prototype), "removeItem", this).call(this, item);
-	      this.updateStoryPoints();
-	    }
-	  }, {
-	    key: "addNumberTasks",
-	    value: function addNumberTasks(value) {
-	      babelHelpers.get(babelHelpers.getPrototypeOf(Backlog.prototype), "addNumberTasks", this).call(this, value);
-
-	      if (this.header) {
-	        this.header.updateNumberTasks();
-	      }
-	    }
-	  }, {
-	    key: "subtractNumberTasks",
-	    value: function subtractNumberTasks(value) {
-	      babelHelpers.get(babelHelpers.getPrototypeOf(Backlog.prototype), "subtractNumberTasks", this).call(this, value);
-
-	      if (this.header) {
-	        this.header.updateNumberTasks();
-	      }
-	    }
-	  }, {
-	    key: "updateStoryPoints",
-	    value: function updateStoryPoints() {
-	      babelHelpers.get(babelHelpers.getPrototypeOf(Backlog.prototype), "updateStoryPoints", this).call(this);
-
-	      if (this.header) {
-	        this.header.setStoryPoints(this.getStoryPoints().getPoints());
-	      }
-	    }
-	  }, {
-	    key: "onActivateGroupMode",
-	    value: function onActivateGroupMode(baseEvent) {
-	      babelHelpers.get(babelHelpers.getPrototypeOf(Backlog.prototype), "onActivateGroupMode", this).call(this, baseEvent);
-	      main_core.Dom.addClass(this.node.querySelector('.tasks-scrum-backlog-items'), 'tasks-scrum-backlog-items-group-mode');
-	    }
-	  }, {
-	    key: "onDeactivateGroupMode",
-	    value: function onDeactivateGroupMode(baseEvent) {
-	      babelHelpers.get(babelHelpers.getPrototypeOf(Backlog.prototype), "onDeactivateGroupMode", this).call(this, baseEvent);
-	      main_core.Dom.removeClass(this.node.querySelector('.tasks-scrum-backlog-items'), 'tasks-scrum-backlog-items-group-mode');
-	    }
-	  }], [{
-	    key: "buildBacklog",
-	    value: function buildBacklog() {
-	      var backlogData = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
-	      var backlog = new Backlog(backlogData);
-	      backlog.addHeader(new Header(backlog));
-	      backlog.addEpicCreationButton(new EpicCreationButton());
-	      backlog.addGroupActionsButton(new GroupActionsButton());
-	      backlog.addListItems(new ListItems(backlog));
-	      return backlog;
+	    key: "fadeInAll",
+	    value: function fadeInAll() {
+	      this.entityStorage.getBacklog().fadeIn();
+	      this.entityStorage.getSprints().forEach(function (sprint) {
+	        sprint.fadeIn();
+	      });
 	    }
 	  }]);
-	  return Backlog;
-	}(Entity);
+	  return FilterHandler;
+	}(main_core_events.EventEmitter);
 
-	function _templateObject7$2() {
+	function _templateObject7$3() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-epic-form-header\">\n\t\t\t\t<div class=\"tasks-scrum-epic-form-header-title\">\n\t\t\t\t\t<input type=\"text\" name=\"name\" value=\"", "\" class=\n\t\t\t\t\t\t\"tasks-scrum-epic-form-header-title-control\" placeholder=\n\t\t\t\t\t\t\"", "\">\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-epic-form-header-separate\"></div>\n\t\t\t\t<div class=\"tasks-scrum-epic-header-color\">\n\t\t\t\t\t<div class=\"tasks-scrum-epic-header-color-current\" style=\n\t\t\t\t\t\t\"background-color: ", ";\">\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-epic-header-color-btn-angle\">\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject7$2 = function _templateObject7() {
+	  _templateObject7$3 = function _templateObject7() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject6$3() {
+	function _templateObject6$4() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-epic-header\">\n\t\t\t\t<div class=\"tasks-scrum-epic-header-title\">\n\t\t\t\t\t", "\n\t\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject6$3 = function _templateObject6() {
+	  _templateObject6$4 = function _templateObject6() {
 	    return data;
 	  };
 
@@ -5205,40 +7768,40 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return data;
 	}
 
-	function _templateObject4$5() {
+	function _templateObject4$7() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-epic-form\">\n\t\t\t\t", "\n\t\t\t\t<div class=\"tasks-scrum-epic-form-container\">\n\t\t\t\t\t", "\n\t\t\t\t\t<div class=\"tasks-scrum-epic-form-body\">\n\t\t\t\t\t\t<div class=\"tasks-scrum-epic-form-description\"></div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-epic-form-buttons\"></div>\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject4$5 = function _templateObject4() {
+	  _templateObject4$7 = function _templateObject4() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject3$6() {
+	function _templateObject3$8() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-epic-form\">\n\t\t\t\t", "\n\t\t\t\t<div class=\"tasks-scrum-epic-form-container\">\n\t\t\t\t\t<div class=\"tasks-scrum-epic-form-header\">\n\t\t\t\t\t\t<div class=\"tasks-scrum-epic-form-header-title\">\n\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div class=\"tasks-scrum-epic-form-header-separate\"></div>\n\t\t\t\t\t\t<div class=\"tasks-scrum-epic-header-color\">\n\t\t\t\t\t\t\t<div class=\"tasks-scrum-epic-header-color-current\" style=\n\t\t\t\t\t\t\t\t\"background-color: ", ";\">\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div class=\"tasks-scrum-epic-header-color-btn-angle\">\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-epic-form-body\">\n\t\t\t\t\t\t<div class=\"tasks-scrum-epic-form-description\" style=\"padding: 15px 10px 15px 10px;\"></div>\n\t\t\t\t\t\t<div class=\"tasks-scrum-epic-form-files\"></div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-epic-form-buttons\"></div>\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject3$6 = function _templateObject3() {
+	  _templateObject3$8 = function _templateObject3() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject2$7() {
+	function _templateObject2$9() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-epic-form\">\n\t\t\t\t", "\n\t\t\t\t<div class=\"tasks-scrum-epic-form-container\">\n\t\t\t\t\t", "\n\t\t\t\t\t<div class=\"tasks-scrum-epic-form-body\">\n\t\t\t\t\t\t<div class=\"tasks-scrum-epic-form-description\"></div>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-epic-form-buttons\"></div>\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject2$7 = function _templateObject2() {
+	  _templateObject2$9 = function _templateObject2() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject$k() {
+	function _templateObject$p() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t\t<div class=\"tasks-scrum-epics-list\">\n\t\t\t\t\t\t<div class=\"tasks-scrum-epic-header\">\n\t\t\t\t\t\t\t<div class=\"tasks-scrum-epic-header-title\">\n\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t\t<div class=\"tasks-scrum-epic-header-add-button\">\n\t\t\t\t\t\t\t\t<button class=\"ui-btn ui-btn-primary ui-btn-sm\">\n\t\t\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t\t\t</button>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div class=\"tasks-scrum-epics-list-grid\"></div>\n\t\t\t\t\t</div>\n\t\t\t\t"]);
 
-	  _templateObject$k = function _templateObject() {
+	  _templateObject$p = function _templateObject() {
 	    return data;
 	  };
 
@@ -5247,17 +7810,20 @@ this.BX.Tasks = this.BX.Tasks || {};
 	var Epic = /*#__PURE__*/function (_EventEmitter) {
 	  babelHelpers.inherits(Epic, _EventEmitter);
 
-	  function Epic(options) {
+	  function Epic(params) {
 	    var _this;
 
 	    babelHelpers.classCallCheck(this, Epic);
-	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Epic).call(this, options));
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Epic).call(this, params));
 
 	    _this.setEventNamespace('BX.Tasks.Scrum.Epic');
 
-	    _this.requestSender = options.requestSender;
-	    _this.sidePanel = options.sidePanel;
-	    _this.entity = options.entity;
+	    _this.requestSender = params.requestSender;
+	    _this.entityStorage = params.entityStorage;
+	    _this.sidePanel = params.sidePanel;
+	    _this.entity = params.entity;
+	    _this.filter = params.filter;
+	    _this.tagSearcher = params.tagSearcher;
 	    _this.form = null;
 	    _this.defaultColor = '#69dafc';
 	    _this.selectedColor = '';
@@ -5342,7 +7908,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	          _this5.sidePanel.subscribeOnce('onCloseSidePanel', _this5.destroyGrid.bind(_this5));
 
 	          return new Promise(function (resolve, reject) {
-	            resolve(main_core.Tag.render(_templateObject$k(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_ADD_EPIC_LIST_TITLE'), main_core.Loc.getMessage('TASKS_SCRUM_BACKLOG_LIST_ACTIONS_EPIC_ADD')));
+	            resolve(main_core.Tag.render(_templateObject$p(), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_ADD_EPIC_LIST_TITLE'), main_core.Loc.getMessage('TASKS_SCRUM_BACKLOG_LIST_ACTIONS_EPIC_ADD')));
 	          });
 	        },
 	        zIndex: 1000
@@ -5361,7 +7927,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      this.onLoadAddButtons().then(function (buttonsContainer) {
 	        main_core.Event.bind(buttonsContainer.querySelector('[name=save]'), 'click', function () {
 	          _this6.requestSender.createEpic(_this6.getRequestData()).then(function (response) {
-	            _this6.emit('onAfterCreateEpic', response);
+	            _this6.onAfterCreateEpic(response.data);
 
 	            if (_this6.sidePanel.isPreviousSidePanelExist(sidePanel)) {
 	              _this6.sidePanel.reloadPreviousSidePanel(sidePanel);
@@ -5377,6 +7943,9 @@ this.BX.Tasks = this.BX.Tasks || {};
 
 	            sidePanel.close();
 	          });
+	        });
+	        main_core.Event.bind(buttonsContainer.querySelector('[name=cancel]'), 'click', function () {
+	          return sidePanel.close();
 	        });
 	      });
 	    }
@@ -5394,6 +7963,9 @@ this.BX.Tasks = this.BX.Tasks || {};
 	          sidePanel.close(false, function () {
 	            _this7.openEditForm(_this7.currentEpic.id);
 	          });
+	        });
+	        main_core.Event.bind(buttonsContainer.querySelector('[name=cancel]'), 'click', function () {
+	          return sidePanel.close();
 	        });
 	      });
 	    }
@@ -5419,6 +7991,9 @@ this.BX.Tasks = this.BX.Tasks || {};
 
 	            _this8.requestSender.showErrorAlert(response, main_core.Loc.getMessage('TASKS_SCRUM_EPIC_UPDATE_ERROR_TITLE_POPUP'));
 	          });
+	        });
+	        main_core.Event.bind(buttonsContainer.querySelector('[name=cancel]'), 'click', function () {
+	          return sidePanel.close();
 	        });
 	      });
 	    }
@@ -5624,17 +8199,17 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "buildAddForm",
 	    value: function buildAddForm() {
-	      return main_core.Tag.render(_templateObject2$7(), this.buildFormHeader(main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_ADD_EPIC_FORM_TITLE')), this.buildFormContainerHeader('', '#69dafc'));
+	      return main_core.Tag.render(_templateObject2$9(), this.buildFormHeader(main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_ADD_EPIC_FORM_TITLE')), this.buildFormContainerHeader('', '#69dafc'));
 	    }
 	  }, {
 	    key: "buildViewForm",
 	    value: function buildViewForm() {
-	      return main_core.Tag.render(_templateObject3$6(), this.buildFormHeader(main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_VIEW_EPIC_FORM_TITLE')), main_core.Text.encode(this.currentEpic.name), main_core.Text.encode(this.currentEpic.info.color));
+	      return main_core.Tag.render(_templateObject3$8(), this.buildFormHeader(main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_VIEW_EPIC_FORM_TITLE')), main_core.Text.encode(this.currentEpic.name), main_core.Text.encode(this.currentEpic.info.color));
 	    }
 	  }, {
 	    key: "buildEditForm",
 	    value: function buildEditForm() {
-	      return main_core.Tag.render(_templateObject4$5(), this.buildFormHeader(main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_EDIT_EPIC_FORM_TITLE')), this.buildFormContainerHeader(this.currentEpic.name, this.currentEpic.info.color));
+	      return main_core.Tag.render(_templateObject4$7(), this.buildFormHeader(main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_EDIT_EPIC_FORM_TITLE')), this.buildFormContainerHeader(this.currentEpic.name, this.currentEpic.info.color));
 	    }
 	  }, {
 	    key: "getEmptyEpicListForm",
@@ -5644,12 +8219,12 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "buildFormHeader",
 	    value: function buildFormHeader(title) {
-	      return main_core.Tag.render(_templateObject6$3(), title);
+	      return main_core.Tag.render(_templateObject6$4(), title);
 	    }
 	  }, {
 	    key: "buildFormContainerHeader",
 	    value: function buildFormContainerHeader(name, color) {
-	      return main_core.Tag.render(_templateObject7$2(), main_core.Text.encode(name), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_ADD_EPIC_NAME_PLACEHOLDER'), main_core.Text.encode(color));
+	      return main_core.Tag.render(_templateObject7$3(), main_core.Text.encode(name), main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_ADD_EPIC_NAME_PLACEHOLDER'), main_core.Text.encode(color));
 	    }
 	  }, {
 	    key: "getDescriptionEditor",
@@ -5798,7 +8373,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      main_core.Event.bind(container, 'click', function () {
 	        _this23.emit('filterByTag', tag);
 
-	        _this23.sidePanel.closeTopSidePanel();
+	        _this23.sidePanel.closeTopSidePanel(true);
 	      });
 	      return container;
 	    }
@@ -5811,217 +8386,48 @@ this.BX.Tasks = this.BX.Tasks || {};
 	        main_core.Dom.removeClass(buttonsContainer.querySelector('[name=save]'), 'ui-btn-wait');
 	      }
 	    }
+	  }, {
+	    key: "onAfterCreateEpic",
+	    value: function onAfterCreateEpic(epic) {
+	      this.tagSearcher.addEpicToSearcher(epic);
+	      this.filter.addItemToListTypeField('EPIC', {
+	        NAME: epic.name.trim(),
+	        VALUE: String(epic.id)
+	      });
+	    }
+	  }, {
+	    key: "onAfterUpdateEpic",
+	    value: function onAfterUpdateEpic(epic) {
+	      this.entityStorage.getAllItems().forEach(function (item) {
+	        var itemEpic = item.getEpic();
+
+	        if (itemEpic && itemEpic.id === epic.id) {
+	          item.setEpicAndTags(epic);
+	        }
+	      });
+	      var oldEpicInfo = this.getCurrentEpic();
+
+	      if (oldEpicInfo) {
+	        this.tagSearcher.removeEpicFromSearcher(oldEpicInfo);
+	      }
+
+	      this.tagSearcher.addEpicToSearcher(epic);
+	    }
+	  }, {
+	    key: "onAfterRemoveEpic",
+	    value: function onAfterRemoveEpic(epic) {
+	      this.entityStorage.getAllItems().forEach(function (item) {
+	        var itemEpic = item.getEpic();
+
+	        if (itemEpic && itemEpic.id === epic.id) {
+	          item.setEpicAndTags(null);
+	        }
+	      });
+	      this.tagSearcher.removeEpicFromSearcher(epic);
+	      this.sidePanel.reloadTopSidePanel(true);
+	    }
 	  }]);
 	  return Epic;
-	}(main_core_events.EventEmitter);
-
-	function _templateObject$l() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-decomposition-structure\">\n\t\t\t\t<button class=\"ui-btn ui-btn-sm ui-btn-primary\">\n\t\t\t\t\t", "\n\t\t\t\t</button>\n\t\t\t</div>\n\t\t"]);
-
-	  _templateObject$l = function _templateObject() {
-	    return data;
-	  };
-
-	  return data;
-	}
-	var Decomposition = /*#__PURE__*/function (_EventEmitter) {
-	  babelHelpers.inherits(Decomposition, _EventEmitter);
-
-	  function Decomposition() {
-	    var _this;
-
-	    babelHelpers.classCallCheck(this, Decomposition);
-	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Decomposition).call(this));
-
-	    _this.setEventNamespace('BX.Tasks.Scrum.Decomposition');
-
-	    _this.items = new Set();
-	    _this.input = new Input();
-
-	    _this.input.setPlaceholder(main_core.Loc.getMessage('TASKS_SCRUM_TASK_ADD_DECOMPOSITION_INPUT_PLACEHOLDER'));
-
-	    _this.input.subscribe('tagsSearchOpen', function (baseEvent) {
-	      _this.emit('tagsSearchOpen', {
-	        inputObject: baseEvent.getTarget(),
-	        enteredHashTagName: baseEvent.getData()
-	      });
-	    });
-
-	    _this.input.subscribe('tagsSearchClose', function () {
-	      return _this.emit('tagsSearchClose');
-	    });
-
-	    return _this;
-	  }
-
-	  babelHelpers.createClass(Decomposition, [{
-	    key: "decomposeItem",
-	    value: function decomposeItem(item) {
-	      var _this2 = this;
-
-	      this.addDecomposedItem(item);
-	      main_core.Dom.insertAfter(this.input.render(), item.getItemNode());
-	      this.input.setNode();
-	      var inputNode = this.input.getInputNode();
-	      main_core.Event.bind(inputNode, 'input', this.input.onTagSearch.bind(this.input));
-	      main_core.Event.bind(inputNode, 'keydown', this.onCreateItem.bind(this));
-	      inputNode.focus();
-	      var button = this.createButton();
-	      main_core.Dom.insertAfter(button, this.input.getNode());
-	      main_core.Event.bind(button.querySelector('button'), 'click', function () {
-	        _this2.deactivateDecompositionMode();
-
-	        _this2.input.removeYourself();
-
-	        main_core.Dom.remove(button);
-	      });
-	    }
-	  }, {
-	    key: "addDecomposedItem",
-	    value: function addDecomposedItem(item) {
-	      item.activateDecompositionMode();
-	      this.items.add(item);
-	    }
-	  }, {
-	    key: "getDecomposedItems",
-	    value: function getDecomposedItems() {
-	      return this.items;
-	    }
-	  }, {
-	    key: "deactivateDecompositionMode",
-	    value: function deactivateDecompositionMode() {
-	      this.items.forEach(function (item) {
-	        item.deactivateDecompositionMode();
-	      });
-	      this.items.clear();
-	    }
-	  }, {
-	    key: "createButton",
-	    value: function createButton() {
-	      return main_core.Tag.render(_templateObject$l(), main_core.Loc.getMessage('TASKS_SCRUM_DECOMPOSITION_BUTTON'));
-	    }
-	  }, {
-	    key: "onCreateItem",
-	    value: function onCreateItem(event) {
-	      if (event.isComposing || event.keyCode === 13) {
-	        if (!this.input.isTagsSearchMode()) {
-	          var inputNode = event.target;
-
-	          if (inputNode.value) {
-	            this.emit('createItem', inputNode.value);
-	            inputNode.value = '';
-	            inputNode.focus();
-	          }
-	        }
-	      }
-	    }
-	  }]);
-	  return Decomposition;
-	}(main_core_events.EventEmitter);
-
-	var Filter = /*#__PURE__*/function (_EventEmitter) {
-	  babelHelpers.inherits(Filter, _EventEmitter);
-
-	  function Filter(params) {
-	    var _this;
-
-	    babelHelpers.classCallCheck(this, Filter);
-	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Filter).call(this, params));
-
-	    _this.setEventNamespace('BX.Tasks.Scrum.Filter');
-
-	    _this.filterId = params.filterId;
-	    _this.scrumManager = params.scrumManager;
-	    _this.requestSender = params.requestSender;
-
-	    _this.initUiFilterManager();
-
-	    _this.bindHandlers();
-
-	    return _this;
-	  }
-
-	  babelHelpers.createClass(Filter, [{
-	    key: "initUiFilterManager",
-	    value: function initUiFilterManager() {
-	      /* eslint-disable */
-	      this.filterManager = BX.Main.filterManager.getById(this.filterId);
-	      /* eslint-enable */
-	    }
-	  }, {
-	    key: "bindHandlers",
-	    value: function bindHandlers() {
-	      /* eslint-disable */
-	      BX.addCustomEvent('BX.Main.Filter:apply', this.onApplyFilter.bind(this));
-	      /* eslint-enable */
-	    }
-	  }, {
-	    key: "getSearchContainer",
-	    value: function getSearchContainer() {
-	      return this.filterManager.getSearch().getContainer();
-	    }
-	  }, {
-	    key: "scrollToSearchContainer",
-	    value: function scrollToSearchContainer() {
-	      var filterSearchContainer = this.getSearchContainer();
-
-	      if (!this.isNodeInViewport(filterSearchContainer)) {
-	        filterSearchContainer.scrollIntoView(true);
-	      }
-	    }
-	  }, {
-	    key: "onApplyFilter",
-	    value: function onApplyFilter(filterId, values, filterInstance, promise, params) {
-	      if (this.filterId !== filterId || !this.scrumManager) {
-	        return;
-	      }
-
-	      params.autoResolve = false;
-	      this.emit('applyFilter', {
-	        promise: promise
-	      });
-	    }
-	  }, {
-	    key: "addItemToListTypeField",
-	    value: function addItemToListTypeField(name, item) {
-	      //todo set item to list after epic crud actions
-	      var fieldInstances = this.filterManager.getField(name);
-	      var fieldOptions = this.filterManager.getFieldByName(name);
-	      fieldInstances.options.ITEMS.push(item);
-	      fieldOptions.ITEMS.push(item);
-	      var itemsNode = fieldInstances.node.querySelector('[data-name=' + name + ']');
-	      var items = main_core.Dom.attr(itemsNode, 'data-items');
-	      items.push(item);
-	      main_core.Dom.attr(itemsNode, 'data-items', items);
-	    }
-	  }, {
-	    key: "setValueToField",
-	    value: function setValueToField(value) {
-	      var filterApi = this.filterManager.getApi();
-	      var filterFieldsValues = this.filterManager.getFilterFieldsValues();
-	      filterFieldsValues[value.name] = value.value;
-	      filterApi.setFields(filterFieldsValues);
-	      filterApi.apply();
-	    }
-	  }, {
-	    key: "getValueFromField",
-	    value: function getValueFromField(value) {
-	      var filterFieldsValues = this.filterManager.getFilterFieldsValues();
-	      return filterFieldsValues[value.name];
-	    }
-	  }, {
-	    key: "resetFilter",
-	    value: function resetFilter() {
-	      this.filterManager.resetFilter();
-	    }
-	  }, {
-	    key: "isNodeInViewport",
-	    value: function isNodeInViewport(element) {
-	      var rect = element.getBoundingClientRect();
-	      return rect.top >= 0 && rect.left >= 0 && rect.bottom <= (window.innerHeight || document.documentElement.clientHeight) && rect.right <= (window.innerWidth || document.documentElement.clientWidth);
-	    }
-	  }]);
-	  return Filter;
 	}(main_core_events.EventEmitter);
 
 	//todo import amchart4 like es6
@@ -6052,6 +8458,9 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      var xAxis = this.chart.xAxes.push(new am4charts.CategoryAxis());
 	      xAxis.dataFields.category = 'sprintName';
 	      xAxis.renderer.grid.template.location = 0;
+	      var label = xAxis.renderer.labels.template;
+	      label.wrap = true;
+	      label.maxWidth = 120;
 	      var yAxis = this.chart.yAxes.push(new am4charts.ValueAxis());
 	      yAxis.min = 0;
 	    }
@@ -6087,20 +8496,20 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return TeamSpeedChart;
 	}();
 
-	function _templateObject2$8() {
+	function _templateObject2$a() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-project-side-panel\">\n\t\t\t\t<div class=\"tasks-scrum-project-side-panel-header\">\n\t\t\t\t\t<span class=\"tasks-scrum-project-side-panel-header-title\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</span>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-project-dod-panel\"></div>\n\t\t\t\t<div class=\"tasks-scrum-project-dod-options\">\n\t\t\t\t\t<label class=\"ui-ctl ui-ctl-checkbox\">\n\t\t\t\t\t\t<input type=\"checkbox\" class=\"ui-ctl-element dod-items-required\">\n\t\t\t\t\t\t<div class=\"ui-ctl-label-text\">\n\t\t\t\t\t\t\t", "\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</label>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-project-side-panel-buttons\"></div>\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject2$8 = function _templateObject2() {
+	  _templateObject2$a = function _templateObject2() {
 	    return data;
 	  };
 
 	  return data;
 	}
 
-	function _templateObject$m() {
+	function _templateObject$q() {
 	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-project-side-panel\">\n\t\t\t\t<div class=\"tasks-scrum-project-side-panel-header\">\n\t\t\t\t\t<span class=\"tasks-scrum-project-side-panel-header-title\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</span>\n\t\t\t\t</div>\n\t\t\t\t<div class=\"tasks-scrum-project-side-panel-chart\"></div>\n\t\t\t\t<div class=\"tasks-scrum-project-side-panel-buttons\"></div>\n\t\t\t</div>\n\t\t"]);
 
-	  _templateObject$m = function _templateObject() {
+	  _templateObject$q = function _templateObject() {
 	    return data;
 	  };
 
@@ -6119,7 +8528,8 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    value: function showTeamSpeedChart() {
 	      var _this = this;
 
-	      this.sidePanelId = 'tasks-scrum-start-' + main_core.Text.getRandom();
+	      this.sidePanelId = 'tasks-scrum-team-speed-chart';
+	      this.sidePanel.unsubscribeAll('onLoadSidePanel');
 	      this.sidePanel.subscribeOnce('onLoadSidePanel', this.onLoadTeamSpeedChartPanel.bind(this));
 	      this.sidePanel.subscribe('onCloseSidePanel', this.onCloseTeamSpeedChart.bind(this));
 	      this.sidePanel.openSidePanel(this.sidePanelId, {
@@ -6136,8 +8546,9 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    value: function showDefinitionOfDone(entity) {
 	      var _this2 = this;
 
-	      this.sidePanelId = 'tasks-scrum-dod-' + main_core.Text.getRandom();
+	      this.sidePanelId = 'tasks-scrum-dod-panel';
 	      this.entity = entity;
+	      this.sidePanel.unsubscribeAll('onLoadSidePanel');
 	      this.sidePanel.subscribeOnce('onLoadSidePanel', this.onLoadDodPanel.bind(this));
 	      this.sidePanel.openSidePanel(this.sidePanelId, {
 	        contentCallback: function contentCallback() {
@@ -6151,12 +8562,12 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "buildTeamSpeedPanel",
 	    value: function buildTeamSpeedPanel() {
-	      return main_core.Tag.render(_templateObject$m(), main_core.Loc.getMessage('TASKS_SCRUM_TEAM_SPEED_CHART_HEADER'));
+	      return main_core.Tag.render(_templateObject$q(), main_core.Loc.getMessage('TASKS_SCRUM_TEAM_SPEED_CHART_HEADER'));
 	    }
 	  }, {
 	    key: "buildDodPanel",
 	    value: function buildDodPanel() {
-	      return main_core.Tag.render(_templateObject2$8(), main_core.Loc.getMessage('TASKS_SCRUM_DOD_HEADER'), main_core.Loc.getMessage('TASKS_SCRUM_DOD_OPTIONS_REQUIRED_LABEL'));
+	      return main_core.Tag.render(_templateObject2$a(), main_core.Loc.getMessage('TASKS_SCRUM_DOD_HEADER'), main_core.Loc.getMessage('TASKS_SCRUM_DOD_OPTIONS_REQUIRED_LABEL'));
 	    }
 	  }, {
 	    key: "onLoadTeamSpeedChartPanel",
@@ -6164,8 +8575,10 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      var _this3 = this;
 
 	      var sidePanel = baseEvent.getData();
+	      sidePanel.showLoader();
 	      this.form = sidePanel.getContainer().querySelector('.tasks-scrum-project-side-panel');
 	      this.getTeamSpeedChartData().then(function (data) {
+	        sidePanel.closeLoader();
 	        setTimeout(function () {
 	          _this3.teamSpeedChart = new TeamSpeedChart(data);
 
@@ -6182,9 +8595,11 @@ this.BX.Tasks = this.BX.Tasks || {};
 
 	      if (this.sidePanelId === sidePanel.getUrl()) {
 	        setTimeout(function () {
-	          _this4.teamSpeedChart.destroyChart();
+	          if (_this4.teamSpeedChart) {
+	            _this4.teamSpeedChart.destroyChart();
 
-	          _this4.teamSpeedChart = null;
+	            _this4.teamSpeedChart = null;
+	          }
 	        }, 300);
 	      }
 	    }
@@ -6194,8 +8609,11 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      var _this5 = this;
 
 	      var sidePanel = baseEvent.getData();
+	      sidePanel.showLoader();
 	      this.form = sidePanel.getContainer().querySelector('.tasks-scrum-project-side-panel');
 	      this.getDodComponent().then(function (data) {
+	        sidePanel.closeLoader();
+
 	        var dodContainer = _this5.form.querySelector('.tasks-scrum-project-dod-panel');
 
 	        main_core.Runtime.html(dodContainer, data.html);
@@ -6209,9 +8627,12 @@ this.BX.Tasks = this.BX.Tasks || {};
 
 	          main_core.Runtime.html(buttonsContainer, response.data.html).then(function () {
 	            main_core.Event.bind(buttonsContainer.querySelector('[name=save]'), 'click', function () {
-	              _this5.requestSender.saveDod(_this5.getRequestDataForSaveList()).then(function (response) {
-	                sidePanel.close();
+	              _this5.requestSender.saveDod(_this5.getRequestDataForSaveList()).then(function () {
+	                return sidePanel.close();
 	              });
+	            });
+	            main_core.Event.bind(buttonsContainer.querySelector('[name=cancel]'), 'click', function () {
+	              return sidePanel.close();
 	            });
 	          });
 	        });
@@ -6299,156 +8720,192 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  return ProjectSidePanel;
 	}();
 
-	function _templateObject4$6() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-sprints\">\n\t\t\t\t", "\n\t\t\t\t", "\n\t\t\t\t", "\n\t\t\t</div>\n\t\t"]);
-
-	  _templateObject4$6 = function _templateObject4() {
-	    return data;
-	  };
-
-	  return data;
-	}
-
-	function _templateObject3$7() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t<div id=\"", "\" class=\"tasks-scrum-sprint-list\">\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-active-list\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-planned-list\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t\t<div class=\"tasks-scrum-sprint-completed-list\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t"]);
-
-	  _templateObject3$7 = function _templateObject3() {
-	    return data;
-	  };
-
-	  return data;
-	}
-
-	function _templateObject2$9() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t<div id=\"", "\">\n\t\t\t\t\t<label class=\"ui-ctl ui-ctl-file-drop tasks-scrum-sprint-sprint-add-drop\">\n\t\t\t\t\t\t<div class=\"ui-ctl-label-text\">\n\t\t\t\t\t\t\t<small>", "</small>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</label>\n\t\t\t\t</div>\n\t\t\t"]);
-
-	  _templateObject2$9 = function _templateObject2() {
-	    return data;
-	  };
-
-	  return data;
-	}
-
-	function _templateObject$n() {
-	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t\t<div id=\"", "\" class=\"tasks-scrum-sprint-create ui-btn ui-btn-md ui-btn-themes ui-btn-light-border ui-btn-icon-add\">\n\t\t\t\t\t<span>", "</span>\n\t\t\t\t</div>\n\t\t\t"]);
-
-	  _templateObject$n = function _templateObject() {
-	    return data;
-	  };
-
-	  return data;
-	}
-	//todo single responsibility principle
-	//todo add ItemMover, ItemSorter
-	var Plan = /*#__PURE__*/function () {
-	  function Plan(options) {
-	    var _this = this;
-
-	    babelHelpers.classCallCheck(this, Plan);
-	    this.defaultSprintDuration = options.defaultSprintDuration;
-	    this.pathToTask = options.pathToTask;
-	    this.requestSender = new RequestSender({
-	      signedParameters: options.signedParameters,
-	      debugMode: options.debugMode
-	    });
-	    this.activeSprintId = parseInt(options.activeSprintId, 10);
-	    this.views = options.views;
-	    this.backlog = Backlog.buildBacklog(options.backlog);
-	    this.sprints = new Map();
-	    options.sprints.forEach(function (sprintData) {
-	      sprintData.defaultSprintDuration = _this.defaultSprintDuration;
-	      var sprint = Sprint.buildSprint(sprintData);
-
-	      _this.sprints.set(sprint.getId(), sprint);
-	    });
-	    this.sidePanel = new SidePanel();
-	    this.tagSearcher = new TagSearcher();
-	    Object.values(options.tags.epic).forEach(function (epic) {
-	      _this.tagSearcher.addEpicToSearcher(epic);
-	    });
-	    Object.values(options.tags.task).forEach(function (tagName) {
-	      _this.tagSearcher.addTagToSearcher(tagName);
-	    });
-	    this.epic = new Epic({
-	      entity: this.backlog,
-	      requestSender: this.requestSender,
-	      sidePanel: this.sidePanel
-	    });
-	    this.epic.subscribe('onAfterCreateEpic', function (baseEvent) {
-	      var response = baseEvent.getData();
-	      var epic = response.data;
-
-	      _this.tagSearcher.addEpicToSearcher(epic);
-
-	      _this.filter.addItemToListTypeField('EPIC', {
-	        NAME: epic.name.trim(),
-	        VALUE: String(epic.id)
-	      });
-	    });
-	    this.filter = new Filter({
-	      filterId: options.filterId,
-	      scrumManager: this,
-	      requestSender: this.requestSender
-	    });
-	    this.filter.subscribe('applyFilter', this.onApplyFilter.bind(this));
-	    this.defaultResponsible = options.defaultResponsible;
-	    this.bindHandlers();
+	var PullSprint = /*#__PURE__*/function () {
+	  function PullSprint(params) {
+	    babelHelpers.classCallCheck(this, PullSprint);
+	    this.requestSender = params.requestSender;
+	    this.domBuilder = params.domBuilder;
+	    this.entityStorage = params.entityStorage;
+	    this.groupId = params.groupId;
+	    this.listIdsToSkipAdding = new Set();
+	    this.listIdsToSkipUpdating = new Set();
+	    this.listIdsToSkipRemoving = new Set();
 	  }
 
-	  babelHelpers.createClass(Plan, [{
-	    key: "renderTo",
-	    value: function renderTo(container) {
-	      if (!main_core.Type.isDomNode(container)) {
-	        throw new Error('Scrum: HTMLElement for Scrum not found');
-	      }
-
-	      this.scrumContainer = container;
-	      main_core.Dom.append(this.backlog.render(), this.scrumContainer);
-	      this.backlog.onAfterAppend();
-	      main_core.Dom.append(this.renderSprintsContainer(), this.scrumContainer);
-	      this.sprints.forEach(function (sprint) {
-	        sprint.onAfterAppend();
-	      });
-	      this.sprintCreatingButtonNode = document.getElementById(this.sprintCreatingButtonNodeId);
-	      this.sprintCreatingDropZoneNode = document.getElementById(this.sprintCreatingDropZoneNodeId);
-	      this.sprintListNode = document.getElementById(this.sprintListNodeId);
-	      main_core.Event.bind(this.sprintCreatingButtonNode, 'click', this.createSprint.bind(this));
-	      this.setDraggable();
+	  babelHelpers.createClass(PullSprint, [{
+	    key: "getModuleId",
+	    value: function getModuleId() {
+	      return 'tasks';
 	    }
 	  }, {
-	    key: "setDraggable",
-	    value: function setDraggable() {
-	      var _this2 = this;
-
-	      var itemContainers = [];
-	      itemContainers.push(this.backlog.getListItemsNode());
-
-	      if (this.sprintCreatingDropZoneNode) {
-	        itemContainers.push(this.sprintCreatingDropZoneNode);
+	    key: "getMap",
+	    value: function getMap() {
+	      return {
+	        sprintAdded: this.onSprintAdded.bind(this),
+	        sprintUpdated: this.onSprintUpdated.bind(this),
+	        sprintRemoved: this.onSprintRemoved.bind(this)
+	      };
+	    }
+	  }, {
+	    key: "onSprintAdded",
+	    value: function onSprintAdded(params) {
+	      if (this.groupId !== params.groupId) {
+	        return;
 	      }
 
-	      this.sprints.forEach(function (sprint) {
-	        if (!sprint.isDisabled()) {
-	          itemContainers.push(sprint.getListItemsNode());
+	      var sprint = Sprint.buildSprint(params);
+
+	      if (this.needSkipAdd(sprint)) {
+	        this.cleanSkipAdd(sprint);
+	        return;
+	      }
+
+	      this.domBuilder.createSprintNode(sprint);
+	    }
+	  }, {
+	    key: "onSprintUpdated",
+	    value: function onSprintUpdated(params) {
+	      var tmpSprint = Sprint.buildSprint(params);
+
+	      if (this.needSkipUpdate(tmpSprint)) {
+	        this.cleanSkipUpdate(tmpSprint);
+	        return;
+	      }
+
+	      var sprint = this.entityStorage.findEntityByEntityId(tmpSprint.getId());
+
+	      if (sprint) {
+	        if (tmpSprint.getStatus() !== sprint.getStatus()) {
+	          if (tmpSprint.getStatus() === 'active') {
+	            this.domBuilder.moveSprintToActiveListNode(sprint);
+	          } else {
+	            this.domBuilder.moveSprintToCompletedListNode(sprint);
+	          }
 	        }
-	      });
-	      this.draggableItems = new ui_draganddrop_draggable.Draggable({
-	        container: itemContainers,
-	        draggable: '.tasks-scrum-item-drag',
-	        // todo add tmp class
-	        dragElement: '.tasks-scrum-item',
-	        type: ui_draganddrop_draggable.Draggable.DROP_PREVIEW,
-	        delay: 200
-	      });
-	      this.draggableItems.subscribe('end', function (baseEvent) {
+
+	        sprint.updateYourself(tmpSprint);
+	      }
+	    }
+	  }, {
+	    key: "onSprintRemoved",
+	    value: function onSprintRemoved(params) {
+	      if (this.needSkipRemove(params.sprintId)) {
+	        this.cleanSkipRemove(params.sprintId);
+	        return;
+	      }
+
+	      var sprint = this.entityStorage.findEntityByEntityId(params.sprintId);
+
+	      if (sprint) {
+	        sprint.removeSprint();
+	        this.entityStorage.removeSprint(sprint.getId());
+	      }
+	    }
+	  }, {
+	    key: "addTmpIdToSkipAdding",
+	    value: function addTmpIdToSkipAdding(tmpId) {
+	      this.listIdsToSkipAdding.add(tmpId);
+	    }
+	  }, {
+	    key: "addIdToSkipUpdating",
+	    value: function addIdToSkipUpdating(sprintId) {
+	      this.listIdsToSkipUpdating.add(sprintId);
+	    }
+	  }, {
+	    key: "addIdToSkipRemoving",
+	    value: function addIdToSkipRemoving(sprintId) {
+	      this.listIdsToSkipRemoving.add(sprintId);
+	    }
+	  }, {
+	    key: "needSkipAdd",
+	    value: function needSkipAdd(sprint) {
+	      return this.listIdsToSkipAdding.has(sprint.getTmpId());
+	    }
+	  }, {
+	    key: "cleanSkipAdd",
+	    value: function cleanSkipAdd(sprint) {
+	      this.listIdsToSkipAdding.delete(sprint.getTmpId());
+	    }
+	  }, {
+	    key: "needSkipUpdate",
+	    value: function needSkipUpdate(sprint) {
+	      return this.listIdsToSkipUpdating.has(sprint.getId());
+	    }
+	  }, {
+	    key: "cleanSkipUpdate",
+	    value: function cleanSkipUpdate(sprint) {
+	      this.listIdsToSkipUpdating.delete(sprint.getId());
+	    }
+	  }, {
+	    key: "needSkipRemove",
+	    value: function needSkipRemove(sprintId) {
+	      return this.listIdsToSkipRemoving.has(sprintId);
+	    }
+	  }, {
+	    key: "cleanSkipRemove",
+	    value: function cleanSkipRemove(sprintId) {
+	      this.listIdsToSkipRemoving.delete(sprintId);
+	    }
+	  }]);
+	  return PullSprint;
+	}();
+
+	var ItemMover = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(ItemMover, _EventEmitter);
+
+	  function ItemMover(params) {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, ItemMover);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(ItemMover).call(this, params));
+	    _this.requestSender = params.requestSender;
+	    _this.domBuilder = params.domBuilder;
+	    _this.entityStorage = params.entityStorage;
+	    _this.subTasksCreator = params.subTasksCreator;
+
+	    _this.bindHandlers();
+
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(ItemMover, [{
+	    key: "bindHandlers",
+	    value: function bindHandlers() {
+	      var _this2 = this;
+
+	      this.domBuilder.subscribe('itemMoveStart', function (baseEvent) {
 	        var dragEndEvent = baseEvent.getData();
+	        var itemNode = dragEndEvent.source;
+	        var itemId = itemNode.dataset.itemId;
+
+	        var item = _this2.entityStorage.findItemByItemId(itemId);
+
 	        var sourceContainer = dragEndEvent.sourceContainer;
 	        var sourceEntityId = parseInt(sourceContainer.dataset.entityId, 10);
 
-	        var sourceEntity = _this2.findEntityByEntityId(sourceEntityId);
+	        var sourceEntity = _this2.entityStorage.findEntityByEntityId(sourceEntityId);
 
+	        _this2.hideSubTasks(sourceEntity, item);
+
+	        var actionsPanel = item.getCurrentActionsPanel();
+
+	        if (actionsPanel) {
+	          actionsPanel.destroy();
+	        }
+	      });
+	      this.domBuilder.subscribe('itemMoveEnd', function (baseEvent) {
+	        var dragEndEvent = baseEvent.getData();
 	        var endContainer = dragEndEvent.endContainer;
+
+	        if (!endContainer) {
+	          return;
+	        }
+
+	        var sourceContainer = dragEndEvent.sourceContainer;
+	        var sourceEntityId = parseInt(sourceContainer.dataset.entityId, 10);
 	        var endEntityId = parseInt(endContainer.dataset.entityId, 10);
+
+	        var sourceEntity = _this2.entityStorage.findEntityByEntityId(sourceEntityId);
 
 	        if (sourceEntityId === endEntityId) {
 	          _this2.onItemMove(dragEndEvent);
@@ -6461,787 +8918,257 @@ this.BX.Tasks = this.BX.Tasks || {};
 	            var itemNode = dragEndEvent.source;
 	            var itemId = itemNode.dataset.itemId;
 
-	            var item = _this2.findItemByItemId(itemId);
+	            var item = _this2.entityStorage.findItemByItemId(itemId);
 
 	            var itemNodeAfterSourceItem = sourceEntity.getListItemsNode().children[item.getSort()];
-	            main_core.Dom.insertBefore(itemNode, itemNodeAfterSourceItem);
+
+	            _this2.domBuilder.insertBefore(itemNode, itemNodeAfterSourceItem);
 	          });
 	        }
-	      });
-	      this.draggableSprints = new ui_draganddrop_draggable.Draggable({
-	        container: this.sprintListNode.querySelector('.tasks-scrum-sprint-planned-list'),
-	        draggable: '.tasks-scrum-sprint',
-	        dragElement: '.tasks-scrum-sprint-dragndrop',
-	        type: ui_draganddrop_draggable.Draggable.DROP_PREVIEW
-	      });
-	      this.draggableSprints.subscribe('end', function (baseEvent) {
-	        var dragEndEvent = baseEvent.getData();
-
-	        _this2.onSprintMove(dragEndEvent);
 	      });
 	    }
 	  }, {
-	    key: "bindHandlers",
-	    value: function bindHandlers(newSprint) {
+	    key: "moveItem",
+	    value: function moveItem(item, button) {
 	      var _this3 = this;
 
-	      this.teamSpeedChartButtonContainerNode = document.getElementById('tasks-scrum-team-speed-button-container');
-	      main_core.Event.bind(this.teamSpeedChartButtonContainerNode, 'click', this.onShowTeamSpeedChart.bind(this));
+	      var entity = this.entityStorage.findEntityByItemId(item.getItemId());
+	      var listToMove = [];
 
-	      var createTaskItem = function createTaskItem(baseEvent) {
-	        var data = baseEvent.getData();
-	        var entity = baseEvent.getTarget();
-	        var inputObject = data.inputObject;
-	        var inputValue = data.value;
-
-	        var newItem = _this3.createItem('task', inputValue);
-
-	        newItem.setParentEntity(entity.getId(), entity.getEntityType());
-	        newItem.setSort(1);
-
-	        _this3.appendItem(newItem, entity.getListItemsNode(), inputObject.getNode());
-
-	        _this3.fillItemBeforeCreation(newItem, inputValue);
-
-	        newItem.setParentId(inputObject.getEpicId());
-
-	        _this3.sendRequestToCreateTask(entity, newItem, inputValue).then(function (response) {
-	          _this3.fillItemAfterCreation(newItem, response.data);
-
-	          response.data.tags.forEach(function (tag) {
-	            _this3.tagSearcher.addTagToSearcher(tag);
-	          });
-	          entity.setItem(newItem);
-	        }).catch(function (response) {
-	          _this3.requestSender.showErrorAlert(response);
-	        });
-	      };
-
-	      var onUpdateItem = function onUpdateItem(baseEvent) {
-	        _this3.requestSender.updateItem(baseEvent.getData()).catch(function (response) {
-	          _this3.requestSender.showErrorAlert(response);
-	        });
-	      };
-
-	      var onShowTask = function onShowTask(baseEvent) {
-	        var item = baseEvent.getData();
-
-	        _this3.sidePanel.openSidePanelByUrl(_this3.pathToTask.replace('#task_id#', item.getSourceId()));
-	      };
-
-	      var onMoveItem = function onMoveItem(baseEvent) {
-	        var data = baseEvent.getData();
-
-	        _this3.moveItem(data.item, data.button);
-	      };
-
-	      var onMoveToSprint = function onMoveToSprint(baseEvent) {
-	        var data = baseEvent.getData();
-
-	        _this3.moveToAnotherEntity(baseEvent.getTarget(), data.item, null, data.button);
-
-	        if (_this3.sprints.size <= 1) {
-	          main_core.Dom.remove(data.button.parentNode);
-	        }
-	      };
-
-	      var onMoveToBacklog = function onMoveToBacklog(baseEvent) {
-	        var data = baseEvent.getData();
-
-	        _this3.moveToAnotherEntity(data.sprint, data.item, _this3.backlog);
-	      };
-
-	      var onAttachFilesToTask = function onAttachFilesToTask(baseEvent) {
-	        var data = baseEvent.getData();
-
-	        _this3.requestSender.attachFilesToTask({
-	          taskId: data.item.getSourceId(),
-	          attachedIds: data.attachedIds
-	        }).then(function (response) {
-	          data.item.updateIndicators(response.data);
-	        }).catch(function (response) {
-	          _this3.requestSender.showErrorAlert(response);
-	        });
-	      };
-
-	      var onRemoveItem = function onRemoveItem(baseEvent) {
-	        var entity = baseEvent.getTarget();
-
-	        if (entity.isGroupMode()) {
-	          var items = [];
-	          entity.getGroupModeItems().forEach(function (groupModeItem) {
-	            items.push({
-	              itemId: groupModeItem.getItemId(),
-	              itemType: groupModeItem.getItemType(),
-	              sourceId: groupModeItem.getSourceId()
-	            });
-	          });
-
-	          _this3.requestSender.batchRemoveItem({
-	            items: items,
-	            sortInfo: _this3.calculateSort(entity.getListItemsNode())
-	          }).catch(function (response) {
-	            _this3.requestSender.showErrorAlert(response);
-	          });
-
-	          entity.deactivateGroupMode();
-	        } else {
-	          _this3.requestSender.removeItem({
-	            itemId: baseEvent.getData().getItemId(),
-	            itemType: baseEvent.getData().getItemType(),
-	            sourceId: baseEvent.getData().getSourceId(),
-	            sortInfo: _this3.calculateSort(entity.getListItemsNode())
-	          }).catch(function (response) {
-	            _this3.requestSender.showErrorAlert(response);
-	          });
-	        }
-	      };
-
-	      var onStartSprint = function onStartSprint(baseEvent) {
-	        var sprint = baseEvent.getTarget();
-	        var sprintSidePanel = new SprintSidePanel({
-	          sprints: _this3.sprints,
-	          sidePanel: _this3.sidePanel,
-	          requestSender: _this3.requestSender,
-	          views: _this3.views
-	        });
-	        sprintSidePanel.showStartSidePanel(sprint);
-	      };
-
-	      var onCompleteSprint = function onCompleteSprint(baseEvent) {
-	        var sprint = baseEvent.getTarget();
-	        var sprintSidePanel = new SprintSidePanel({
-	          sprints: _this3.sprints,
-	          sidePanel: _this3.sidePanel,
-	          requestSender: _this3.requestSender,
-	          views: _this3.views
-	        });
-	        sprintSidePanel.showCompleteSidePanel(sprint);
-	      };
-
-	      var onShowSprintBurnDownChart = function onShowSprintBurnDownChart(baseEvent) {
-	        var sprint = baseEvent.getTarget();
-	        var sprintSidePanel = new SprintSidePanel({
-	          sprints: _this3.sprints,
-	          sidePanel: _this3.sidePanel,
-	          requestSender: _this3.requestSender,
-	          views: _this3.views
-	        });
-	        sprintSidePanel.showBurnDownChart(sprint);
-	      };
-
-	      var onChangeTaskResponsible = function onChangeTaskResponsible(baseEvent) {
-	        _this3.requestSender.changeTaskResponsible({
-	          itemId: baseEvent.getData().getItemId(),
-	          itemType: baseEvent.getData().getItemType(),
-	          sourceId: baseEvent.getData().getSourceId(),
-	          responsible: baseEvent.getData().gerResponsible()
-	        }).catch(function (response) {
-	          _this3.requestSender.showErrorAlert(response);
-	        });
-	      };
-
-	      var onRemoveSprint = function onRemoveSprint(baseEvent) {
-	        var sprint = baseEvent.getTarget();
-
-	        _this3.sprints.delete(sprint.getId());
-
-	        _this3.requestSender.removeSprint({
-	          sprintId: sprint.getId(),
-	          sortInfo: _this3.calculateSprintSort()
-	        }).catch(function (response) {
-	          _this3.requestSender.showErrorAlert(response);
-	        });
-	      };
-
-	      var onChangeSprintName = function onChangeSprintName(baseEvent) {
-	        _this3.requestSender.changeSprintName(baseEvent.getData()).catch(function (response) {
-	          _this3.requestSender.showErrorAlert(response);
-	        });
-	      };
-
-	      var onChangeSprintDeadline = function onChangeSprintDeadline(baseEvent) {
-	        _this3.requestSender.changeSprintDeadline(baseEvent.getData()).catch(function (response) {
-	          _this3.requestSender.showErrorAlert(response);
-	        });
-	      };
-
-	      var onOpenAddEpicForm = function onOpenAddEpicForm(baseEvent) {
-	        _this3.epic.openAddForm();
-	      };
-
-	      var onOpenListEpicGrid = function onOpenListEpicGrid(baseEvent) {
-	        _this3.epic.openEpicsList();
-
-	        _this3.epic.subscribe('onAfterEditEpic', function (innerBaseEvent) {
-	          var response = innerBaseEvent.getData();
-	          var updatedEpicInfo = response.data;
-
-	          var oldEpicInfo = _this3.epic.getCurrentEpic();
-
-	          _this3.getAllItems().forEach(function (item) {
-	            var itemEpic = item.getEpic();
-
-	            if (itemEpic && itemEpic.name === oldEpicInfo.name) {
-	              item.setEpicAndTags(updatedEpicInfo);
-	            }
-	          });
-
-	          _this3.tagSearcher.removeEpicFromSearcher(oldEpicInfo);
-
-	          _this3.tagSearcher.addEpicToSearcher(updatedEpicInfo);
-	        });
-	      };
-
-	      var onOpenDefinitionOfDone = function onOpenDefinitionOfDone(baseEvent) {
-	        var entity = baseEvent.getTarget();
-	        var projectSidePanel = new ProjectSidePanel({
-	          sidePanel: _this3.sidePanel,
-	          requestSender: _this3.requestSender
-	        });
-	        projectSidePanel.showDefinitionOfDone(entity);
-	      };
-
-	      var onShowTagSearcher = function onShowTagSearcher(baseEvent) {
-	        //todo refactor and test
-	        var entity = baseEvent.getTarget();
-	        var data = baseEvent.getData();
-	        var item = data.item;
-	        var actionsPanelButton = data.button;
-
-	        _this3.tagSearcher.showTagsDialog(item, actionsPanelButton);
-
-	        _this3.tagSearcher.unsubscribeAll('attachTagToTask');
-
-	        _this3.tagSearcher.subscribe('attachTagToTask', function (innerBaseEvent) {
-	          var tag = innerBaseEvent.getData();
-
-	          if (entity.isGroupMode()) {
-	            var tasks = [];
-	            entity.getGroupModeItems().forEach(function (groupModeItem) {
-	              tasks.push({
-	                taskId: groupModeItem.getSourceId()
+	      if (!entity.isFirstItem(item)) {
+	        listToMove.push({
+	          text: main_core.Loc.getMessage('TASKS_SCRUM_ITEM_ACTIONS_MOVE_UP'),
+	          onclick: function onclick(event, menuItem) {
+	            if (entity.isGroupMode()) {
+	              var groupModeItems = entity.getGroupModeItems();
+	              var sortedItems = babelHelpers.toConsumableArray(groupModeItems.values()).sort(function (first, second) {
+	                if (first.getSort() < second.getSort()) return 1;
+	                if (first.getSort() > second.getSort()) return -1;
 	              });
-	            });
+	              var sortedItemsIds = new Set();
+	              sortedItems.forEach(function (groupModeItem) {
+	                sortedItemsIds.add(groupModeItem.getItemId());
 
-	            _this3.requestSender.batchAttachTagToTask({
-	              tasks: tasks,
-	              tag: tag
-	            }).then(function (response) {
-	              entity.getGroupModeItems().forEach(function (groupModeItem) {
-	                var currentTags = groupModeItem.getTags();
-	                currentTags.push(tag);
-	                groupModeItem.setEpicAndTags(groupModeItem.getEpic(), currentTags);
+	                _this3.hideSubTasks(entity, groupModeItem);
+
+	                _this3.moveItemToUp(groupModeItem, entity.getListItemsNode(), entity.hasInput(), false);
 	              });
-	            }).catch(function (response) {
-	              _this3.requestSender.showErrorAlert(response);
-	            });
-	          } else {
-	            var currentTags = item.getTags();
 
-	            _this3.requestSender.attachTagToTask({
-	              taskId: item.getSourceId(),
-	              tag: tag
-	            }).then(function (response) {
-	              currentTags.push(tag);
-	              item.setEpicAndTags(item.getEpic(), currentTags);
-	            }).catch(function (response) {
-	              _this3.requestSender.showErrorAlert(response);
-	            });
-	          }
-	        });
-
-	        _this3.tagSearcher.unsubscribeAll('deAttachTagToTask');
-
-	        _this3.tagSearcher.subscribe('deAttachTagToTask', function (innerBaseEvent) {
-	          var tag = innerBaseEvent.getData();
-
-	          if (entity.isGroupMode()) {
-	            var tasks = [];
-	            entity.getGroupModeItems().forEach(function (groupModeItem) {
-	              tasks.push({
-	                taskId: groupModeItem.getSourceId()
+	              _this3.requestSender.updateItemSort({
+	                sortInfo: _this3.calculateSort(entity.getListItemsNode(), sortedItemsIds)
+	              }).catch(function (response) {
+	                _this3.requestSender.showErrorAlert(response);
 	              });
-	            });
 
-	            _this3.requestSender.batchDeattachTagToTask({
-	              tasks: tasks,
-	              tag: tag
-	            }).then(function (response) {
-	              entity.getGroupModeItems().forEach(function (groupModeItem) {
-	                var currentTags = groupModeItem.getTags();
-	                currentTags.splice(currentTags.indexOf(tag), 1);
-	                groupModeItem.setEpicAndTags(groupModeItem.getEpic(), currentTags);
-	              });
-	            }).catch(function (response) {
-	              _this3.requestSender.showErrorAlert(response);
-	            });
-	          } else {
-	            var currentTags = item.getTags();
-
-	            _this3.requestSender.deAttachTagToTask({
-	              taskId: item.getSourceId(),
-	              tag: tag
-	            }).then(function (response) {
-	              currentTags.splice(currentTags.indexOf(tag), 1);
-	              item.setEpicAndTags(item.getEpic(), currentTags);
-	            }).catch(function (response) {
-	              _this3.requestSender.showErrorAlert(response);
-	            });
-	          }
-	        });
-
-	        _this3.tagSearcher.unsubscribeAll('hideTagDialog');
-
-	        _this3.tagSearcher.subscribe('hideTagDialog', function (innerBaseEvent) {
-	          if (entity.isGroupMode()) {
-	            entity.deactivateGroupMode();
-	          }
-	        });
-	      };
-
-	      var onShowEpicSearcher = function onShowEpicSearcher(baseEvent) {
-	        var entity = baseEvent.getTarget();
-	        var data = baseEvent.getData();
-	        var item = data.item;
-	        var actionsPanelButton = data.button;
-
-	        _this3.tagSearcher.showEpicDialog(item, actionsPanelButton);
-
-	        _this3.tagSearcher.unsubscribeAll('updateItemEpic');
-
-	        _this3.tagSearcher.subscribe('updateItemEpic', function (innerBaseEvent) {
-	          if (entity.isGroupMode()) {
-	            var items = [];
-	            entity.getGroupModeItems().forEach(function (groupModeItem) {
-	              items.push({
-	                itemId: groupModeItem.getItemId()
-	              });
-	            });
-
-	            _this3.requestSender.batchUpdateItemEpic({
-	              items: items,
-	              epicId: innerBaseEvent.getData()
-	            }).then(function (response) {
-	              entity.getGroupModeItems().forEach(function (groupModeItem) {
-	                if (main_core.Type.isArray(response.data.epic)) {
-	                  groupModeItem.setParentId(0);
-	                  groupModeItem.setEpicAndTags(null, null);
-	                } else {
-	                  groupModeItem.setParentId(response.data.epic.id);
-	                  groupModeItem.setEpicAndTags(response.data.epic, groupModeItem.getTags());
-	                }
-	              });
 	              entity.deactivateGroupMode();
-	            }).catch(function (response) {
-	              _this3.requestSender.showErrorAlert(response);
-	            });
-	          } else {
-	            _this3.requestSender.updateItemEpic({
-	              itemId: item.getItemId(),
-	              epicId: innerBaseEvent.getData()
-	            }).then(function (response) {
-	              if (main_core.Type.isArray(response.data.epic)) {
-	                item.setParentId(0);
-	                item.setEpicAndTags(null, null);
-	              } else {
-	                item.setParentId(response.data.epic.id);
-	                item.setEpicAndTags(response.data.epic, item.getTags());
-	              }
-	            }).catch(function (response) {
-	              _this3.requestSender.showErrorAlert(response);
-	            });
+	            } else {
+	              _this3.hideSubTasks(entity, item);
+
+	              _this3.moveItemToUp(item, entity.getListItemsNode(), entity.hasInput());
+	            }
+
+	            menuItem.getMenuWindow().close();
 	          }
 	        });
-	      };
+	      }
 
-	      var onStartDecomposition = function onStartDecomposition(baseEvent) {
-	        var entity = baseEvent.getTarget();
-	        var parentItem = baseEvent.getData();
-	        var decomposition = new Decomposition();
-	        decomposition.subscribe('tagsSearchOpen', onTagsSearchOpen);
-	        decomposition.subscribe('tagsSearchClose', onTagsSearchClose);
-	        decomposition.subscribe('createItem', function (innerBaseEvent) {
-	          var inputValue = innerBaseEvent.getData();
-	          var decomposedItems = decomposition.getDecomposedItems();
-	          var lastDecomposedItem = Array.from(decomposedItems).pop();
+	      if (!entity.isLastItem(item)) {
+	        listToMove.push({
+	          text: main_core.Loc.getMessage('TASKS_SCRUM_ITEM_ACTIONS_MOVE_DOWN'),
+	          onclick: function onclick(event, menuItem) {
+	            if (entity.isGroupMode()) {
+	              var groupModeItems = entity.getGroupModeItems();
+	              var sortedItems = babelHelpers.toConsumableArray(groupModeItems.values()).sort(function (first, second) {
+	                if (first.getSort() > second.getSort()) return 1;
+	                if (first.getSort() < second.getSort()) return -1;
+	              });
+	              var sortedItemsIds = new Set();
+	              sortedItems.forEach(function (groupModeItem) {
+	                sortedItemsIds.add(groupModeItem.getItemId());
 
-	          var newItem = _this3.createItem(parentItem.getItemType(), inputValue);
+	                _this3.hideSubTasks(entity, groupModeItem);
 
-	          newItem.setParentEntity(entity.getId(), entity.getEntityType());
-	          newItem.setParentId(parentItem.getParentId());
-	          newItem.setParentSourceId(parentItem.getSourceId());
-	          newItem.setSort(lastDecomposedItem.getSort() + 1);
-	          newItem.setTags(parentItem.getTags());
+	                _this3.moveItemToDown(groupModeItem, entity.getListItemsNode(), false);
+	              });
 
-	          _this3.appendItem(newItem, entity.getListItemsNode(), lastDecomposedItem.getItemNode());
+	              _this3.requestSender.updateItemSort({
+	                sortInfo: _this3.calculateSort(entity.getListItemsNode(), sortedItemsIds)
+	              }).catch(function (response) {
+	                _this3.requestSender.showErrorAlert(response);
+	              });
 
-	          decomposition.addDecomposedItem(newItem);
+	              entity.deactivateGroupMode();
+	            } else {
+	              _this3.hideSubTasks(entity, item);
 
-	          _this3.sendRequestToCreateTask(entity, newItem, inputValue).then(function (response) {
-	            _this3.fillItemAfterCreation(newItem, response.data);
+	              _this3.moveItemToDown(item, entity.getListItemsNode());
+	            }
 
-	            response.data.tags.forEach(function (tag) {
-	              _this3.tagSearcher.addTagToSearcher(tag);
-	            });
-	            entity.setItem(newItem);
-	          });
-	        });
-	        decomposition.decomposeItem(parentItem);
-	      };
-
-	      var onTagsSearchOpen = function onTagsSearchOpen(baseEvent) {
-	        var data = baseEvent.getData();
-	        var inputObject = data.inputObject;
-	        var enteredHashTagName = data.enteredHashTagName;
-
-	        _this3.tagSearcher.showTagsSearchDialog(inputObject, enteredHashTagName);
-	      };
-
-	      var onTagsSearchClose = function onTagsSearchClose() {
-	        _this3.tagSearcher.closeTagsSearchDialog();
-	      };
-
-	      var onEpicSearchOpen = function onEpicSearchOpen(baseEvent) {
-	        var data = baseEvent.getData();
-	        var inputObject = data.inputObject;
-	        var enteredHashEpicName = data.enteredHashEpicName;
-
-	        _this3.tagSearcher.showEpicSearchDialog(inputObject, enteredHashEpicName);
-	      };
-
-	      var onEpicSearchClose = function onEpicSearchClose() {
-	        _this3.tagSearcher.closeEpicSearchDialog();
-	      };
-
-	      var onFilterByEpic = function onFilterByEpic(baseEvent) {
-	        var epicId = baseEvent.getData();
-
-	        var currentValue = _this3.filter.getValueFromField({
-	          name: 'EPIC',
-	          value: ''
-	        });
-
-	        if (String(epicId) === String(currentValue)) {
-	          _this3.filter.setValueToField({
-	            name: 'EPIC',
-	            value: ''
-	          });
-	        } else {
-	          _this3.filter.setValueToField({
-	            name: 'EPIC',
-	            value: String(epicId)
-	          });
-	        }
-
-	        _this3.filter.scrollToSearchContainer();
-	      };
-
-	      var onFilterByTag = function onFilterByTag(baseEvent) {
-	        var tag = baseEvent.getData();
-
-	        var currentValue = _this3.filter.getValueFromField({
-	          name: 'TAG',
-	          value: ''
-	        });
-
-	        if (String(tag) === String(currentValue)) {
-	          _this3.filter.setValueToField({
-	            name: 'TAG',
-	            value: ''
-	          });
-	        } else {
-	          _this3.filter.setValueToField({
-	            name: 'TAG',
-	            value: String(tag)
-	          });
-	        }
-
-	        _this3.filter.scrollToSearchContainer();
-	      };
-
-	      var onActivateGroupMode = function onActivateGroupMode(baseEvent) {
-	        var entity = baseEvent.getTarget();
-
-	        if (entity.getId() !== _this3.backlog.getId()) {
-	          _this3.backlog.deactivateGroupMode();
-	        }
-
-	        _this3.sprints.forEach(function (sprint) {
-	          if (entity.getId() !== sprint.getId()) {
-	            sprint.deactivateGroupMode();
+	            menuItem.getMenuWindow().close();
 	          }
 	        });
+	      }
 
-	        entity.getItems().forEach(function (item) {
-	          item.activateGroupMode();
-	        });
-	      };
+	      this.showMoveItemMenu(item, button, listToMove);
+	    }
+	  }, {
+	    key: "moveItemToUp",
+	    value: function moveItemToUp(item, listItemsNode) {
+	      var entityWithInput = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
+	      var updateSort = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
 
-	      var onDeactivateGroupMode = function onDeactivateGroupMode(baseEvent) {
-	        var entity = baseEvent.getTarget();
-	        entity.getItems().forEach(function (item) {
-	          item.deactivateGroupMode();
-	        });
-	      };
+	      if (entityWithInput) {
+	        this.domBuilder.appendItemAfterItem(item.getItemNode(), listItemsNode.firstElementChild);
+	      } else {
+	        this.domBuilder.insertBefore(item.getItemNode(), listItemsNode.firstElementChild);
+	      }
 
-	      var onGetSprintCompletedItems = function onGetSprintCompletedItems(baseEvent) {
-	        var sprint = baseEvent.getTarget();
-	        var listItemsNode = sprint.getListItemsNode();
-	        var listPosition = main_core.Dom.getPosition(listItemsNode);
-	        var loader = new main_loader.Loader({
-	          target: listItemsNode,
-	          size: 60,
-	          mode: 'inline',
-	          color: '#eaeaea',
-	          offset: {
-	            left: "".concat(listPosition.width / 2 - 30, "px")
-	          }
-	        });
-	        loader.show();
+	      if (updateSort) {
+	        this.updateItemsSort(item, listItemsNode);
+	      }
+	    }
+	  }, {
+	    key: "moveItemToDown",
+	    value: function moveItemToDown(item, listItemsNode) {
+	      var updateSort = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
+	      this.domBuilder.append(item.getItemNode(), listItemsNode);
 
-	        _this3.requestSender.getSprintCompletedItems({
-	          sprintId: sprint.getId()
-	        }).then(function (response) {
-	          var itemsData = response.data;
-	          itemsData.forEach(function (itemData) {
-	            var item = new Item(itemData);
-	            item.setDisableStatus(sprint.isDisabled());
-	            main_core.Dom.append(item.render(), listItemsNode);
-	            sprint.setItem(item);
-	          });
-	          loader.hide();
-	        }).catch(function (response) {
-	          loader.hide();
+	      if (updateSort) {
+	        this.updateItemsSort(item, listItemsNode);
+	      }
+	    }
+	  }, {
+	    key: "updateItemsSort",
+	    value: function updateItemsSort(item, listItemsNode) {
+	      var _this4 = this;
 
-	          _this3.requestSender.showErrorAlert(response);
-	        });
-	      };
+	      this.requestSender.updateItem({
+	        itemId: item.getItemId(),
+	        sortInfo: babelHelpers.objectSpread({}, this.calculateSort(listItemsNode, new Set([item.getItemId()])))
+	      }).catch(function (response) {
+	        _this4.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "onItemMove",
+	    value: function onItemMove(dragEndEvent) {
+	      var _this5 = this;
 
-	      var subscribeToSprint = function subscribeToSprint(sprint) {
-	        sprint.subscribe('createTaskItem', createTaskItem);
-	        sprint.subscribe('updateItem', onUpdateItem);
-	        sprint.subscribe('showTask', onShowTask);
-	        sprint.subscribe('moveItem', onMoveItem);
-	        sprint.subscribe('moveToSprint', onMoveToSprint);
-	        sprint.subscribe('moveToBacklog', onMoveToBacklog);
-	        sprint.subscribe('removeItem', onRemoveItem);
-	        sprint.subscribe('startSprint', onStartSprint);
-	        sprint.subscribe('completeSprint', onCompleteSprint);
-	        sprint.subscribe('changeTaskResponsible', onChangeTaskResponsible);
-	        sprint.subscribe('removeSprint', onRemoveSprint);
-	        sprint.subscribe('changeSprintName', onChangeSprintName);
-	        sprint.subscribe('changeSprintDeadline', onChangeSprintDeadline);
-	        sprint.subscribe('attachFilesToTask', onAttachFilesToTask);
-	        sprint.subscribe('showTagSearcher', onShowTagSearcher);
-	        sprint.subscribe('showEpicSearcher', onShowEpicSearcher);
-	        sprint.subscribe('startDecomposition', onStartDecomposition);
-	        sprint.subscribe('tagsSearchOpen', onTagsSearchOpen);
-	        sprint.subscribe('tagsSearchClose', onTagsSearchClose);
-	        sprint.subscribe('epicSearchOpen', onEpicSearchOpen);
-	        sprint.subscribe('epicSearchClose', onEpicSearchClose);
-	        sprint.subscribe('filterByEpic', onFilterByEpic);
-	        sprint.subscribe('filterByTag', onFilterByTag);
-	        sprint.subscribe('activateGroupMode', onActivateGroupMode);
-	        sprint.subscribe('deactivateGroupMode', onDeactivateGroupMode);
-	        sprint.subscribe('getSprintCompletedItems', onGetSprintCompletedItems);
-	        sprint.subscribe('showSprintBurnDownChart', onShowSprintBurnDownChart);
-	      };
-
-	      if (newSprint) {
-	        subscribeToSprint(newSprint);
+	      if (!dragEndEvent.endContainer) {
 	        return;
 	      }
 
-	      this.backlog.subscribe('createTaskItem', createTaskItem);
-	      this.backlog.subscribe('updateItem', onUpdateItem);
-	      this.backlog.subscribe('showTask', onShowTask);
-	      this.backlog.subscribe('moveItem', onMoveItem);
-	      this.backlog.subscribe('moveToSprint', onMoveToSprint);
-	      this.backlog.subscribe('removeItem', onRemoveItem);
-	      this.backlog.subscribe('changeTaskResponsible', onChangeTaskResponsible);
-	      this.backlog.subscribe('openAddEpicForm', onOpenAddEpicForm);
-	      this.backlog.subscribe('openListEpicGrid', onOpenListEpicGrid);
-	      this.backlog.subscribe('openDefinitionOfDone', onOpenDefinitionOfDone);
-	      this.backlog.subscribe('attachFilesToTask', onAttachFilesToTask);
-	      this.backlog.subscribe('showTagSearcher', onShowTagSearcher);
-	      this.backlog.subscribe('showEpicSearcher', onShowEpicSearcher);
-	      this.backlog.subscribe('startDecomposition', onStartDecomposition);
-	      this.backlog.subscribe('tagsSearchOpen', onTagsSearchOpen);
-	      this.backlog.subscribe('tagsSearchClose', onTagsSearchClose);
-	      this.backlog.subscribe('epicSearchOpen', onEpicSearchOpen);
-	      this.backlog.subscribe('epicSearchClose', onEpicSearchClose);
-	      this.backlog.subscribe('filterByEpic', onFilterByEpic);
-	      this.backlog.subscribe('filterByTag', onFilterByTag);
-	      this.backlog.subscribe('activateGroupMode', onActivateGroupMode);
-	      this.backlog.subscribe('deactivateGroupMode', onDeactivateGroupMode);
-	      this.epic.subscribe('filterByTag', onFilterByTag);
-	      this.sprints.forEach(function (sprint) {
-	        subscribeToSprint(sprint);
-	      });
+	      var sourceContainer = dragEndEvent.sourceContainer;
+	      var endContainer = dragEndEvent.endContainer;
+
+	      if (endContainer === this.domBuilder.getSprintCreatingDropZoneNode()) {
+	        var createNewSprintAndMoveItem = function createNewSprintAndMoveItem() {
+	          _this5.domBuilder.createSprint().then(function (sprint) {
+	            var itemNode = dragEndEvent.source;
+	            var itemId = itemNode.dataset.itemId;
+
+	            var item = _this5.entityStorage.findItemByItemId(itemId);
+
+	            _this5.moveTo(_this5.entityStorage.getBacklog(), sprint, item);
+	          });
+	        };
+
+	        createNewSprintAndMoveItem();
+	        return;
+	      }
+
+	      var sourceEntityId = parseInt(sourceContainer.dataset.entityId, 10);
+	      var endEntityId = parseInt(endContainer.dataset.entityId, 10);
+
+	      if (sourceEntityId === endEntityId) {
+	        var moveInCurrentContainer = function moveInCurrentContainer() {
+	          var itemNode = dragEndEvent.source;
+	          var itemId = parseInt(itemNode.dataset.itemId, 10);
+
+	          _this5.requestSender.updateItemSort({
+	            sortInfo: _this5.calculateSort(sourceContainer, new Set([itemId]))
+	          }).catch(function (response) {
+	            _this5.requestSender.showErrorAlert(response);
+	          });
+	        };
+
+	        moveInCurrentContainer();
+	      } else {
+	        var moveInAnotherContainer = function moveInAnotherContainer() {
+	          var itemNode = dragEndEvent.source;
+	          var itemId = itemNode.dataset.itemId;
+
+	          var item = _this5.entityStorage.findItemByItemId(itemId);
+
+	          var sourceEntity = _this5.entityStorage.findEntityByEntityId(sourceEntityId);
+
+	          var endEntity = _this5.entityStorage.findEntityByEntityId(endEntityId);
+
+	          _this5.moveItemFromEntityToEntity(item, sourceEntity, endEntity);
+
+	          _this5.requestSender.updateItemSort({
+	            entityId: endEntity.getId(),
+	            itemId: item.getItemId(),
+	            itemType: item.getItemType(),
+	            sourceEntityId: sourceEntity.getId(),
+	            fromActiveSprint: sourceEntity.getEntityType() === 'sprint' && sourceEntity.isActive() ? 'Y' : 'N',
+	            toActiveSprint: endEntity.getEntityType() === 'sprint' && endEntity.isActive() ? 'Y' : 'N',
+	            sortInfo: _this5.calculateSort(endContainer, new Set([item.getItemId()]), true)
+	          }).catch(function (response) {
+	            _this5.requestSender.showErrorAlert(response);
+	          });
+	        };
+
+	        moveInAnotherContainer();
+	      }
 	    }
 	  }, {
-	    key: "renderSprintsContainer",
-	    value: function renderSprintsContainer() {
-	      var _this4 = this;
+	    key: "calculateSort",
+	    value: function calculateSort(container, updatedItemsIds) {
+	      var _this6 = this;
 
-	      var createCreatingButton = function createCreatingButton() {
-	        _this4.sprintCreatingButtonNodeId = 'tasks-scrum-sprint-creating-button';
-	        return main_core.Tag.render(_templateObject$n(), _this4.sprintCreatingButtonNodeId, main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_ADD'));
-	      };
+	      var moveToAnotherEntity = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : false;
+	      var listSortInfo = {};
+	      var items = babelHelpers.toConsumableArray(container.querySelectorAll('[data-sort]'));
+	      var sort = 1;
+	      items.forEach(function (itemNode) {
+	        var itemId = parseInt(itemNode.dataset.itemId, 10);
 
-	      var createCreatingDropZone = function createCreatingDropZone() {
-	        if (_this4.sprints.size) {
-	          return '';
+	        var item = _this6.entityStorage.findItemByItemId(itemId);
+
+	        if (item && !item.isSubTask()) {
+	          var tmpId = main_core.Text.getRandom();
+	          var isSortUpdated = sort !== item.getSort();
+	          item.setSort(sort);
+	          listSortInfo[itemId] = {
+	            sort: sort
+	          };
+
+	          if (moveToAnotherEntity) {
+	            listSortInfo[itemId].entityId = container.dataset.entityId;
+	            isSortUpdated = true;
+	          }
+
+	          if (isSortUpdated && updatedItemsIds && updatedItemsIds.has(itemId)) {
+	            listSortInfo[itemId].tmpId = tmpId;
+	            listSortInfo[itemId].updatedItemId = itemId;
+	          }
+
+	          itemNode.dataset.sort = sort;
 	        }
 
-	        _this4.sprintCreatingDropZoneNodeId = 'tasks-scrum-sprint-creating-drop-zone';
-	        return main_core.Tag.render(_templateObject2$9(), _this4.sprintCreatingDropZoneNodeId, main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_ADD_DROP'));
-	      };
-
-	      var createSprintsList = function createSprintsList() {
-	        _this4.sprintListNodeId = 'tasks-scrum-sprint-list';
-	        return main_core.Tag.render(_templateObject3$7(), _this4.sprintListNodeId, babelHelpers.toConsumableArray(_this4.sprints.values()).map(function (sprint) {
-	          if (sprint.isActive()) {
-	            return sprint.render();
-	          } else {
-	            return '';
-	          }
-	        }), babelHelpers.toConsumableArray(_this4.sprints.values()).map(function (sprint) {
-	          if (sprint.isPlanned()) {
-	            return sprint.render();
-	          } else {
-	            return '';
-	          }
-	        }), babelHelpers.toConsumableArray(_this4.sprints.values()).map(function (sprint) {
-	          if (sprint.isCompleted()) {
-	            return sprint.render();
-	          } else {
-	            return '';
-	          }
-	        }));
-	      };
-
-	      return main_core.Tag.render(_templateObject4$6(), createCreatingButton(), createCreatingDropZone(), createSprintsList());
-	    }
-	  }, {
-	    key: "createSprint",
-	    value: function createSprint() {
-	      var _this5 = this;
-
-	      main_core.Dom.remove(this.sprintCreatingDropZoneNode);
-	      var countSprints = this.sprints.size;
-	      var title = main_core.Loc.getMessage('TASKS_SCRUM_SPRINT_NAME').replace('%s', countSprints + 1);
-	      var storyPoints = 0;
-	      var dateStart = Math.floor(Date.now() / 1000);
-	      var dateEnd = Math.floor(Date.now() / 1000) + parseInt(this.defaultSprintDuration, 10);
-	      var sprintListNode = this.sprintListNode.querySelector('.tasks-scrum-sprint-planned-list');
-	      var sort = sprintListNode.children.length ? sprintListNode.children.length + 1 : 1;
-	      var sprint = Sprint.buildSprint({
-	        name: title,
-	        sort: sort,
-	        dateStart: dateStart,
-	        dateEnd: dateEnd,
-	        storyPoints: storyPoints
+	        sort++;
 	      });
-	      main_core.Dom.append(sprint.render(), sprintListNode);
-	      var requestData = {
-	        name: title,
-	        sort: sort,
-	        dateStart: dateStart,
-	        dateEnd: dateEnd,
-	        sortInfo: this.calculateSprintSort()
-	      };
-	      return this.requestSender.createSprint(requestData).then(function (response) {
-	        sprint.setId(response.data.sprintId);
-	        sprint.onAfterAppend();
-	        sprint.getNode().scrollIntoView(true);
-
-	        _this5.sprints.set(sprint.getId(), sprint);
-
-	        _this5.bindHandlers(sprint);
-
-	        _this5.draggableItems.addContainer(sprint.getListItemsNode());
-
-	        return sprint;
-	      }).catch(function (response) {
-	        _this5.requestSender.showErrorAlert(response);
-	      });
-	    }
-	  }, {
-	    key: "createItem",
-	    value: function createItem(itemType, value) {
-	      //todo test
-	      var valueWithoutTags = value.replace(new RegExp('#([^\\s]*)', 'g'), '').replace(new RegExp('@([^\\s]*)', 'g'), '');
-	      return new Item({
-	        'itemId': '',
-	        'itemType': itemType,
-	        'name': valueWithoutTags
-	      });
-	    }
-	  }, {
-	    key: "appendItem",
-	    value: function appendItem(item, entityListNode, bindItemNode) {
-	      this.appendItemAfterItem(item.render(), bindItemNode);
-	      item.onAfterAppend(entityListNode);
-	    }
-	  }, {
-	    key: "sendRequestToCreateTask",
-	    value: function sendRequestToCreateTask(entity, item, value) {
-	      var requestData = {
-	        'itemType': item.getItemType(),
-	        'name': value,
-	        'entityId': item.getEntityId(),
-	        'entityType': entity.getEntityType(),
-	        'parentId': item.getParentId(),
-	        'sort': item.getSort(),
-	        'storyPoints': item.getStoryPoints().getPoints(),
-	        'tags': item.getTags(),
-	        'epic': item.getEpic(),
-	        'parentSourceId': item.getParentSourceId(),
-	        'sortInfo': this.calculateSort(entity.getListItemsNode()),
-	        'isActiveSprint': entity.getEntityType() === 'sprint' && entity.isActive() ? 'Y' : 'N'
-	      };
-	      return this.requestSender.createTask(requestData);
-	    }
-	  }, {
-	    key: "fillItemBeforeCreation",
-	    value: function fillItemBeforeCreation(item, value) {
-	      var tags = TagSearcher.getHashTagNamesFromText(value);
-	      var epicName = TagSearcher.getHashEpicNamesFromText(value).pop();
-	      var inputEpic = null;
-
-	      if (epicName) {
-	        inputEpic = this.tagSearcher.getEpicByName(epicName.trim());
-	      }
-
-	      if (inputEpic || tags.length > 0) {
-	        item.setEpicAndTags(inputEpic, tags);
-	      }
-
-	      item.setResponsible(this.defaultResponsible);
-	    }
-	  }, {
-	    key: "fillItemAfterCreation",
-	    value: function fillItemAfterCreation(item, responseData) {
-	      //todo test
-	      item.setItemId(responseData.itemId);
-
-	      if (!main_core.Type.isArray(responseData.epic) || responseData.tags.length > 0) {
-	        item.setEpicAndTags(responseData.epic, responseData.tags);
-	      }
-
-	      item.setResponsible(responseData.responsible);
-	      item.setSourceId(responseData.sourceId);
-	      item.setAllowedActions(responseData.allowedActions);
+	      this.emit('calculateSort', listSortInfo);
+	      return listSortInfo;
 	    }
 	  }, {
 	    key: "moveToAnotherEntity",
 	    value: function moveToAnotherEntity(entityFrom, item, targetEntity, bindButton) {
-	      var _this6 = this;
+	      var _this7 = this;
 
 	      var isMoveToSprint = main_core.Type.isNull(targetEntity);
-	      var sprints = isMoveToSprint ? this.getAvailableSprintsToMove() : null;
+	      var sprints = isMoveToSprint ? this.entityStorage.getSprintsAvailableForFilling(entityFrom) : null;
 
 	      if (entityFrom.isGroupMode()) {
 	        if (isMoveToSprint) {
@@ -7249,19 +9176,19 @@ this.BX.Tasks = this.BX.Tasks || {};
 	            this.showListSprintsToMove(entityFrom, item, bindButton);
 	          } else {
 	            if (sprints.size === 0) {
-	              this.createSprint().then(function (sprint) {
-	                _this6.moveToWithGroupMode(entityFrom, sprint, item, true, false);
+	              this.domBuilder.createSprint().then(function (sprint) {
+	                _this7.moveToWithGroupMode(entityFrom, sprint, item, true, false);
 	              });
 	            } else {
 	              sprints.forEach(function (sprint) {
-	                _this6.moveToWithGroupMode(entityFrom, sprint, item, true, false);
+	                _this7.moveToWithGroupMode(entityFrom, sprint, item, true, false);
 	              });
 	            }
 	          }
 	        } else {
 	          var message = main_core.Loc.getMessage('TASKS_SCRUM_CONFIRM_TEXT_MOVE_TASKS_FROM_ACTIVE');
 	          this.onMoveConfirm(entityFrom, message).then(function () {
-	            _this6.moveToWithGroupMode(entityFrom, targetEntity, item, false, false);
+	            _this7.moveToWithGroupMode(entityFrom, targetEntity, item, false, false);
 	          });
 	        }
 	      } else {
@@ -7273,12 +9200,12 @@ this.BX.Tasks = this.BX.Tasks || {};
 
 	            this.onMoveConfirm(entityFrom, _message).then(function () {
 	              if (sprints.size === 0) {
-	                _this6.createSprint().then(function (sprint) {
-	                  _this6.moveTo(entityFrom, sprint, item);
+	                _this7.domBuilder.createSprint().then(function (sprint) {
+	                  _this7.moveTo(entityFrom, sprint, item);
 	                });
 	              } else {
 	                sprints.forEach(function (sprint) {
-	                  _this6.moveTo(entityFrom, sprint, item);
+	                  _this7.moveTo(entityFrom, sprint, item);
 	                });
 	              }
 	            });
@@ -7287,30 +9214,18 @@ this.BX.Tasks = this.BX.Tasks || {};
 	          var _message2 = main_core.Loc.getMessage('TASKS_SCRUM_CONFIRM_TEXT_MOVE_TASK_FROM_ACTIVE');
 
 	          this.onMoveConfirm(entityFrom, _message2).then(function () {
-	            _this6.moveTo(entityFrom, targetEntity, item, false);
+	            _this7.moveTo(entityFrom, targetEntity, item, false);
 	          });
 	        }
 	      }
 	    }
 	  }, {
-	    key: "getAvailableSprintsToMove",
-	    value: function getAvailableSprintsToMove() {
-	      var sprints = new Set();
-	      this.sprints.forEach(function (sprint) {
-	        if (!sprint.isCompleted()) {
-	          sprints.add(sprint);
-	        }
-	      });
-	      return sprints;
-	    }
-	  }, {
 	    key: "moveToWithGroupMode",
 	    value: function moveToWithGroupMode(entityFrom, entityTo, item) {
-	      var _this7 = this;
+	      var _this8 = this;
 
 	      var after = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
 	      var update = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : true;
-	      //todo test
 	      var groupModeItems = entityFrom.getGroupModeItems();
 	      var sortedItems = babelHelpers.toConsumableArray(groupModeItems.values()).sort(function (first, second) {
 	        if (after) {
@@ -7321,38 +9236,51 @@ this.BX.Tasks = this.BX.Tasks || {};
 	          if (first.getSort() > second.getSort()) return -1;
 	        }
 	      });
+	      var sortedItemsIds = new Set();
 	      var items = [];
 	      sortedItems.forEach(function (groupModeItem) {
-	        _this7.moveTo(entityFrom, entityTo, groupModeItem, after, update);
+	        _this8.moveTo(entityFrom, entityTo, groupModeItem, after, update);
 
+	        sortedItemsIds.add(groupModeItem.getItemId());
 	        items.push({
 	          itemId: groupModeItem.getItemId(),
 	          itemType: groupModeItem.getItemType(),
 	          entityId: entityTo.getId(),
+	          sourceEntityId: entityFrom.getId(),
 	          fromActiveSprint: entityFrom.getEntityType() === 'sprint' && entityFrom.isActive() ? 'Y' : 'N',
 	          toActiveSprint: entityTo.getEntityType() === 'sprint' && entityTo.isActive() ? 'Y' : 'N'
 	        });
 	      });
 	      this.requestSender.batchUpdateItem({
 	        items: items,
-	        sortInfo: babelHelpers.objectSpread({}, this.calculateSort(entityFrom.getListItemsNode(), true), this.calculateSort(entityTo.getListItemsNode(), true))
+	        sortInfo: babelHelpers.objectSpread({}, this.calculateSort(entityTo.getListItemsNode(), sortedItemsIds, true), this.calculateSort(entityFrom.getListItemsNode(), new Set(), true))
 	      }).catch(function (response) {
-	        _this7.requestSender.showErrorAlert(response);
+	        _this8.requestSender.showErrorAlert(response);
 	      });
 	      entityFrom.deactivateGroupMode();
+	    }
+	  }, {
+	    key: "hideSubTasks",
+	    value: function hideSubTasks(entity, item) {
+	      if (item && item.isParentTask()) {
+	        if (this.subTasksCreator.isShown(item)) {
+	          this.subTasksCreator.toggleSubTasks(entity, item);
+	        }
+	      }
 	    }
 	  }, {
 	    key: "moveTo",
 	    value: function moveTo(entityFrom, entityTo, item) {
 	      var after = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
 	      var update = arguments.length > 4 && arguments[4] !== undefined ? arguments[4] : true;
+	      this.hideSubTasks(entityFrom, item);
 	      var itemNode = item.getItemNode();
 	      var entityListNode = entityTo.getListItemsNode();
 
 	      if (after) {
-	        main_core.Dom.append(itemNode, entityListNode);
+	        this.domBuilder.append(itemNode, entityListNode);
 	      } else {
-	        this.appendItemAfterItem(itemNode, entityListNode.firstElementChild);
+	        this.domBuilder.appendItemAfterItem(itemNode, entityListNode.firstElementChild);
 	      }
 
 	      this.moveItemFromEntityToEntity(item, entityFrom, entityTo);
@@ -7362,19 +9290,47 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      }
 	    }
 	  }, {
+	    key: "moveToPosition",
+	    value: function moveToPosition(entityFrom, entityTo, item) {
+	      this.hideSubTasks(entityFrom, item);
+	      var itemNode = item.getItemNode();
+	      var entityListNode = entityTo.getListItemsNode();
+	      var bindItemNode = entityListNode.children[item.getSort()];
+
+	      if (main_core.Type.isUndefined(bindItemNode)) {
+	        this.domBuilder.append(itemNode, entityListNode);
+	      } else {
+	        var bindItemSort = parseInt(bindItemNode.dataset.sort, 10);
+	        var isMoveFromAnotherEntity = entityFrom.getId() !== entityTo.getId();
+
+	        if (bindItemSort >= item.getPreviousSort()) {
+	          if (isMoveFromAnotherEntity) {
+	            this.domBuilder.insertBefore(itemNode, bindItemNode);
+	          } else {
+	            this.domBuilder.appendItemAfterItem(itemNode, bindItemNode);
+	          }
+	        } else {
+	          this.domBuilder.insertBefore(itemNode, bindItemNode);
+	        }
+	      }
+
+	      this.moveItemFromEntityToEntity(item, entityFrom, entityTo);
+	    }
+	  }, {
 	    key: "onMoveItemUpdate",
 	    value: function onMoveItemUpdate(entityFrom, entityTo, item) {
-	      var _this8 = this;
+	      var _this9 = this;
 
 	      this.requestSender.updateItem({
 	        itemId: item.getItemId(),
 	        itemType: item.getItemType(),
 	        entityId: entityTo.getId(),
+	        sourceEntityId: entityFrom.getId(),
 	        fromActiveSprint: entityFrom.getEntityType() === 'sprint' && entityFrom.isActive() ? 'Y' : 'N',
 	        toActiveSprint: entityTo.getEntityType() === 'sprint' && entityTo.isActive() ? 'Y' : 'N',
-	        sortInfo: babelHelpers.objectSpread({}, this.calculateSort(entityFrom.getListItemsNode(), true), this.calculateSort(entityTo.getListItemsNode(), true))
+	        sortInfo: babelHelpers.objectSpread({}, this.calculateSort(entityTo.getListItemsNode(), new Set([item.getItemId()]), true), this.calculateSort(entityFrom.getListItemsNode(), new Set(), true))
 	      }).catch(function (response) {
-	        _this8.requestSender.showErrorAlert(response);
+	        _this9.requestSender.showErrorAlert(response);
 	      });
 	    }
 	  }, {
@@ -7396,7 +9352,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "showListSprintsToMove",
 	    value: function showListSprintsToMove(entityFrom, item, button) {
-	      var _this9 = this;
+	      var _this10 = this;
 
 	      var id = "item-sprint-action-".concat(entityFrom.getEntityType() + entityFrom.getId() + item.itemId);
 
@@ -7414,9 +9370,9 @@ this.BX.Tasks = this.BX.Tasks || {};
 	        id: id,
 	        bindElement: button
 	      });
-	      this.sprints.forEach(function (sprint) {
-	        if (!sprint.isCompleted() && !_this9.isSameSprint(entityFrom, sprint)) {
-	          _this9.moveToSprintMenu.addMenuItem({
+	      this.entityStorage.getSprints().forEach(function (sprint) {
+	        if (!sprint.isCompleted() && !_this10.isSameSprint(entityFrom, sprint)) {
+	          _this10.moveToSprintMenu.addMenuItem({
 	            text: sprint.getName(),
 	            onclick: function onclick(event, menuItem) {
 	              var message = main_core.Loc.getMessage('TASKS_SCRUM_CONFIRM_TEXT_MOVE_TASK_FROM_ACTIVE');
@@ -7425,11 +9381,11 @@ this.BX.Tasks = this.BX.Tasks || {};
 	                message = main_core.Loc.getMessage('TASKS_SCRUM_CONFIRM_TEXT_MOVE_TASKS_FROM_ACTIVE');
 	              }
 
-	              _this9.onMoveConfirm(entityFrom, message).then(function () {
+	              _this10.onMoveConfirm(entityFrom, message).then(function () {
 	                if (entityFrom.isGroupMode()) {
-	                  _this9.moveToWithGroupMode(entityFrom, sprint, item, true, false);
+	                  _this10.moveToWithGroupMode(entityFrom, sprint, item, true, false);
 	                } else {
-	                  _this9.moveTo(entityFrom, sprint, item);
+	                  _this10.moveTo(entityFrom, sprint, item);
 	                }
 	              });
 
@@ -7444,143 +9400,6 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    key: "isSameSprint",
 	    value: function isSameSprint(first, second) {
 	      return first.getEntityType() === 'sprint' && first.getId() === second.getId();
-	    }
-	  }, {
-	    key: "calculateSort",
-	    value: function calculateSort(container) {
-	      var _this10 = this;
-
-	      var moveToAnotherEntity = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
-	      //todo test
-	      var listSortInfo = {};
-	      var items = babelHelpers.toConsumableArray(container.querySelectorAll('[data-sort]'));
-	      var sort = 1;
-	      items.forEach(function (itemNode) {
-	        var itemId = itemNode.dataset.itemId;
-
-	        var item = _this10.findItemByItemId(itemId);
-
-	        if (item) {
-	          item.setSort(sort);
-	          listSortInfo[itemId] = {
-	            sort: sort
-	          };
-
-	          if (moveToAnotherEntity) {
-	            listSortInfo[itemId].entityId = container.dataset.entityId;
-	          }
-
-	          itemNode.dataset.sort = sort;
-	        }
-
-	        sort++;
-	      });
-	      return listSortInfo;
-	    }
-	  }, {
-	    key: "calculateSprintSort",
-	    value: function calculateSprintSort() {
-	      var _this11 = this;
-
-	      var increment = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
-	      //todo test
-	      var listSortInfo = {};
-	      var container = this.sprintListNode.querySelector('.tasks-scrum-sprint-planned-list');
-	      var sprints = babelHelpers.toConsumableArray(container.querySelectorAll('[data-sprint-sort]'));
-	      var sort = 1 + increment;
-	      sprints.forEach(function (sprintNode) {
-	        var sprintId = sprintNode.dataset.sprintId;
-
-	        var sprint = _this11.findEntityByEntityId(sprintId);
-
-	        if (sprint) {
-	          sprint.setSort(sort);
-	          listSortInfo[sprintId] = {
-	            sort: sort
-	          };
-	          sprintNode.dataset.sprintSort = sort;
-	          sort++;
-	        }
-	      });
-	      return listSortInfo;
-	    }
-	  }, {
-	    key: "appendItemAfterItem",
-	    value: function appendItemAfterItem(newNode, item) {
-	      if (item.nextElementSibling) {
-	        main_core.Dom.insertBefore(newNode, item.nextElementSibling);
-	      } else {
-	        main_core.Dom.append(newNode, item.parentElement);
-	      }
-	    }
-	  }, {
-	    key: "onItemMove",
-	    value: function onItemMove(dragEndEvent) {
-	      var _this12 = this;
-
-	      if (!dragEndEvent.endContainer) {
-	        return;
-	      }
-
-	      var sourceContainer = dragEndEvent.sourceContainer;
-	      var endContainer = dragEndEvent.endContainer;
-
-	      if (endContainer === this.sprintCreatingDropZoneNode) {
-	        var createNewSprintAndMoveItem = function createNewSprintAndMoveItem() {
-	          _this12.createSprint().then(function (sprint) {
-	            var itemNode = dragEndEvent.source;
-	            var itemId = itemNode.dataset.itemId;
-
-	            var item = _this12.findItemByItemId(itemId);
-
-	            _this12.moveTo(_this12.backlog, sprint, item);
-	          });
-	        };
-
-	        createNewSprintAndMoveItem();
-	        return;
-	      }
-
-	      var sourceEntityId = parseInt(sourceContainer.dataset.entityId, 10);
-	      var endEntityId = parseInt(endContainer.dataset.entityId, 10);
-
-	      if (sourceEntityId === endEntityId) {
-	        var moveInCurrentContainer = function moveInCurrentContainer() {
-	          _this12.requestSender.updateItemSort({
-	            sortInfo: _this12.calculateSort(sourceContainer)
-	          }).catch(function (response) {
-	            _this12.requestSender.showErrorAlert(response);
-	          });
-	        };
-
-	        moveInCurrentContainer();
-	      } else {
-	        var moveInAnotherContainer = function moveInAnotherContainer() {
-	          var itemNode = dragEndEvent.source;
-	          var itemId = itemNode.dataset.itemId;
-
-	          var item = _this12.findItemByItemId(itemId);
-
-	          var sourceEntity = _this12.findEntityByEntityId(sourceEntityId);
-
-	          var endEntity = _this12.findEntityByEntityId(endEntityId);
-
-	          _this12.moveItemFromEntityToEntity(item, sourceEntity, endEntity);
-
-	          _this12.requestSender.updateItemSort({
-	            entityId: endEntity.getId(),
-	            itemId: item.getItemId(),
-	            itemType: item.getItemType(),
-	            fromActiveSprint: sourceEntity.getEntityType() === 'sprint' && sourceEntity.isActive() ? 'Y' : 'N',
-	            toActiveSprint: endEntity.getEntityType() === 'sprint' && endEntity.isActive() ? 'Y' : 'N',
-	            sortInfo: _this12.calculateSort(endContainer, true)
-	          }).catch(function (response) {
-	            _this12.requestSender.showErrorAlert(response);
-	          });
-	        };
-
-	        moveInAnotherContainer();
-	      }
 	    }
 	  }, {
 	    key: "onMoveConfirm",
@@ -7600,142 +9419,9 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      });
 	    }
 	  }, {
-	    key: "onSprintMove",
-	    value: function onSprintMove(dragEndEvent) {
-	      var _this13 = this;
-
-	      if (!dragEndEvent.endContainer) {
-	        return;
-	      }
-
-	      this.requestSender.updateSprintSort({
-	        sortInfo: this.calculateSprintSort()
-	      }).catch(function (response) {
-	        _this13.requestSender.showErrorAlert(response);
-	      });
-	    }
-	  }, {
-	    key: "findItemByItemId",
-	    value: function findItemByItemId(itemId) {
-	      itemId = parseInt(itemId, 10);
-	      var backlogItems = this.backlog.getItems();
-
-	      if (backlogItems.has(itemId)) {
-	        return backlogItems.get(itemId);
-	      }
-
-	      var sprint = babelHelpers.toConsumableArray(this.sprints.values()).find(function (sprint) {
-	        return sprint.getItems().has(itemId);
-	      });
-
-	      if (sprint) {
-	        return sprint.getItems().get(itemId);
-	      }
-
-	      return null;
-	    }
-	  }, {
-	    key: "findEntityByItemId",
-	    value: function findEntityByItemId(itemId) {
-	      itemId = parseInt(itemId, 10);
-	      var backlogItems = this.backlog.getItems();
-
-	      if (backlogItems.has(itemId)) {
-	        return this.backlog;
-	      }
-
-	      return babelHelpers.toConsumableArray(this.sprints.values()).find(function (sprint) {
-	        return sprint.getItems().has(itemId);
-	      });
-	    }
-	  }, {
-	    key: "findEntityByEntityId",
-	    value: function findEntityByEntityId(entityId) {
-	      entityId = parseInt(entityId, 10);
-
-	      if (this.backlog.getId() === entityId) {
-	        return this.backlog;
-	      }
-
-	      return babelHelpers.toConsumableArray(this.sprints.values()).find(function (sprint) {
-	        return sprint.getId() === entityId;
-	      });
-	    }
-	  }, {
-	    key: "moveItem",
-	    value: function moveItem(item, button) {
-	      var _this14 = this;
-
-	      //todo test
-	      var entity = this.findEntityByItemId(item.getItemId());
-	      var listToMove = [];
-
-	      if (!entity.isFirstItem(item)) {
-	        listToMove.push({
-	          text: main_core.Loc.getMessage('TASKS_SCRUM_ITEM_ACTIONS_MOVE_UP'),
-	          onclick: function onclick(event, menuItem) {
-	            if (entity.isGroupMode()) {
-	              var groupModeItems = entity.getGroupModeItems();
-	              var sortedItems = babelHelpers.toConsumableArray(groupModeItems.values()).sort(function (first, second) {
-	                if (first.getSort() < second.getSort()) return 1;
-	                if (first.getSort() > second.getSort()) return -1;
-	              });
-	              sortedItems.forEach(function (groupModeItem) {
-	                _this14.moveItemToUp(groupModeItem, entity.getListItemsNode(), entity.hasInput(), false);
-	              });
-
-	              _this14.requestSender.updateItemSort({
-	                sortInfo: _this14.calculateSort(entity.getListItemsNode())
-	              }).catch(function (response) {
-	                _this14.requestSender.showErrorAlert(response);
-	              });
-
-	              entity.deactivateGroupMode();
-	            } else {
-	              _this14.moveItemToUp(item, entity.getListItemsNode(), entity.hasInput());
-	            }
-
-	            menuItem.getMenuWindow().close();
-	          }
-	        });
-	      }
-
-	      if (!entity.isLastItem(item)) {
-	        listToMove.push({
-	          text: main_core.Loc.getMessage('TASKS_SCRUM_ITEM_ACTIONS_MOVE_DOWN'),
-	          onclick: function onclick(event, menuItem) {
-	            if (entity.isGroupMode()) {
-	              var groupModeItems = entity.getGroupModeItems();
-	              var sortedItems = babelHelpers.toConsumableArray(groupModeItems.values()).sort(function (first, second) {
-	                if (first.getSort() > second.getSort()) return 1;
-	                if (first.getSort() < second.getSort()) return -1;
-	              });
-	              sortedItems.forEach(function (groupModeItem) {
-	                _this14.moveItemToDown(groupModeItem, entity.getListItemsNode(), false);
-	              });
-
-	              _this14.requestSender.updateItemSort({
-	                sortInfo: _this14.calculateSort(entity.getListItemsNode())
-	              }).catch(function (response) {
-	                _this14.requestSender.showErrorAlert(response);
-	              });
-
-	              entity.deactivateGroupMode();
-	            } else {
-	              _this14.moveItemToDown(item, entity.getListItemsNode());
-	            }
-
-	            menuItem.getMenuWindow().close();
-	          }
-	        });
-	      }
-
-	      this.showMoveItemMenu(item, button, listToMove);
-	    }
-	  }, {
 	    key: "showMoveItemMenu",
 	    value: function showMoveItemMenu(item, button, listToMove) {
-	      var _this15 = this;
+	      var _this11 = this;
 
 	      var id = "item-move-".concat(item.itemId);
 
@@ -7748,67 +9434,1430 @@ this.BX.Tasks = this.BX.Tasks || {};
 	        bindElement: button
 	      });
 	      listToMove.forEach(function (item) {
-	        _this15.moveItemMenu.addMenuItem(item);
+	        _this11.moveItemMenu.addMenuItem(item);
 	      });
 	      this.moveItemMenu.show();
 	    }
-	  }, {
-	    key: "moveItemToUp",
-	    value: function moveItemToUp(item, listItemsNode) {
-	      var entityWithInput = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
-	      var updateSort = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : true;
+	  }]);
+	  return ItemMover;
+	}(main_core_events.EventEmitter);
 
-	      if (entityWithInput) {
-	        this.appendItemAfterItem(item.getItemNode(), listItemsNode.firstElementChild);
+	var PullItem = /*#__PURE__*/function () {
+	  function PullItem(params) {
+	    babelHelpers.classCallCheck(this, PullItem);
+	    this.requestSender = params.requestSender;
+	    this.domBuilder = params.domBuilder;
+	    this.entityStorage = params.entityStorage;
+	    this.tagSearcher = params.tagSearcher;
+	    this.itemMover = params.itemMover;
+	    this.subTasksCreator = params.subTasksCreator;
+	    this.counters = params.counters;
+	    this.currentUserId = params.currentUserId;
+	    this.listToAddAfterUpdate = new Map();
+	    this.listIdsToSkipAdding = new Set();
+	    this.listIdsToSkipUpdating = new Set();
+	    this.listIdsToSkipRemoving = new Set();
+	    this.listIdsToSkipSorting = new Set();
+	    this.itemMover.subscribe('calculateSort', this.onCalculateSort.bind(this));
+	  }
+
+	  babelHelpers.createClass(PullItem, [{
+	    key: "getModuleId",
+	    value: function getModuleId() {
+	      return 'tasks';
+	    }
+	  }, {
+	    key: "getMap",
+	    value: function getMap() {
+	      return {
+	        itemAdded: this.onItemAdded.bind(this),
+	        itemUpdated: this.onItemUpdated.bind(this),
+	        itemRemoved: this.onItemRemoved.bind(this),
+	        itemSortUpdated: this.onItemSortUpdated.bind(this),
+	        comment_add: this.onCommentAdd.bind(this)
+	      };
+	    }
+	  }, {
+	    key: "onItemAdded",
+	    value: function onItemAdded(itemData) {
+	      var _this = this;
+
+	      var item = new Item(itemData);
+	      this.setDelayedAdd(item);
+	      this.externalAdd(item).finally(function () {
+	        return _this.cleanDelayedAdd(item);
+	      }).then(function () {
+	        return _this.addItemToEntity(item);
+	      }).catch(function () {});
+	    }
+	  }, {
+	    key: "onItemUpdated",
+	    value: function onItemUpdated(itemData) {
+	      var item = new Item(itemData);
+
+	      if (this.isDelayedAdd(item)) {
+	        this.cleanDelayedAdd(item);
+
+	        if (this.needSkipAdd(item)) {
+	          this.cleanSkipAdd(item);
+	          return;
+	        }
+
+	        this.addItemToEntity(item);
+	        return;
+	      }
+
+	      if (this.needSkipUpdate(item)) {
+	        this.cleanSkipUpdate(item);
+	        return;
+	      }
+
+	      this.updateItem(item);
+	    }
+	  }, {
+	    key: "onItemRemoved",
+	    value: function onItemRemoved(params) {
+	      if (this.needSkipRemove(params.itemId)) {
+	        this.cleanSkipRemove(params.itemId);
+	        return;
+	      }
+
+	      var item = this.entityStorage.findItemByItemId(params.itemId);
+
+	      if (item) {
+	        var entity = this.entityStorage.findEntityByItemId(item.getItemId());
+	        entity.removeItem(item);
+	        item.removeYourself();
+	      }
+	    }
+	  }, {
+	    key: "onItemSortUpdated",
+	    value: function onItemSortUpdated(itemsSortInfo) {
+	      var _this2 = this;
+
+	      var itemsToSort = new Map();
+	      var itemsInfoToSort = new Map();
+	      Object.entries(itemsSortInfo).forEach(function (_ref) {
+	        var _ref2 = babelHelpers.slicedToArray(_ref, 2),
+	            itemId = _ref2[0],
+	            info = _ref2[1];
+
+	        var item = _this2.entityStorage.findItemByItemId(itemId);
+
+	        if (item) {
+	          if (!_this2.needSkipSort(info.tmpId)) {
+	            itemsToSort.set(item.getItemId(), item);
+	            itemsInfoToSort.set(item.getItemId(), info);
+	          }
+
+	          _this2.cleanSkipRemove(info.tmpId);
+	        }
+	      });
+	      itemsToSort.forEach(function (item) {
+	        var itemInfoToSort = itemsInfoToSort.get(item.getItemId());
+	        item.setSort(itemInfoToSort.sort);
+
+	        var sourceEntity = _this2.entityStorage.findEntityByEntityId(item.getEntityId());
+
+	        if (sourceEntity) {
+	          var targetEntityId = main_core.Type.isUndefined(itemInfoToSort.entityId) ? item.getEntityId() : itemInfoToSort.entityId;
+
+	          var targetEntity = _this2.entityStorage.findEntityByEntityId(targetEntityId);
+
+	          if (!targetEntity || sourceEntity.getId() === targetEntity.getId()) {
+	            targetEntity = sourceEntity;
+	          }
+
+	          _this2.itemMover.moveToPosition(sourceEntity, targetEntity, item);
+
+	          _this2.entityStorage.recalculateItemsSort();
+	        }
+	      });
+	    }
+	  }, {
+	    key: "onCommentAdd",
+	    value: function onCommentAdd(params) {
+	      var _this3 = this;
+
+	      var participants = main_core.Type.isArray(params.participants) ? params.participants : [];
+
+	      if (participants.includes(this.currentUserId.toString())) {
+	        var xmlId = params.entityXmlId.split('_');
+
+	        if (xmlId) {
+	          var entityType = xmlId[0];
+	          var taskId = xmlId[1];
+	          var item = this.entityStorage.findItemBySourceId(taskId);
+
+	          if (entityType === 'TASK' && item) {
+	            this.requestSender.getCurrentState({
+	              taskId: item.getSourceId()
+	            }).then(function (response) {
+	              var tmpItem = new Item(response.data.itemData);
+
+	              _this3.updateItem(tmpItem, item);
+
+	              _this3.counters.updateState(response.data.counters);
+	            }).catch(function (response) {
+	              _this3.requestSender.showErrorAlert(response);
+	            });
+	          }
+	        }
+	      }
+	    }
+	  }, {
+	    key: "addItemToEntity",
+	    value: function addItemToEntity(item) {
+	      var _this4 = this;
+
+	      if (item.isSubTask()) {
+	        return;
+	      }
+
+	      this.requestSender.hasTaskInFilter({
+	        taskId: item.getSourceId()
+	      }).then(function (response) {
+	        if (!response.data.has) {
+	          return;
+	        }
+
+	        var entity = _this4.entityStorage.findEntityByEntityId(item.getEntityId());
+
+	        if (!entity) {
+	          return;
+	        }
+
+	        var bindItemNode = entity.getListItemsNode().children[1];
+
+	        if (bindItemNode) {
+	          _this4.domBuilder.insertBefore(item.render(), bindItemNode);
+	        } else {
+	          _this4.domBuilder.append(item.render(), entity.getListItemsNode());
+	        }
+
+	        item.onAfterAppend(entity.getListItemsNode());
+	        entity.setItem(item);
+	        item.getTags().forEach(function (tag) {
+	          _this4.tagSearcher.addTagToSearcher(tag);
+	        });
+	      }).catch(function (response) {
+	        _this4.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "updateItem",
+	    value: function updateItem(tmpItem, item) {
+	      if (!item) {
+	        item = this.entityStorage.findItemByItemId(tmpItem.getItemId());
+	      }
+
+	      if (item) {
+	        if (item.isParentTask()) {
+	          if (this.subTasksCreator.isShown(item)) {
+	            var entity = this.entityStorage.findEntityByEntityId(item.getEntityId());
+	            this.subTasksCreator.hideSubTaskItems(entity, item);
+	          }
+
+	          this.subTasksCreator.cleanSubTasks(item);
+	        }
+
+	        var isParentChangeAction = tmpItem.isSubTask() !== item.isSubTask();
+
+	        if (isParentChangeAction) {
+	          if (tmpItem.isSubTask()) {
+	            var _entity = this.entityStorage.findEntityByItemId(item.getItemId());
+
+	            _entity.removeItem(item);
+
+	            item.removeYourself();
+	          }
+
+	          return;
+	        }
+
+	        if (tmpItem.getEntityId() !== item.getEntityId()) {
+	          var targetEntityId = tmpItem.getEntityId();
+	          var sourceEntityId = item.getEntityId();
+	          var targetEntity = this.entityStorage.findEntityByEntityId(targetEntityId);
+	          var sourceEntity = this.entityStorage.findEntityByEntityId(sourceEntityId);
+
+	          if (targetEntity && sourceEntity) {
+	            this.itemMover.moveToPosition(sourceEntity, targetEntity, item);
+	            this.entityStorage.recalculateItemsSort();
+	          }
+	        }
+
+	        item.updateYourself(tmpItem);
 	      } else {
-	        main_core.Dom.insertBefore(item.getItemNode(), listItemsNode.firstElementChild);
-	      }
+	        if (tmpItem.isSubTask()) {
+	          var parentItem = this.entityStorage.findItemBySourceId(tmpItem.getParentTaskId());
 
-	      if (updateSort) {
-	        this.updateItemsSort(item, listItemsNode);
+	          if (parentItem) {
+	            parentItem.updateSubTasksPoints(tmpItem.getSourceId(), tmpItem.getStoryPoints());
+	          }
+	        } else {
+	          this.addItemToEntity(tmpItem);
+	        }
 	      }
 	    }
 	  }, {
-	    key: "moveItemToDown",
-	    value: function moveItemToDown(item, listItemsNode) {
-	      var updateSort = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : true;
-	      main_core.Dom.append(item.getItemNode(), listItemsNode);
+	    key: "onCalculateSort",
+	    value: function onCalculateSort(baseEvent) {
+	      var _this5 = this;
 
-	      if (updateSort) {
-	        this.updateItemsSort(item, listItemsNode);
+	      var listSortInfo = baseEvent.getData();
+	      Object.entries(listSortInfo).forEach(function (_ref3) {
+	        var _ref4 = babelHelpers.slicedToArray(_ref3, 2),
+	            itemId = _ref4[0],
+	            info = _ref4[1];
+
+	        if (Object.prototype.hasOwnProperty.call(info, 'tmpId')) {
+	          _this5.addTmpIdToSkipSorting(info.tmpId);
+	        }
+	      });
+	    }
+	  }, {
+	    key: "addTmpIdsToSkipAdding",
+	    value: function addTmpIdsToSkipAdding(tmpId) {
+	      this.listIdsToSkipAdding.add(tmpId);
+	    }
+	  }, {
+	    key: "addIdToSkipUpdating",
+	    value: function addIdToSkipUpdating(itemId) {
+	      this.listIdsToSkipUpdating.add(itemId);
+	    }
+	  }, {
+	    key: "addIdToSkipRemoving",
+	    value: function addIdToSkipRemoving(itemId) {
+	      this.listIdsToSkipRemoving.add(itemId);
+	    }
+	  }, {
+	    key: "addTmpIdToSkipSorting",
+	    value: function addTmpIdToSkipSorting(itemId) {
+	      this.listIdsToSkipSorting.add(itemId);
+	    }
+	  }, {
+	    key: "externalAdd",
+	    value: function externalAdd(item) {
+	      var _this6 = this;
+
+	      return new Promise(function (resolve, reject) {
+	        setTimeout(function () {
+	          return _this6.isDelayedAdd(item) ? resolve() : reject();
+	        }, 3000);
+	      });
+	    }
+	  }, {
+	    key: "isDelayedAdd",
+	    value: function isDelayedAdd(item) {
+	      return this.listToAddAfterUpdate.has(item.getItemId());
+	    }
+	  }, {
+	    key: "setDelayedAdd",
+	    value: function setDelayedAdd(item) {
+	      this.listToAddAfterUpdate.set(item.getItemId(), item);
+	    }
+	  }, {
+	    key: "cleanDelayedAdd",
+	    value: function cleanDelayedAdd(item) {
+	      this.listToAddAfterUpdate.delete(item.getItemId());
+	    }
+	  }, {
+	    key: "needSkipAdd",
+	    value: function needSkipAdd(item) {
+	      return this.listIdsToSkipAdding.has(item.getTmpId());
+	    }
+	  }, {
+	    key: "cleanSkipAdd",
+	    value: function cleanSkipAdd(item) {
+	      this.listIdsToSkipAdding.delete(item.getTmpId());
+	    }
+	  }, {
+	    key: "needSkipUpdate",
+	    value: function needSkipUpdate(item) {
+	      return this.listIdsToSkipUpdating.has(item.getItemId());
+	    }
+	  }, {
+	    key: "cleanSkipUpdate",
+	    value: function cleanSkipUpdate(item) {
+	      this.listIdsToSkipUpdating.delete(item.getItemId());
+	    }
+	  }, {
+	    key: "needSkipRemove",
+	    value: function needSkipRemove(itemId) {
+	      return this.listIdsToSkipRemoving.has(itemId);
+	    }
+	  }, {
+	    key: "cleanSkipRemove",
+	    value: function cleanSkipRemove(itemId) {
+	      this.listIdsToSkipRemoving.delete(itemId);
+	    }
+	  }, {
+	    key: "needSkipSort",
+	    value: function needSkipSort(tmpId) {
+	      return this.listIdsToSkipSorting.has(tmpId);
+	    }
+	  }, {
+	    key: "cleanSkipSort",
+	    value: function cleanSkipSort(tmpId) {
+	      this.listIdsToSkipSorting.delete(tmpId);
+	    }
+	  }]);
+	  return PullItem;
+	}();
+
+	var PullEpic = /*#__PURE__*/function () {
+	  function PullEpic(params) {
+	    babelHelpers.classCallCheck(this, PullEpic);
+	    this.requestSender = params.requestSender;
+	    this.domBuilder = params.domBuilder;
+	    this.entityStorage = params.entityStorage;
+	    this.epic = params.epic;
+	    this.listIdsToSkipAdding = new Set();
+	    this.listIdsToSkipUpdating = new Set();
+	    this.listIdsToSkipRemoving = new Set();
+	  }
+
+	  babelHelpers.createClass(PullEpic, [{
+	    key: "getModuleId",
+	    value: function getModuleId() {
+	      return 'tasks';
+	    }
+	  }, {
+	    key: "getMap",
+	    value: function getMap() {
+	      return {
+	        epicAdded: this.onEpicAdded.bind(this),
+	        epicUpdated: this.onEpicUpdated.bind(this),
+	        epicRemoved: this.onEpicRemoved.bind(this)
+	      };
+	    }
+	  }, {
+	    key: "onEpicAdded",
+	    value: function onEpicAdded(epicData) {
+	      this.epic.onAfterCreateEpic(epicData);
+	    }
+	  }, {
+	    key: "onEpicUpdated",
+	    value: function onEpicUpdated(epicData) {
+	      this.epic.onAfterUpdateEpic(epicData);
+	    }
+	  }, {
+	    key: "onEpicRemoved",
+	    value: function onEpicRemoved(epicData) {
+	      this.epic.onAfterRemoveEpic(epicData);
+	    }
+	  }]);
+	  return PullEpic;
+	}();
+
+	var SprintMover = /*#__PURE__*/function () {
+	  function SprintMover(params) {
+	    babelHelpers.classCallCheck(this, SprintMover);
+	    this.requestSender = params.requestSender;
+	    this.domBuilder = params.domBuilder;
+	    this.entityStorage = params.entityStorage;
+	    this.bindHandlers();
+	  }
+
+	  babelHelpers.createClass(SprintMover, [{
+	    key: "bindHandlers",
+	    value: function bindHandlers() {
+	      this.domBuilder.subscribe('sprintMove', this.onSprintMove.bind(this));
+	    }
+	  }, {
+	    key: "onSprintMove",
+	    value: function onSprintMove(baseEvent) {
+	      var _this = this;
+
+	      var dragEndEvent = baseEvent.getData();
+
+	      if (!dragEndEvent.endContainer) {
+	        return;
+	      }
+
+	      this.requestSender.updateSprintSort({
+	        sortInfo: this.calculateSprintSort()
+	      }).catch(function (response) {
+	        _this.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "calculateSprintSort",
+	    value: function calculateSprintSort() {
+	      var _this2 = this;
+
+	      var increment = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : 0;
+	      var listSortInfo = {};
+	      var container = this.domBuilder.getSprintPlannedListNode();
+	      var sprints = babelHelpers.toConsumableArray(container.querySelectorAll('[data-sprint-sort]'));
+	      var sort = 1 + increment;
+	      sprints.forEach(function (sprintNode) {
+	        var sprintId = sprintNode.dataset.sprintId;
+
+	        var sprint = _this2.entityStorage.findEntityByEntityId(sprintId);
+
+	        if (sprint) {
+	          sprint.setSort(sort);
+	          listSortInfo[sprintId] = {
+	            sort: sort
+	          };
+	          sprintNode.dataset.sprintSort = sort;
+	          sort++;
+	        }
+	      });
+	      return listSortInfo;
+	    }
+	  }]);
+	  return SprintMover;
+	}();
+
+	var Plan = /*#__PURE__*/function (_View) {
+	  babelHelpers.inherits(Plan, _View);
+
+	  function Plan(params) {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, Plan);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Plan).call(this, params));
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.Plan');
+
+	    _this.pathToTask = params.pathToTask;
+	    _this.defaultResponsible = params.defaultResponsible;
+	    _this.activeSprintId = parseInt(params.activeSprintId, 10);
+	    _this.views = params.views;
+	    _this.entityStorage = new EntityStorage();
+
+	    _this.entityStorage.addBacklog(Backlog.buildBacklog(params.backlog));
+
+	    params.sprints.forEach(function (sprintData) {
+	      sprintData.defaultSprintDuration = params.defaultSprintDuration;
+	      var sprint = Sprint.buildSprint(sprintData);
+
+	      _this.entityStorage.addSprint(sprint);
+	    });
+	    _this.sidePanel = new SidePanel();
+	    _this.filterHandler = new FilterHandler({
+	      filter: _this.filter,
+	      requestSender: _this.requestSender,
+	      entityStorage: _this.entityStorage
+	    });
+	    _this.tagSearcher = new TagSearcher();
+	    Object.values(params.tags.epic).forEach(function (epic) {
+	      _this.tagSearcher.addEpicToSearcher(epic);
+	    });
+	    Object.values(params.tags.task).forEach(function (tagName) {
+	      _this.tagSearcher.addTagToSearcher(tagName);
+	    });
+	    _this.domBuilder = new DomBuilder({
+	      requestSender: _this.requestSender,
+	      entityStorage: _this.entityStorage,
+	      defaultSprintDuration: params.defaultSprintDuration,
+	      pageNumberToCompletedSprints: params.pageNumberToCompletedSprints
+	    });
+
+	    _this.domBuilder.subscribe('beforeCreateSprint', function (baseEvent) {
+	      var requestData = baseEvent.getData();
+
+	      _this.pullSprint.addTmpIdToSkipAdding(requestData.tmpId);
+	    });
+
+	    _this.domBuilder.subscribe('createSprint', function (baseEvent) {
+	      return _this.onSubscribeToSprint(baseEvent.getData());
+	    });
+
+	    _this.domBuilder.subscribe('createSprintNode', function (baseEvent) {
+	      return _this.onSubscribeToSprint(baseEvent.getData());
+	    });
+
+	    _this.sprintMover = new SprintMover({
+	      requestSender: _this.requestSender,
+	      domBuilder: _this.domBuilder,
+	      entityStorage: _this.entityStorage
+	    });
+	    _this.subTasksCreator = new SubTasksManager({
+	      requestSender: _this.requestSender,
+	      domBuilder: _this.domBuilder
+	    });
+	    _this.itemMover = new ItemMover({
+	      requestSender: _this.requestSender,
+	      domBuilder: _this.domBuilder,
+	      entityStorage: _this.entityStorage,
+	      subTasksCreator: _this.subTasksCreator
+	    });
+	    _this.itemStyleDesigner = new ItemStyleDesigner({
+	      requestSender: _this.requestSender,
+	      entityStorage: _this.entityStorage
+	    });
+	    _this.epic = new Epic({
+	      entity: _this.entityStorage.getBacklog(),
+	      requestSender: _this.requestSender,
+	      entityStorage: _this.entityStorage,
+	      sidePanel: _this.sidePanel,
+	      filter: _this.filter,
+	      tagSearcher: _this.tagSearcher
+	    });
+	    _this.pullSprint = new PullSprint({
+	      requestSender: _this.requestSender,
+	      domBuilder: _this.domBuilder,
+	      entityStorage: _this.entityStorage,
+	      groupId: _this.getCurrentGroupId()
+	    });
+	    _this.pullItem = new PullItem({
+	      requestSender: _this.requestSender,
+	      domBuilder: _this.domBuilder,
+	      entityStorage: _this.entityStorage,
+	      tagSearcher: _this.tagSearcher,
+	      itemMover: _this.itemMover,
+	      subTasksCreator: _this.subTasksCreator,
+	      counters: _this.counters,
+	      currentUserId: _this.getCurrentUserId()
+	    });
+	    _this.pullEpic = new PullEpic({
+	      requestSender: _this.requestSender,
+	      domBuilder: _this.domBuilder,
+	      entityStorage: _this.entityStorage,
+	      epic: _this.epic
+	    });
+
+	    _this.bindHandlers();
+
+	    _this.subscribeToPull();
+
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(Plan, [{
+	    key: "renderTo",
+	    value: function renderTo(container) {
+	      babelHelpers.get(babelHelpers.getPrototypeOf(Plan.prototype), "renderTo", this).call(this, container);
+	      this.domBuilder.renderTo(container);
+	    }
+	  }, {
+	    key: "renderButtonsTo",
+	    value: function renderButtonsTo(container) {
+	      babelHelpers.get(babelHelpers.getPrototypeOf(Plan.prototype), "renderButtonsTo", this).call(this, container);
+	      var teamSpeedButton = new TeamSpeedButton();
+	      teamSpeedButton.subscribe('click', this.onShowTeamSpeedChart.bind(this));
+	      main_core.Dom.append(teamSpeedButton.render(), container);
+	    }
+	  }, {
+	    key: "subscribeToPull",
+	    value: function subscribeToPull() {
+	      pull_client.PULL.subscribe(this.pullSprint);
+	      pull_client.PULL.subscribe(this.pullItem);
+	      pull_client.PULL.subscribe(this.pullEpic);
+	    }
+	  }, {
+	    key: "bindHandlers",
+	    value: function bindHandlers() {
+	      var _this2 = this;
+
+	      this.entityStorage.getBacklog().subscribe('createTaskItem', this.onCreateTaskItem.bind(this));
+	      this.entityStorage.getBacklog().subscribe('updateItem', this.onUpdateItem.bind(this));
+	      this.entityStorage.getBacklog().subscribe('showTask', this.onShowTask.bind(this));
+	      this.entityStorage.getBacklog().subscribe('moveItem', this.onMoveItem.bind(this));
+	      this.entityStorage.getBacklog().subscribe('moveToSprint', this.onMoveToSprint.bind(this));
+	      this.entityStorage.getBacklog().subscribe('removeItem', this.onRemoveItem.bind(this));
+	      this.entityStorage.getBacklog().subscribe('changeTaskResponsible', this.onChangeTaskResponsible.bind(this));
+	      this.entityStorage.getBacklog().subscribe('openAddEpicForm', this.onOpenAddEpicForm.bind(this));
+	      this.entityStorage.getBacklog().subscribe('openListEpicGrid', this.onOpenListEpicGrid.bind(this));
+	      this.entityStorage.getBacklog().subscribe('openDefinitionOfDone', this.onOpenDefinitionOfDone.bind(this));
+	      this.entityStorage.getBacklog().subscribe('attachFilesToTask', this.onAttachFilesToTask.bind(this));
+	      this.entityStorage.getBacklog().subscribe('showTagSearcher', this.onShowTagSearcher.bind(this));
+	      this.entityStorage.getBacklog().subscribe('showEpicSearcher', this.onShowEpicSearcher.bind(this));
+	      this.entityStorage.getBacklog().subscribe('startDecomposition', this.onStartDecomposition.bind(this));
+	      this.entityStorage.getBacklog().subscribe('tagsSearchOpen', this.onTagsSearchOpen.bind(this));
+	      this.entityStorage.getBacklog().subscribe('tagsSearchClose', this.onTagsSearchClose.bind(this));
+	      this.entityStorage.getBacklog().subscribe('epicSearchOpen', this.onEpicSearchOpen.bind(this));
+	      this.entityStorage.getBacklog().subscribe('epicSearchClose', this.onEpicSearchClose.bind(this));
+	      this.entityStorage.getBacklog().subscribe('filterByEpic', this.onFilterByEpic.bind(this));
+	      this.entityStorage.getBacklog().subscribe('filterByTag', this.onFilterByTag.bind(this));
+	      this.entityStorage.getBacklog().subscribe('activateGroupMode', this.onActivateGroupMode.bind(this));
+	      this.entityStorage.getBacklog().subscribe('deactivateGroupMode', this.onDeactivateGroupMode.bind(this));
+	      this.entityStorage.getBacklog().subscribe('loadBacklogItems', this.onLoadBacklogItems.bind(this));
+	      this.entityStorage.getSprints().forEach(function (sprint) {
+	        return _this2.onSubscribeToSprint(sprint);
+	      });
+	      this.epic.subscribe('filterByTag', this.onFilterByTag.bind(this));
+	    }
+	  }, {
+	    key: "onSubscribeToSprint",
+	    value: function onSubscribeToSprint(sprint) {
+	      sprint.subscribe('createTaskItem', this.onCreateTaskItem.bind(this));
+	      sprint.subscribe('updateItem', this.onUpdateItem.bind(this));
+	      sprint.subscribe('showTask', this.onShowTask.bind(this));
+	      sprint.subscribe('moveItem', this.onMoveItem.bind(this));
+	      sprint.subscribe('moveToSprint', this.onMoveToSprint.bind(this));
+	      sprint.subscribe('moveToBacklog', this.onMoveToBacklog.bind(this));
+	      sprint.subscribe('removeItem', this.onRemoveItem.bind(this));
+	      sprint.subscribe('startSprint', this.onStartSprint.bind(this));
+	      sprint.subscribe('completeSprint', this.onCompleteSprint.bind(this));
+	      sprint.subscribe('changeTaskResponsible', this.onChangeTaskResponsible.bind(this));
+	      sprint.subscribe('removeSprint', this.onRemoveSprint.bind(this));
+	      sprint.subscribe('changeSprintName', this.onChangeSprintName.bind(this));
+	      sprint.subscribe('changeSprintDeadline', this.onChangeSprintDeadline.bind(this));
+	      sprint.subscribe('attachFilesToTask', this.onAttachFilesToTask.bind(this));
+	      sprint.subscribe('showTagSearcher', this.onShowTagSearcher.bind(this));
+	      sprint.subscribe('showEpicSearcher', this.onShowEpicSearcher.bind(this));
+	      sprint.subscribe('startDecomposition', this.onStartDecomposition.bind(this));
+	      sprint.subscribe('tagsSearchOpen', this.onTagsSearchOpen.bind(this));
+	      sprint.subscribe('tagsSearchClose', this.onTagsSearchClose.bind(this));
+	      sprint.subscribe('epicSearchOpen', this.onEpicSearchOpen.bind(this));
+	      sprint.subscribe('epicSearchClose', this.onEpicSearchClose.bind(this));
+	      sprint.subscribe('filterByEpic', this.onFilterByEpic.bind(this));
+	      sprint.subscribe('filterByTag', this.onFilterByTag.bind(this));
+	      sprint.subscribe('activateGroupMode', this.onActivateGroupMode.bind(this));
+	      sprint.subscribe('deactivateGroupMode', this.onDeactivateGroupMode.bind(this));
+	      sprint.subscribe('getSprintCompletedItems', this.onGetSprintCompletedItems.bind(this));
+	      sprint.subscribe('showSprintBurnDownChart', this.onShowSprintBurnDownChart.bind(this));
+	      sprint.subscribe('toggleSubTasks', this.onToggleSubTasks.bind(this));
+	    }
+	  }, {
+	    key: "onCreateTaskItem",
+	    value: function onCreateTaskItem(baseEvent) {
+	      var _this3 = this;
+
+	      var data = baseEvent.getData();
+	      var entity = baseEvent.getTarget();
+	      var inputObject = data.inputObject;
+	      var inputValue = data.value;
+	      var newItem = this.createItem('task', inputValue);
+	      this.pullItem.addTmpIdsToSkipAdding(newItem.getItemId());
+	      this.fillItemBeforeCreation(entity, newItem, inputValue);
+	      this.domBuilder.appendItemAfterItem(newItem.render(), inputObject.getNode());
+	      newItem.onAfterAppend(entity.getListItemsNode());
+	      newItem.setParentId(inputObject.getEpicId());
+	      inputObject.setEpicId(0);
+	      this.sendRequestToCreateTask(entity, newItem).then(function (response) {
+	        _this3.fillItemAfterCreation(newItem, response.data);
+
+	        response.data.tags.forEach(function (tag) {
+	          _this3.tagSearcher.addTagToSearcher(tag);
+	        });
+	        entity.setItem(newItem);
+	      }).catch(function (response) {
+	        _this3.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "onUpdateItem",
+	    value: function onUpdateItem(baseEvent) {
+	      var _this4 = this;
+
+	      var updateData = baseEvent.getData();
+	      this.pullItem.addIdToSkipUpdating(updateData.itemId);
+	      this.requestSender.updateItem(baseEvent.getData()).catch(function (response) {
+	        _this4.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "onRemoveItem",
+	    value: function onRemoveItem(baseEvent) {
+	      var _this5 = this;
+
+	      var entity = baseEvent.getTarget();
+
+	      if (entity.isGroupMode()) {
+	        var items = [];
+	        entity.getGroupModeItems().forEach(function (groupModeItem) {
+	          items.push({
+	            itemId: groupModeItem.getItemId(),
+	            entityId: groupModeItem.getEntityId(),
+	            itemType: groupModeItem.getItemType(),
+	            sourceId: groupModeItem.getSourceId()
+	          });
+
+	          _this5.pullItem.addIdToSkipRemoving(groupModeItem.getItemId());
+	        });
+	        this.requestSender.batchRemoveItem({
+	          items: items,
+	          sortInfo: this.itemMover.calculateSort(entity.getListItemsNode())
+	        }).catch(function (response) {
+	          _this5.requestSender.showErrorAlert(response);
+	        });
+	        entity.deactivateGroupMode();
+	      } else {
+	        this.pullItem.addIdToSkipRemoving(baseEvent.getData().getItemId());
+	        this.requestSender.removeItem({
+	          itemId: baseEvent.getData().getItemId(),
+	          entityId: baseEvent.getData().getEntityId(),
+	          itemType: baseEvent.getData().getItemType(),
+	          sourceId: baseEvent.getData().getSourceId(),
+	          sortInfo: this.itemMover.calculateSort(entity.getListItemsNode())
+	        }).catch(function (response) {
+	          _this5.requestSender.showErrorAlert(response);
+	        });
 	      }
 	    }
 	  }, {
-	    key: "updateItemsSort",
-	    value: function updateItemsSort(item, listItemsNode) {
+	    key: "onMoveItem",
+	    value: function onMoveItem(baseEvent) {
+	      var data = baseEvent.getData();
+	      this.itemMover.moveItem(data.item, data.button);
+	    }
+	  }, {
+	    key: "onMoveToSprint",
+	    value: function onMoveToSprint(baseEvent) {
+	      var data = baseEvent.getData();
+	      var entityFrom = baseEvent.getTarget();
+	      this.itemMover.moveToAnotherEntity(entityFrom, data.item, null, data.button);
+
+	      if (this.entityStorage.getSprintsAvailableForFilling(entityFrom).size <= 1) {
+	        this.domBuilder.remove(data.button.parentNode);
+	      }
+	    }
+	  }, {
+	    key: "onMoveToBacklog",
+	    value: function onMoveToBacklog(baseEvent) {
+	      var data = baseEvent.getData();
+	      this.itemMover.moveToAnotherEntity(data.sprint, data.item, this.entityStorage.getBacklog());
+	    }
+	  }, {
+	    key: "onChangeTaskResponsible",
+	    value: function onChangeTaskResponsible(baseEvent) {
+	      var _this6 = this;
+
+	      this.pullItem.addIdToSkipUpdating(baseEvent.getData().getItemId());
+	      this.requestSender.changeTaskResponsible({
+	        itemId: baseEvent.getData().getItemId(),
+	        itemType: baseEvent.getData().getItemType(),
+	        sourceId: baseEvent.getData().getSourceId(),
+	        responsible: baseEvent.getData().getResponsible()
+	      }).catch(function (response) {
+	        _this6.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "onStartSprint",
+	    value: function onStartSprint(baseEvent) {
+	      var sprint = baseEvent.getTarget();
+	      var sprintSidePanel = new SprintSidePanel({
+	        sprints: this.entityStorage.getSprints(),
+	        sidePanel: this.sidePanel,
+	        requestSender: this.requestSender,
+	        views: this.views
+	      });
+	      sprintSidePanel.showStartSidePanel(sprint);
+	    }
+	  }, {
+	    key: "onCompleteSprint",
+	    value: function onCompleteSprint(baseEvent) {
+	      var sprint = baseEvent.getTarget();
+	      var sprintSidePanel = new SprintSidePanel({
+	        sprints: this.entityStorage.getSprints(),
+	        sidePanel: this.sidePanel,
+	        requestSender: this.requestSender,
+	        views: this.views
+	      });
+	      sprintSidePanel.showCompleteSidePanel(sprint);
+	    }
+	  }, {
+	    key: "onRemoveSprint",
+	    value: function onRemoveSprint(baseEvent) {
+	      var _this7 = this;
+
+	      var sprint = baseEvent.getTarget();
+	      this.pullSprint.addIdToSkipRemoving(sprint.getId());
+	      this.requestSender.removeSprint({
+	        sprintId: sprint.getId(),
+	        sortInfo: this.sprintMover.calculateSprintSort()
+	      }).then(function (response) {
+	        _this7.entityStorage.removeSprint(sprint.getId());
+	      }).catch(function (response) {
+	        _this7.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "onChangeSprintName",
+	    value: function onChangeSprintName(baseEvent) {
+	      var _this8 = this;
+
+	      var requestData = baseEvent.getData();
+	      this.pullSprint.addIdToSkipUpdating(requestData.sprintId);
+	      this.requestSender.changeSprintName(requestData).catch(function (response) {
+	        _this8.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "onChangeSprintDeadline",
+	    value: function onChangeSprintDeadline(baseEvent) {
+	      var _this9 = this;
+
+	      var requestData = baseEvent.getData();
+	      this.pullSprint.addIdToSkipUpdating(requestData.sprintId);
+	      this.requestSender.changeSprintDeadline(requestData).catch(function (response) {
+	        _this9.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "onGetSprintCompletedItems",
+	    value: function onGetSprintCompletedItems(baseEvent) {
+	      var _this10 = this;
+
+	      var sprint = baseEvent.getTarget();
+	      var listItemsNode = sprint.getListItemsNode();
+	      var listPosition = this.domBuilder.getPosition(listItemsNode);
+	      var loader = new main_loader.Loader({
+	        target: listItemsNode,
+	        size: 60,
+	        mode: 'inline',
+	        color: '#eaeaea',
+	        offset: {
+	          left: "".concat(listPosition.width / 2 - 30, "px")
+	        }
+	      });
+	      loader.show();
+	      this.requestSender.getSprintCompletedItems({
+	        sprintId: sprint.getId()
+	      }).then(function (response) {
+	        var itemsData = response.data;
+	        itemsData.forEach(function (itemData) {
+	          var item = new Item(itemData);
+	          item.setDisableStatus(sprint.isDisabled());
+
+	          _this10.domBuilder.append(item.render(), listItemsNode);
+
+	          sprint.setItem(item);
+	        });
+	        loader.hide();
+	      }).catch(function (response) {
+	        loader.hide();
+
+	        _this10.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "onShowSprintBurnDownChart",
+	    value: function onShowSprintBurnDownChart(baseEvent) {
+	      var sprint = baseEvent.getTarget();
+	      var sprintSidePanel = new SprintSidePanel({
+	        sprints: this.entityStorage.getSprints(),
+	        sidePanel: this.sidePanel,
+	        requestSender: this.requestSender,
+	        views: this.views
+	      });
+	      sprintSidePanel.showBurnDownChart(sprint);
+	    }
+	  }, {
+	    key: "onShowTask",
+	    value: function onShowTask(baseEvent) {
+	      var item = baseEvent.getData();
+	      this.sidePanel.openSidePanelByUrl(this.pathToTask.replace('#task_id#', item.getSourceId()));
+	    }
+	  }, {
+	    key: "onAttachFilesToTask",
+	    value: function onAttachFilesToTask(baseEvent) {
+	      var _this11 = this;
+
+	      var data = baseEvent.getData();
+	      this.pullItem.addIdToSkipUpdating(data.item.getItemId());
+	      this.requestSender.attachFilesToTask({
+	        taskId: data.item.getSourceId(),
+	        itemId: data.item.getItemId(),
+	        entityId: data.item.getEntityId(),
+	        attachedIds: data.attachedIds
+	      }).then(function (response) {
+	        data.item.updateIndicators(response.data);
+	      }).catch(function (response) {
+	        _this11.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "onToggleSubTasks",
+	    value: function onToggleSubTasks(baseEvent) {
+	      var sprint = baseEvent.getTarget();
+	      var item = baseEvent.getData();
+	      this.subTasksCreator.toggleSubTasks(sprint, item);
+	    }
+	  }, {
+	    key: "onShowTagSearcher",
+	    value: function onShowTagSearcher(baseEvent) {
+	      var _this12 = this;
+
+	      //todo refactor and test
+	      var entity = baseEvent.getTarget();
+	      var data = baseEvent.getData();
+	      var item = data.item;
+	      var actionsPanelButton = data.button;
+	      this.tagSearcher.showTagsDialog(item, actionsPanelButton);
+	      this.tagSearcher.unsubscribeAll('attachTagToTask');
+	      this.tagSearcher.subscribe('attachTagToTask', function (innerBaseEvent) {
+	        var tag = innerBaseEvent.getData();
+
+	        if (entity.isGroupMode()) {
+	          var tasks = [];
+	          entity.getGroupModeItems().forEach(function (groupModeItem) {
+	            tasks.push({
+	              taskId: groupModeItem.getSourceId(),
+	              itemId: groupModeItem.getItemId()
+	            });
+	          });
+
+	          _this12.requestSender.batchAttachTagToTask({
+	            tasks: tasks,
+	            entityId: entity.getId(),
+	            tag: tag
+	          }).then(function (response) {
+	            entity.getGroupModeItems().forEach(function (groupModeItem) {
+	              var currentTags = groupModeItem.getTags();
+	              currentTags.push(tag);
+	              groupModeItem.setEpicAndTags(groupModeItem.getEpic(), currentTags);
+	            });
+	          }).catch(function (response) {
+	            _this12.requestSender.showErrorAlert(response);
+	          });
+	        } else {
+	          var currentTags = item.getTags();
+
+	          _this12.requestSender.attachTagToTask({
+	            taskId: item.getSourceId(),
+	            itemId: item.getItemId(),
+	            entityId: entity.getId(),
+	            tag: tag
+	          }).then(function (response) {
+	            currentTags.push(tag);
+	            item.setEpicAndTags(item.getEpic(), currentTags);
+	          }).catch(function (response) {
+	            _this12.requestSender.showErrorAlert(response);
+	          });
+	        }
+	      });
+	      this.tagSearcher.unsubscribeAll('deAttachTagToTask');
+	      this.tagSearcher.subscribe('deAttachTagToTask', function (innerBaseEvent) {
+	        var tag = innerBaseEvent.getData();
+
+	        if (entity.isGroupMode()) {
+	          var tasks = [];
+	          entity.getGroupModeItems().forEach(function (groupModeItem) {
+	            tasks.push({
+	              taskId: groupModeItem.getSourceId(),
+	              itemId: groupModeItem.getItemId()
+	            });
+	          });
+
+	          _this12.requestSender.batchDeattachTagToTask({
+	            tasks: tasks,
+	            entityId: entity.getId(),
+	            tag: tag
+	          }).then(function (response) {
+	            entity.getGroupModeItems().forEach(function (groupModeItem) {
+	              var currentTags = groupModeItem.getTags();
+	              currentTags.splice(currentTags.indexOf(tag), 1);
+	              groupModeItem.setEpicAndTags(groupModeItem.getEpic(), currentTags);
+	            });
+	          }).catch(function (response) {
+	            _this12.requestSender.showErrorAlert(response);
+	          });
+	        } else {
+	          var currentTags = item.getTags();
+
+	          _this12.requestSender.deAttachTagToTask({
+	            taskId: item.getSourceId(),
+	            itemId: item.getItemId(),
+	            entityId: entity.getId(),
+	            tag: tag
+	          }).then(function (response) {
+	            currentTags.splice(currentTags.indexOf(tag), 1);
+	            item.setEpicAndTags(item.getEpic(), currentTags);
+	          }).catch(function (response) {
+	            _this12.requestSender.showErrorAlert(response);
+	          });
+	        }
+	      });
+	      this.tagSearcher.unsubscribeAll('hideTagDialog');
+	      this.tagSearcher.subscribe('hideTagDialog', function (innerBaseEvent) {
+	        if (entity.isGroupMode()) {
+	          entity.deactivateGroupMode();
+	        }
+	      });
+	    }
+	  }, {
+	    key: "onShowEpicSearcher",
+	    value: function onShowEpicSearcher(baseEvent) {
+	      var _this13 = this;
+
+	      var entity = baseEvent.getTarget();
+	      var data = baseEvent.getData();
+	      var item = data.item;
+	      var actionsPanelButton = data.button;
+	      this.tagSearcher.showEpicDialog(item, actionsPanelButton);
+	      this.tagSearcher.unsubscribeAll('updateItemEpic');
+	      this.tagSearcher.subscribe('updateItemEpic', function (innerBaseEvent) {
+	        if (entity.isGroupMode()) {
+	          var items = [];
+	          entity.getGroupModeItems().forEach(function (groupModeItem) {
+	            items.push({
+	              itemId: groupModeItem.getItemId()
+	            });
+
+	            _this13.pullItem.addIdToSkipUpdating(groupModeItem.getItemId());
+	          });
+
+	          _this13.requestSender.batchUpdateItemEpic({
+	            items: items,
+	            entityId: entity.getId(),
+	            epicId: innerBaseEvent.getData()
+	          }).then(function (response) {
+	            entity.getGroupModeItems().forEach(function (groupModeItem) {
+	              if (main_core.Type.isArray(response.data.epic)) {
+	                groupModeItem.setParentId(0);
+	                groupModeItem.setEpicAndTags(null, null);
+	              } else {
+	                groupModeItem.setParentId(response.data.epic.id);
+	                groupModeItem.setEpicAndTags(response.data.epic, groupModeItem.getTags());
+	              }
+	            });
+	            entity.deactivateGroupMode();
+	          }).catch(function (response) {
+	            _this13.requestSender.showErrorAlert(response);
+	          });
+	        } else {
+	          _this13.pullItem.addIdToSkipUpdating(item.getItemId());
+
+	          _this13.requestSender.updateItemEpic({
+	            itemId: item.getItemId(),
+	            entityId: entity.getId(),
+	            epicId: innerBaseEvent.getData()
+	          }).then(function (response) {
+	            if (main_core.Type.isArray(response.data.epic)) {
+	              item.setParentId(0);
+	              item.setEpicAndTags(null, null);
+	            } else {
+	              item.setParentId(response.data.epic.id);
+	              item.setEpicAndTags(response.data.epic, item.getTags());
+	            }
+	          }).catch(function (response) {
+	            _this13.requestSender.showErrorAlert(response);
+	          });
+	        }
+	      });
+	    }
+	  }, {
+	    key: "onStartDecomposition",
+	    value: function onStartDecomposition(baseEvent) {
+	      var _this14 = this;
+
+	      var entity = baseEvent.getTarget();
+	      var parentItem = baseEvent.getData();
+	      var decomposition = new Decomposition({
+	        entity: entity,
+	        itemStyleDesigner: this.itemStyleDesigner,
+	        subTasksCreator: this.subTasksCreator
+	      });
+	      decomposition.subscribe('tagsSearchOpen', this.onTagsSearchOpen.bind(this));
+	      decomposition.subscribe('tagsSearchClose', this.onTagsSearchClose.bind(this));
+	      decomposition.subscribe('createItem', function (innerBaseEvent) {
+	        var inputValue = innerBaseEvent.getData();
+	        var decomposedItems = decomposition.getDecomposedItems();
+	        var lastDecomposedItem = Array.from(decomposedItems).pop();
+
+	        var newItem = _this14.createItem(parentItem.getItemType(), inputValue);
+
+	        _this14.pullItem.addTmpIdsToSkipAdding(newItem.getItemId());
+
+	        _this14.pullItem.addIdToSkipUpdating(parentItem.getItemId());
+
+	        newItem.setParentEntity(entity.getId(), entity.getEntityType());
+	        newItem.setParentId(parentItem.getParentId());
+	        newItem.setParentTaskId(parentItem.getSourceId());
+	        newItem.setEpic(parentItem.getEpic());
+	        newItem.setTags(parentItem.getTags());
+	        newItem.setResponsible(decomposition.getResponsible());
+
+	        if (decomposition.isBacklogDecomposition()) {
+	          parentItem.setLinkedTask('Y');
+	          newItem.setSort(lastDecomposedItem.getSort() + 1);
+	          newItem.setInfo({
+	            borderColor: decomposition.getBorderColor()
+	          });
+	          newItem.setLinkedTask('Y');
+	        } else {
+	          newItem.setSort(decomposition.getSubTasks(parentItem).length + 1);
+	          newItem.setSubTask('Y');
+	          newItem.setParentTaskId(parentItem.getSourceId());
+	          newItem.setParentTask('N');
+
+	          if (decomposition.isFirstDecomposition()) {
+	            newItem.setStoryPoints(parentItem.getStoryPoints().getPoints());
+	          }
+
+	          parentItem.setParentTask('Y');
+	          parentItem.setSubTasksCount(parentItem.getSubTasksCount() + 1);
+	          parentItem.updateParentTaskNodes();
+	        }
+
+	        _this14.domBuilder.appendItemAfterItem(newItem.render(), decomposition.getLastDecomposedItemNode(parentItem));
+
+	        newItem.onAfterAppend(entity.getListItemsNode());
+	        decomposition.addDecomposedItem(newItem);
+
+	        _this14.sendRequestToCreateTask(entity, newItem).then(function (response) {
+	          _this14.fillItemAfterCreation(newItem, response.data);
+
+	          response.data.tags.forEach(function (tag) {
+	            _this14.tagSearcher.addTagToSearcher(tag);
+	          });
+	          entity.setItem(newItem);
+
+	          if (!decomposition.isBacklogDecomposition()) {
+	            if (lastDecomposedItem.getItemId() === parentItem.getItemId()) {
+	              parentItem.updateSubTasksPoints(newItem.getSourceId(), newItem.getStoryPoints());
+	              parentItem.setStoryPoints('');
+	            }
+
+	            _this14.subTasksCreator.addSubTask(parentItem, newItem);
+	          }
+	        });
+	      });
+	      decomposition.subscribe('updateParentItem', this.onUpdateItem.bind(this));
+	      decomposition.decomposeItem(parentItem);
+	    }
+	  }, {
+	    key: "onTagsSearchOpen",
+	    value: function onTagsSearchOpen(baseEvent) {
+	      var data = baseEvent.getData();
+	      var inputObject = data.inputObject;
+	      var enteredHashTagName = data.enteredHashTagName;
+	      this.tagSearcher.showTagsSearchDialog(inputObject, enteredHashTagName);
+	    }
+	  }, {
+	    key: "onTagsSearchClose",
+	    value: function onTagsSearchClose() {
+	      this.tagSearcher.closeTagsSearchDialog();
+	    }
+	  }, {
+	    key: "onFilterByTag",
+	    value: function onFilterByTag(baseEvent) {
+	      var tag = baseEvent.getData();
+	      var currentValue = this.filter.getValueFromField({
+	        name: 'TAG',
+	        value: ''
+	      });
+
+	      if (String(tag) === String(currentValue)) {
+	        this.filter.setValueToField({
+	          name: 'TAG',
+	          value: ''
+	        });
+	      } else {
+	        this.filter.setValueToField({
+	          name: 'TAG',
+	          value: String(tag)
+	        });
+	      }
+
+	      this.filter.scrollToSearchContainer();
+	    }
+	  }, {
+	    key: "onEpicSearchOpen",
+	    value: function onEpicSearchOpen(baseEvent) {
+	      var data = baseEvent.getData();
+	      var inputObject = data.inputObject;
+	      var enteredHashEpicName = data.enteredHashEpicName;
+	      this.tagSearcher.showEpicSearchDialog(inputObject, enteredHashEpicName);
+	    }
+	  }, {
+	    key: "onEpicSearchClose",
+	    value: function onEpicSearchClose() {
+	      this.tagSearcher.closeEpicSearchDialog();
+	    }
+	  }, {
+	    key: "onFilterByEpic",
+	    value: function onFilterByEpic(baseEvent) {
+	      var epicId = baseEvent.getData();
+	      var currentValue = this.filter.getValueFromField({
+	        name: 'EPIC',
+	        value: ''
+	      });
+
+	      if (String(epicId) === String(currentValue)) {
+	        this.filter.setValueToField({
+	          name: 'EPIC',
+	          value: ''
+	        });
+	      } else {
+	        this.filter.setValueToField({
+	          name: 'EPIC',
+	          value: String(epicId)
+	        });
+	      }
+
+	      this.filter.scrollToSearchContainer();
+	    }
+	  }, {
+	    key: "onActivateGroupMode",
+	    value: function onActivateGroupMode(baseEvent) {
+	      var entity = baseEvent.getTarget();
+
+	      if (entity.getId() !== this.entityStorage.getBacklog().getId()) {
+	        this.entityStorage.getBacklog().deactivateGroupMode();
+	      }
+
+	      this.entityStorage.getSprints().forEach(function (sprint) {
+	        if (entity.getId() !== sprint.getId()) {
+	          sprint.deactivateGroupMode();
+	        }
+	      });
+	      entity.getItems().forEach(function (item) {
+	        item.activateGroupMode();
+	      });
+	    }
+	  }, {
+	    key: "onDeactivateGroupMode",
+	    value: function onDeactivateGroupMode(baseEvent) {
+	      var entity = baseEvent.getTarget();
+	      entity.getItems().forEach(function (item) {
+	        item.deactivateGroupMode();
+	      });
+	    }
+	  }, {
+	    key: "onLoadBacklogItems",
+	    value: function onLoadBacklogItems(baseEvent) {
+	      var _this15 = this;
+
+	      var backlog = baseEvent.getTarget();
+	      backlog.setActiveLoadBacklogItems(true);
+	      var loader = backlog.showItemsLoader();
+	      var requestData = {
+	        entityId: backlog.getId(),
+	        pageNumber: backlog.getPageNumberItems() + 1
+	      };
+	      this.requestSender.getItems(requestData).then(function (response) {
+	        var items = response.data;
+
+	        if (main_core.Type.isArray(items) && items.length) {
+	          backlog.incrementPageNumberItems();
+	          backlog.setActiveLoadBacklogItems(false);
+
+	          _this15.createItemsInEntity(backlog, items);
+	        }
+
+	        loader.hide();
+	      }).catch(function (response) {
+	        loader.hide();
+	        backlog.setActiveLoadBacklogItems(false);
+
+	        _this15.requestSender.showErrorAlert(response);
+	      });
+	    }
+	  }, {
+	    key: "createItemsInEntity",
+	    value: function createItemsInEntity(entity, items) {
 	      var _this16 = this;
 
-	      this.requestSender.updateItem({
-	        itemId: item.getItemId(),
-	        sortInfo: babelHelpers.objectSpread({}, this.calculateSort(listItemsNode))
-	      }).catch(function (response) {
-	        _this16.requestSender.showErrorAlert(response);
+	      items.forEach(function (itemData) {
+	        var item = new Item(itemData);
+
+	        if (!_this16.entityStorage.findItemByItemId(item.getItemId())) {
+	          _this16.domBuilder.append(item.render(), entity.getListItemsNode());
+
+	          item.onAfterAppend(entity.getListItemsNode());
+	          entity.setItem(item);
+	        }
 	      });
 	    }
 	  }, {
-	    key: "getBacklog",
-	    value: function getBacklog() {
-	      return this.backlog;
+	    key: "onShowTeamSpeedChart",
+	    value: function onShowTeamSpeedChart(baseEvent) {
+	      var projectSidePanel = new ProjectSidePanel({
+	        sidePanel: this.sidePanel,
+	        requestSender: this.requestSender
+	      });
+	      projectSidePanel.showTeamSpeedChart();
 	    }
 	  }, {
-	    key: "getSprints",
-	    value: function getSprints() {
-	      return this.sprints;
+	    key: "onOpenAddEpicForm",
+	    value: function onOpenAddEpicForm(baseEvent) {
+	      this.epic.openAddForm();
 	    }
 	  }, {
-	    key: "getAllItems",
-	    value: function getAllItems() {
+	    key: "onOpenListEpicGrid",
+	    value: function onOpenListEpicGrid(baseEvent) {
+	      var _this17 = this;
+
+	      this.epic.openEpicsList();
+	      this.epic.subscribe('onAfterEditEpic', function (innerBaseEvent) {
+	        var response = innerBaseEvent.getData();
+	        var updatedEpicInfo = response.data;
+
+	        _this17.epic.onAfterUpdateEpic(updatedEpicInfo);
+	      });
+	    }
+	  }, {
+	    key: "onOpenDefinitionOfDone",
+	    value: function onOpenDefinitionOfDone(baseEvent) {
+	      var entity = baseEvent.getTarget();
+	      var projectSidePanel = new ProjectSidePanel({
+	        sidePanel: this.sidePanel,
+	        requestSender: this.requestSender
+	      });
+	      projectSidePanel.showDefinitionOfDone(entity);
+	    }
+	  }, {
+	    key: "createItem",
+	    value: function createItem(itemType, value) {
+	      var valueWithoutTags = value.replace(new RegExp(TagSearcher.tagRegExp, 'g'), '').replace(new RegExp(TagSearcher.epicRegExp, 'g'), '');
+	      return new Item({
+	        'itemId': '',
+	        'itemType': itemType,
+	        'name': valueWithoutTags
+	      });
+	    }
+	  }, {
+	    key: "sendRequestToCreateTask",
+	    value: function sendRequestToCreateTask(entity, item) {
+	      var requestData = {
+	        'tmpId': item.getItemId(),
+	        'itemType': item.getItemType(),
+	        'name': item.getName(),
+	        'entityId': item.getEntityId(),
+	        'entityType': entity.getEntityType(),
+	        'parentId': item.getParentId(),
+	        'sort': item.getSort(),
+	        'storyPoints': item.getStoryPoints().getPoints(),
+	        'tags': item.getTags(),
+	        'epic': item.getEpic(),
+	        'parentTaskId': item.getParentTaskId(),
+	        'responsible': item.getResponsible(),
+	        'info': item.getInfo(),
+	        'sortInfo': this.itemMover.calculateSort(entity.getListItemsNode()),
+	        'isActiveSprint': entity.getEntityType() === 'sprint' && entity.isActive() ? 'Y' : 'N'
+	      };
+	      return this.requestSender.createTask(requestData);
+	    }
+	  }, {
+	    key: "fillItemBeforeCreation",
+	    value: function fillItemBeforeCreation(entity, item, value) {
+	      item.setParentEntity(entity.getId(), entity.getEntityType());
+	      item.setSort(1);
+	      item.setResponsible(this.defaultResponsible);
+	      var tags = TagSearcher.getHashTagNamesFromText(value);
+	      var epicName = TagSearcher.getHashEpicNamesFromText(value).pop();
+	      var inputEpic = null;
+
+	      if (epicName) {
+	        inputEpic = this.tagSearcher.getEpicByName(epicName.trim());
+	      }
+
+	      if (inputEpic || tags.length > 0) {
+	        item.setEpicAndTags(inputEpic, tags);
+	      }
+	    }
+	  }, {
+	    key: "fillItemAfterCreation",
+	    value: function fillItemAfterCreation(item, responseData) {
 	      //todo test
-	      var items = new Map(this.backlog.getItems());
-	      babelHelpers.toConsumableArray(this.sprints.values()).map(function (sprint) {
-	        return items = new Map([].concat(babelHelpers.toConsumableArray(items), babelHelpers.toConsumableArray(sprint.getItems())));
-	      });
-	      return items;
+	      item.setItemId(responseData.itemId);
+
+	      if (!main_core.Type.isArray(responseData.epic) || responseData.tags.length > 0) {
+	        item.setEpicAndTags(responseData.epic, responseData.tags);
+	      }
+
+	      item.setResponsible(responseData.responsible);
+	      item.setSourceId(responseData.sourceId);
+	      item.setAllowedActions(responseData.allowedActions);
 	    }
 	  }, {
 	    key: "openEpicEditForm",
@@ -7823,7 +10872,7 @@ this.BX.Tasks = this.BX.Tasks || {};
 	  }, {
 	    key: "removeEpic",
 	    value: function removeEpic(epicId) {
-	      var _this17 = this;
+	      var _this18 = this;
 
 	      this.requestSender.removeItem({
 	        itemId: epicId,
@@ -7831,178 +10880,523 @@ this.BX.Tasks = this.BX.Tasks || {};
 	      }).then(function (response) {
 	        var epicInfo = response.data;
 
-	        _this17.getAllItems().forEach(function (item) {
-	          var itemEpic = item.getEpic();
-
-	          if (itemEpic && itemEpic.name === epicInfo.name) {
-	            item.setEpicAndTags(null);
-	          }
-	        });
-
-	        _this17.tagSearcher.removeEpicFromSearcher(epicInfo);
-
-	        _this17.sidePanel.reloadTopSidePanel();
+	        _this18.epic.onAfterRemoveEpic(epicInfo);
 	      }).catch(function (response) {
-	        _this17.requestSender.showErrorAlert(response);
-	      });
-	    }
-	  }, {
-	    key: "fadeOutAll",
-	    value: function fadeOutAll() {
-	      this.backlog.fadeOut();
-	      this.sprints.forEach(function (sprint) {
-	        if (!sprint.isCompleted()) {
-	          sprint.fadeOut();
-	        }
-	      });
-	    }
-	  }, {
-	    key: "fadeInAll",
-	    value: function fadeInAll() {
-	      this.backlog.fadeIn();
-	      this.sprints.forEach(function (sprint) {
-	        if (!sprint.isCompleted()) {
-	          sprint.fadeIn();
-	        }
-	      });
-	    }
-	  }, {
-	    key: "createTaskItemByItemData",
-	    value: function createTaskItemByItemData(itemData) {
-	      return new Item({
-	        itemId: itemData.itemId,
-	        itemType: itemData.itemType,
-	        name: itemData.name,
-	        entityId: itemData.entityId,
-	        entityType: itemData.entityType,
-	        parentId: itemData.parentId,
-	        sort: itemData.sort,
-	        storyPoints: itemData.storyPoints,
-	        sourceId: itemData.sourceId,
-	        completed: itemData.completed,
-	        responsible: itemData.responsible,
-	        attachedFilesCount: itemData.attachedFilesCount,
-	        checkListComplete: itemData.checkListComplete,
-	        checkListAll: itemData.checkListAll,
-	        newCommentsCount: itemData.newCommentsCount,
-	        epic: itemData.epic,
-	        tags: itemData.tags,
-	        allowedActions: itemData.allowedActions
-	      });
-	    }
-	  }, {
-	    key: "onApplyFilter",
-	    value: function onApplyFilter(baseEvent) {
-	      var _this18 = this;
-
-	      var filterInfo = baseEvent.getData();
-	      this.fadeOutAll();
-	      this.requestSender.applyFilter().then(function (response) {
-	        var filteredItemsData = response.data;
-
-	        _this18.getAllItems().forEach(function (item) {
-	          var entity = _this18.findEntityByEntityId(item.getEntityId());
-
-	          if (!entity.isCompleted()) {
-	            entity.removeItem(item);
-	            item.removeYourself();
-	          }
-	        });
-
-	        filteredItemsData.forEach(function (itemData) {
-	          var item = _this18.createTaskItemByItemData(itemData);
-
-	          var entity = _this18.findEntityByEntityId(item.getEntityId());
-
-	          if (!entity.isCompleted()) {
-	            main_core.Dom.append(item.render(), entity.getListItemsNode());
-	            entity.setItem(item);
-	            item.onAfterAppend(entity.getListItemsNode());
-	          }
-	        });
-	        filterInfo.promise.fulfill();
-
-	        _this18.fadeInAll();
-
-	        _this18.getBacklog().updateStoryPoints();
-
-	        _this18.getSprints().forEach(function (sprint) {
-	          if (!sprint.isCompleted()) {
-	            sprint.updateStoryPoints();
-	          }
-	        });
-	      }).catch(function (response) {
-	        filterInfo.promise.reject();
-
-	        _this18.fadeInAll();
-
 	        _this18.requestSender.showErrorAlert(response);
 	      });
 	    }
-	  }, {
-	    key: "onShowTeamSpeedChart",
-	    value: function onShowTeamSpeedChart() {
-	      var projectSidePanel = new ProjectSidePanel({
-	        sidePanel: this.sidePanel,
-	        requestSender: this.requestSender
-	      });
-	      projectSidePanel.showTeamSpeedChart();
-	    }
 	  }]);
 	  return Plan;
-	}();
+	}(View);
 
-	var CompletedSprint = /*#__PURE__*/function () {
-	  function CompletedSprint(params) {
-	    var _this = this;
+	function _templateObject$r() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-button-container\">\n\t\t\t\t<div class=\"ui-btn-split ui-btn-primary ui-btn-xs\"> \n\t\t\t\t\t<button class=\"ui-btn-main\">\n\t\t\t\t\t\t", "\n\t\t\t\t\t</button> \n\t\t\t\t\t<button class=\"ui-btn-menu\"></button> \n\t\t\t\t</div>\n\t\t\t</div>\n\t\t"]);
 
-	    babelHelpers.classCallCheck(this, CompletedSprint);
-	    this.completedSprint = params.completedSprint;
-	    this.requestSender = new RequestSender({
-	      signedParameters: params.signedParameters
-	    });
-	    this.sidePanel = new SidePanel();
-	    this.sprints = new Map();
-	    params.sprints.forEach(function (sprintData) {
-	      var sprint = Sprint.buildSprint(sprintData);
+	  _templateObject$r = function _templateObject() {
+	    return data;
+	  };
 
-	      _this.sprints.set(sprint.getId(), sprint);
-	    });
-	    this.views = params.views;
-	    this.initDomNodes();
-	    this.bindHandlers();
-	    this.createTitle();
+	  return data;
+	}
+	var ActiveSprintActionButton = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(ActiveSprintActionButton, _EventEmitter);
+
+	  function ActiveSprintActionButton() {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, ActiveSprintActionButton);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(ActiveSprintActionButton).call(this));
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.ActiveSprintButton');
+
+	    return _this;
 	  }
 
-	  babelHelpers.createClass(CompletedSprint, [{
-	    key: "initDomNodes",
-	    value: function initDomNodes() {
-	      this.chartSprintButtonNode = document.getElementById('tasks-scrum-completed-sprint-chart');
+	  babelHelpers.createClass(ActiveSprintActionButton, [{
+	    key: "render",
+	    value: function render() {
+	      var node = main_core.Tag.render(_templateObject$r(), main_core.Loc.getMessage('TASKS_SCRUM_ACTIONS_COMPLETE_SPRINT'));
+	      var completeSprintButtonNode = node.querySelector('.ui-btn-main');
+	      var menuButtonNode = node.querySelector('.ui-btn-menu');
+	      main_core.Event.bind(completeSprintButtonNode, 'click', this.onCompleteSprintClick.bind(this));
+	      main_core.Event.bind(menuButtonNode, 'click', this.onMenuClick.bind(this, completeSprintButtonNode));
+	      return node;
+	    }
+	  }, {
+	    key: "onCompleteSprintClick",
+	    value: function onCompleteSprintClick() {
+	      this.emit('completeSprint');
+	    }
+	  }, {
+	    key: "onMenuClick",
+	    value: function onMenuClick(bindElement) {
+	      var _this2 = this;
+
+	      var menu = new main_popup.Menu({
+	        id: "active-sprint-actions-menu-".concat(main_core.Text.getRandom()),
+	        bindElement: bindElement
+	      });
+	      menu.addMenuItem({
+	        text: main_core.Loc.getMessage('TASKS_SCRUM_ACTIVE_SPRINT_BUTTON'),
+	        onclick: function onclick(event, menuItem) {
+	          menuItem.getMenuWindow().close();
+
+	          _this2.emit('showBurnDownChart');
+	        }
+	      });
+	      menu.show();
+	    }
+	  }]);
+	  return ActiveSprintActionButton;
+	}(main_core_events.EventEmitter);
+
+	function _templateObject$s() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-button-container\">\n\t\t\t\t<button class=\"", "\">\n\t\t\t\t\t", "\n\t\t\t\t</button>\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject$s = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
+	var RobotButton = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(RobotButton, _EventEmitter);
+
+	  function RobotButton(params) {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, RobotButton);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(RobotButton).call(this, params));
+	    _this.sidePanel = params.sidePanel;
+	    _this.isTaskLimitsExceeded = params.isTaskLimitsExceeded;
+	    _this.canUseAutomation = params.canUseAutomation;
+	    _this.groupId = params.groupId;
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.RobotButton');
+
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(RobotButton, [{
+	    key: "render",
+	    value: function render() {
+	      var className = 'tasks-scrum-robot-btn ui-btn ui-btn-light-border ui-btn-no-caps ui-btn-themes ui-btn-round';
+
+	      if (this.isShowLimitSidePanel()) {
+	        className += ' ui-btn-icon-lock';
+	      }
+
+	      var node = main_core.Tag.render(_templateObject$s(), className, main_core.Loc.getMessage('TASKS_SCRUM_ROBOTS_BUTTON'));
+	      main_core.Event.bind(node, 'click', this.onClick.bind(this));
+	      return node;
+	    }
+	  }, {
+	    key: "onClick",
+	    value: function onClick() {
+	      if (this.isShowLimitSidePanel()) {
+	        // eslint-disable-next-line
+	        BX.UI.InfoHelper.show('limit_tasks_robots');
+	      } else {
+	        var url = '/bitrix/components/bitrix/tasks.automation/slider.php?site_id=' + main_core.Loc.getMessage('SITE_ID') + '&project_id=' + this.groupId;
+	        this.sidePanel.openSidePanelByUrl(url);
+	      }
+	    }
+	  }, {
+	    key: "isShowLimitSidePanel",
+	    value: function isShowLimitSidePanel() {
+	      return this.isTaskLimitsExceeded && !this.canUseAutomation;
+	    }
+	  }]);
+	  return RobotButton;
+	}(main_core_events.EventEmitter);
+
+	var ActiveSprint = /*#__PURE__*/function (_View) {
+	  babelHelpers.inherits(ActiveSprint, _View);
+
+	  function ActiveSprint(params) {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, ActiveSprint);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(ActiveSprint).call(this, params));
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.ActiveSprint');
+
+	    _this.setParams(params);
+
+	    if (_this.existActiveSprint()) {
+	      _this.finishStatus = _this.getActiveSprintParams().finishStatus;
+	      _this.sprint = new Sprint(_this.getActiveSprintParams());
+	      _this.itemsInFinishStage = new Map();
+
+	      _this.bindHandlers();
+	    }
+
+	    _this.sidePanel = new SidePanel();
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(ActiveSprint, [{
+	    key: "renderSprintStatsTo",
+	    value: function renderSprintStatsTo(container) {
+	      babelHelpers.get(babelHelpers.getPrototypeOf(ActiveSprint.prototype), "renderSprintStatsTo", this).call(this, container);
+	      this.statsHeader = StatsHeaderBuilder.build(this.sprint);
+	      this.statsHeader.setKanbanStyle();
+	      main_core.Dom.append(this.statsHeader.render(), container);
+	    }
+	  }, {
+	    key: "renderButtonsTo",
+	    value: function renderButtonsTo(container) {
+	      babelHelpers.get(babelHelpers.getPrototypeOf(ActiveSprint.prototype), "renderButtonsTo", this).call(this, container);
+
+	      if (!this.existActiveSprint()) {
+	        return;
+	      }
+
+	      var robotButton = new RobotButton({
+	        sidePanel: this.sidePanel,
+	        groupId: this.getCurrentGroupId(),
+	        isTaskLimitsExceeded: this.isTaskLimitsExceeded(),
+	        canUseAutomation: this.isCanUseAutomation()
+	      });
+	      var activeSprintActionButton = new ActiveSprintActionButton();
+	      activeSprintActionButton.subscribe('completeSprint', this.onCompleteSprint.bind(this));
+	      activeSprintActionButton.subscribe('showBurnDownChart', this.onShowSprintBurnDownChart.bind(this));
+	      main_core.Dom.append(robotButton.render(), container);
+	      main_core.Dom.append(activeSprintActionButton.render(), container);
+	    }
+	  }, {
+	    key: "setParams",
+	    value: function setParams(params) {
+	      var _this2 = this;
+
+	      this.setPathToTask(params.pathToTask);
+	      this.setActiveSprintParams(params.activeSprint);
+	      this.setTaskLimitsExceeded(params.taskLimitExceeded);
+	      this.setCanUseAutomation(params.canUseAutomation);
+	      this.sprints = new Map();
+	      params.sprints.forEach(function (sprintData) {
+	        var sprint = new Sprint(sprintData);
+
+	        _this2.sprints.set(sprint.getId(), sprint);
+	      });
+	      this.views = params.views;
+	    }
+	  }, {
+	    key: "setPathToTask",
+	    value: function setPathToTask(pathToTask) {
+	      this.pathToTask = main_core.Type.isString(pathToTask) ? pathToTask : '';
+	    }
+	  }, {
+	    key: "getPathToTask",
+	    value: function getPathToTask() {
+	      return this.pathToTask;
+	    }
+	  }, {
+	    key: "setActiveSprintParams",
+	    value: function setActiveSprintParams(params) {
+	      this.activeSprint = main_core.Type.isPlainObject(params) ? params : null;
+	    }
+	  }, {
+	    key: "getActiveSprintParams",
+	    value: function getActiveSprintParams() {
+	      return this.activeSprint;
+	    }
+	  }, {
+	    key: "setTaskLimitsExceeded",
+	    value: function setTaskLimitsExceeded(limitExceeded) {
+	      this.limitExceeded = limitExceeded === 'Y';
+	    }
+	  }, {
+	    key: "isTaskLimitsExceeded",
+	    value: function isTaskLimitsExceeded() {
+	      return this.limitExceeded;
+	    }
+	  }, {
+	    key: "setCanUseAutomation",
+	    value: function setCanUseAutomation(canUseAutomation) {
+	      this.canUseAutomation = canUseAutomation === 'Y';
+	    }
+	  }, {
+	    key: "isCanUseAutomation",
+	    value: function isCanUseAutomation() {
+	      return this.canUseAutomation;
+	    }
+	  }, {
+	    key: "existActiveSprint",
+	    value: function existActiveSprint() {
+	      return this.activeSprint !== null;
 	    }
 	  }, {
 	    key: "bindHandlers",
 	    value: function bindHandlers() {
-	      /* eslint-disable */
-	      BX.addCustomEvent('onTasksGroupSelectorChange', this.onSprintSelectorChange.bind(this));
-	      /* eslint-enable */
+	      var _this3 = this;
 
-	      main_core.Event.bind(this.chartSprintButtonNode, 'click', this.onShowSprintBurnDownChart.bind(this));
+	      // eslint-disable-next-line
+	      var kanbanManager = BX.Tasks.Scrum.Kanban;
+
+	      if (kanbanManager) {
+	        this.bindKanbanHandlers(kanbanManager.getKanban());
+	        kanbanManager.getKanbansGroupedByParentTasks().forEach(function (kanban) {
+	          _this3.bindKanbanHandlers(kanban);
+	        });
+	      }
 	    }
 	  }, {
-	    key: "createTitle",
-	    value: function createTitle() {
-	      this.titleContainer = document.getElementById('tasks-scrum-completed-sprint-title');
+	    key: "bindKanbanHandlers",
+	    value: function bindKanbanHandlers(kanban) {
+	      var _this4 = this;
+
+	      this.onKanbanRender(kanban);
+	      main_core_events.EventEmitter.subscribe(kanban, 'Kanban.Grid:onItemMoved', function (event) {
+	        var _event$getCompatData = event.getCompatData(),
+	            _event$getCompatData2 = babelHelpers.slicedToArray(_event$getCompatData, 3),
+	            kanbanItem = _event$getCompatData2[0],
+	            targetColumn = _event$getCompatData2[1],
+	            beforeItem = _event$getCompatData2[2];
+
+	        _this4.onItemMoved(kanbanItem, targetColumn, beforeItem);
+	      });
+	    }
+	  }, {
+	    key: "onCompleteSprint",
+	    value: function onCompleteSprint(baseEvent) {
+	      var _this5 = this;
+
+	      var sprintSidePanel = new SprintSidePanel({
+	        sprints: this.sprints,
+	        sidePanel: this.sidePanel,
+	        requestSender: this.requestSender,
+	        views: this.views
+	      });
+	      sprintSidePanel.showCompleteSidePanel(this.sprint);
+	      this.sprint.subscribe('showTask', function (innerBaseEvent) {
+	        var item = innerBaseEvent.getData();
+
+	        _this5.sidePanel.openSidePanelByUrl(_this5.getPathToTask().replace('#task_id#', item.getSourceId()));
+	      });
+	    }
+	    /**
+	     * Handles Kanban render.
+	     * @param {BX.Tasks.Kanban.Grid} kanbanGrid
+	     * @returns {void}
+	     */
+
+	  }, {
+	    key: "onKanbanRender",
+	    value: function onKanbanRender(kanbanGrid) {
+	      var items = kanbanGrid.getItems();
+	      var hasOwnProperty = Object.prototype.hasOwnProperty;
+
+	      for (var itemId in kanbanGrid.getItems()) {
+	        if (hasOwnProperty.call(items, itemId)) {
+	          var item = items[itemId];
+
+	          if (item.getColumn().getType() === this.finishStatus) {
+	            this.itemsInFinishStage.set(itemId, '');
+	          }
+	        }
+	      }
+	    }
+	    /**
+	     * Hook on item moved.
+	     * @param {BX.Tasks.Kanban.Item} kanbanItem
+	     * @param {BX.Tasks.Kanban.Column} targetColumn
+	     * @param {BX.Tasks.Kanban.Item} [beforeItem]
+	     * @returns {void}
+	     */
+
+	  }, {
+	    key: "onItemMoved",
+	    value: function onItemMoved(kanbanItem, targetColumn, beforeItem) {
+	      if (targetColumn.type === this.finishStatus) {
+	        if (!this.itemsInFinishStage.has(kanbanItem.getId())) {
+	          this.updateStatsAfterMovedToFinish(kanbanItem, this.sprint);
+	        }
+	      } else {
+	        if (this.itemsInFinishStage.has(kanbanItem.getId())) {
+	          this.updateStatsAfterMovedFromFinish(kanbanItem, this.sprint);
+	        }
+	      }
+
+	      this.statsHeader.updateStats(this.sprint);
+	    }
+	  }, {
+	    key: "updateStatsAfterMovedToFinish",
+	    value: function updateStatsAfterMovedToFinish(kanbanItem, sprint) {
+	      this.itemsInFinishStage.set(kanbanItem.getId(), kanbanItem.getStoryPoints());
+	      sprint.getTotalCompletedStoryPoints().addPoints(kanbanItem.getStoryPoints());
+	      sprint.getTotalUncompletedStoryPoints().subtractPoints(kanbanItem.getStoryPoints());
+	      sprint.setCompletedTasks(sprint.getCompletedTasks() + 1);
+	      sprint.setUncompletedTasks(sprint.getUncompletedTasks() - 1);
+	      sprint.getItems().forEach(function (scrumItem) {
+	        if (scrumItem.getSourceId() === parseInt(kanbanItem.getId(), 10)) {
+	          scrumItem.setCompleted('Y');
+
+	          if (scrumItem.isSubTask()) {
+	            var parentItem = sprint.getItemBySourceId(scrumItem.getParentTaskId());
+
+	            if (parentItem) {
+	              var subTasksItems = sprint.getItemsByParentTaskId(parentItem.getSourceId());
+	              var unCompletedItem = babelHelpers.toConsumableArray(subTasksItems.values()).find(function (item) {
+	                return !item.isCompleted();
+	              });
+
+	              if (!unCompletedItem) {
+	                parentItem.setCompleted('Y');
+	              }
+	            }
+	          }
+	        }
+	      });
+	    }
+	  }, {
+	    key: "updateStatsAfterMovedFromFinish",
+	    value: function updateStatsAfterMovedFromFinish(kanbanItem, sprint) {
+	      this.itemsInFinishStage.delete(kanbanItem.getId());
+	      sprint.getTotalCompletedStoryPoints().subtractPoints(kanbanItem.getStoryPoints());
+	      sprint.getTotalUncompletedStoryPoints().addPoints(kanbanItem.getStoryPoints());
+	      sprint.setCompletedTasks(sprint.getCompletedTasks() - 1);
+	      sprint.setUncompletedTasks(sprint.getUncompletedTasks() + 1);
+	      sprint.getItems().forEach(function (scrumItem) {
+	        if (scrumItem.getSourceId() === parseInt(kanbanItem.getId(), 10)) {
+	          scrumItem.setCompleted('N');
+
+	          if (scrumItem.isSubTask()) {
+	            var parentItem = sprint.getItemBySourceId(scrumItem.getParentTaskId());
+
+	            if (parentItem) {
+	              var subTasksItems = sprint.getItemsByParentTaskId(parentItem.getSourceId());
+	              var unCompletedItem = babelHelpers.toConsumableArray(subTasksItems.values()).find(function (item) {
+	                return !item.isCompleted();
+	              });
+
+	              if (unCompletedItem) {
+	                parentItem.setCompleted('N');
+	              }
+	            }
+	          }
+	        }
+	      });
+	    }
+	  }, {
+	    key: "onShowSprintBurnDownChart",
+	    value: function onShowSprintBurnDownChart(baseEvent) {
+	      var sprintSidePanel = new SprintSidePanel({
+	        sidePanel: this.sidePanel,
+	        requestSender: this.requestSender,
+	        views: this.views
+	      });
+	      sprintSidePanel.showBurnDownChart(this.sprint);
+	    }
+	  }]);
+	  return ActiveSprint;
+	}(View);
+
+	function _templateObject$t() {
+	  var data = babelHelpers.taggedTemplateLiteral(["\n\t\t\t<div class=\"tasks-scrum-button-container\">\n\t\t\t\t<button class=\"ui-btn ui-btn-primary ui-btn-xs\">\n\t\t\t\t\t", "\n\t\t\t\t</button>\n\t\t\t</div>\n\t\t"]);
+
+	  _templateObject$t = function _templateObject() {
+	    return data;
+	  };
+
+	  return data;
+	}
+	var BurnDownButton = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(BurnDownButton, _EventEmitter);
+
+	  function BurnDownButton() {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, BurnDownButton);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(BurnDownButton).call(this));
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.BurnDownButton');
+
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(BurnDownButton, [{
+	    key: "render",
+	    value: function render() {
+	      var node = main_core.Tag.render(_templateObject$t(), main_core.Loc.getMessage('TASKS_SCRUM_ACTIVE_SPRINT_BUTTON'));
+	      main_core.Event.bind(node, 'click', this.onClick.bind(this));
+	      return node;
+	    }
+	  }, {
+	    key: "onClick",
+	    value: function onClick() {
+	      this.emit('click');
+	    }
+	  }]);
+	  return BurnDownButton;
+	}(main_core_events.EventEmitter);
+
+	var CompletedSprint = /*#__PURE__*/function (_View) {
+	  babelHelpers.inherits(CompletedSprint, _View);
+
+	  function CompletedSprint(params) {
+	    var _this;
+
+	    babelHelpers.classCallCheck(this, CompletedSprint);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(CompletedSprint).call(this, params));
+
+	    _this.setEventNamespace('BX.Tasks.Scrum.CompletedSprint');
+
+	    _this.setParams(params);
+
+	    _this.bindHandlers();
+
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(CompletedSprint, [{
+	    key: "renderSprintStatsTo",
+	    value: function renderSprintStatsTo(container) {
+	      babelHelpers.get(babelHelpers.getPrototypeOf(CompletedSprint.prototype), "renderSprintStatsTo", this).call(this, container);
+	      this.titleContainer = container;
 	      this.titleContainer.textContent = main_core.Text.encode(this.completedSprint.getName());
 	    }
 	  }, {
+	    key: "renderButtonsTo",
+	    value: function renderButtonsTo(container) {
+	      babelHelpers.get(babelHelpers.getPrototypeOf(CompletedSprint.prototype), "renderButtonsTo", this).call(this, container);
+	      var burnDownButton = new BurnDownButton();
+	      burnDownButton.subscribe('click', this.onShowSprintBurnDownChart.bind(this));
+	      main_core.Dom.append(burnDownButton.render(), container);
+	    }
+	  }, {
+	    key: "setParams",
+	    value: function setParams(params) {
+	      var _this2 = this;
+
+	      this.completedSprint = new Sprint(params.completedSprint);
+	      this.sidePanel = new SidePanel();
+	      this.sprints = new Map();
+	      params.sprints.forEach(function (sprintData) {
+	        var sprint = Sprint.buildSprint(sprintData);
+
+	        _this2.sprints.set(sprint.getId(), sprint);
+	      });
+	      this.views = params.views;
+	    }
+	  }, {
+	    key: "bindHandlers",
+	    value: function bindHandlers() {
+	      main_core_events.EventEmitter.subscribe('onTasksGroupSelectorChange', this.onSprintSelectorChange.bind(this));
+	    }
+	  }, {
 	    key: "onSprintSelectorChange",
-	    value: function onSprintSelectorChange(currentSprint) {
+	    value: function onSprintSelectorChange(event) {
+	      var _event$getCompatData = event.getCompatData(),
+	          _event$getCompatData2 = babelHelpers.slicedToArray(_event$getCompatData, 1),
+	          currentSprint = _event$getCompatData2[0];
+
 	      this.completedSprint = this.findSprintBySprintId(currentSprint.sprintId);
 	      this.titleContainer.textContent = main_core.Text.encode(currentSprint.name);
 	    }
 	  }, {
 	    key: "onShowSprintBurnDownChart",
-	    value: function onShowSprintBurnDownChart() {
+	    value: function onShowSprintBurnDownChart(baseEvent) {
 	      var sprintSidePanel = new SprintSidePanel({
 	        sidePanel: this.sidePanel,
 	        requestSender: this.requestSender,
@@ -8019,53 +11413,134 @@ this.BX.Tasks = this.BX.Tasks || {};
 	    }
 	  }]);
 	  return CompletedSprint;
-	}();
+	}(View);
 
 	var Entry = /*#__PURE__*/function () {
 	  function Entry(params) {
 	    babelHelpers.classCallCheck(this, Entry);
-	    this.activeView = params.activeView;
-	    this.scrumView = null;
-
-	    switch (this.activeView) {
-	      case 'plan':
-	        this.scrumView = new Plan(params);
-	        break;
-
-	      case 'activeSprint':
-	        this.scrumView = new ActiveSprint(params);
-	        break;
-
-	      case 'completedSprint':
-	        this.scrumView = new CompletedSprint({
-	          completedSprint: new Sprint(params.completedSprint),
-	          signedParameters: params.signedParameters,
-	          sprints: params.sprints,
-	          views: params.views
-	        });
-	        break;
-	    }
+	    this.setParams(params);
+	    this.buildView(params);
 	  }
 
 	  babelHelpers.createClass(Entry, [{
+	    key: "setParams",
+	    value: function setParams(params) {
+	      this.setViewName(params.viewName);
+	    }
+	  }, {
+	    key: "setViewName",
+	    value: function setViewName(viewName) {
+	      var availableViews = new Set(['plan', 'activeSprint', 'completedSprint']);
+
+	      if (!availableViews.has(viewName)) {
+	        throw Error('Invalid value to activeView parameter');
+	      }
+
+	      this.viewName = viewName;
+	    }
+	  }, {
+	    key: "getViewName",
+	    value: function getViewName() {
+	      return this.viewName;
+	    }
+	  }, {
+	    key: "setView",
+	    value: function setView(view) {
+	      if (view instanceof View) {
+	        this.view = view;
+	      } else {
+	        this.view = null;
+	      }
+	    }
+	  }, {
+	    key: "getView",
+	    value: function getView() {
+	      return this.view;
+	    }
+	  }, {
+	    key: "buildView",
+	    value: function buildView(params) {
+	      var viewName = this.getViewName();
+
+	      if (viewName === 'plan') {
+	        this.setView(new Plan(params));
+	      } else if (viewName === 'activeSprint') {
+	        this.setView(new ActiveSprint(params));
+	      } else if (viewName === 'completedSprint') {
+	        this.setView(new CompletedSprint(params));
+	      }
+	    }
+	  }, {
 	    key: "renderTo",
 	    value: function renderTo(container) {
-	      this.scrumView.renderTo(container);
+	      var view = this.getView();
+
+	      if (view instanceof View) {
+	        this.getView().renderTo(container);
+	      }
+	    }
+	  }, {
+	    key: "renderTabsTo",
+	    value: function renderTabsTo(container) {
+	      var view = this.getView();
+
+	      if (view instanceof View) {
+	        this.getView().renderTabsTo(container);
+	      }
+	    }
+	  }, {
+	    key: "renderCountersTo",
+	    value: function renderCountersTo(container) {
+	      var view = this.getView();
+
+	      if (view instanceof View) {
+	        this.getView().renderCountersTo(container);
+	      }
+	    }
+	  }, {
+	    key: "renderSprintStatsTo",
+	    value: function renderSprintStatsTo(container) {
+	      var view = this.getView();
+
+	      if (view instanceof View) {
+	        this.getView().renderSprintStatsTo(container);
+	      }
+	    }
+	  }, {
+	    key: "renderButtonsTo",
+	    value: function renderButtonsTo(container) {
+	      var view = this.getView();
+
+	      if (view instanceof View) {
+	        this.getView().renderButtonsTo(container);
+	      }
 	    }
 	  }, {
 	    key: "openEpicEditForm",
 	    value: function openEpicEditForm(epicId) {
-	      this.scrumView.openEpicEditForm(epicId);
+	      var view = this.getView();
+
+	      if (view instanceof Plan) {
+	        view.openEpicEditForm(epicId);
+	      }
 	    }
 	  }, {
 	    key: "openEpicViewForm",
 	    value: function openEpicViewForm(epicId) {
-	      this.scrumView.openEpicViewForm(epicId);
+	      var view = this.getView();
+
+	      if (view instanceof Plan) {
+	        view.openEpicViewForm(epicId);
+	      }
 	    }
 	  }, {
 	    key: "removeEpic",
 	    value: function removeEpic(epicId) {
-	      this.scrumView.removeEpic(epicId);
+	      var view = this.getView();
+
+	      if (view instanceof Plan) {
+	        view.removeEpic(epicId);
+	      }
 	    }
 	  }]);
 	  return Entry;
@@ -8073,5 +11548,5 @@ this.BX.Tasks = this.BX.Tasks || {};
 
 	exports.Entry = Entry;
 
-}((this.BX.Tasks.Scrum = this.BX.Tasks.Scrum || {}),BX.UI.EntitySelector,BX.UI,BX,BX.Main,BX.UI.DragAndDrop,BX.UI,BX.UI.Dialogs,BX.Event,BX));
+}((this.BX.Tasks.Scrum = this.BX.Tasks.Scrum || {}),BX.UI.EntitySelector,BX.UI,BX,BX.UI.DragAndDrop,BX,BX.UI,BX.UI.Dialogs,BX.Main,BX,BX.Event));
 //# sourceMappingURL=script.js.map

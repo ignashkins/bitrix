@@ -1,5 +1,9 @@
 <?php
 
+use Bitrix\Crm\ContactAddress;
+use Bitrix\Crm\EntityAddressType;
+use Bitrix\Crm\Format\AddressFormatter;
+use Bitrix\Crm\LeadAddress;
 use Bitrix\Crm\UserField\Visibility\VisibilityManager;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Loader;
@@ -1529,17 +1533,19 @@ class CCrmMobileHelper
 			$item['~POST'] = $item['POST'] = '';
 		}
 
-		$item['FULL_ADDRESS'] = Bitrix\Crm\Format\ContactAddressFormatter::format(
-			array(
-				'ADDRESS' => $item['~ADDRESS'],
-				'ADDRESS_2' => $item['~ADDRESS_2'],
-				'ADDRESS_CITY' => $item['~ADDRESS_CITY'],
-				'ADDRESS_REGION' => $item['~ADDRESS_REGION'],
-				'ADDRESS_PROVINCE' => $item['~ADDRESS_PROVINCE'],
-				'ADDRESS_POSTAL_CODE' => $item['~ADDRESS_POSTAL_CODE'],
-				'ADDRESS_COUNTRY' => $item['~ADDRESS_COUNTRY']
-			),
-			array('SEPARATOR' => Bitrix\Crm\Format\AddressSeparator::HtmlLineBreak)
+		$item['FULL_ADDRESS'] = AddressFormatter::getSingleInstance()->formatHtmlMultiline(
+			ContactAddress::mapEntityFields(
+				[
+					'ADDRESS' => $item['~ADDRESS'],
+					'ADDRESS_2' => $item['~ADDRESS_2'],
+					'ADDRESS_CITY' => $item['~ADDRESS_CITY'],
+					'ADDRESS_REGION' => $item['~ADDRESS_REGION'],
+					'ADDRESS_PROVINCE' => $item['~ADDRESS_PROVINCE'],
+					'ADDRESS_POSTAL_CODE' => $item['~ADDRESS_POSTAL_CODE'],
+					'ADDRESS_COUNTRY' => $item['~ADDRESS_COUNTRY'],
+					'ADDRESS_LOC_ADDR_ID' => $item['~ADDRESS_LOC_ADDR_ID']
+				]
+			)
 		);
 
 		if(!isset($item['~COMMENTS']))
@@ -1688,7 +1694,7 @@ class CCrmMobileHelper
 	public static function getCompanySortFields()
 	{
 		$addressLabels = Bitrix\Crm\EntityAddress::getShortLabels();
-		$regAddressLabels = Bitrix\Crm\EntityAddress::getShortLabels(Bitrix\Crm\EntityAddress::Registered);
+		$regAddressLabels = Bitrix\Crm\EntityAddress::getShortLabels(EntityAddressType::Registered);
 
 		$fields = array(
 			'ID' => array('id' => 'ID', 'name' => GetMessage('CRM_COLUMN_COMPANY_ID'), 'sort' => 'id'),
@@ -1777,7 +1783,7 @@ class CCrmMobileHelper
 	public static function getCompanyFields($includeUserFields = true)
 	{
 		$addressLabels = Bitrix\Crm\EntityAddress::getShortLabels();
-		$regAddressLabels = Bitrix\Crm\EntityAddress::getShortLabels(Bitrix\Crm\EntityAddress::Registered);
+		$regAddressLabels = Bitrix\Crm\EntityAddress::getShortLabels(EntityAddressType::Registered);
 
 		$fields = array(
 			'ID' => array('id' => 'ID', 'name' => GetMessage('CRM_COLUMN_COMPANY_ID')),
@@ -1789,7 +1795,7 @@ class CCrmMobileHelper
 			'ASSIGNED_BY' => array('id' => 'ASSIGNED_BY', 'name' => GetMessage('CRM_COLUMN_COMPANY_ASSIGNED_BY')),
 
 			'FULL_ADDRESS' => array('id' => 'FULL_ADDRESS', 'name' => Bitrix\Crm\EntityAddress::getFullAddressLabel()),
-			'FULL_REG_ADDRESS' => array('id' => 'FULL_REG_ADDRESS', 'name' => Bitrix\Crm\EntityAddress::getFullAddressLabel(Bitrix\Crm\EntityAddress::Registered)),
+			'FULL_REG_ADDRESS' => array('id' => 'FULL_REG_ADDRESS', 'name' => Bitrix\Crm\EntityAddress::getFullAddressLabel(EntityAddressType::Registered)),
 
 			'BANKING_DETAILS' => array('id' => 'BANKING_DETAILS', 'name' => GetMessage('CRM_COLUMN_COMPANY_BANKING_DETAILS')),
 			'INDUSTRY' => array('id' => 'INDUSTRY', 'name' => GetMessage('CRM_COLUMN_COMPANY_INDUSTRY')),
@@ -2237,17 +2243,19 @@ class CCrmMobileHelper
 
 		if (is_array($enums["FIELDS"]) && in_array("FULL_ADDRESS", $enums["FIELDS"]))
 		{
-			$item['FULL_ADDRESS'] = Bitrix\Crm\Format\LeadAddressFormatter::format(
-				array(
-					'ADDRESS' => $item['ADDRESS'],
-					'ADDRESS_2' => $item['ADDRESS_2'],
-					'ADDRESS_CITY' => $item['ADDRESS_CITY'],
-					'ADDRESS_REGION' => $item['ADDRESS_REGION'],
-					'ADDRESS_PROVINCE' => $item['ADDRESS_PROVINCE'],
-					'ADDRESS_POSTAL_CODE' => $item['ADDRESS_POSTAL_CODE'],
-					'ADDRESS_COUNTRY' => $item['ADDRESS_COUNTRY']
-				),
-				array('SEPARATOR' => Bitrix\Crm\Format\AddressSeparator::HtmlLineBreak)
+			$item['FULL_ADDRESS'] = AddressFormatter::getSingleInstance()->formatHtmlMultiline(
+				LeadAddress::mapEntityFields(
+					[
+						'ADDRESS' => $item['ADDRESS'],
+						'ADDRESS_2' => $item['ADDRESS_2'],
+						'ADDRESS_CITY' => $item['ADDRESS_CITY'],
+						'ADDRESS_REGION' => $item['ADDRESS_REGION'],
+						'ADDRESS_PROVINCE' => $item['ADDRESS_PROVINCE'],
+						'ADDRESS_POSTAL_CODE' => $item['ADDRESS_POSTAL_CODE'],
+						'ADDRESS_COUNTRY' => $item['ADDRESS_COUNTRY'],
+						'ADDRESS_LOC_ADDR_ID' => $item['ADDRESS_LOC_ADDR_ID']
+					]
+				)
 			);
 		}
 		if (isset($item["DATE_CREATE"]))

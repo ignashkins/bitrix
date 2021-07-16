@@ -115,7 +115,7 @@ class BizprocDocument extends CIBlockDocument
 	 * @throws CBPArgumentOutOfRangeException
 	 * @throws Exception
 	 */
-	public function getDocument($documentId)
+	public static function getDocument($documentId)
 	{
 		$documentId = intval($documentId);
 		if ($documentId <= 0)
@@ -188,7 +188,7 @@ class BizprocDocument extends CIBlockDocument
 						$property['VALUE'] = array($property['VALUE']);
 
 					$listUsers = implode(' | ', $property['VALUE']);
-					$userQuery = CUser::getList($by = 'ID', $order = 'ASC',
+					$userQuery = CUser::getList('ID', 'ASC',
 						array('ID' => $listUsers) ,
 						array('FIELDS' => array('ID' ,'LOGIN', 'NAME', 'LAST_NAME')));
 					while($user = $userQuery->fetch())
@@ -560,7 +560,7 @@ class BizprocDocument extends CIBlockDocument
 	 * @return array
 	 * @throws CBPArgumentOutOfRangeException
 	 */
-	public function getDocumentFields($documentType)
+	public static function getDocumentFields($documentType)
 	{
 		$iblockId = intval(mb_substr($documentType, mb_strlen("iblock_")));
 		if ($iblockId <= 0)
@@ -804,7 +804,7 @@ class BizprocDocument extends CIBlockDocument
 	 * @return bool|string
 	 * @throws CBPArgumentOutOfRangeException
 	 */
-	public function addDocumentField($documentType, $fields)
+	public static function addDocumentField($documentType, $fields)
 	{
 		$iblockId = intval(mb_substr($documentType, mb_strlen("iblock_")));
 		if ($iblockId <= 0)
@@ -995,7 +995,7 @@ class BizprocDocument extends CIBlockDocument
 	 * @return bool|string
 	 * @throws CBPArgumentOutOfRangeException
 	 */
-	public function updateDocumentField($documentType, $fields)
+	public static function updateDocumentField($documentType, $fields)
 	{
 		if(!isset($fields['settings'])) // check field on the activity
 			return false;
@@ -1203,7 +1203,7 @@ class BizprocDocument extends CIBlockDocument
 		return false;
 	}
 
-	public function updateDocument($documentId, $arFields)
+	public static function updateDocument($documentId, $arFields)
 	{
 		$documentId = intval($documentId);
 		if ($documentId <= 0)
@@ -1251,6 +1251,10 @@ class BizprocDocument extends CIBlockDocument
 						foreach ($a1 as $a11)
 							$ar[] = $a11;
 					}
+				}
+				if (!empty($ar))
+				{
+					$ar = array_unique($ar);
 				}
 
 				$arFields[$key] = $ar;
@@ -1391,7 +1395,13 @@ class BizprocDocument extends CIBlockDocument
 		}
 	}
 
-	public static function onWorkflowStatusChange($documentId, $workflowId, $status)
+	/**
+	 * @param string $documentId
+	 * @param string $workflowId
+	 * @param int $status
+	 * @param null|CBPActivity $rootActivity
+	 */
+	public static function onWorkflowStatusChange($documentId, $workflowId, $status, $rootActivity)
 	{
 		if ($status == CBPWorkflowStatus::Completed)
 		{
@@ -1402,6 +1412,16 @@ class BizprocDocument extends CIBlockDocument
 		{
 			CLists::deleteSocnetLog(array($workflowId));
 		}
+
+		if (
+			$rootActivity
+			&& $status === \CBPWorkflowStatus::Running
+			&& !$rootActivity->workflow->isNew()
+			&& !\CBPRuntime::isFeatureEnabled()
+		)
+		{
+			throw new \Exception(Loc::getMessage('LISTS_BIZPROC_RESUME_RESTRICTED'));
+		}
 	}
 
 	/**
@@ -1409,7 +1429,7 @@ class BizprocDocument extends CIBlockDocument
 	 * @return null|string
 	 * @throws CBPArgumentNullException
 	 */
-	public function getDocumentAdminPage($documentId)
+	public static function getDocumentAdminPage($documentId)
 	{
 		$documentId = intval($documentId);
 		if ($documentId <= 0)
@@ -1459,7 +1479,7 @@ class BizprocDocument extends CIBlockDocument
 	 * @return array
 	 * @throws CBPArgumentOutOfRangeException
 	 */
-	public function getAllowableOperations($documentType)
+	public static function getAllowableOperations($documentType)
 	{
 		$iblockId = intval(mb_substr($documentType, mb_strlen("iblock_")));
 		if ($iblockId <= 0)
@@ -1486,7 +1506,7 @@ class BizprocDocument extends CIBlockDocument
 	 * @param array $permissions
 	 * @return array
 	 */
-	public function toInternalOperations($documentType, $permissions)
+	public static function toInternalOperations($documentType, $permissions)
 	{
 		$permissions = (array) $permissions;
 		$tasks = self::getRightsTasks();
@@ -1507,7 +1527,7 @@ class BizprocDocument extends CIBlockDocument
 	 * @param array $permissions
 	 * @return array
 	 */
-	public function toExternalOperations($documentType, $permissions)
+	public static function toExternalOperations($documentType, $permissions)
 	{
 		$permissions = (array) $permissions;
 		$tasks = self::getRightsTasks();
@@ -1529,7 +1549,7 @@ class BizprocDocument extends CIBlockDocument
 		return $normalized;
 	}
 
-	function CanUserOperateDocument($operation, $userId, $documentId, $parameters = array())
+	public static function CanUserOperateDocument($operation, $userId, $documentId, $parameters = array())
 	{
 		$documentId = trim($documentId);
 		if ($documentId == '')
@@ -1733,7 +1753,7 @@ class BizprocDocument extends CIBlockDocument
 		return $r;
 	}
 
-	function CanUserOperateDocumentType($operation, $userId, $documentType, $parameters = array())
+	public static function CanUserOperateDocumentType($operation, $userId, $documentType, $parameters = array())
 	{
 		$documentType = trim($documentType);
 		if ($documentType == '')
@@ -1903,7 +1923,7 @@ class BizprocDocument extends CIBlockDocument
 		return $r;
 	}
 
-	protected function isAdmin()
+	protected static function isAdmin()
 	{
 		global $USER;
 		if (is_object($USER) && $USER->IsAuthorized())
@@ -1922,7 +1942,7 @@ class BizprocDocument extends CIBlockDocument
 	 * @param bool $withExtended
 	 * @return array|bool
 	 */
-	public function GetAllowableUserGroups($documentType, $withExtended = false)
+	public static function GetAllowableUserGroups($documentType, $withExtended = false)
 	{
 		$documentType = trim($documentType);
 		if ($documentType == '')
@@ -1967,13 +1987,13 @@ class BizprocDocument extends CIBlockDocument
 		return $result;
 	}
 
-	public function SetPermissions($documentId, $workflowId, $permissions, $rewrite = true)
+	public static function SetPermissions($documentId, $workflowId, $permissions, $rewrite = true)
 	{
 		$permissions = self::toInternalOperations(null, $permissions);
 		parent::setPermissions($documentId, $workflowId, $permissions, $rewrite);
 	}
 
-	public function GetFieldInputControl($documentType, $fieldType, $fieldName, $fieldValue, $allowSelection = false, $publicMode = false)
+	public static function GetFieldInputControl($documentType, $fieldType, $fieldName, $fieldValue, $allowSelection = false, $publicMode = false)
 	{
 		$iblockId = intval(mb_substr($documentType, mb_strlen("iblock_")));
 		if ($iblockId <= 0)
@@ -2512,7 +2532,7 @@ class BizprocDocument extends CIBlockDocument
 		return $s;
 	}
 
-	public function GetFieldInputValue($documentType, $fieldType, $fieldName, $request, &$errors)
+	public static function GetFieldInputValue($documentType, $fieldType, $fieldName, $request, &$errors)
 	{
 		$iblockId = intval(mb_substr($documentType, mb_strlen("iblock_")));
 		if ($iblockId <= 0)
@@ -2823,7 +2843,7 @@ class BizprocDocument extends CIBlockDocument
 		return $result;
 	}
 
-	public function GetFieldInputValuePrintable($documentType, $fieldType, $fieldValue)
+	public static function GetFieldInputValuePrintable($documentType, $fieldType, $fieldValue)
 	{
 		$result = $fieldValue;
 
@@ -2935,7 +2955,7 @@ class BizprocDocument extends CIBlockDocument
 		return $result;
 	}
 
-	public function UnlockDocument($documentId, $workflowId)
+	public static function UnlockDocument($documentId, $workflowId)
 	{
 		global $DB;
 
@@ -2975,7 +2995,7 @@ class BizprocDocument extends CIBlockDocument
 	 * @param string $documentId
 	 * @return bool|int
 	 */
-	public function PublishDocument($documentId)
+	public static function PublishDocument($documentId)
 	{
 		global $DB;
 		$ID = intval($documentId);
@@ -3106,7 +3126,7 @@ class BizprocDocument extends CIBlockDocument
 	 * @return null
 	 * @throws CBPArgumentNullException
 	 */
-	public function GetDocumentForHistory($documentId, $historyIndex)
+	public static function GetDocumentForHistory($documentId, $historyIndex)
 	{
 		$documentId = intval($documentId);
 		if ($documentId <= 0)

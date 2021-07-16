@@ -65,7 +65,8 @@
 		onQualityGraded: 'phoneCallViewOnQualityGraded',
 		onDialpadButtonClicked: 'phoneCallViewOnDialpadButtonClicked',
 		onCommentShown: 'phoneCallViewOnCommentShown',
-		onSaveComment: 'phoneCallViewOnSaveComment'
+		onSaveComment: 'phoneCallViewOnSaveComment',
+		onSetAutoClose: 'phoneCallViewOnSetAutoClose',
 	};
 
 	var defaults = {
@@ -417,6 +418,7 @@
 		var self = this;
 
 		return new BX.PopupWindow(self.getId(), null, {
+			targetContainer: document.body,
 			content: this.elements.main,
 			closeIcon: false,
 			noAllPaddings: true,
@@ -2415,39 +2417,45 @@
 	BX.PhoneCallView.prototype._onMakeCallButtonClick = function(e)
 	{
 		var event = {};
-		var self = this;
 		if(this.callListId > 0)
 		{
 			this.callingEntity = this.currentEntity;
 
-			if(this.currentEntity.phones.length == 0)
+			if(this.currentEntity.phones.length === 0)
 			{
 				// show keypad and dial entered number
 				this.keypad = new Keypad({
 					bindElement: this.elements.buttons.call ? this.elements.buttons.call : null,
 					onClose: function()
 					{
-						self.keypad.destroy();
-						self.keypad = null;
-					},
+						this.keypad.destroy();
+						this.keypad = null;
+					}.bind(this),
 					onDial: function(e)
 					{
-						self.keypad.close();
-						self.phoneNumber = e.phoneNumber;
-						self.createTitle().then(self.setTitle.bind(this));
+						this.keypad.close();
+						this.phoneNumber = e.phoneNumber;
+						this.createTitle().then(function(title)
+						{
+							this.setTitle(title)
+						}.bind(this));
 
 						event = {
 							phoneNumber: e.phoneNumber,
-							crmEntityType: self.crmEntityType,
-							crmEntityId: self.crmEntityId,
-							callListId: self.callListId
+							crmEntityType: this.crmEntityType,
+							crmEntityId: this.crmEntityId,
+							callListId: this.callListId
 						};
 
-						if(self.isDesktop() && self.slave)
+						if(this.isDesktop() && this.slave)
+						{
 							BX.desktop.onCustomEvent(desktopEvents.onCallListMakeCall, [event]);
+						}
 						else
-							self.callbacks.callListMakeCall(event);
-					}
+						{
+							this.callbacks.callListMakeCall(event);
+						}
+					}.bind(this)
 				});
 				this.keypad.show();
 			}
@@ -2459,9 +2467,13 @@
 				event.crmEntityId = this.crmEntityId;
 				event.callListId = this.callListId;
 				if(this.isDesktop() && this.slave)
+				{
 					BX.desktop.onCustomEvent(desktopEvents.onCallListMakeCall, [event]);
+				}
 				else
+				{
 					this.callbacks.callListMakeCall(event);
+				}
 			}
 			else
 			{
@@ -2469,23 +2481,26 @@
 				this.showNumberSelectMenu({
 					bindElement: this.elements.buttons.call ? this.elements.buttons.call : null,
 					phoneNumbers: this.currentEntity.phones,
-					onSelect: function(e){
-						self.closeNumberSelectMenu();
-						self.phoneNumber = e.phoneNumber;
-						self.createTitle().then(self.setTitle.bind(self));
+					onSelect: function(e)
+					{
+						this.closeNumberSelectMenu();
+						this.phoneNumber = e.phoneNumber;
+						this.createTitle().then(function(title){
+							this.setTitle(title)
+						}.bind(this));
 
 						event = {
 							phoneNumber: e.phoneNumber,
-							crmEntityType: self.crmEntityType,
-							crmEntityId: self.crmEntityId,
-							callListId: self.callListId
+							crmEntityType: this.crmEntityType,
+							crmEntityId: this.crmEntityId,
+							callListId: this.callListId
 						};
 
-						if(self.isDesktop() && self.slave)
+						if(this.isDesktop() && this.slave)
 							BX.desktop.onCustomEvent(desktopEvents.onCallListMakeCall, [event]);
 						else
-							self.callbacks.callListMakeCall(event);
-					}
+							this.callbacks.callListMakeCall(event);
+					}.bind(this)
 				});
 			}
 		}
@@ -2884,6 +2899,7 @@
 		};
 
 		this.qualityPopup = new BX.PopupWindow('PhoneCallViewQualityGrade', this.elements.qualityMeter, {
+			targetContainer: document.body,
 			darkMode: true,
 			closeByEsc: true,
 			autoHide: true,
@@ -3168,6 +3184,7 @@
 		BX.desktop.addCustomEvent(desktopEvents.onDialpadButtonClicked, function(grade){self.callbacks.dialpadButtonClicked(grade)});
 		BX.desktop.addCustomEvent(desktopEvents.onCommentShown, function(commentShown){self.commentShown = commentShown});
 		BX.desktop.addCustomEvent(desktopEvents.onSaveComment, function(comment){self.comment = comment; self.saveComment();});
+		BX.desktop.addCustomEvent(desktopEvents.onSetAutoClose, function(autoClose){self.autoClose = autoClose;});
 
 	};
 
@@ -3304,12 +3321,20 @@
 	BX.PhoneCallView.prototype.disableAutoClose = function()
 	{
 		this.allowAutoClose = false;
+		if(this.isDesktop() && this.slave)
+		{
+			BX.desktop.onCustomEvent(desktopEvents.onSetAutoClose, [this.allowAutoClose]);
+		}
 		this.renderButtons();
 	};
 
 	BX.PhoneCallView.prototype.enableAutoClose = function()
 	{
 		this.allowAutoClose = true;
+		if(this.isDesktop() && this.slave)
+		{
+			BX.desktop.onCustomEvent(desktopEvents.onSetAutoClose, [this.allowAutoClose]);
+		}
 		this.renderButtons();
 	};
 
@@ -4660,6 +4685,7 @@
 	{
 		var self = this;
 		return new BX.PopupWindow('bx-messenger-popup-transfer', this.bindElement, {
+			targetContainer: document.body,
 			zIndex: baseZIndex + 200,
 			lightShadow : true,
 			offsetTop: 5,
@@ -4992,6 +5018,7 @@
 	{
 		var self = this;
 		var popupOptions = {
+			targetContainer: document.body,
 			darkMode: true,
 			closeByEsc: true,
 			autoHide: true,
@@ -5159,7 +5186,8 @@
 		{}
 		else if (e.keyCode >= 48 && e.keyCode <= 57 && !e.shiftKey) // 0-9
 		{
-			this.elements.input.value = this.elements.input.value + e.key;
+			insertAtCursor(this.elements.input, e.key);
+
 			e.preventDefault();
 			this.callbacks.onButtonClick({
 				key: e.key
@@ -5167,7 +5195,8 @@
 		}
 		else if (e.keyCode >= 96 && e.keyCode <= 105 && !e.shiftKey) // extra 0-9
 		{
-			this.elements.input.value = this.elements.input.value + e.key;
+			insertAtCursor(this.elements.input, e.key);
+
 			e.preventDefault();
 			this.callbacks.onButtonClick({
 				key: e.key
@@ -5205,7 +5234,6 @@
 
 	Keypad.prototype._onInterceptButtonClick = function()
 	{
-		var self = this;
 		if(!defaults.callInterceptAllowed)
 		{
 			this.close();
@@ -5220,13 +5248,14 @@
 		{
 			if(!response.FOUND || response.FOUND == 'Y')
 			{
-				self.close();
+				this.close();
 			}
 			else
 			{
 				if(response.ERROR)
 				{
-					self.interceptErrorPopup = new BX.PopupWindow('intercept-call-error', this.elements.interceptButton, {
+					this.interceptErrorPopup = new BX.PopupWindow('intercept-call-error', this.elements.interceptButton, {
+						targetContainer: document.body,
 						content: BX.util.htmlspecialchars(response.ERROR),
 						autoHide: true,
 						closeByEsc: true,
@@ -5237,16 +5266,18 @@
 							offset: 40
 						},
 						zIndex: this.zIndex + 100,
-						onPopupClose: function(e)
-						{
-							self.interceptErrorPopup.destroy()
-						},
-						onPopupDestroy: function(e)
-						{
-							self.interceptErrorPopup = null;
+						events: {
+							onPopupClose: function(e)
+							{
+								this.interceptErrorPopup.destroy();
+							}.bind(this),
+							onPopupDestroy: function(e)
+							{
+								this.interceptErrorPopup = null;
+							}.bind(this)
 						}
 					});
-					self.interceptErrorPopup.show();
+					this.interceptErrorPopup.show();
 				}
 			}
 		}.bind(this));
@@ -5259,9 +5290,14 @@
 		var self = this;
 		if (key == 0)
 		{
-			this.plusKeyTimeout = setTimeout(function() {
-				self.plusEntered = true;
-				self.elements.input.value = self.elements.input.value + '+';
+			self.plusEntered = false;
+			this.plusKeyTimeout = setTimeout(function()
+			{
+				if (!self.elements.input.value.startsWith('+'))
+				{
+					self.plusEntered = true;
+					self.elements.input.value = '+' + self.elements.input.value;
+				}
 			}, 500);
 		}
 	};
@@ -5274,13 +5310,15 @@
 		{
 			clearTimeout(this.plusKeyTimeout);
 			if (!this.plusEntered)
-				this.elements.input.value = this.elements.input.value + '0';
+			{
+				insertAtCursor(this.elements.input, '0');
+			}
 
 			this.plusEntered = false;
 		}
 		else
 		{
-			this.elements.input.value = this.elements.input.value + key;
+			insertAtCursor(this.elements.input, key);
 		}
 		this._onAfterNumberChanged();
 		this.callbacks.onButtonClick({
@@ -5518,4 +5556,22 @@
 	{
 		this.callbacks.onFormSend(form);
 	};
+
+	function insertAtCursor(inputElement, value)
+	{
+		if (inputElement.selectionStart || inputElement.selectionStart == '0')
+		{
+			var startPos = inputElement.selectionStart;
+			var endPos = inputElement.selectionEnd;
+			inputElement.value = inputElement.value.substring(0, startPos)
+				+ value
+				+ inputElement.value.substring(endPos, inputElement.value.length);
+			inputElement.selectionStart = startPos + value.length;
+			inputElement.selectionEnd = startPos + value.length;
+		}
+		else
+		{
+			inputElement.value += value;
+		}
+	}
 })();

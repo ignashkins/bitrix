@@ -1,11 +1,23 @@
-<?if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)die();
+<?php
+
+if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)
+{
+	die();
+}
+
 /**
  * @var CMain $APPLICATION
  * @var CUser $USER
  */
 use \Bitrix\Main\UI;
 
-UI\Extension::load(['ui.animations', 'main.rating' , 'ui.tooltip', 'ui.icons.b24']);
+UI\Extension::load([
+	'ui.animations',
+	'main.rating',
+	'ui.tooltip',
+	'ui.icons.b24',
+	'ui.urlpreview',
+]);
 
 $APPLICATION->SetAdditionalCSS("/bitrix/components/bitrix/socialnetwork.log.ex/templates/.default/style.css");
 $APPLICATION->SetAdditionalCSS("/bitrix/components/bitrix/socialnetwork.blog.blog/templates/.default/style.css");
@@ -46,7 +58,7 @@ ob_start();
 		#BEFORE_RECORD#
 		<div class="feed-com-block blog-comment-user-#AUTHOR_ID# sonet-log-comment-createdby-#AUTHOR_ID# feed-com-block-#APPROVED##CLASSNAME#">
 			#BEFORE_HEADER#
-			<div class="feed-com-avatar feed-com-avatar-#AUTHOR_AVATAR_IS#"><img src="#AUTHOR_AVATAR#" width="<?=$arParams["AVATAR_SIZE"]?>" height="<?=$arParams["AVATAR_SIZE"]?>" /></div>
+			<div class="ui-icon ui-icon-common-user feed-com-avatar feed-com-avatar-#AUTHOR_AVATAR_IS#"><i></i><img src="#AUTHOR_AVATAR#" width="<?=$arParams["AVATAR_SIZE"]?>" height="<?=$arParams["AVATAR_SIZE"]?>" /></div>
 			<!--/noindex-->
 			<div class="feed-com-main-content feed-com-block-#NEW#">
 				<span class="feed-com-name #AUTHOR_EXTRANET_STYLE# feed-author-name feed-author-name-#AUTHOR_ID#">#AUTHOR_NAME#</span>
@@ -88,7 +100,8 @@ ob_start();
 				?>onclick="BX.onCustomEvent(BX('<?=$eventNodeIdTemplate?>'), 'onReply', [this]);" <?
 				?>bx-mpl-author-id="#AUTHOR_ID#" <?
 				?>bx-mpl-author-gender="#AUTHOR_PERSONAL_GENDER#" <?
-				?>bx-mpl-author-name="#AUTHOR_NAME#"><?=GetMessage("BLOG_C_REPLY")?></a><?
+				?>bx-mpl-author-name="#AUTHOR_NAME#" <?
+				?>data-slider-ignore-autobinding="true"><?=GetMessage("BLOG_C_REPLY")?></a><?
 			}
 
 
@@ -146,9 +159,13 @@ else
 				?><div id="record-<?=$prefixNode?>-hidden" class="feed-hidden-post" style="display:none; overflow:hidden;"></div> <?
 			}
 			?><div class="feed-com-header"><?
-				?><a class="feed-com-all" href="<?=$arParams["NAV_STRING"]?>" id="<?=$prefixNode?>_page_nav" bx-mpl-comments-count="<?=$arResult["NAV_STRING_COUNT_MORE"]?>"><?
+				?><a class="feed-com-all" href="<?=$arParams["NAV_STRING"]?>"<?
+					?> id="<?=$prefixNode?>_page_nav" <?
+					?> bx-mpl-comments-count="<?=$arResult["NAV_STRING_COUNT_MORE"]?>"<?
+					?> data-slider-ignore-autobinding="true"><?
 					?><?=($arParams["PREORDER"] == "Y" ? GetMessage("BLOG_C_VIEW1") : GetMessage("BLOG_C_VIEW2"))?> <span class="feed-com-all-count"><?=$arResult["NAV_STRING_COUNT_MORE"]?></span><i></i><?
 				?></a><?
+				?><span class="feed-com-loader-informer" id="<?=$prefixNode?>_page_nav_loader" style="display:none;"><?=GetMessage("BLOG_C_LOADING")?></span><?
 			?></div><?
 			if ($arParams["PREORDER"] != "Y")
 			{
@@ -293,6 +310,7 @@ BX.ready(function(){
 
 		mainNode : BX('<?=$eventNodeId?>'),
 		navigationNode : BX('<?=$prefixNode?>_page_nav'),
+		navigationNodeLoader : BX('<?=$prefixNode?>_page_nav_loader'),
 		nodeForOldMessages : BX('record-<?=$prefixNode?>-hidden'),
 		nodeForNewMessages : BX('record-<?=$prefixNode?>-new'),
 		nodeFormHolder : BX('record-<?=$prefixNode?>-form-holder'),
@@ -360,7 +378,7 @@ if ($arParams["SHOW_POST_FORM"] == "Y")
 		<div class="ui-icon ui-icon-common-user feed-com-avatar feed-com-avatar-<?=($AUTHOR_AVATAR == '/bitrix/images/1.gif' ? "N" : "Y")?>"><?
 			?>
 			<i></i>
-			<img width="37" height="37" src="<?=\CHTTP::urnEncode($AUTHOR_AVATAR)?>">
+			<img width="37" height="37" src="<?= $AUTHOR_AVATAR ?>">
 			<?
 		?></div>
 

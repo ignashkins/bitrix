@@ -26,9 +26,9 @@ $arTooltipPropertiesDefault = serialize(array(
 ));
 
 if (!array_key_exists("SHOW_FIELDS_TOOLTIP", $arParams))
-	$arParams["SHOW_FIELDS_TOOLTIP"] = unserialize(COption::GetOptionString("socialnetwork", "tooltip_fields", $arTooltipFieldsDefault));
+	$arParams["SHOW_FIELDS_TOOLTIP"] = unserialize(COption::GetOptionString("socialnetwork", "tooltip_fields", $arTooltipFieldsDefault), ["allowed_classes" => false]);
 if (!array_key_exists("USER_PROPERTY_TOOLTIP", $arParams))
-	$arParams["USER_PROPERTY_TOOLTIP"] = unserialize(COption::GetOptionString("socialnetwork", "tooltip_properties", $arTooltipPropertiesDefault));
+	$arParams["USER_PROPERTY_TOOLTIP"] = unserialize(COption::GetOptionString("socialnetwork", "tooltip_properties", $arTooltipPropertiesDefault), ["allowed_classes" => false]);
 
 if (!array_key_exists("PM_URL", $arParams))
 	$arParams["~PM_URL"] = $arParams["PM_URL"] = "/company/personal/messages/chat/#USER_ID#/";
@@ -105,8 +105,8 @@ else
 	if (count($arUserIDs) > 0)
 	{
 		$dbUsers = CUser::GetList(
-			$by = 'ID',
-			$order = 'asc',
+			'ID',
+			'asc',
 			array('ID' => implode('|', $arUserIDs), 'ACTIVE' => 'Y', '!UF_DEPARTMENT' => false),
 			array('SELECT' => array('UF_*'))
 		);

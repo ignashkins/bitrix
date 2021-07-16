@@ -1,4 +1,8 @@
 <?
+
+use Bitrix\Crm\Format\AddressFormatter;
+use Bitrix\Crm\LeadAddress;
+
 if (!CModule::IncludeModule('bizproc'))
 	return;
 
@@ -337,9 +341,8 @@ class CCrmDocumentContact extends CCrmDocument
 
 	static public function PrepareDocument(array &$arFields)
 	{
-		$arFields['FULL_ADDRESS'] = Bitrix\Crm\Format\LeadAddressFormatter::format(
-			$arFields,
-			array('SEPARATOR' => Bitrix\Crm\Format\AddressSeparator::Comma)
+		$arFields['FULL_ADDRESS'] = AddressFormatter::getSingleInstance()->formatTextComma(
+			LeadAddress::mapEntityFields($arFields)
 		);
 		$arFields['COMPANY_IDS'] = \Bitrix\Crm\Binding\ContactCompanyTable::getContactCompanyIDs($arFields['ID']);
 	}
@@ -568,10 +571,25 @@ class CCrmDocumentContact extends CCrmDocument
 				{
 					//Issue #40380. Secure URLs and file IDs are allowed.
 					$file = false;
-					CCrmFileProxy::TryResolveFile($value, $file, $arFileOptions);
+					if (\CCrmFileProxy::TryResolveFile($value, $file, $arFileOptions))
+					{
+						global $USER_FIELD_MANAGER;
+						if ($USER_FIELD_MANAGER instanceof \CUserTypeManager)
+						{
+							$prevValue = $USER_FIELD_MANAGER->GetUserFieldValue(
+								\CCrmOwnerType::ResolveUserFieldEntityID(\CCrmOwnerType::Contact),
+								$key,
+								$arDocumentID['ID']
+							);
+							if ($prevValue)
+							{
+								$file['old_id'] = $prevValue;
+							}
+						}
+					}
 					$value = $file;
 				}
-				unset($value);
+				unset($value, $prevValue);
 			}
 			elseif ($fieldType == "S:HTML")
 			{
@@ -657,7 +675,7 @@ class CCrmDocumentContact extends CCrmDocument
 		}
 	}
 
-	public function getDocumentName($documentId)
+	public static function getDocumentName($documentId)
 	{
 		$arDocumentID = self::GetDocumentInfo($documentId);
 		$caption = '';

@@ -1,26 +1,27 @@
 <?php
 namespace Bitrix\Intranet;
 
-
 use Bitrix\ImOpenLines\Common;
 use Bitrix\ImOpenlines\Security\Helper;
 use Bitrix\ImOpenlines\Security\Permissions;
 use Bitrix\Main\Application;
-use \Bitrix\Main\Error;
-use \Bitrix\Main\Loader;
-use \Bitrix\Main\Result;
+use Bitrix\Main\Error;
+use Bitrix\Main\Loader;
+use Bitrix\Main\Result;
 use Bitrix\Main\UI\Extension;
 use Bitrix\Main\Web\Json;
-use \Bitrix\Main\Web\Uri;
-use \Bitrix\Main\Localization\Loc;
-use \Bitrix\Main\Config\Option;
+use Bitrix\Main\Web\Uri;
+use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\Config\Option;
 use Bitrix\Voximplant\Limits;
 
 Loc::loadMessages(__FILE__);
 
 class ContactCenter
 {
-	const CC_MODULE_NOT_LOADED = 1;
+	public const CC_MODULE_NOT_LOADED = 1;
+
+	protected const LANDING_CRM_SHOP_CODE = 'store_v3';
 
 	private $cisCheck;
 	private $modules = array(
@@ -62,7 +63,7 @@ class ContactCenter
 			$methodName = $module . "GetItems";
 			if (method_exists($this, $methodName) && Loader::includeModule($module))
 			{
-				$result = call_user_func_array(array($this, $methodName), $filter);
+				$result = call_user_func_array(array($this, $methodName), array_values($filter));
 				if ($result instanceof Result)
 				{
 					$itemsList[$module] = $result->getData();
@@ -252,38 +253,38 @@ class ContactCenter
 
 		if (!Loader::includeModule($module))
 		{
-			$result->addError(new Error(Loc::getMessage("CONTACT_CENTER_ERROR_MODULE_NOT_LOADED", array("#MODULE_ID" => $module)), self::CC_MODULE_NOT_LOADED));
+			return $result->addError(new Error(Loc::getMessage("CONTACT_CENTER_ERROR_MODULE_NOT_LOADED", array("#MODULE_ID" => $module)), self::CC_MODULE_NOT_LOADED));
 		}
-		else
+
+		if (\Bitrix\Crm\Tracking\Manager::isAccessible())
 		{
-			if (\Bitrix\Crm\Tracking\Manager::isAccessible())
-			{
-				$itemsList["calltracking"] = $this->getCallTrackingFormListItem();
-			}
+			$itemsList["calltracking"] = $this->getCallTrackingFormListItem();
+		}
 
-			$itemsList["widget"] = $this->getButtonListItem($filter);
-			$itemsList["form"] = $this->getFormListItem($filter);
+		$itemsList = array_merge($itemsList, $this->getCrmShopListItems());
 
-			if (Loader::includeModule("voximplant") && !empty(\Bitrix\Crm\WebForm\Callback::getPhoneNumbers()))
-			{
-				$itemsList["call"] = $this->getCallFormListItem($filter);
-			}
+		$itemsList["widget"] = $this->getButtonListItem($filter);
+		$itemsList["form"] = $this->getFormListItem($filter);
 
-			if (\Bitrix\Crm\Ads\AdsForm::canUse())
-			{
-				$itemsList = array_merge($itemsList, $this->getAdsFormListItems($filter));
-			}
+		if (Loader::includeModule("voximplant") && !empty(\Bitrix\Crm\WebForm\Callback::getPhoneNumbers()))
+		{
+			$itemsList["call"] = $this->getCallFormListItem($filter);
+		}
 
-			if (isset($filter["ACTIVE"]))
+		if (\Bitrix\Crm\Ads\AdsForm::canUse())
+		{
+			$itemsList = array_merge($itemsList, $this->getAdsFormListItems($filter));
+		}
+
+		if (isset($filter["ACTIVE"]))
+		{
+			foreach ($itemsList as $key => $item)
 			{
-				foreach ($itemsList as $key => $item)
+				$isAddItemToList = $this->isAddItemToList($filter["ACTIVE"], $item["SELECTED"]);
+
+				if (!$isAddItemToList)
 				{
-					$isAddItemToList = $this->isAddItemToList($filter["ACTIVE"], $item["SELECTED"]);
-
-					if (!$isAddItemToList)
-					{
-						unset($itemsList[$key]);
-					}
+					unset($itemsList[$key]);
 				}
 			}
 		}
@@ -385,27 +386,28 @@ class ContactCenter
 						"LOGO_CLASS" => "ui-icon ui-icon-service-" . $codeMap[$code]
 					);
 
+					$link = \CUtil::JSEscape( $linkTemplate . "?ID=" . $code);
 					if (empty($connector["link"]))
 					{
-						$itemsList[$code]["LINK"] = \CUtil::JSEscape( $linkTemplate . "?ID=" . $code);
+						$itemsList[$code]["LINK"] = $link;
 					}
 					else
 					{
 						$itemsList[$code]["LIST"] =  $this->getConnectorListItem($code, $configList, $statusList);
 						if (empty($itemsList[$code]["LIST"]))
 						{
-							$itemsList[$code]["LINK"] = \CUtil::JSEscape( $linkTemplate . "?ID=" . $code);
+							$itemsList[$code]["LINK"] = $link;
 						}
 					}
 
-					if ($code == "vkgroup")
+					if ($code === "vkgroup")
 					{
 						$isAddItemToList = $this->isAddItemToList($filter["ACTIVE"], $selectedOrder);
 
 						//Hack for vkgroup order
 						if ($isAddItemToList)
 						{
-							$uri = new Uri($itemsList["vkgroup"]["LINK"]);
+							$uri = new Uri($link);
 							$uri->addParams(array("group_orders" => "Y"));
 							$itemsList["vkgrouporder"] = array(
 								"NAME" => Loc::getMessage("CONTACT_CENTER_IMOPENLINES_VK_ORDER"),
@@ -514,7 +516,7 @@ class ContactCenter
 
 			$itemsList = array_merge($itemsList, array(
 				'ccplacement' => array(
-					"NAME" => Loc::getMessage("CONTACT_CENTER_REST_CC_PLACEMENT"),
+					"NAME" => Loc::getMessage("CONTACT_CENTER_REST_CC_PLACEMENT_2"),
 					"LOGO_CLASS" => "ui-icon ui-icon-service-rest-contact-center",
 					"SELECTED" => false
 				),
@@ -801,6 +803,8 @@ class ContactCenter
 			return [];
 		}
 
+		$connectorCode = htmlspecialcharsbx(\CUtil::JSescape($connectorCode));
+
 		$openLineSliderPath = Common::getPublicFolder() . "connector/?ID={$connectorCode}&LINE=#LINE#&action-line=create";
 		$infoConnectors = \Bitrix\ImConnector\InfoConnectors::getInfoConnectorsList();
 
@@ -871,7 +875,7 @@ class ContactCenter
 					"NAME" => Loc::getMessage("CONTACT_CENTER_IMOPENLINES_CREATE_OPEN_LINE"),
 					"ID" => 0,
 					'DELIMITER_BEFORE' => true,
-					"ONCLICK" => "BX.OpenLinesConfigEdit.createLineAction('{$openLineSliderPath}', true);",
+					"ONCLICK" => "new BX.Imopenlines.CreateLine({path:'{$openLineSliderPath}'});",
 				];
 			}
 		}
@@ -1234,6 +1238,103 @@ class ContactCenter
 	private function getFormUrlTemplate($formId = 0)
 	{
 		return \Bitrix\Crm\WebForm\Manager::getEditUrl($formId);
+	}
+
+	private function getCrmShopSiteInfo(): ?array
+	{
+		\Bitrix\Landing\Rights::setGlobalOff();
+		$site = \Bitrix\Landing\Site::getList([
+			'select' => ['ID', 'ACTIVE',],
+			'filter' => [
+				'=TPL_CODE' => static::LANDING_CRM_SHOP_CODE,
+			],
+			'order' => [
+				'ID' => 'desc'
+			],
+			'limit' => 1,
+		])->fetch();
+		\Bitrix\Landing\Rights::setGlobalOn();
+
+		return is_array($site) ? $site : null;
+	}
+
+	private function getCrmShopListItems(): array
+	{
+		$items = [];
+
+		if (!Loader::includeModule('landing'))
+		{
+			return $items;
+		}
+
+		$shopItem = [
+			"NAME" => Loc::getMessage("CONTACT_CENTER_CRM_SHOP_ITEM"),
+			"LOGO_CLASS" => "ui-icon intranet-contact-center-crm-shop-item intranet-contact-center-crm-shop-item-color",
+			"COLOR_CLASS" => "intranet-contact-center-crm-shop-item-color",
+			"IS_NEW" => true,
+		];
+		$site = $this->getCrmShopSiteInfo();
+		if ($site !== null)
+		{
+			$sitePublicUrl = null;
+			if ($site['ACTIVE'] !== 'N')
+			{
+				$sitePublicUrl = \Bitrix\Landing\Site::getPublicUrl($site['ID']);
+			}
+			$shopItem["SELECTED"] = true;
+			$shopItem["LIST"] = [];
+			$dealsUrl = \CComponentEngine::makePathFromTemplate('#SITE_DIR#crm/deal/?redirect_to');
+			if ($dealsUrl)
+			{
+				$shopItem["LIST"][] = [
+					"ONCLICK" => "window.open('".\CUtil::JSEscape($dealsUrl)."', '_blank');",
+					"NAME" => Loc::getMessage('CONTACT_CENTER_CRM_SHOP_ITEM_DEALS'),
+				];
+			}
+			if (Loader::includeModule('salescenter'))
+			{
+				$paySystemPath = \CComponentEngine::makeComponentPath('bitrix:salescenter.paysystem.panel');
+				$paySystemPath = getLocalPath('components'.$paySystemPath.'/slider.php');
+				$paySystemPath = new \Bitrix\Main\Web\Uri($paySystemPath);
+				$paySystemPath->addParams([
+					'analyticsLabel' => 'contactCenterClickPaymentTile',
+					'type' => 'main',
+					'mode' => 'main'
+				]);
+				$shopItem["LIST"][] = [
+					"ONCLICK" => "BX.SidePanel.Instance.open('".\CUtil::JSEscape($paySystemPath->getUri())."');",
+					"NAME" => Loc::getMessage('CONTACT_CENTER_CRM_SHOP_ITEM_PAYSYSTEMS'),
+				];
+			}
+
+			$shopItem['LIST'][] = [
+				'NAME' => Loc::getMessage('CONTACT_CENTER_CRM_SHOP_ITEM_GO_TO_SITE'),
+				'ONCLICK' => $site['ACTIVE'] === 'Y' ? "window.open('".\CUtil::JSEscape($sitePublicUrl)."', '_blank');" : null,
+				'DISABLED' => $site['ACTIVE'] !== 'Y',
+			];
+
+			$shopItem["LIST"][] = [
+				"NAME" => Loc::getMessage('CONTACT_CENTER_CRM_SHOP_ITEM_HELP'),
+				"ONCLICK" => "top.BX.Helper.show('redirect=detail&code=13651476')",
+				"DELIMITER_BEFORE" => true,
+			];
+		}
+		else
+		{
+			$shopItem["SELECTED"] = false;
+			$shopItem["SIDEPANEL_PARAMS"] = [
+				'allowChangeHistory' => false,
+				'width' => 1200,
+				'data' => [
+					'rightBoundary' => 0,
+				],
+			];
+			$shopItem["LINK"] = '/shop/stores/site/edit/0/?super=Y';
+		}
+
+		$items['crm_shop'] = $shopItem;
+
+		return $items;
 	}
 
 	/**

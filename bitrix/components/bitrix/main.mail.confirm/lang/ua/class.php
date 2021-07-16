@@ -38,7 +38,6 @@ $MESS["MAIN_MAIL_CONFIRM_POST_DELETE_NOT_FULL_LIST_WARN_TITTLE"] = "Попере
 $MESS["MAIN_MAIL_CONFIRM_POST_DELETE_SUCCESS"] = "Видалення відправників пройшло успішно";
 $MESS["MAIN_MAIL_CONFIRM_POST_DELETE_SUCCESS_TITLE"] = "Видалено";
 $MESS["MAIN_MAIL_CONFIRM_PUBLIC"] = "Показана всім";
-$MESS["MAIN_MAIL_CONFIRM_PUBLIC_HINT"] = "Додану адресу зможуть вибрати всі менеджери, які працюють в CRM";
 $MESS["MAIN_MAIL_CONFIRM_PUBLIC_HINT1"] = "Додану адресу зможе обрати будь-який співробітник";
 $MESS["MAIN_MAIL_CONFIRM_SAVE"] = "Зберегти";
 $MESS["MAIN_MAIL_CONFIRM_SMTP_LOGIN"] = "Логін";

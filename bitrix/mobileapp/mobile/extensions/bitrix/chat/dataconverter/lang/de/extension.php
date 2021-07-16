@@ -28,3 +28,4 @@ $MESS["IM_YOU"] = "Das sind Sie";
 $MESS["IM_YOU_2"] = "Sie: ";
 $MESS["NOTIFICATION_TITLE"] = "Benachrichtigungen";
 $MESS["USER_INVITED"] = "Einladung wurde gesendet";
+$MESS["USER_INVITED_2"] = "Einladung wurde nicht angenommen";

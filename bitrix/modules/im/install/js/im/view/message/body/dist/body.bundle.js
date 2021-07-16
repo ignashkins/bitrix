@@ -1,4 +1,4 @@
-(function (exports,im_view_element_media,im_view_element_attach,im_view_element_keyboard,im_view_element_chatteaser,ui_vue_components_reaction,ui_vue,ui_vue_vuex,im_model,im_const,im_lib_utils) {
+(function (exports,im_view_element_media,im_view_element_attach,im_view_element_keyboard,im_view_element_chatteaser,ui_vue_components_reaction,ui_vue,ui_vue_vuex,im_model,im_const,im_lib_utils,main_core) {
 	'use strict';
 
 	function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it.return != null) it.return(); } finally { if (didErr) throw err; } } }; }
@@ -17,7 +17,7 @@
 	  richLink: 'richLink'
 	});
 
-	ui_vue.Vue.component('bx-im-view-message-body', {
+	ui_vue.BitrixVue.component('bx-im-view-message-body', {
 	  /**
 	   * @emits 'clickByUserName' {user: object, event: MouseEvent}
 	   * @emits 'clickByUploadCancel' {file: object, event: MouseEvent}
@@ -42,18 +42,6 @@
 	    message: {
 	      type: Object,
 	      default: im_model.MessagesModel.create().getElementState
-	    },
-	    user: {
-	      type: Object,
-	      default: im_model.UsersModel.create().getElementState
-	    },
-	    dialog: {
-	      type: Object,
-	      default: im_model.DialoguesModel.create().getElementState
-	    },
-	    files: {
-	      type: Object,
-	      default: {}
 	    },
 	    enableReactions: {
 	      default: true
@@ -106,7 +94,7 @@
 	        return this.cacheFormatDate[id];
 	      }
 
-	      var dateFormat = im_lib_utils.Utils.date.getFormatType(BX.Messenger.Const.DateFormat.message, this.$root.$bitrixMessages);
+	      var dateFormat = im_lib_utils.Utils.date.getFormatType(BX.Messenger.Const.DateFormat.message, this.$Bitrix.Loc.getMessages());
 	      this.cacheFormatDate[id] = this._getDateFormat().format(dateFormat, date);
 	      return this.cacheFormatDate[id];
 	    },
@@ -119,11 +107,9 @@
 
 	      this.dateFormatFunction = Object.create(BX.Main.Date);
 
-	      if (this.$root.$bitrixMessages) {
-	        this.dateFormatFunction._getMessage = function (phrase) {
-	          return _this.$root.$bitrixMessages[phrase];
-	        };
-	      }
+	      this.dateFormatFunction._getMessage = function (phrase) {
+	        return _this.$Bitrix.Loc.getMessage(phrase);
+	      };
 
 	      return this.dateFormatFunction;
 	    },
@@ -211,9 +197,6 @@
 
 	      return _ContentType.default;
 	    },
-	    localize: function localize() {
-	      return ui_vue.Vue.getFilteredPhrases('IM_MESSENGER_MESSAGE_', this.$root.$bitrixMessages);
-	    },
 	    formattedDate: function formattedDate() {
 	      return this.formatDate(this.message.date);
 	    },
@@ -221,7 +204,7 @@
 	      var _this2 = this;
 
 	      if (this.isDeleted) {
-	        return this.localize.IM_MESSENGER_MESSAGE_DELETED;
+	        return this.$Bitrix.Loc.getMessage('IM_MESSENGER_MESSAGE_DELETED');
 	      }
 
 	      var message = this.message.textConverted;
@@ -247,6 +230,13 @@
 	    },
 	    chatColor: function chatColor() {
 	      return this.dialog.type !== im_const.DialogType.private ? this.dialog.color : this.user.color;
+	    },
+	    dialog: function dialog() {
+	      var dialog = this.$store.getters['dialogues/get'](this.dialogId);
+	      return dialog ? dialog : this.$store.getters['dialogues/getBlank']();
+	    },
+	    user: function user() {
+	      return this.$store.getters['users/get'](this.message.authorId, true);
 	    },
 	    filesData: function filesData() {
 	      var _this3 = this;
@@ -303,7 +293,7 @@
 	    },
 	    userName: function userName() {
 	      if (this.message.params.NAME) {
-	        return this.message.params.NAME;
+	        return main_core.Text.decode(this.message.params.NAME);
 	      }
 
 	      if (!this.showAvatar) {
@@ -327,5 +317,5 @@
 	  template: "\n\t\t<div class=\"bx-im-message-content-wrap\">\n\t\t\t<template v-if=\"contentType == ContentType.default || contentType == ContentType.audio || contentType == ContentType.progress || (contentType !== ContentType.image && isDesktop() && getDesktopVersion() < 47)\">\n\t\t\t\t<div class=\"bx-im-message-content\">\n\t\t\t\t\t<span class=\"bx-im-message-content-box\">\n\t\t\t\t\t\t<div class=\"bx-im-message-content-name-wrap\">\n\t\t\t\t\t\t\t<template v-if=\"showName && user.extranet && messageType == MessageType.opponent\">\n\t\t\t\t\t\t\t\t<div class=\"bx-im-message-extranet-icon\"></div>\n\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t<template v-if=\"showName && messageType == MessageType.opponent\">\n\t\t\t\t\t\t\t\t<div :class=\"['bx-im-message-content-name', referenceContentNameClassName]\" :style=\"{color: userColor}\" @click=\"clickByUserName({user: user, event: $event})\">{{userName}}</div>\n\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t\t<div :class=\"['bx-im-message-content-body', referenceContentBodyClassName]\">\n\t\t\t\t\t\t\t<template v-if=\"(contentType == ContentType.audio) && (!isDesktop() || (isDesktop() && getDesktopVersion() > 43))\">\n\t\t\t\t\t\t\t\t<bx-im-view-element-file-audio v-for=\"file in filesData\" :messageType=\"messageType\" :file=\"file\" :key=\"file.templateId\" @uploadCancel=\"clickByUploadCancel\"/>\n\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t<template v-else>\n\t\t\t\t\t\t\t\t<bx-im-view-element-file v-for=\"file in filesData\" :messageType=\"messageType\" :file=\"file\" :key=\"file.templateId\" @uploadCancel=\"clickByUploadCancel\"/>\n\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t<div :class=\"['bx-im-message-content-body-wrap', {\n\t\t\t\t\t\t\t\t'bx-im-message-content-body-with-text': messageText.length > 0,\n\t\t\t\t\t\t\t\t'bx-im-message-content-body-without-text': messageText.length <= 0,\n\t\t\t\t\t\t\t}]\">\n\t\t\t\t\t\t\t\t<template v-if=\"messageText\">\n\t\t\t\t\t\t\t\t\t<span class=\"bx-im-message-content-text\" v-html=\"messageText\"></span>\n\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t<template v-for=\"(config, id) in messageAttach\">\n\t\t\t\t\t\t\t\t\t<bx-im-view-element-attach :baseColor=\"chatColor\" :config=\"config\" :key=\"id\"/>\n\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t<span class=\"bx-im-message-content-params\">\n\t\t\t\t\t\t\t\t\t<span class=\"bx-im-message-content-date\">{{formattedDate}}</span>\n\t\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</span>\n\t\t\t\t\t<div v-if=\"!message.push && enableReactions && message.authorId\" class=\"bx-im-message-content-reaction\">\n\t\t\t\t\t\t<bx-reaction :values=\"messageReactions\" :userId=\"userId\" :openList=\"false\" @set=\"setReaction({message: message, reaction: $event})\" @list=\"openReactionList({message: message, values: $event.values})\"/>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</template>\n\t\t\t<template v-else-if=\"contentType == ContentType.richLink\">\n\t\t\t\t<!-- richLink type markup -->\n\t\t\t</template>\n\t\t\t<template v-else-if=\"contentType == ContentType.image || contentType == ContentType.video\">\n\t\t\t\t<div class=\"bx-im-message-content bx-im-message-content-fit\">\n\t\t\t\t\t<span class=\"bx-im-message-content-box\">\n\t\t\t\t\t\t<template v-if=\"showName && messageType == MessageType.opponent\">\n\t\t\t\t\t\t\t<div :class=\"['bx-im-message-content-name', referenceContentNameClassName]\" :style=\"{color: user.color}\" @click=\"clickByUserName({user: user, event: $event})\">{{!showAvatar? user.name: (user.firstName? user.firstName: user.name)}}</div>\n\t\t\t\t\t\t</template>\n\t\t\t\t\t\t<div :class=\"['bx-im-message-content-body', referenceContentBodyClassName]\">\n\t\t\t\t\t\t\t<template v-if=\"contentType == ContentType.image\">\n\t\t\t\t\t\t\t\t<bx-im-view-element-file-image v-for=\"file in filesData\" :messageType=\"messageType\" :file=\"file\" :key=\"file.templateId\" @uploadCancel=\"clickByUploadCancel\"/>\n\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t<template v-else-if=\"contentType == ContentType.video\">\n\t\t\t\t\t\t\t\t<bx-im-view-element-file-video v-for=\"file in filesData\" :messageType=\"messageType\" :file=\"file\" :key=\"file.templateId\" @uploadCancel=\"clickByUploadCancel\"/>\n\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t<div :class=\"['bx-im-message-content-body-wrap', {\n\t\t\t\t\t\t\t\t'bx-im-message-content-body-with-text': messageText.length > 0,\n\t\t\t\t\t\t\t\t'bx-im-message-content-body-without-text': messageText.length <= 0,\n\t\t\t\t\t\t\t}]\">\n\t\t\t\t\t\t\t\t<template v-if=\"messageText\">\n\t\t\t\t\t\t\t\t\t<span class=\"bx-im-message-content-text\" v-html=\"messageText\"></span>\n\t\t\t\t\t\t\t\t</template>\n\t\t\t\t\t\t\t\t<span class=\"bx-im-message-content-params\">\n\t\t\t\t\t\t\t\t\t<span class=\"bx-im-message-content-date\">{{formattedDate}}</span>\n\t\t\t\t\t\t\t\t</span>\n\t\t\t\t\t\t\t</div>\n\t\t\t\t\t\t</div>\n\t\t\t\t\t</span>\n\t\t\t\t\t<div v-if=\"!message.push && enableReactions && message.authorId\" class=\"bx-im-message-content-reaction\">\n\t\t\t\t\t\t<bx-reaction :values=\"messageReactions\" :userId=\"userId\" :openList=\"false\" @set=\"setReaction({message: message, reaction: $event})\" @list=\"openReactionList({message: message, values: $event.values})\"/>\n\t\t\t\t\t</div>\n\t\t\t\t</div>\n\t\t\t</template>\n\t\t\t<template v-if=\"keyboardButtons\">\n\t\t\t\t<bx-im-view-element-keyboard :buttons=\"keyboardButtons\" :messageId=\"message.id\" :userId=\"userId\" :dialogId=\"dialogId\" @click=\"clickByKeyboardButton({message: message, event: $event})\"/>\n\t\t\t</template>\n\t\t\t<template v-if=\"chatTeaser\">\n\t\t\t\t<bx-im-view-element-chat-teaser :messageCounter=\"chatTeaser.messageCounter\" :messageLastDate=\"chatTeaser.messageLastDate\" :languageId=\"chatTeaser.languageId\" @click=\"clickByChatTeaser({message: message, event: $event})\"/>\n\t\t\t</template>\n\t\t</div>\n\t"
 	});
 
-}((this.window = this.window || {}),window,window,window,window,window,BX,BX,BX.Messenger.Model,BX.Messenger.Const,BX.Messenger.Lib));
+}((this.window = this.window || {}),window,window,window,window,window,BX,BX,BX.Messenger.Model,BX.Messenger.Const,BX.Messenger.Lib,BX));
 //# sourceMappingURL=body.bundle.js.map

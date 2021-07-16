@@ -1,4 +1,6 @@
 import {EventEmitter} from 'main.core.events';
+import {Loc} from 'main.core';
+import {Location, Address, AddressType, LocationType} from 'location.core';
 import Menu from './menu';
 
 export default class Prompt extends EventEmitter
@@ -7,9 +9,14 @@ export default class Prompt extends EventEmitter
 
 	/** Element */
 	#inputNode;
+
+	/** Element */
+	#menuNode;
+
 	/** {Menu} */
 	#menu;
 
+	/** {Array<Location>} */
 	#locationList;
 
 	constructor(props)
@@ -18,14 +25,20 @@ export default class Prompt extends EventEmitter
 		this.setEventNamespace('BX.Location.Widget.Prompt');
 
 		this.#inputNode = props.inputNode;
+
+		if (props.menuNode)
+		{
+			this.#menuNode = props.menuNode;
+		}
 	}
 
 	#createMenu()
 	{
 		return new Menu({
-			bindElement: this.#inputNode,
+			bindElement: this.#menuNode ? this.#menuNode : this.#inputNode,
 			autoHide: false,
-			closeByEsc: true
+			closeByEsc: true,
+			className: 'location-widget-prompt-menu',
 		});
 	}
 
@@ -49,7 +62,7 @@ export default class Prompt extends EventEmitter
 	{
 		if(locationsList.length > 0)
 		{
-			this.#setMenuItems(locationsList, searchPhrase);
+			this.setMenuItems(locationsList, searchPhrase);
 			this.getMenu().show();
 		}
 	}
@@ -62,17 +75,36 @@ export default class Prompt extends EventEmitter
 	/**
 	 * @param {array<Location>} locationsList
 	 * @param {string} searchPhrase
+	 * @param {Address} address
 	 * @returns {*}
 	 */
-	#setMenuItems(locationsList: array<Location>, searchPhrase: string): Menu
+	setMenuItems(locationsList: Array<Location>, searchPhrase: string, address: Address): Menu
 	{
 		this.getMenu().clearItems();
 
 		if(Array.isArray(locationsList))
 		{
+			let isSeparatorSet = false;
+
 			this.#locationList = locationsList.slice();
 
 			locationsList.forEach((location) => {
+
+				if(address && address.getFieldValue(AddressType.LOCALITY))
+				{
+					if (!isSeparatorSet && location && location.address && location.address.getFieldValue(AddressType.LOCALITY))
+					{
+						if (address.getFieldValue(AddressType.LOCALITY) !== location.address.getFieldValue(AddressType.LOCALITY))
+						{
+							isSeparatorSet = true;
+							this.getMenu().addMenuItem({
+								html: Loc.getMessage('LOCATION_WIDGET_PROMPT_IN_OTHER_CITY'),
+								delimiter: true
+							});
+						}
+					}
+				}
+
 				this.getMenu().addMenuItem(
 					this.#createMenuItem(location, searchPhrase)
 				);
@@ -92,7 +124,7 @@ export default class Prompt extends EventEmitter
 		return {
 			id: externalId,
 			title: location.name,
-			html: Prompt.createMenuItemText(location.name, searchPhrase),
+			html: Prompt.createMenuItemText(location.name, searchPhrase, location),
 			onclick: (event, item) => {
 				this.#onItemSelect(externalId);
 				this.close();
@@ -110,31 +142,50 @@ export default class Prompt extends EventEmitter
 		}
 	}
 
-	static createMenuItemText(locationName: string, searchPhrase: string): string
+	static createMenuItemText(locationName: string, searchPhrase: string, location: Location): string
 	{
-		let result = locationName.slice();
+		let result = `
+		<div>
+			<strong>${locationName}</strong>
+		</div>`;
 
-		if(!searchPhrase || searchPhrase.length <= 0)
+		let clarification;
+
+		if(location.getFieldValue(LocationType.TMP_TYPE_CLARIFICATION))
 		{
-			return result;
+			clarification = location.getFieldValue(LocationType.TMP_TYPE_CLARIFICATION);
+
+			if(clarification)
+			{
+				if(location.getFieldValue(LocationType.TMP_TYPE_HINT))
+				{
+					clarification += ` <i>(${location.getFieldValue(LocationType.TMP_TYPE_HINT)})</i>`;
+				}
+
+				result += `<div>${clarification}</div>`;
+			}
 		}
 
-		const spWords = searchPhrase
-			.replace(/,+/gi, '')
-			.split(new RegExp(/\s+/g));
-
-		const pattern = new RegExp(`(${spWords.join('|')})`, 'gi');
-
-		result = locationName.replace(pattern, match => `<strong>${match}</strong>`);
-
 		return result;
+	}
+
+	static #extractClarification(location: Location): string
+	{
+		let clarification = '';
+
+		if(location.getFieldValue(LocationType.TMP_TYPE_CLARIFICATION))
+		{
+			clarification = location.getFieldValue(LocationType.TMP_TYPE_CLARIFICATION);
+		}
+
+		return clarification;
 	}
 
 	#getLocationFromList(externalId: string): ?Location
 	{
 		let result = null;
 
-		for(let location of this.#locationList)
+		for(const location of this.#locationList)
 		{
 			if(location.externalId === externalId)
 			{
@@ -145,20 +196,27 @@ export default class Prompt extends EventEmitter
 
 		if(!result)
 		{
-			BX.debug('Location with externalId ' + externalId + ' was not found');
+			BX.debug(`Location with externalId ${externalId} was not found`);
 		}
 
 		return result;
 	}
 
-	choosePrevItem()
+	choosePrevItem(isRecursive: boolean = false)
 	{
 		let result = null;
 		const item = this.getMenu().choosePrevItem();
 
-		if(item)
+		if (item)
 		{
-			result = this.#getLocationFromList(item.id);
+			if (item.delimiter && item.delimiter === true)
+			{
+				result = isRecursive ? this.getMenu().chooseNextItem() : this.choosePrevItem(true);
+			}
+			else
+			{
+				result = this.#getLocationFromList(item.id);
+			}
 		}
 
 		return result;
@@ -169,9 +227,16 @@ export default class Prompt extends EventEmitter
 		let result = null;
 		const item = this.getMenu().chooseNextItem();
 
-		if(item)
+		if (item)
 		{
-			result = this.#getLocationFromList(item.id);
+			if (item.delimiter && item.delimiter === true)
+			{
+				result = this.chooseNextItem();
+			}
+			else
+			{
+				result = this.#getLocationFromList(item.id);
+			}
 		}
 
 		return result;

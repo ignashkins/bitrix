@@ -59,14 +59,22 @@ $component = $this->getComponent();
 		}
 		elseif($arResult['userField']['SETTINGS']['DISPLAY'] === EnumType::DISPLAY_UI)
 		{
+			$postfix = $this->randString();
+			if ($component->isAjaxRequest())
+			{
+				$postfix .= time();
+			}
+			$arResult['valueContainerId'] .= $postfix;
+			$arResult['spanAttrList']['id'] = $arResult['valueContainerId'];
+			$arResult['controlNodeId'] .= $postfix;
+			$defaultFieldName = $arResult['fieldName'].'_default_'.$postfix;
 			?>
 
 			<input
 				type="hidden"
 				value=""
-				id="<?= $arResult['userField']['FIELD_NAME'] ?>_default"
+				id="<?= $defaultFieldName ?>"
 			>
-
 			<span <?= $component->getHtmlBuilder()->buildTagAttributes($arResult['spanAttrList']) ?>>
 			<?php
 			if(count($arResult['attrList']))
@@ -84,72 +92,23 @@ $component = $this->getComponent();
 			<span id="<?= $arResult['controlNodeId'] ?>"></span>
 
 			<?php
+			$scriptParams = CUtil::PhpToJSObject([
+				'defaultFieldName' => $defaultFieldName,
+				'fieldName' => $arResult['fieldNameJs'],
+				'container' => $arResult['controlNodeId'],
+				'valueContainerId' => $arResult['valueContainerId'],
+				'block' => $arResult['block'],
+				'value' => $arResult['currentValue'],
+				'items' => $arResult['items'],
+				'params' => $arResult['params']
+			]);
 			$script = <<<EOT
-			<script>
-			function changeHandler_{$arResult['fieldNameJs']}(controlObject, value)
-			{
-				if(controlObject.params.fieldName === '{$arResult['fieldNameJs']}' && !!BX('{$arResult['valueContainerIdJs']}'))
-				{
-					var currentValue = JSON.parse(controlObject.node.getAttribute('data-value'));
-	
-					var s = '';
-					if(!BX.type.isArray(currentValue))
-					{
-						if(currentValue === null)
-						{
-							currentValue = [{VALUE:''}];
-						}
-						else
-						{
-							currentValue = [currentValue];
-						}
-					}
-	
-					if(currentValue.length > 0)
-					{
-						for(var i = 0; i < currentValue.length; i++)
-						{
-							s += '<input type="hidden" name="{$arResult['htmlFieldNameJs']}" value="'+BX.util.htmlspecialchars(currentValue[i].VALUE)+'" />';
-						}
-					}
-					else
-					{
-						s += '<input type="hidden" name="{$arResult['htmlFieldNameJs']}" value="" />';
-					}
-	
-					BX('{$arResult['valueContainerIdJs']}').innerHTML = s;
-					BX.fireEvent(BX('{$arResult['fieldNameJs']}_default'), 'change');
-				}
-			}
-	
-			BX.ready(function(){
-	
-				var params = {$arResult['params']};
-	
-				BX('{$arResult['controlNodeIdJs']}').appendChild(BX.decl({
-					block: '{$arResult['block']}',
-					name: '{$arResult['fieldNameJs']}',
-					items: {$arResult['items']},
-					value: {$arResult['currentValue']},
-					params: params,
-					valueDelete: false
-				}));
-				
-				BX.addCustomEvent(
-					window,
-					'UI::Select::change',
-					changeHandler_{$arResult['fieldNameJs']}
-				);
-	
-				BX.bind(BX('{$arResult['controlNodeIdJs']}'), 'click', BX.defer(function(){
-					changeHandler_{$arResult['fieldNameJs']}(
-						{
-							params: params,
-							node: BX('{$arResult['controlNodeIdJs']}').firstChild
-						});
-				}));
-			});
-			</script>
+<script>
+	BX.ready(function ()
+	{
+		new BX.Desktop.Field.Enum({$scriptParams});
+	});
+</script>
 EOT;
 			print $script;
 		}
@@ -213,6 +172,7 @@ EOT;
 	else
 	{
 		$arResult['additionalParameters']['mode'] = BaseType::MODE_VIEW;
+		$arResult['additionalParameters']['showInputs'] = true;
 		$field = new \Bitrix\Main\UserField\Renderer($arResult['userField'], $arResult['additionalParameters']);
 		print $field->render();
 	}

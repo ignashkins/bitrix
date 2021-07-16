@@ -42,7 +42,9 @@ BX.namespace('Tasks.Component');
 					BX.addClass(this.control('open-form'), 'invisible');
 
 					this.control('item-link').innerHTML = BX.util.htmlspecialchars(text);
-					this.control('item-link').setAttribute('href', this.option('path').SG.toString().replace('{{ID}}', id));
+					this.control('item-link').setAttribute('href', this.getProjectLink(id));
+
+					this.option('groupId', id);
 				}
 				else
 				{
@@ -56,6 +58,11 @@ BX.namespace('Tasks.Component');
 			onOpenForm: function()
 			{
 				this.getSelector().open();
+			},
+
+			getProjectLink: function(groupId)
+			{
+				return this.option('path').SG.toString().replace('{{ID}}', groupId);
 			},
 
 			saveId: function(groupId)

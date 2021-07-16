@@ -294,7 +294,7 @@ if ($_SERVER['REQUEST_METHOD'] == "POST" && empty($_POST))
 	{
 		require_once($_SERVER["DOCUMENT_ROOT"].BX_ROOT."/modules/main/classes/".mb_strtolower($GLOBALS["DB"]->type)."/favorites.php");
 		$arUserSettings = CUserOptions::GetOption("webdav", "upload_settings", '');
-		$arUserSettings = @unserialize($arUserSettings, false);
+		$arUserSettings = @unserialize($arUserSettings, ['allowed_classes' => false]);
 		$arUserSettings = (is_array($arUserSettings) ? $arUserSettings : array());
 		$view_mode = $arUserSettings["view_mode"];
 	}

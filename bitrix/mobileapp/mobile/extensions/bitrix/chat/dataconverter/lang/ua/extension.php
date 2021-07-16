@@ -28,3 +28,4 @@ $MESS["IM_YOU"] = "це ви";
 $MESS["IM_YOU_2"] = "Ви:";
 $MESS["NOTIFICATION_TITLE"] = "Сповіщення";
 $MESS["USER_INVITED"] = "Запрошення відправлено";
+$MESS["USER_INVITED_2"] = "Запрошення не прийнято";

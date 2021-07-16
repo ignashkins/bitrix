@@ -1,5 +1,8 @@
 <?php
 
+use Bitrix\Main\Application;
+use Bitrix\Main\Data\RedisConnection;
+
 class CPHPCacheRedisCluster extends \Bitrix\Main\Data\CacheEngineRedis
 {
 	private $bQueue = null;
@@ -70,19 +73,19 @@ class CPHPCacheRedisCluster extends \Bitrix\Main\Data\CacheEngineRedis
 					{
 						if ($config["failover"] == 0)
 						{
-							$this->serializer = \RedisCluster::FAILOVER_NONE;
+							$this->failover = \RedisCluster::FAILOVER_NONE;
 						}
 						elseif ($config["failover"] == 1)
 						{
-							$this->serializer = \RedisCluster::FAILOVER_ERROR;
+							$this->failover = \RedisCluster::FAILOVER_ERROR;
 						}
 						elseif ($config["failover"] == 2)
 						{
-							$this->serializer = \RedisCluster::FAILOVER_DISTRIBUTE;
+							$this->failover = \RedisCluster::FAILOVER_DISTRIBUTE;
 						}
 						elseif ($config["failover"] == 3)
 						{
-							$this->serializer = \RedisCluster::FAILOVER_DISTRIBUTE_SLAVES;
+							$this->failover = \RedisCluster::FAILOVER_DISTRIBUTE_SLAVES;
 						}
 					}
 
@@ -105,25 +108,30 @@ class CPHPCacheRedisCluster extends \Bitrix\Main\Data\CacheEngineRedis
 					}
 				}
 
-				$connections = [];
+				$reformattedServers = [];
 				foreach ($servers as $server)
 				{
-					$connections[] = $server['HOST'].':'.$server['PORT'];
+					$reformattedServers[] = [
+						'host' => $server['HOST'],
+						'port' => $server['PORT'],
+					];
 				}
 
-				if (!empty($servers))
-				{
-					self::$redis = new \RedisCluster(null, $connections, $this->timeout, $this->readTimeout, $this->persistent);
+				$connectionPool = Application::getInstance()->getConnectionPool();
+				$connectionPool->setConnectionParameters(self::SESSION_REDIS_CONNECTION, [
+					'className' => RedisConnection::class,
+					'servers' => $reformattedServers,
+					'timeout' => $this->timeout,
+					'readTimeout' => $this->readTimeout,
+					'serializer' => $this->serializer,
+					'failover' => $this->failover,
+					'persistent' => $this->persistent,
+				]);
 
-					self::$redis->setOption(\RedisCluster::OPT_SERIALIZER, $this->serializer);
-
-					if ($cnt > 1)
-					{
-						self::$redis->setOption(\RedisCluster::OPT_SLAVE_FAILOVER, $this->failover);
-					}
-
-					self::$isConnected = true;
-				}
+				/** @var RedisConnection $redisConnection */
+				$redisConnection = $connectionPool->getConnection(self::SESSION_REDIS_CONNECTION);
+				self::$redis = $redisConnection->getResource();
+				self::$isConnected = $redisConnection->isConnected();
 			}
 		}
 

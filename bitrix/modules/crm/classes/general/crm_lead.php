@@ -6,6 +6,7 @@ use Bitrix\Crm\Binding\EntityBinding;
 use Bitrix\Crm\Binding\LeadContactTable;
 use Bitrix\Crm\CustomerType;
 use Bitrix\Crm\Entity\Traits\UserFieldPreparer;
+use Bitrix\Crm\EntityAddressType;
 use Bitrix\Crm\Integration\PullManager;
 use Bitrix\Crm\UtmTable;
 use Bitrix\Crm\Tracking;
@@ -157,6 +158,9 @@ class CAllCrmLead
 				'OPPORTUNITY' => array(
 					'TYPE' => 'double'
 				),
+				'IS_MANUAL_OPPORTUNITY' => array(
+					'TYPE' => 'char'
+				),
 				'OPENED' => array(
 					'TYPE' => 'char'
 				),
@@ -279,6 +283,7 @@ class CAllCrmLead
 			'CURRENCY_ID' => array('FIELD' => 'L.CURRENCY_ID', 'TYPE' => 'string'),
 			'EXCH_RATE' => array('FIELD' => 'L.EXCH_RATE', 'TYPE' => 'double'),
 			'OPPORTUNITY' => array('FIELD' => 'L.OPPORTUNITY', 'TYPE' => 'double'),
+			'IS_MANUAL_OPPORTUNITY' => array('FIELD' => 'L.IS_MANUAL_OPPORTUNITY', 'TYPE' => 'char'),
 			'ACCOUNT_CURRENCY_ID' => array('FIELD' => 'L.ACCOUNT_CURRENCY_ID', 'TYPE' => 'string'),
 			'OPPORTUNITY_ACCOUNT' => array('FIELD' => 'L.OPPORTUNITY_ACCOUNT', 'TYPE' => 'double'),
 
@@ -325,7 +330,7 @@ class CAllCrmLead
 		if(!(is_array($arOptions) && isset($arOptions['DISABLE_ADDRESS']) && $arOptions['DISABLE_ADDRESS']))
 		{
 			$addrJoin = 'LEFT JOIN b_crm_addr ADDR ON L.ID = ADDR.ENTITY_ID AND ADDR.TYPE_ID = '
-				.\Bitrix\Crm\EntityAddress::Primary.' AND ADDR.ENTITY_TYPE_ID = '.CCrmOwnerType::Lead;
+				.EntityAddressType::Primary.' AND ADDR.ENTITY_TYPE_ID = '.CCrmOwnerType::Lead;
 
 			$result['ADDRESS'] = array('FIELD' => 'ADDR.ADDRESS_1', 'TYPE' => 'string', 'FROM' => $addrJoin);
 			$result['ADDRESS_2'] = array('FIELD' => 'ADDR.ADDRESS_2', 'TYPE' => 'string', 'FROM' => $addrJoin);
@@ -514,8 +519,8 @@ class CAllCrmLead
 						$sqlData['FROM'][] = $ufSelectSql->GetJoin($alias.'.ID');
 					}
 
-					$sqlData['WHERE'][] = CDatabase::ForSql($ufName)." <= ".$DB->CharToDateFunction($arFilter['CALENDAR_DATE_TO'], 'SHORT');
-					$sqlData['WHERE'][] = CDatabase::ForSql($ufName)." >= ".$DB->CharToDateFunction($arFilter['CALENDAR_DATE_FROM'], 'SHORT');
+					$sqlData['WHERE'][] = $DB->ForSql($ufName)." <= ".$DB->CharToDateFunction($arFilter['CALENDAR_DATE_TO'], 'SHORT');
+					$sqlData['WHERE'][] = $DB->ForSql($ufName)." >= ".$DB->CharToDateFunction($arFilter['CALENDAR_DATE_FROM'], 'SHORT');
 				}
 			}
 		}
@@ -601,7 +606,7 @@ class CAllCrmLead
 
 	public static function GetTopIDs($top, $sortType = 'ASC', $userPermissions = null)
 	{
-		$top = (int) $top;
+		$top = (int)$top;
 		if ($top <= 0)
 		{
 			return [];
@@ -609,40 +614,11 @@ class CAllCrmLead
 
 		$sortType = mb_strtoupper($sortType) !== 'DESC' ? 'ASC' : 'DESC';
 
-		$permissionSql = '';
-		if (!CCrmPerms::IsAdmin())
-		{
-			if (!$userPermissions)
-			{
-				$userPermissions = CCrmPerms::GetCurrentUserPermissions();
-			}
-
-			$permissionSql = self::BuildPermSql('L', 'READ', ['PERMS' => $userPermissions]);
-		}
-
-		if ($permissionSql === false)
-		{
-			return [];
-		}
-
-		$query = new Bitrix\Main\Entity\Query(Crm\LeadTable::getEntity());
-		$query->addSelect('ID');
-		$query->addOrder('ID', $sortType);
-		$query->setLimit($top);
-
-		if ($permissionSql !== '')
-		{
-			$permissionSql = mb_substr($permissionSql, 7);
-			$query->where('ID', 'in', new Bitrix\Main\DB\SqlExpression($permissionSql));
-		}
-
-		$rs = $query->exec();
-		$results = [];
-		while ($field = $rs->fetch())
-		{
-			$results[] = (int) $field['ID'];
-		}
-		return $results;
+		return \Bitrix\Crm\Entity\Lead::getInstance()->getTopIDs([
+			'order' => ['ID' => $sortType],
+			'limit' => $top,
+			'userPermissions' => $userPermissions
+		]);
 	}
 
 	public static function GetTotalCount()
@@ -792,6 +768,7 @@ class CAllCrmLead
 			'LAST_NAME' => 'L.LAST_NAME',
 			'FULL_NAME' => 'L.FULL_NAME',
 			'OPPORTUNITY' => 'L.OPPORTUNITY',
+			'IS_MANUAL_OPPORTUNITY' => 'L.IS_MANUAL_OPPORTUNITY',
 			'CURRENCY_ID' => 'L.CURRENCY_ID',
 			'OPPORTUNITY_ACCOUNT' => 'L.OPPORTUNITY_ACCOUNT',
 			'ACCOUNT_CURRENCY_ID' => 'L.ACCOUNT_CURRENCY_ID',
@@ -974,6 +951,12 @@ class CAllCrmLead
 				'TABLE_ALIAS' => 'L',
 				'FIELD_NAME' => 'L.OPPORTUNITY',
 				'FIELD_TYPE' => 'int',
+				'JOIN' => false
+			),
+			'IS_MANUAL_OPPORTUNITY' => array(
+				'TABLE_ALIAS' => 'L',
+				'FIELD_NAME' => 'L.IS_MANUAL_OPPORTUNITY',
+				'FIELD_TYPE' => 'string',
 				'JOIN' => false
 			),
 			'ACCOUNT_CURRENCY_ID' => array(
@@ -1299,7 +1282,7 @@ class CAllCrmLead
 			$arFields['BIRTHDAY_SORT'] = \Bitrix\Crm\BirthdayReminder::prepareSorting('');
 		}
 
-		if(!isset($arFields['STATUS_ID']) || $arFields['STATUS_ID'] === '')
+		if(!isset($arFields['STATUS_ID']) || (string)$arFields['STATUS_ID'] === '')
 		{
 			$arFields['STATUS_ID'] = self::GetStartStatusID(
 				$this->bCheckPermission
@@ -1576,7 +1559,7 @@ class CAllCrmLead
 			\Bitrix\Crm\EntityAddress::register(
 				CCrmOwnerType::Lead,
 				$ID,
-				\Bitrix\Crm\EntityAddress::Primary,
+				EntityAddressType::Primary,
 				$addressFields
 			);
 		}
@@ -1659,7 +1642,9 @@ class CAllCrmLead
 		}
 
 		//region Search content index
-		Bitrix\Crm\Search\SearchContentBuilderFactory::create(CCrmOwnerType::Lead)->build($ID);
+		Bitrix\Crm\Search\SearchContentBuilderFactory::create(
+			CCrmOwnerType::Lead
+		)->build($ID, ['checkExist' => true]);
 		//endregion
 
 		if(isset($options['REGISTER_SONET_EVENT']) && $options['REGISTER_SONET_EVENT'] === true)
@@ -1755,7 +1740,10 @@ class CAllCrmLead
 
 			PullManager::getInstance()->sendItemAddedEvent(
 				$item,
-				['TYPE' => self::$TYPE_NAME]
+				[
+					'TYPE' => self::$TYPE_NAME,
+					'SKIP_CURRENT_USER' => ($userID !== 0),
+				]
 			);
 		}
 
@@ -2392,7 +2380,7 @@ class CAllCrmLead
 				\Bitrix\Crm\EntityAddress::unregister(
 					CCrmOwnerType::Lead,
 					$ID,
-					\Bitrix\Crm\EntityAddress::Primary);
+					EntityAddressType::Primary);
 			}
 			elseif(isset($arFields['ADDRESS'])
 				|| isset($arFields['ADDRESS_2'])
@@ -2407,7 +2395,7 @@ class CAllCrmLead
 				\Bitrix\Crm\EntityAddress::register(
 					CCrmOwnerType::Lead,
 					$ID,
-					\Bitrix\Crm\EntityAddress::Primary,
+					EntityAddressType::Primary,
 					array(
 						'ADDRESS_1' => isset($arFields['ADDRESS'])
 							? $arFields['ADDRESS'] : (isset($arRow['ADDRESS']) ? $arRow['ADDRESS'] : null),
@@ -2592,6 +2580,13 @@ class CAllCrmLead
 			}
 			DuplicateEntityRanking::registerEntityStatistics(CCrmOwnerType::Lead, $ID, array_merge($arRow, $arFields));
 
+			$enableDupIndexInvalidation = isset($arOptions['ENABLE_DUP_INDEX_INVALIDATION'])
+				? (bool)$arOptions['ENABLE_DUP_INDEX_INVALIDATION'] : true;
+			if(!$isSystemAction && $enableDupIndexInvalidation)
+			{
+				\Bitrix\Crm\Integrity\DuplicateManager::markDuplicateIndexAsDirty(CCrmOwnerType::Lead, $ID);
+			}
+
 			if($bResult && (isset($arFields['ASSIGNED_BY_ID']) || isset($arFields['STATUS_ID'])))
 			{
 				$assignedByIDs = array();
@@ -2621,6 +2616,11 @@ class CAllCrmLead
 						$assignedByIDs
 					);
 				}
+
+				if ($assignedByID !== $previousAssignedByID && $enableDupIndexInvalidation)
+				{
+					\Bitrix\Crm\Integrity\DuplicateManager::onChangeEntityAssignedBy(CCrmOwnerType::Lead, $ID);
+				}
 			}
 
 			// update utm fields
@@ -2632,7 +2632,8 @@ class CAllCrmLead
 			}
 			//endregion
 			//region Search content index
-			Bitrix\Crm\Search\SearchContentBuilderFactory::create(CCrmOwnerType::Lead)->build($ID);
+			Bitrix\Crm\Search\SearchContentBuilderFactory::create(CCrmOwnerType::Lead)
+				->build($ID, ['checkExist' => true]);
 			//endregion
 
 			Bitrix\Crm\Timeline\LeadController::getInstance()->onModify(
@@ -2804,7 +2805,10 @@ class CAllCrmLead
 
 				PullManager::getInstance()->sendItemUpdatedEvent(
 					$item,
-					['TYPE' => self::$TYPE_NAME]
+					[
+						'TYPE' => self::$TYPE_NAME,
+						'SKIP_CURRENT_USER' => ($iUserId !== 0),
+					]
 				);
 			}
 		}
@@ -2978,6 +2982,13 @@ class CAllCrmLead
 				Bitrix\Crm\Statistics\LeadConversionStatisticsEntry::unregister($ID);
 			}
 
+			$enableDupIndexInvalidation = is_array($arOptions) && isset($arOptions['ENABLE_DUP_INDEX_INVALIDATION'])
+				? (bool)$arOptions['ENABLE_DUP_INDEX_INVALIDATION'] : true;
+			if($enableDupIndexInvalidation)
+			{
+				\Bitrix\Crm\Integrity\DuplicateManager::markDuplicateIndexAsJunk(CCrmOwnerType::Lead, $ID);
+			}
+
 			DuplicateEntityRanking::unregisterEntityStatistics(CCrmOwnerType::Lead, $ID);
 			DuplicatePersonCriterion::unregister(CCrmOwnerType::Lead, $ID);
 			DuplicateOrganizationCriterion::unregister(CCrmOwnerType::Lead, $ID);
@@ -2998,13 +3009,6 @@ class CAllCrmLead
 					),
 					array($assignedByID)
 				);
-			}
-
-			$enableDupIndexInvalidation = is_array($arOptions) && isset($arOptions['ENABLE_DUP_INDEX_INVALIDATION'])
-				? (bool)$arOptions['ENABLE_DUP_INDEX_INVALIDATION'] : true;
-			if($enableDupIndexInvalidation)
-			{
-				Bitrix\Crm\Integrity\DuplicateIndexBuilder::markAsJunk(CCrmOwnerType::Lead, $ID);
 			}
 
 			if($isConverted)
@@ -3029,7 +3033,7 @@ class CAllCrmLead
 				CCrmProductRow::DeleteByOwner('L', $ID);
 				CCrmProductRow::DeleteSettings('L', $ID);
 
-				Crm\EntityAddress::unregister(CCrmOwnerType::Lead, $ID, \Bitrix\Crm\EntityAddress::Primary);
+				Crm\EntityAddress::unregister(CCrmOwnerType::Lead, $ID, EntityAddressType::Primary);
 				Crm\Timeline\TimelineEntry::deleteByOwner(CCrmOwnerType::Lead, $ID);
 				Crm\Pseudoactivity\WaitEntry::deleteByOwner(CCrmOwnerType::Lead, $ID);
 				Crm\Observer\ObserverManager::deleteByOwner(CCrmOwnerType::Lead, $ID);
@@ -3088,7 +3092,10 @@ class CAllCrmLead
 
 		PullManager::getInstance()->sendItemDeletedEvent(
 			$item,
-			['TYPE' => self::$TYPE_NAME]
+			[
+				'TYPE' => self::$TYPE_NAME,
+				'SKIP_CURRENT_USER' => ($iUserId !== 0),
+			]
 		);
 
 		return true;
@@ -3437,6 +3444,18 @@ class CAllCrmLead
 			);
 		}
 
+		if (isset($arFieldsOrig['IS_MANUAL_OPPORTUNITY'])
+			&& isset($arFieldsModif['IS_MANUAL_OPPORTUNITY'])
+			&& $arFieldsOrig['IS_MANUAL_OPPORTUNITY'] != $arFieldsModif['IS_MANUAL_OPPORTUNITY'])
+		{
+			$arMsg[] = Array(
+				'ENTITY_FIELD' => 'IS_MANUAL_OPPORTUNITY',
+				'EVENT_NAME' => GetMessage('CRM_LEAD_FIELD_COMPARE_IS_MANUAL_OPPORTUNITY'),
+				'EVENT_TEXT_1' => GetMessage('CRM_LEAD_FIELD_COMPARE_IS_MANUAL_OPPORTUNITY_'.($arFieldsOrig['IS_MANUAL_OPPORTUNITY'] == 'Y' ? 'Y' : 'N')),
+				'EVENT_TEXT_2' => GetMessage('CRM_LEAD_FIELD_COMPARE_IS_MANUAL_OPPORTUNITY_'.($arFieldsModif['IS_MANUAL_OPPORTUNITY'] == 'Y' ? 'Y' : 'N')),
+			);
+		}
+
 		if(isset($arFieldsOrig['SOURCE_ID']) && isset($arFieldsModif['SOURCE_ID'])
 			&& $arFieldsOrig['SOURCE_ID'] != $arFieldsModif['SOURCE_ID'])
 		{
@@ -3472,7 +3491,7 @@ class CAllCrmLead
 		{
 			$arUser = Array();
 			$dbUsers = CUser::GetList(
-				($sort_by = 'last_name'), ($sort_dir = 'asc'),
+				'last_name', 'asc',
 				array('ID' => implode('|', array(intval($arFieldsOrig['ASSIGNED_BY_ID']), intval($arFieldsModif['ASSIGNED_BY_ID'])))),
 				array('FIELDS' => array('ID', 'NAME', 'SECOND_NAME', 'LAST_NAME', 'LOGIN', 'TITLE', 'EMAIL'))
 			);
@@ -3695,11 +3714,14 @@ class CAllCrmLead
 		if (is_array($arTotalInfo))
 		{
 			$arFields = array(
-				'OPPORTUNITY' => isset($arTotalInfo['OPPORTUNITY']) ? $arTotalInfo['OPPORTUNITY'] : 0.0,
 				'TAX_VALUE' => isset($arTotalInfo['TAX_VALUE']) ? $arTotalInfo['TAX_VALUE'] : 0.0
 			);
 
 			$entity = new CCrmLead($checkPerms);
+			if (!$entity::isManualOpportunity($ID))
+			{
+				$arFields['OPPORTUNITY'] = isset($arTotalInfo['OPPORTUNITY']) ? $arTotalInfo['OPPORTUNITY'] : 0.0;
+			}
 			$entity->Update($ID, $arFields);
 		}
 	}
@@ -4514,6 +4536,10 @@ class CAllCrmLead
 			$entity->Update($fields['ID'], $fields);
 		}
 	}
+	/**
+	 * @deprecated
+	 * @param array $fields
+	 */
 	public static function ProcessStatusModification(array $fields)
 	{
 		$entityID = isset($fields['ENTITY_ID']) ? $fields['ENTITY_ID'] : '';
@@ -4529,6 +4555,11 @@ class CAllCrmLead
 			);
 		}
 	}
+
+	/**
+	 * @deprecated
+	 * @param array $fields
+	 */
 	public static function ProcessStatusDeletion(array $fields)
 	{
 		$entityID = isset($fields['ENTITY_ID']) ? $fields['ENTITY_ID'] : '';
@@ -4702,6 +4733,29 @@ class CAllCrmLead
 		);
 
 		return (bool) $queryObject->fetch();
+	}
+
+	public static function isManualOpportunity($ID)
+	{
+		$ID = intval($ID);
+		if($ID <= 0)
+		{
+			return false;
+		}
+
+		$dbRes = self::GetListEx(
+			array(),
+			array('ID' => $ID, 'CHECK_PERMISSIONS' => 'N'),
+			false,
+			false,
+			array('ID', 'IS_MANUAL_OPPORTUNITY')
+		);
+
+		if ($arRes = $dbRes->Fetch())
+		{
+			return ($arRes['IS_MANUAL_OPPORTUNITY'] == 'Y');
+		}
+		return false;
 	}
 }
 ?>

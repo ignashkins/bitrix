@@ -160,7 +160,7 @@ class CWebDavSocNetEvent
 		}
 	}
 
-	public function GetSocnetLogByFileID($sourceID, $eventID)
+	public static function GetSocnetLogByFileID($sourceID, $eventID)
 	{
 		$arLog = null;
 		$rsLog = CSocNetLog::GetList(Array("ID" => "DESC"), array(
@@ -172,7 +172,7 @@ class CWebDavSocNetEvent
 		return $arLog;
 	}
 
-	public function SocnetLogUpdateRights($ID, $iblockID, $eventID)
+	public static function SocnetLogUpdateRights($ID, $iblockID, $eventID)
 	{
 		if (!CModule::IncludeModule("socialnetwork"))
 		{
@@ -668,7 +668,7 @@ UPDATE_TYPE:
 			return $arEntity;
 		}
 
-		$arEventParams = unserialize($arFields["~PARAMS"] <> '' ? $arFields["~PARAMS"] : $arFields["PARAMS"], false);
+		$arEventParams = unserialize($arFields["~PARAMS"] <> '' ? $arFields["~PARAMS"] : $arFields["PARAMS"], ['allowed_classes' => false]);
 
 		if (intval($arFields["ENTITY_ID"]) > 0)
 		{

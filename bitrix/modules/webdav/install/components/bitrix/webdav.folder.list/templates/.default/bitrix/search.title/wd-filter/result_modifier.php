@@ -103,10 +103,10 @@ foreach($arResult["CATEGORIES"] as $category_id => $arCategory)
 			$arResult["SEARCH"][] = &$arResult["CATEGORIES"][$category_id]["ITEMS"][$i];
         }
 	}
-    if (sizeof($arResult["CATEGORIES"][$category_id]["ITEMS"]) < 1)
+    if (empty($arResult["CATEGORIES"]["all"]["ITEMS"]) || sizeof($arResult["CATEGORIES"][$category_id]["ITEMS"]) < 1)
         unset($arResult["CATEGORIES"][$category_id]);
 }
-if (sizeof($arResult["CATEGORIES"]["all"]["ITEMS"]) < 2)
+if (empty($arResult["CATEGORIES"]["all"]["ITEMS"]) || sizeof($arResult["CATEGORIES"]["all"]["ITEMS"]) < 2)
     unset($arResult["CATEGORIES"]["all"]);
 
 foreach($arResult["SEARCH"] as $i=>$arItem)

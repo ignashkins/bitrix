@@ -21,12 +21,15 @@ BX.namespace("Tasks.Component");
 		this.allowTimeTracking = this.parameters.allowTimeTracking === true;
 		this.user = this.parameters.user || {};
 		this.isAmAuditor = this.parameters.iAmAuditor;
+		this.showIntranetControl = this.parameters.showIntranetControl;
 		this.auditorCtrl = null;
 		this.pathToTasks = this.parameters.pathToTasks;
 		this.stageId = parseInt(this.parameters.stageId);
 		this.stages = this.parameters.stages || {};
 		this.query = new BX.Tasks.Util.Query();
 		this.taskLimitExceeded = this.parameters.taskLimitExceeded;
+
+		this.calendarSettings = (this.parameters.calendarSettings ? this.parameters.calendarSettings : {});
 
 		this.initDeadline();
 		this.initReminder();
@@ -35,9 +38,29 @@ BX.namespace("Tasks.Component");
 		this.initTags();
 		this.initAuditorThing();
 		this.initStages();
+		this.initIntranetControlButton();
 
 		BX.addCustomEvent(window, "tasksTaskEvent", BX.delegate(this.onTaskEvent, this));
 		BX.addCustomEvent(window, "onChangeProjectLink", BX.delegate(this.onChangeProjectLink, this));
+	};
+
+	BX.Tasks.Component.TaskViewSidebar.prototype.initIntranetControlButton = function()
+	{
+		if (!this.showIntranetControl)
+		{
+			return;
+		}
+
+		BX.loadExt('intranet.control-button').then(function() {
+			if (BX.Intranet.ControlButton)
+			{
+				new BX.Intranet.ControlButton({
+					container: BX('task-detail-sidebar-item-videocall'),
+					entityType: 'task',
+					entityId: this.taskId
+				});
+			}
+		}.bind(this));
 	};
 
 BX.Tasks.Component.TaskViewSidebar.prototype.initAuditorThing = function()
@@ -433,7 +456,11 @@ BX.Tasks.Component.TaskViewSidebar.prototype.syncAuditor = function()
 			bTime: true,
 			value: this.deadline ? this.deadline : today,
 			bHideTimebar: false,
-			bCompatibility: false,
+			bCompatibility: true,
+			bCategoryTimeVisibilityOption: 'tasks.bx.calendar.deadline',
+			bTimeVisibility: (
+				this.calendarSettings ? (this.calendarSettings.deadlineTimeVisibility === 'Y') : false
+			),
 			callback_after: BX.proxy(function(value, time) {
 				this.setDeadline(value);
 			}, this)

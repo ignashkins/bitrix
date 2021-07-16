@@ -261,7 +261,10 @@ class SenderLetterListComponent extends Bitrix\Sender\Internals\CommonSenderComp
 
 			}
 			$item['DURATION'] = $letter->getDuration()->getFormattedInterval();
-			$item['STATE_NAME'] = $letter->getState()->getName();
+			$item['STATE_NAME'] = $item['WAITING_RECIPIENT'] === 'N'
+				? $letter->getState()->getName()
+				: Loc::getMessage('SENDER_DISPATCH_STATE_M')
+			;
 			if ($isExportMode)
 			{
 				$item['STATUS'] = $item['STATE_NAME'];
@@ -716,6 +719,10 @@ class SenderLetterListComponent extends Bitrix\Sender\Internals\CommonSenderComp
 				$result[] = [
 					"id" => "COUNT_CLICK",
 					"name" => Loc::getMessage('SENDER_LETTER_LIST_COMP_UI_COLUMN_COUNT_CLICK'),
+				];
+				$result[] = [
+					"id" => "COUNT_UNSUB",
+					"name" => Loc::getMessage('SENDER_LETTER_LIST_COMP_UI_COLUMN_COUNT_UNSUB'),
 				];
 			}
 			else

@@ -2,7 +2,7 @@
 
 namespace Bitrix\Disk;
 
-use Bitrix\Disk\Integration\TransformerManager;
+use Bitrix\Disk;
 use Bitrix\Disk\Internals\AttachedObjectTable;
 use Bitrix\Disk\Internals\EditSessionTable;
 use Bitrix\Disk\Internals\Error\Error;
@@ -13,6 +13,7 @@ use Bitrix\Disk\Internals\ObjectTable;
 use Bitrix\Disk\Internals\RightTable;
 use Bitrix\Disk\Internals\SharingTable;
 use Bitrix\Disk\Internals\SimpleRightTable;
+use Bitrix\Disk\Internals\TrackedObjectTable;
 use Bitrix\Disk\Internals\VersionTable;
 use Bitrix\Disk\Security\SecurityContext;
 use Bitrix\Disk\Uf\FileUserType;
@@ -260,7 +261,7 @@ class File extends BaseObject
 		{
 			return $this->file;
 		}
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		$this->file = \CFile::getByID($this->fileId)->fetch();
 
 		if(!$this->file)
@@ -359,9 +360,9 @@ class File extends BaseObject
 	 * @param string $newName New name.
 	 * @return bool
 	 */
-	public function rename($newName)
+	public function rename($newName, bool $generateUniqueName = false)
 	{
-		$result = parent::rename($newName);
+		$result = parent::rename($newName, $generateUniqueName);
 		if($result)
 		{
 			$this->extension = null;
@@ -380,7 +381,7 @@ class File extends BaseObject
 	{
 		$this->errorCollection->clear();
 
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		$forkFileId = \CFile::copyFile($this->getFileId(), true);
 		if(!$forkFileId)
 		{
@@ -388,7 +389,7 @@ class File extends BaseObject
 			return null;
 		}
 
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		$fileArray = \CFile::getFileArray($forkFileId);
 		$fileModel = $targetFolder->addFile(array(
 			'NAME' => $this->getName(),
@@ -434,16 +435,24 @@ class File extends BaseObject
 	/**
 	 * Returns object lock model.
 	 *
-	 * @return ObjectLock
+	 * @return ObjectLock|null
 	 */
 	public function getLock()
 	{
-		if($this->isLoadedAttribute('lock'))
+		if ($this->isLoadedAttribute('lock'))
 		{
 			return $this->lock;
 		}
-		$this->lock = ObjectLock::load(array('OBJECT_ID' => $this->getRealObjectId()));
+
+		$lock = ObjectLock::load(['OBJECT_ID' => $this->getRealObjectId()]);
+		$this->lock = $lock;
 		$this->setAsLoadedAttribute('lock');
+
+		if ($lock && $lock->shouldProcessAutoUnlock())
+		{
+			$this->unlock(SystemUser::SYSTEM_USER_ID);
+			$this->lock = null;
+		}
 
 		return $this->lock;
 	}
@@ -499,47 +508,49 @@ class File extends BaseObject
 	public function unlock($unlockedBy, $token = null)
 	{
 		$objectLock = $this->getLock();
-		if(!$objectLock)
+		if (!$objectLock)
 		{
 			return true;
 		}
 
 		if (!$objectLock->canUnlock($unlockedBy))
 		{
-			$createLockUser = $objectLock->getCreateUser();
-			if ($createLockUser)
-			{
-				$this->errorCollection->addOne(new Error(Loc::getMessage('DISK_FILE_MODEL_ERROR_INVALID_USER_FOR_UNLOCK_2', [
-					'#USER#' => "<a href='{$createLockUser->getDetailUrl()}'>" . htmlspecialcharsbx($createLockUser->getFormattedName()) . "</a>",
-				]), self::ERROR_INVALID_USER_FOR_UNLOCK));
-			}
-			else
-			{
-				$this->errorCollection->addOne(new Error(
-					Loc::getMessage('DISK_FILE_MODEL_ERROR_INVALID_USER_FOR_UNLOCK'),
-					self::ERROR_INVALID_USER_FOR_UNLOCK
-				));
-			}
+			$this->errorCollection[] = $this->generateUnlockErrorByAnotherUser($objectLock);
+
 			return false;
 		}
 
-		if($token !== null && $objectLock->getToken() !== $token)
+		if ($token !== null && $objectLock->getToken() !== $token)
 		{
 			$this->errorCollection[] = new Error(
 				Loc::getMessage('DISK_FILE_MODEL_ERROR_INVALID_LOCK_TOKEN'),
 				self::ERROR_INVALID_LOCK_TOKEN
 			);
+
 			return false;
 		}
 
 		$success = $objectLock->delete($unlockedBy);
-		if($success)
+		if ($success)
 		{
 			$this->update(array('SYNC_UPDATE_TIME' => new DateTime()));
 			Driver::getInstance()->sendChangeStatusToSubscribers($this, 'quick');
 		}
 
 		return $success;
+	}
+
+	public function generateUnlockErrorByAnotherUser(ObjectLock $objectLock): Error
+	{
+		$createLockUser = $objectLock->getCreateUser();
+		if ($createLockUser)
+		{
+			return new Error(Loc::getMessage('DISK_FILE_MODEL_ERROR_INVALID_USER_FOR_UNLOCK_2', [
+				'#USER#' => "<a href='{$createLockUser->getDetailUrl()}'>" . htmlspecialcharsbx($createLockUser->getFormattedName()) . "</a>",
+			]), self::ERROR_INVALID_USER_FOR_UNLOCK);
+		}
+
+		return new Error(Loc::getMessage('DISK_FILE_MODEL_ERROR_INVALID_USER_FOR_UNLOCK'), self::ERROR_INVALID_USER_FOR_UNLOCK);
 	}
 
 	/**
@@ -556,10 +567,11 @@ class File extends BaseObject
 	{
 		$this->errorCollection->clear();
 
-		$this->checkRequiredInputParams($file, array(
+		static::checkRequiredInputParams($file, array(
 			'ID', 'FILE_SIZE'
 		));
 
+		$objectLock = null;
 		if(Configuration::isEnabledObjectLock())
 		{
 			$objectLock = $this->getLock();
@@ -591,6 +603,11 @@ class File extends BaseObject
 
 		$this->changeParentUpdateTime(new DateTime(), $updatedBy);
 
+		if ($objectLock instanceof ObjectLock && Configuration::shouldAutoUnlockObjectOnSave())
+		{
+			$this->unlock($updatedBy);
+		}
+
 		$this->updateLinksAttributes(array(
 			'ETAG' => $this->getEtag(),
 			'GLOBAL_CONTENT_VERSION' => $this->getGlobalContentVersion(),
@@ -599,11 +616,15 @@ class File extends BaseObject
 			'SYNC_UPDATE_TIME' => $this->getSyncUpdateTime(),
 			'UPDATED_BY' => $updatedBy,
 		));
+		$this->updateRelated();
 
 		$driver = Driver::getInstance();
 		if ($this->getStorage()->isUseInternalRights())
 		{
-			$driver->getRecentlyUsedManager()->push($updatedBy, $this->getId());
+			$driver->getRecentlyUsedManager()->push(
+				$updatedBy,
+				$this
+			);
 		}
 
 		if ($this->getGlobalContentVersion() <= 1)
@@ -649,13 +670,15 @@ class File extends BaseObject
 	 * @return Version|null
 	 * @throws \Bitrix\Main\SystemException
 	 */
-	public function addVersion(array $file, $createdBy, $disableJoin = false)
+	public function addVersion(array $file, $createdBy, $disableJoin = false, array $options = [])
 	{
 		$this->errorCollection->clear();
 
+		$commentAttachedObjects = $options['commentAttachedObjects'] ?? true;
+
 		if(Configuration::isEnabledStorageSizeRestriction())
 		{
-			$this->checkRequiredInputParams($file, array(
+			static::checkRequiredInputParams($file, array(
 				'FILE_SIZE'
 			));
 
@@ -704,7 +727,10 @@ class File extends BaseObject
 		}
 
 		$this->cleanVersionsOverLimit($createdBy);
-		$this->commentAttachedObjects($versionModel);
+		if ($commentAttachedObjects)
+		{
+			$this->commentAttachedObjects($versionModel);
+		}
 		$this->resetHeadVersionToAttachedObject($versionModel);
 
 		if ($this->getGlobalContentVersion() == 1)
@@ -754,45 +780,45 @@ class File extends BaseObject
 		}
 	}
 
-	private function commentAttachedObjects(Version $version)
+	public function commentAttachedObjects(Version $version): void
 	{
 		$createdBy = $version->getCreatedBy();
 		$valueVersionUf = FileUserType::NEW_FILE_PREFIX . $version->getId();
 
 		/** @var User $createUser */
 		$createUser = User::loadById($createdBy);
-		if(!$createUser)
+		if (!$createUser)
 		{
 			return;
 		}
 
 		$text = $this->getTextForComment($createUser);
-		$attachedObjects = $this->getAttachedObjects(array(
-			'filter' => array(
+		$attachedObjects = $this->getAttachedObjects([
+			'filter' => [
 				'=ALLOW_AUTO_COMMENT' => 1,
-			),
-		));
-		foreach ($attachedObjects as $attache)
+			],
+		]);
+		foreach ($attachedObjects as $attachedObject)
 		{
-			if(!$attache->getAllowAutoComment())
+			if (!$attachedObject->getAllowAutoComment())
 			{
 				continue;
 			}
 
-			AttachedObject::storeDataByObjectId($this->getId(), array(
-				'IS_EDITABLE' => $attache->isEditable(),
-				'ALLOW_EDIT' => $attache->getAllowEdit(),
-			));
+			AttachedObject::storeDataByObjectId($this->getId(), [
+				'IS_EDITABLE' => $attachedObject->isEditable(),
+				'ALLOW_EDIT' => $attachedObject->getAllowEdit(),
+				'STATE' => 'commentAttachedObjects',
+			]);
 
-			$attache->getConnector()->addComment($createdBy, array(
+			$attachedObject->getConnector()->addComment($createdBy, [
 				'text' => $text,
 				'versionId' => $valueVersionUf,
-				'authorGender' => $createUser->getPersonalGender()
-			));
+				'authorGender' => $createUser->getPersonalGenderExact()
+			]);
 
 			AttachedObject::storeDataByObjectId($this->getId(), null);
 		}
-		unset($attache);
 	}
 
 	private function cleanVersionsOverLimit($createdBy)
@@ -904,7 +930,7 @@ class File extends BaseObject
 	 * @param int $createdBy Id of user.
 	 * @return Version|null
 	 */
-	public function uploadVersion(array $fileArray, $createdBy)
+	public function uploadVersion(array $fileArray, $createdBy, array $options = [])
 	{
 		$this->errorCollection->clear();
 
@@ -919,7 +945,7 @@ class File extends BaseObject
 		}
 		$fileArray['type'] = TypeFile::normalizeMimeType($fileArray['type'], $this->name);
 
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		$fileId = CFile::saveFile($fileArray, Driver::INTERNAL_MODULE_ID, true, true);
 		if(!$fileId)
 		{
@@ -928,7 +954,7 @@ class File extends BaseObject
 		}
 		$updateTime = isset($fileArray['UPDATE_TIME'])? $fileArray['UPDATE_TIME'] : null;
 		/** @var array $fileArray */
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		$fileArray = CFile::getFileArray($fileId);
 		if(!$fileArray)
 		{
@@ -940,7 +966,7 @@ class File extends BaseObject
 		{
 			$fileArray['UPDATE_TIME'] = $updateTime;
 		}
-		$version = $this->addVersion($fileArray, $createdBy);
+		$version = $this->addVersion($fileArray, $createdBy, false, $options);
 		if(!$version)
 		{
 			CFile::delete($fileId);
@@ -1028,7 +1054,7 @@ class File extends BaseObject
 			$this->errorCollection->add(array(new Error(Loc::getMessage('DISK_FILE_MODEL_ERROR_COULD_NOT_RESTORE_FROM_ANOTHER_OBJECT'), self::ERROR_COULD_NOT_RESTORE_FROM_OBJECT)));
 			return false;
 		}
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		$forkFileId = \CFile::copyFile($version->getFileId(), true);
 
 		if(!$forkFileId)
@@ -1037,7 +1063,7 @@ class File extends BaseObject
 			return false;
 		}
 
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		if($this->addVersion(\CFile::getFileArray($forkFileId), $createdBy, true) === null)
 		{
 			return false;
@@ -1213,7 +1239,10 @@ class File extends BaseObject
 			$driver = Driver::getInstance();
 			if ($this->getStorage()->isUseInternalRights())
 			{
-				$driver->getRecentlyUsedManager()->push($restoredBy, $this->getId());
+				$driver->getRecentlyUsedManager()->push(
+					$restoredBy,
+					$this
+				);
 			}
 			$driver->getIndexManager()->indexFileByModuleSearch($this);
 			$driver->sendChangeStatusToSubscribers($this);
@@ -1260,6 +1289,14 @@ class File extends BaseObject
 		{
 			return false;
 		}
+
+		Document\OnlyOffice\Models\DocumentSessionTable::deleteBatch([
+			'OBJECT_ID' => $this->id,
+		]);
+
+		TrackedObjectTable::deleteBatch([
+			'REAL_OBJECT_ID' => $this->id,
+		]);
 
 		$success = ExternalLinkTable::deleteByFilter(array(
 			'OBJECT_ID' => $this->id,
@@ -1466,6 +1503,11 @@ class File extends BaseObject
 		{
 			parent::updateLinksAttributes($attr);
 		}
+	}
+
+	private function updateRelated()
+	{
+		Disk\Driver::getInstance()->getTrackedObjectManager()->refresh($this);
 	}
 
 	/**

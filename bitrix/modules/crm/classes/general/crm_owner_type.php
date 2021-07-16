@@ -1,79 +1,92 @@
 <?php
+
+use Bitrix\Crm\Service\Container;
+use Bitrix\Main\DI\ServiceLocator;
+
 class CCrmOwnerType
 {
-	const Undefined = 0;
-	const Lead = 1;
-	const Deal = 2;
-	const Contact = 3;
-	const Company = 4;
-	const Invoice = 5;
-	const Activity = 6;
-	const Quote = 7;
-	const Requisite = 8;
-	const DealCategory = 9;
-	const CustomActivityType = 10;
-	const Wait = 11;
-	const CallList = 12;
-	const DealRecurring = 13;
-	const Order = 14;
-	const OrderCheck = 15;
-	const OrderShipment = 16;
-	const OrderPayment = 17;
+	public const Undefined = 0;
+	public const Lead = 1;
+	public const Deal = 2;
+	public const Contact = 3;
+	public const Company = 4;
+	public const Invoice = 5;
+	public const Activity = 6;
+	public const Quote = 7;
+	public const Requisite = 8;
+	public const DealCategory = 9;
+	public const CustomActivityType = 10;
+	public const Wait = 11;
+	public const CallList = 12;
+	public const DealRecurring = 13;
+	public const Order = 14;
+	public const OrderCheck = 15;
+	public const OrderShipment = 16;
+	public const OrderPayment = 17;
 
 	//Types for suspended state (moved to recycle bin)
-	const SuspendedLead = 18;
-	const SuspendedDeal = 19;
-	const SuspendedContact = 20;
-	const SuspendedCompany = 21;
-	const SuspendedQuote = 22;
-	const SuspendedInvoice = 23;
-	const SuspendedOrder = 24;
-	const SuspendedActivity = 25;
-	const SuspendedRequisite = 26;
+	public const SuspendedLead = 18;
+	public const SuspendedDeal = 19;
+	public const SuspendedContact = 20;
+	public const SuspendedCompany = 21;
+	public const SuspendedQuote = 22;
+	public const SuspendedInvoice = 23;
+	public const SuspendedOrder = 24;
+	public const SuspendedActivity = 25;
+	public const SuspendedRequisite = 26;
 
-	const InvoiceRecurring = 27;
-	const Scoring = 28;
+	public const InvoiceRecurring = 27;
+	public const Scoring = 28;
 
-	const CheckCorrection = 29;
+	public const CheckCorrection = 29;
 
-	const FirstOwnerType = 1;
-	const LastOwnerType = 29;
+	public const FirstOwnerType = 1;
+	public const LastOwnerType = 29;
+
+	public const DynamicTypeStart = 128;
+	public const DynamicTypeEnd = 192;
+	public const SuspendedDynamicTypeStart = 192;
+	public const SuspendedDynamicTypeEnd = 256;
 
 	//Special quasi-types
-	const System = 1024;
+	public const System = 1024;
 
-	const LeadName = 'LEAD';
-	const DealName = 'DEAL';
-	const ContactName = 'CONTACT';
-	const CompanyName = 'COMPANY';
-	const InvoiceName = 'INVOICE';
-	const ActivityName = 'ACTIVITY';
-	const QuoteName = 'QUOTE';
-	const RequisiteName = 'REQUISITE';
-	const DealCategoryName = 'DEAL_CATEGORY';
-	const CustomActivityTypeName = 'CUSTOM_ACTIVITY_TYPE';
-	const WaitTypeName = 'WAIT';
-	const CallListTypeName = 'CALL_LIST';
-	const SystemName = 'SYSTEM';
-	const DealRecurringName = 'DEAL_RECURRING';
-	const InvoiceRecurringName = 'INVOICE_RECURRING';
-	const OrderName = 'ORDER';
-	const OrderCheckName = 'ORDER_CHECK';
-	const CheckCorrectionName = 'CHECK_CORRECTION';
-	const OrderShipmentName = 'ORDER_SHIPMENT';
-	const OrderPaymentName = 'ORDER_PAYMENT';
+	public const LeadName = 'LEAD';
+	public const DealName = 'DEAL';
+	public const ContactName = 'CONTACT';
+	public const CompanyName = 'COMPANY';
+	public const InvoiceName = 'INVOICE';
+	public const ActivityName = 'ACTIVITY';
+	public const QuoteName = 'QUOTE';
+	public const RequisiteName = 'REQUISITE';
+	public const DealCategoryName = 'DEAL_CATEGORY';
+	public const CustomActivityTypeName = 'CUSTOM_ACTIVITY_TYPE';
+	public const WaitTypeName = 'WAIT';
+	public const CallListTypeName = 'CALL_LIST';
+	public const SystemName = 'SYSTEM';
+	public const DealRecurringName = 'DEAL_RECURRING';
+	public const InvoiceRecurringName = 'INVOICE_RECURRING';
+	public const OrderName = 'ORDER';
+	public const OrderCheckName = 'ORDER_CHECK';
+	public const CheckCorrectionName = 'CHECK_CORRECTION';
+	public const OrderShipmentName = 'ORDER_SHIPMENT';
+	public const OrderPaymentName = 'ORDER_PAYMENT';
+	public const CommonDynamicName = 'DYNAMIC';
 
-	const SuspendedLeadName = 'SUS_LEAD';
-	const SuspendedDealName = 'SUS_DEAL';
-	const SuspendedContactName = 'SUS_CONTACT';
-	const SuspendedCompanyName = 'SUS_COMPANY';
-	const SuspendedQuoteName = 'SUS_QUOTE';
-	const SuspendedInvoiceName = 'SUS_INVOICE';
-	const SuspendedOrderName = 'SUS_ORDER';
-	const SuspendedActivityName = 'SUS_ACTIVITY';
-	const SuspendedRequisiteName = 'SUS_REQUISITE';
+	public const SuspendedLeadName = 'SUS_LEAD';
+	public const SuspendedDealName = 'SUS_DEAL';
+	public const SuspendedContactName = 'SUS_CONTACT';
+	public const SuspendedCompanyName = 'SUS_COMPANY';
+	public const SuspendedQuoteName = 'SUS_QUOTE';
+	public const SuspendedInvoiceName = 'SUS_INVOICE';
+	public const SuspendedOrderName = 'SUS_ORDER';
+	public const SuspendedActivityName = 'SUS_ACTIVITY';
+	public const SuspendedRequisiteName = 'SUS_REQUISITE';
 
-	const ScoringName = 'SCORING';
+	public const ScoringName = 'SCORING';
+
+	public const DynamicTypePrefixName = 'DYNAMIC_';
+	public const SuspendedDynamicTypePrefixName = 'SUS_DYNAMIC_';
 
 	private static $ALL_DESCRIPTIONS = array();
 	private static $ALL_CATEGORY_CAPTION = array();
@@ -84,38 +97,94 @@ class CCrmOwnerType
 	private static $COMPANY_TYPE = null;
 	private static $COMPANY_INDUSTRY = null;
 
-	public static function IsDefined($typeID)
+	public static function IsDefined($typeID): bool
 	{
-		if(!is_int($typeID))
+		$typeID = (int)$typeID;
+
+		$isStatic = $typeID === self::System
+			|| ($typeID >= self::FirstOwnerType && $typeID <= self::LastOwnerType);
+
+		if($isStatic)
 		{
-			$typeID = (int)$typeID;
+			return true;
 		}
 
-		return $typeID === self::System
-			|| ($typeID >= self::FirstOwnerType && $typeID <= self::LastOwnerType);
+		if(!static::isPossibleDynamicTypeId($typeID) && !static::isPossibleSuspendedDynamicTypeId($typeID))
+		{
+			return false;
+		}
+
+		return (
+			Container::getInstance()->getTypeByEntityTypeId(static::getRealDynamicTypeId($typeID)) !== null
+		);
 	}
 
-	public static function IsEntity($typeID)
+	public static function IsEntity($typeID): bool
 	{
-		if(!is_int($typeID))
-		{
-			$typeID = (int)$typeID;
-		}
+		$typeID = (int)$typeID;
 
-		return $typeID === self::Lead
+		$isStatic = (
+			$typeID === self::Lead
 			|| $typeID === self::Deal
 			|| $typeID === self::Contact
 			|| $typeID === self::Company
 			|| $typeID === self::Invoice
 			|| $typeID === self::Quote
 			|| $typeID === self::Activity
-			|| $typeID === self::Order;
+			|| $typeID === self::Order
+			|| $typeID === self::OrderPayment
+			|| $typeID === self::OrderShipment
+			|| $typeID === self::OrderCheck
+			|| $typeID === self::CheckCorrection
+		);
+
+		if($isStatic)
+		{
+			return true;
+		}
+
+		if(static::isPossibleDynamicTypeId($typeID))
+		{
+			return static::IsDefined($typeID);
+		}
+
+		return false;
 	}
 
-	public static function ResolveID($name)
+	public static function isPossibleDynamicTypeId(int $typeId): bool
 	{
-		$name = mb_strtoupper(trim(strval($name)));
-		if($name == '')
+		return ($typeId >= static::DynamicTypeStart && $typeId < static::DynamicTypeEnd);
+	}
+
+	public static function isPossibleSuspendedDynamicTypeId(int $typeId): bool
+	{
+		return ($typeId >= static::SuspendedDynamicTypeStart && $typeId < static::SuspendedDynamicTypeEnd);
+	}
+
+	protected static function getRealDynamicTypeId(int $typeId): int
+	{
+		if (static::isPossibleSuspendedDynamicTypeId($typeId))
+		{
+			$typeId -= (static::SuspendedDynamicTypeEnd - static::SuspendedDynamicTypeStart);
+		}
+
+		return $typeId;
+	}
+
+	public static function getSuspendedDynamicTypeId(int $typeId): int
+	{
+		if(static::isPossibleDynamicTypeId($typeId))
+		{
+			$typeId += (static::DynamicTypeEnd - static::DynamicTypeStart);
+		}
+
+		return $typeId;
+	}
+
+	public static function ResolveID($name): int
+	{
+		$name = mb_strtoupper(trim((string)$name));
+		if($name === '')
 		{
 			return self::Undefined;
 		}
@@ -213,18 +282,34 @@ class CCrmOwnerType
 				return self::System;
 
 			default:
+				if (CCrmOwnerTypeAbbr::isDynamicTypeAbbreviation($name) || CCrmOwnerTypeAbbr::isSuspendedDynamicTypeAbbreviation($name))
+				{
+					$name = CCrmOwnerTypeAbbr::ResolveName($name);
+				}
+
+				$isSuspendedDynamicType = false;
+				$isDynamicType = preg_match('/^'.static::DynamicTypePrefixName.'(\d+)$/', $name, $matches);
+				if(!$isDynamicType)
+				{
+					$isSuspendedDynamicType = preg_match('/^'.static::SuspendedDynamicTypePrefixName.'(\d+)$/', $name, $matches);
+				}
+				if($isDynamicType || $isSuspendedDynamicType)
+				{
+					return $matches[1];
+				}
+
 				return self::Undefined;
 		}
 	}
 
-	public static function ResolveName($typeID)
+	public static function ResolveName($typeID): string
 	{
 		if(!is_numeric($typeID))
 		{
 			return '';
 		}
 
-		$typeID = intval($typeID);
+		$typeID = (int)$typeID;
 		if($typeID <= 0)
 		{
 			return '';
@@ -255,6 +340,9 @@ class CCrmOwnerType
 
 			case self::Order:
 				return self::OrderName;
+
+			case self::OrderCheck:
+				return self::OrderCheckName;
 
 			case self::OrderShipment:
 				return self::OrderShipmentName;
@@ -311,17 +399,25 @@ class CCrmOwnerType
 				return self::SystemName;
 
 			case self::Undefined:
+				return '';
+
 			default:
+				$isPossibleDynamicTypeId = static::isPossibleDynamicTypeId($typeID);
+				$isPossibleSuspendedDynamicTypeId = static::isPossibleSuspendedDynamicTypeId($typeID);
+				if($isPossibleDynamicTypeId || $isPossibleSuspendedDynamicTypeId)
+				{
+					return (
+						$isPossibleDynamicTypeId ? static::DynamicTypePrefixName : static::SuspendedDynamicTypePrefixName
+					) . $typeID;
+				}
+
 				return '';
 		}
 	}
 
-	public static function ResolveSuspended($typeID)
+	public static function ResolveSuspended($typeID): int
 	{
-		if(!is_int($typeID))
-		{
-			$typeID = (int)$typeID;
-		}
+		$typeID = (int)$typeID;
 
 		if($typeID <= 0)
 		{
@@ -367,74 +463,83 @@ class CCrmOwnerType
 				return self::SuspendedRequisite;
 
 			default:
+				$isPossibleDynamicTypeId = static::isPossibleDynamicTypeId($typeID);
+				$isPossibleSuspendedDynamicTypeId = static::isPossibleSuspendedDynamicTypeId($typeID);
+				if(
+					(
+						$isPossibleDynamicTypeId
+						|| $isPossibleSuspendedDynamicTypeId
+					)
+					&& static::IsDefined($typeID)
+				)
+				{
+					return static::getSuspendedDynamicTypeId($typeID);
+				}
+
 				return self::Undefined;
 		}
 	}
 
-	public static function GetAllNames()
+	public static function GetAllNames(): array
 	{
-		return array(
+		return [
 			self::ContactName, self::CompanyName,
 			self::LeadName, self::DealName,
 			self::InvoiceName, self::ActivityName,
 			self::QuoteName, self::Requisite,
 			self::DealCategoryName, self::CustomActivityTypeName
-		);
+		];
 	}
 
-	public static function GetNames($types)
+	public static function GetNames(array $types): array
 	{
-		$result = array();
-		if(is_array($types))
+		$result = [];
+
+		foreach($types as $typeID)
 		{
-			foreach($types as $typeID)
+			$typeID = (int)$typeID;
+			$name = self::ResolveName($typeID);
+			if($name !== '')
 			{
-				$typeID = intval($typeID);
-				$name = self::ResolveName($typeID);
-				if($name !== '')
-				{
-					$result[] = $name;
-				}
+				$result[] = $name;
+			}
+		}
+
+		return $result;
+	}
+
+	public static function GetDescriptions(array $types): array
+	{
+		$result = [];
+		foreach($types as $typeID)
+		{
+			$typeID = (int)$typeID;
+			$description = self::GetDescription($typeID);
+			if($description !== '')
+			{
+				$result[$typeID] = $description;
 			}
 		}
 		return $result;
 	}
 
-	public static function GetDescriptions($types)
+	public static function GetAll(): array
 	{
-		$result = array();
-		if(is_array($types))
-		{
-			foreach($types as $typeID)
-			{
-				$typeID = intval($typeID);
-				$descr = self::GetDescription($typeID);
-				if($descr !== '')
-				{
-					$result[$typeID] = $descr;
-				}
-			}
-		}
-		return $result;
-	}
-
-	public static function GetAll()
-	{
-		return array(
+		return [
 			self::Contact, self::Company,
 			self::Lead, self::Deal,
 			self::Invoice, self::Activity,
 			self::Quote, self::Requisite,
 			self::DealCategory, self::CustomActivityType
-		);
+		];
 	}
 
-	public static function GetAllDescriptions()
+	public static function GetAllDescriptions(): array
 	{
 		if(!self::$ALL_DESCRIPTIONS[LANGUAGE_ID])
 		{
 			IncludeModuleLangFile(__FILE__);
-			self::$ALL_DESCRIPTIONS[LANGUAGE_ID] = array(
+			self::$ALL_DESCRIPTIONS[LANGUAGE_ID] = [
 				self::Lead => GetMessage('CRM_OWNER_TYPE_LEAD'),
 				self::Deal => GetMessage('CRM_OWNER_TYPE_DEAL'),
 				self::Contact => GetMessage('CRM_OWNER_TYPE_CONTACT'),
@@ -450,13 +555,23 @@ class CCrmOwnerType
 				self::Order => GetMessage('CRM_OWNER_TYPE_ORDER'),
 				self::OrderShipment => GetMessage('CRM_OWNER_TYPE_ORDER_SHIPMENT'),
 				self::OrderPayment => GetMessage('CRM_OWNER_TYPE_ORDER_PAYMENT')
-			);
+			];
+
+			$dynamicTypesMap = Container::getInstance()->getDynamicTypesMap();
+			$dynamicTypesMap->load([
+				'isLoadCategories' => false,
+				'isLoadStages' => false,
+			]);
+			foreach ($dynamicTypesMap->getTypes() as $type)
+			{
+				self::$ALL_DESCRIPTIONS[LANGUAGE_ID][$type->getEntityTypeId()] = $type->getTitle();
+			}
 		}
 
 		return self::$ALL_DESCRIPTIONS[LANGUAGE_ID];
 	}
 
-	public static function GetAllCategoryCaptions($useNames = false)
+	public static function GetAllCategoryCaptions(bool $useNames = false): array
 	{
 		if(!self::$ALL_CATEGORY_CAPTION[LANGUAGE_ID])
 		{
@@ -473,6 +588,16 @@ class CCrmOwnerType
 				self::CustomActivityType => GetMessage('CRM_OWNER_TYPE_CUSTOM_ACTIVITY_TYPE_CATEGORY'),
 				self::Order => GetMessage('CRM_OWNER_TYPE_ORDER_CATEGORY'),
 			);
+
+			$dynamicTypesMap = Container::getInstance()->getDynamicTypesMap();
+			$dynamicTypesMap->load([
+				'isLoadCategories' => false,
+				'isLoadStages' => false,
+			]);
+			foreach ($dynamicTypesMap->getTypes() as $type)
+			{
+				self::$ALL_CATEGORY_CAPTION[LANGUAGE_ID][$type->getEntityTypeId()] = $type->getTitle();
+			}
 		}
 
 
@@ -611,7 +736,12 @@ class CCrmOwnerType
 	{
 		$typeID = intval($typeID);
 		$ID = intval($ID);
-		
+
+		if($ID <= 0)
+		{
+			return '';
+		}
+
 		switch($typeID)
 		{
 			case self::Lead:
@@ -729,128 +859,47 @@ class CCrmOwnerType
 	{
 		if(!is_array($options))
 		{
-			$options = array();
+			$options = [];
 		}
 
-		$typeID = intval($typeID);
-		$ID = intval($ID);
+		$typeID = (int)$typeID;
+		$ID = (int)$ID;
 
-		$url = '';
-		switch($typeID)
+		if (!static::IsSliderEnabled($typeID))
 		{
-			case self::Lead:
-			{
-				if(!$bCheckPermissions || CCrmLead::CheckReadPermission($ID))
-				{
-					$url = CComponentEngine::MakePathFromTemplate(
-						\COption::GetOptionString('crm', 'path_to_lead_details'),
-						array('lead_id' => $ID)
-					);
-				}
-				break;
-			}
-			case self::Contact:
-			{
-				if(!$bCheckPermissions || CCrmContact::CheckReadPermission($ID))
-				{
-					$url = CComponentEngine::MakePathFromTemplate(
-						\COption::GetOptionString('crm', 'path_to_contact_details'),
-						array('contact_id' => $ID)
-					);
-				}
-				break;
-			}
-			case self::Company:
-			{
-				if(!$bCheckPermissions || CCrmCompany::CheckReadPermission($ID))
-				{
-					$url = CComponentEngine::MakePathFromTemplate(
-						\COption::GetOptionString('crm', 'path_to_company_details'),
-						array('company_id' => $ID)
-					);
-				}
-				break;
-			}
-			case self::Deal:
-			{
-				if(!$bCheckPermissions || CCrmDeal::CheckReadPermission($ID))
-				{
-					$url = CComponentEngine::MakePathFromTemplate(
-						\COption::GetOptionString('crm', 'path_to_deal_details'),
-						array('deal_id' => $ID)
-					);
-				}
-				break;
-			}
-			case self::Quote:
-			{
-				if(!$bCheckPermissions || CCrmQuote::CheckReadPermission($ID))
-				{
-					$url = CComponentEngine::MakePathFromTemplate(
-						\COption::GetOptionString('crm', 'path_to_quote_details'),
-						array('quote_id' => $ID)
-					);
-				}
-				break;
-			}
-			case self::Order:
-			{
-				if(!$bCheckPermissions || \Bitrix\Crm\Order\Permissions\Order::checkReadPermission($ID))
-				{
-					$url = CComponentEngine::MakePathFromTemplate(
-						\COption::GetOptionString('crm', 'path_to_order_details'),
-						array('order_id' => $ID)
-					);
-				}
-				break;
-			}
-			case self::OrderCheck:
-			{
-				$url = CComponentEngine::MakePathFromTemplate(
-					\COption::GetOptionString('crm', 'path_to_order_check_details'),
-					array('check_id' => $ID)
-				);
-				break;
-			}
-			case self::OrderShipment:
-			{
-				if(!$bCheckPermissions || \Bitrix\Crm\Order\Permissions\Shipment::checkReadPermission($ID))
-				{
-					$url = CComponentEngine::MakePathFromTemplate(
-						\COption::GetOptionString('crm', 'path_to_order_shipment_details'),
-						array('shipment_id' => $ID)
-					);
-				}
-				break;
-			}
-			case self::OrderPayment:
-			{
-				if (!$bCheckPermissions || \Bitrix\Crm\Order\Permissions\Payment::checkReadPermission($ID))
-				{
-					$url = CComponentEngine::MakePathFromTemplate(
-						\COption::GetOptionString('crm', 'path_to_order_payment_details'),
-						array('payment_id' => $ID)
-					);
-				}
-				break;
-			}
+			return '';
 		}
 
-		if($url !== '')
+		if ($bCheckPermissions && !static::checkReadPermission($typeID, $ID))
 		{
-			if($ID > 0 && isset($options['INIT_MODE']) && $options['INIT_MODE'] !== '')
-			{
-				$url = \CCrmUrlUtil::AddUrlParams($url, array('init_mode' => mb_strtolower($options['INIT_MODE'])));
-			}
-
-			if(isset($options['ENABLE_SLIDER']) && $options['ENABLE_SLIDER'] === true)
-			{
-				$url = \CCrmUrlUtil::PrepareSliderUrl($url);
-			}
+			return '';
 		}
 
-		return $url;
+		$url = Container::getInstance()->getRouter()->getItemDetailUrl($typeID, $ID);
+
+		if (is_null($url))
+		{
+			return '';
+		}
+
+		if($ID > 0 && !empty($options['INIT_MODE']))
+		{
+			$url->addParams(['init_mode' => mb_strtolower($options['INIT_MODE'])]);
+		}
+
+		if(isset($options['ENABLE_SLIDER']) && $options['ENABLE_SLIDER'] === true)
+		{
+			$url->addParams(['IFRAME' => 'Y', 'IFRAME_TYPE' => 'SIDE_SLIDER']);
+		}
+
+		return $url->getUri();
 	}
+
+	protected static function checkReadPermission(int $typeId, int $id): bool
+	{
+		return \Bitrix\Crm\Security\EntityAuthorization::checkReadPermission($typeId, $id);
+	}
+
 	public static function GetEditUrl($typeID, $ID, $bCheckPermissions = false, array $options = null)
 	{
 		$typeID = intval($typeID);
@@ -985,25 +1034,30 @@ class CCrmOwnerType
 	{
 		$typeID = (int)$typeID;
 
-		if (
-			$typeID === CCrmOwnerType::Order
+		if ($typeID === CCrmOwnerType::Order
+			|| $typeID === CCrmOwnerType::OrderCheck
 			|| $typeID === CCrmOwnerType::OrderShipment
-			|| $typeID === CCrmOwnerType::OrderPayment
-		)
+			|| $typeID === CCrmOwnerType::OrderPayment)
 		{
 			return true;
 		}
 
-		if(!\Bitrix\Crm\Settings\LayoutSettings::getCurrent()->isSliderEnabled())
+		if (!\Bitrix\Crm\Settings\LayoutSettings::getCurrent()->isSliderEnabled())
 		{
 			return false;
 		}
 
+		if ($typeID === static::Quote)
+		{
+			return \Bitrix\Crm\Settings\QuoteSettings::getCurrent()->isFactoryEnabled();
+		}
+
 		return $typeID === CCrmOwnerType::Lead
 			|| $typeID === CCrmOwnerType::Deal
-			//|| $typeID === CCrmOwnerType::Quote
+			|| $typeID === CCrmOwnerType::Quote
 			|| $typeID === CCrmOwnerType::Contact
-			|| $typeID === CCrmOwnerType::Company;
+			|| $typeID === CCrmOwnerType::Company
+			|| static::isPossibleDynamicTypeId($typeID);
 	}
 
 	public static function GetEntityShowPath($typeID, $ID, $bCheckPermissions = false, array $options = null)
@@ -1234,6 +1288,28 @@ class CCrmOwnerType
 					$caption = isset($arRes['NAME']) ? $arRes['NAME'] : '';
 					return (self::$CAPTIONS[$key] = $caption);
 				}
+			}
+		}
+
+		if (static::isPossibleDynamicTypeId($typeID))
+		{
+			$factory = Container::getInstance()->getFactory($typeID);
+			if ($factory)
+			{
+				$item = $factory->getItem($ID);
+				if (!$item)
+				{
+					self::$CAPTIONS[$key] = '';
+					return '';
+				}
+				if ($checkRights && !Container::getInstance()->getUserPermissions()->canReadItem($item))
+				{
+					self::$CAPTIONS[$key] = '';
+					return '';
+				}
+				self::$CAPTIONS[$key] = $item->getTitle();
+
+				return self::$CAPTIONS[$key];
 			}
 		}
 
@@ -1726,7 +1802,7 @@ class CCrmOwnerType
 			}
 
 			$dbUsers = CUser::GetList(
-				($by = 'id'), ($sort = 'asc'),
+				'id', 'asc',
 				array('ID' => implode('|', $userIDs)),
 				array('FIELDS' => $userSelect)
 			);
@@ -2120,6 +2196,7 @@ class CCrmOwnerType
 					'PAY_SYSTEM_NAME' => $arRes['PAY_SYSTEM_NAME'],
 					'SUM' => \CCrmCurrency::MoneyToString($arRes['SUM'], $arRes['CURRENCY'], '#'),
 					'CURRENCY' => \CCrmCurrency::GetCurrencyText($arRes['CURRENCY']),
+					'SUM_WITH_CURRENCY' => \CCrmCurrency::MoneyToString($arRes['SUM'], $arRes['CURRENCY']),
 				);
 				if($enableEditUrl)
 				{
@@ -2133,27 +2210,30 @@ class CCrmOwnerType
 			}
 			case self::OrderShipment:
 			{
-				$deliveryPriceInfo = '';
-				if ($arRes['PRICE_DELIVERY'] > 0)
+				$dateInsert = '';
+				$culture = Bitrix\Main\Context::getCurrent()->getCulture();
+				if ($arRes['DATE_INSERT'] instanceof \Bitrix\Main\Type\Date && $culture)
 				{
-					$deliveryPriceInfo = GetMessage('CRM_OWNER_TYPE_ORDER_SHIPMENT_PRICE_DELIVERY_INFO', [
-						"#PRICE_DELIVERY_WITH_CURRENCY#" => \CCrmCurrency::MoneyToString($arRes['PRICE_DELIVERY'], $arRes['CURRENCY']),
-					]);
+					$dateInsert = FormatDate($culture->getLongDateFormat(), $arRes['DATE_INSERT']->getTimestamp());
 				}
-				$result = array(
+
+				$result = [
 					'TITLE' => isset($arRes['ACCOUNT_NUMBER']) ? $arRes['ACCOUNT_NUMBER'] : '',
-					'LEGEND' => GetMessage('CRM_OWNER_TYPE_ORDER_SHIPMENT_LEGEND', [
-						"#DELIVERY_NAME#" => $arRes['DELIVERY_NAME'],
-						"#PRICE_DELIVERY_INFO#" => $deliveryPriceInfo,
+					'LEGEND' => GetMessage('CRM_OWNER_TYPE_ORDER_SHIPMENT_LEGEND_2', [
+						"#DATE_INSERT#" => $dateInsert,
+						"#PRICE_DELIVERY_WITH_CURRENCY#" => \CCrmCurrency::MoneyToString($arRes['PRICE_DELIVERY'], $arRes['CURRENCY']),
+					]),
+					'SUBLEGEND' => GetMessage('CRM_OWNER_TYPE_ORDER_SHIPMENT_SUBLEGEND', [
+						"#DELIVERY_NAME#" => $arRes['DELIVERY_NAME']
 					]),
 					'RESPONSIBLE_ID' => isset($arRes['RESPONSIBLE_ID']) ? intval($arRes['RESPONSIBLE_ID']) : 0,
 					'IMAGE_FILE_ID' => 0,
 					'SHOW_URL' =>
 						CComponentEngine::MakePathFromTemplate(
 							COption::GetOptionString('crm', 'path_to_order_shipment_details'),
-							array('shipment_id' => $ID)
+							['shipment_id' => $ID]
 						)
-				);
+				];
 				if($enableEditUrl)
 				{
 					$result['EDIT_URL'] =
@@ -2178,9 +2258,9 @@ class CCrmOwnerType
 		return null;
 	}
 
-	public static function ResolveUserFieldEntityID($typeID)
+	public static function ResolveUserFieldEntityID($typeID): string
 	{
-		$typeID = intval($typeID);
+		$typeID = (int)$typeID;
 		if($typeID <= 0)
 		{
 			return '';
@@ -2224,7 +2304,26 @@ class CCrmOwnerType
 				unset($requisite);
 				return $ufId;
 			case self::Undefined:
+				return '';
 			default:
+				if(static::isPossibleSuspendedDynamicTypeId($typeID))
+				{
+					$typeID = \CCrmOwnerType::getRealDynamicTypeId($typeID);
+					$type = Container::getInstance()->getTypeByEntityTypeId($typeID);
+					if($type)
+					{
+						return ServiceLocator::getInstance()->get('crm.type.factory')->getUserFieldSuspendedEntityId($type->getId());
+					}
+				}
+				if(static::isPossibleDynamicTypeId($typeID))
+				{
+					$type = Container::getInstance()->getTypeByEntityTypeId($typeID);
+					if($type)
+					{
+						return ServiceLocator::getInstance()->get('crm.type.factory')->getUserFieldEntityId($type->getId());
+					}
+				}
+
 				return '';
 		}
 	}
@@ -2353,87 +2452,125 @@ class CCrmOwnerType
 		return is_array($fields) && isset($fields[$fieldName]) ? intval($fields[$fieldName]) : 0;
 	}
 
-	public static function GetResponsibleID($typeID, $ID, $checkRights = true)
+	public static function loadResponsibleId(int $entityTypeId, int $entityId, bool $checkRights = true): int
 	{
-		$typeID = intval($typeID);
-		$ID = intval($ID);
-
-		if(!(self::IsDefined($typeID) && $ID > 0))
-		{
-			return 0;
-		}
-
-		$key = "{$typeID}_{$ID}";
-		if(isset(self::$RESPONSIBLES[$key]))
-		{
-			return self::$RESPONSIBLES[$key];
-		}
-
 		$result = 0;
-		switch($typeID)
+
+		switch($entityTypeId)
 		{
 			case self::Lead:
 			{
-				$dbRes = CCrmLead::GetListEx(array(), array('=ID' => $ID, 'CHECK_PERMISSIONS' => ($checkRights ? 'Y' : 'N')), false, false, array('ASSIGNED_BY_ID'));
+				$dbRes = CCrmLead::GetListEx(array(), array('=ID' => $entityId, 'CHECK_PERMISSIONS' => ($checkRights ? 'Y' : 'N')), false, false, array('ASSIGNED_BY_ID'));
 				$arRes = $dbRes ? $dbRes->Fetch() : null;
 				$result = $arRes ? intval($arRes['ASSIGNED_BY_ID']) : 0;
 				break;
 			}
 			case self::Contact:
 			{
-				$dbRes = CCrmContact::GetListEx(array(), array('=ID' => $ID, 'CHECK_PERMISSIONS' => ($checkRights ? 'Y' : 'N')), false, false, array('ASSIGNED_BY_ID'));
+				$dbRes = CCrmContact::GetListEx(array(), array('=ID' => $entityId, 'CHECK_PERMISSIONS' => ($checkRights ? 'Y' : 'N')), false, false, array('ASSIGNED_BY_ID'));
 				$arRes = $dbRes ? $dbRes->Fetch() : null;
 				$result = $arRes ? intval($arRes['ASSIGNED_BY_ID']) : 0;
 				break;
 			}
 			case self::Company:
 			{
-				$dbRes = CCrmCompany::GetListEx(array(), array('=ID' => $ID, 'CHECK_PERMISSIONS' => ($checkRights ? 'Y' : 'N')), false, false, array('ASSIGNED_BY_ID'));
+				$dbRes = CCrmCompany::GetListEx(array(), array('=ID' => $entityId, 'CHECK_PERMISSIONS' => ($checkRights ? 'Y' : 'N')), false, false, array('ASSIGNED_BY_ID'));
 				$arRes = $dbRes ? $dbRes->Fetch() : null;
 				$result = $arRes ? intval($arRes['ASSIGNED_BY_ID']) : 0;
 				break;
 			}
 			case self::Deal:
 			{
-				$dbRes = CCrmDeal::GetListEx(array(), array('=ID' => $ID, 'CHECK_PERMISSIONS' => ($checkRights ? 'Y' : 'N')), false, false, array('ASSIGNED_BY_ID'));
+				$dbRes = CCrmDeal::GetListEx(array(), array('=ID' => $entityId, 'CHECK_PERMISSIONS' => ($checkRights ? 'Y' : 'N')), false, false, array('ASSIGNED_BY_ID'));
 				$arRes = $dbRes ? $dbRes->Fetch() : null;
 				$result = $arRes ? intval($arRes['ASSIGNED_BY_ID']) : 0;
 				break;
 			}
 			case self::Invoice:
 			{
-				$dbRes = CCrmInvoice::GetList(array(), array('ID' => $ID), false, false, array('RESPONSIBLE_ID'));
+				$dbRes = CCrmInvoice::GetList(array(), array('ID' => $entityId), false, false, array('RESPONSIBLE_ID'));
 				$arRes = $dbRes ? $dbRes->Fetch() : null;
 				$result = $arRes ? intval($arRes['RESPONSIBLE_ID']) : 0;
 				break;
 			}
 			case self::Activity:
 			{
-				$dbRes = CCrmActivity::GetList(array(), array('=ID' => $ID, 'CHECK_PERMISSIONS' => ($checkRights ? 'Y' : 'N')), false, false, array('RESPONSIBLE_ID'));
+				$dbRes = CCrmActivity::GetList(array(), array('=ID' => $entityId, 'CHECK_PERMISSIONS' => ($checkRights ? 'Y' : 'N')), false, false, array('RESPONSIBLE_ID'));
 				$arRes = $dbRes ? $dbRes->Fetch() : null;
 				$result = $arRes ? intval($arRes['RESPONSIBLE_ID']) : 0;
 				break;
 			}
 			case self::Quote:
 			{
-				$dbRes = CCrmQuote::GetList(array(), array('=ID' => $ID, 'CHECK_PERMISSIONS' => ($checkRights ? 'Y' : 'N')), false, false, array('ASSIGNED_BY_ID'));
+				$dbRes = CCrmQuote::GetList(array(), array('=ID' => $entityId, 'CHECK_PERMISSIONS' => ($checkRights ? 'Y' : 'N')), false, false, array('ASSIGNED_BY_ID'));
 				$arRes = $dbRes ? $dbRes->Fetch() : null;
 				$result = $arRes ? intval($arRes['ASSIGNED_BY_ID']) : 0;
 				break;
 			}
 			case self::Order:
 			{
-				if($checkRights && !\Bitrix\Crm\Order\Permissions\Order::checkReadPermission($ID))
+				if($checkRights && !\Bitrix\Crm\Order\Permissions\Order::checkReadPermission($entityId))
 				{
 					break;
 				}
 
-				$dbRes = Bitrix\Crm\Order\Order::getList(array('filter' => array('=ID' => $ID), 'select' => array('RESPONSIBLE_ID')));
+				$dbRes = Bitrix\Crm\Order\Order::getList(array('filter' => array('=ID' => $entityId), 'select' => array('RESPONSIBLE_ID')));
 				$arRes = $dbRes ? $dbRes->fetch() : null;
 				$result = $arRes ? intval($arRes['RESPONSIBLE_ID']) : 0;
 				break;
 			}
 		}
+
+		if ($result === 0 && static::isPossibleDynamicTypeId($entityTypeId))
+		{
+			$factory = Container::getInstance()->getFactory($entityTypeId);
+			if ($factory)
+			{
+				$parameters = [
+					'select' => [
+						\Bitrix\Crm\Item::FIELD_NAME_ASSIGNED,
+					],
+					'filter' => [
+						'=ID' => $entityId,
+					],
+					'limit' => 1,
+				];
+				if ($checkRights)
+				{
+					$items = $factory->getItemsFilteredByPermissions($parameters);
+				}
+				else
+				{
+					$items = $factory->getItems($parameters);
+				}
+				if (count($items) > 0 && $items[0] && $items[0] instanceof \Bitrix\Crm\Item)
+				{
+					$result = (int)$items[0]->getAssignedById();
+				}
+			}
+		}
+
+		return $result;
+	}
+
+	public static function GetResponsibleID($typeID, $ID, $checkRights = true)
+	{
+		$typeID = intval($typeID);
+		$ID = intval($ID);
+		$checkRights = $checkRights === true;
+
+		if(!(self::IsDefined($typeID) && $ID > 0))
+		{
+			return 0;
+		}
+
+		$key = "{$typeID}_{$ID}_" . ($checkRights ? 'Y' : 'N');
+		if(isset(self::$RESPONSIBLES[$key]))
+		{
+			return self::$RESPONSIBLES[$key];
+		}
+
+		$result = static::loadResponsibleId($typeID, $ID, $checkRights);
 
 		self::$RESPONSIBLES[$key] = $result;
 		return $result;
@@ -2475,6 +2612,19 @@ class CCrmOwnerType
 				$dbRes = CCrmQuote::GetList(array(), array('=ID' => $ID, 'CHECK_PERMISSIONS' => ($checkRights ? 'Y' : 'N')), false, false, array('OPENED'));
 				$arRes = $dbRes ? $dbRes->Fetch() : null;
 				return ($arRes && $arRes['OPENED'] == 'Y');
+			}
+		}
+
+		if (static::isPossibleDynamicTypeId($typeID))
+		{
+			$factory = Container::getInstance()->getFactory($typeID);
+			if ($factory)
+			{
+				$item = $factory->getItem($ID);
+				if ($item)
+				{
+					return $item->getOpened();
+				}
 			}
 		}
 
@@ -2833,20 +2983,22 @@ class CCrmOwnerType
 
 class CCrmOwnerTypeAbbr
 {
-	const Undefined = '';
-	const Lead = 'L';
-	const Deal = 'D';
-	const Contact = 'C';
-	const Company = 'CO';
-	const Invoice = 'I';
-	const Quote = 'Q';
-	const Requisite = 'RQ';
-	const DealCategory = 'DC';
-	const CustomActivityType = 'CAT';
-	const System = 'SYS';
-	const Order = 'O';
-	const OrderShipment = 'OS';
-	const OrderPayment = 'OP';
+	public const Undefined = '';
+	public const Lead = 'L';
+	public const Deal = 'D';
+	public const Contact = 'C';
+	public const Company = 'CO';
+	public const Invoice = 'I';
+	public const Quote = 'Q';
+	public const Requisite = 'RQ';
+	public const DealCategory = 'DC';
+	public const CustomActivityType = 'CAT';
+	public const System = 'SYS';
+	public const Order = 'O';
+	public const OrderShipment = 'OS';
+	public const OrderPayment = 'OP';
+	public const DynamicTypeAbbreviationPrefix = 'T';
+	public const SuspendedDynamicTypeAbbreviationPrefix = 'S';
 
 	public static function ResolveByTypeID($typeID)
 	{
@@ -2863,6 +3015,10 @@ class CCrmOwnerTypeAbbr
 				return self::Deal;
 			case CCrmOwnerType::Order:
 				return self::Order;
+			case CCrmOwnerType::OrderShipment:
+				return self::OrderShipment;
+			case CCrmOwnerType::OrderPayment:
+				return self::OrderPayment;
 			case CCrmOwnerType::Contact:
 				return self::Contact;
 			case CCrmOwnerType::Company:
@@ -2880,6 +3036,81 @@ class CCrmOwnerTypeAbbr
 			case CCrmOwnerType::System:
 				return self::System;
 			default:
+				if (CCrmOwnerType::isPossibleDynamicTypeId($typeID))
+				{
+					return self::getDynamicTypeAbbreviation($typeID);
+				}
+				if (CCrmOwnerType::isPossibleSuspendedDynamicTypeId($typeID))
+				{
+					return self::getSuspendedTypeAbbreviation($typeID);
+				}
+		}
+
+		return self::Undefined;
+	}
+
+	/**
+	 * Returns an entityTypeId of a type that is associated with the provided abbreviation
+	 *
+	 * @param $abbr
+	 *
+	 * @return int
+	 */
+	public static function ResolveTypeID($abbr)
+	{
+		return CCrmOwnerType::ResolveID(self::ResolveName($abbr));
+	}
+
+	/**
+	 * @param string $typeName
+	 * @return string
+	 */
+	public static function ResolveByTypeName(string $typeName): string
+	{
+		if ($typeName === '')
+		{
+			return self::Undefined;
+		}
+
+		switch($typeName)
+		{
+			case CCrmOwnerType::LeadName:
+				return self::Lead;
+			case CCrmOwnerType::DealName:
+				return self::Deal;
+			case CCrmOwnerType::ContactName:
+				return self::Contact;
+			case CCrmOwnerType::CompanyName:
+				return self::Company;
+			case CCrmOwnerType::InvoiceName:
+				return self::Invoice;
+			case CCrmOwnerType::QuoteName:
+				return self::Quote;
+			case CCrmOwnerType::OrderName:
+				return self::Order;
+			case CCrmOwnerType::OrderShipmentName:
+				return self::OrderShipment;
+			case CCrmOwnerType::OrderPaymentName:
+				return self::OrderPayment;
+			case CCrmOwnerType::RequisiteName:
+				return self::Requisite;
+			case CCrmOwnerType::DealCategoryName:
+				return self::DealCategory;
+			case CCrmOwnerType::CustomActivityTypeName:
+				return self::CustomActivityType;
+			case CCrmOwnerType::SystemName:
+				return self::System;
+			default:
+				$typeId = CCrmOwnerType::ResolveID($typeName);
+				if (CCrmOwnerType::isPossibleDynamicTypeId($typeId))
+				{
+					return self::getDynamicTypeAbbreviation($typeId);
+				}
+				if (CCrmOwnerType::isPossibleSuspendedDynamicTypeId($typeId))
+				{
+					return self::getSuspendedTypeAbbreviation($typeId);
+				}
+
 				return self::Undefined;
 		}
 	}
@@ -2913,6 +3144,10 @@ class CCrmOwnerTypeAbbr
 				return CCrmOwnerType::QuoteName;
 			case self::Order:
 				return CCrmOwnerType::OrderName;
+			case self::OrderShipment:
+				return CCrmOwnerType::OrderShipmentName;
+			case self::OrderPayment:
+				return CCrmOwnerType::OrderPaymentName;
 			case self::Requisite:
 				return CCrmOwnerType::RequisiteName;
 			case self::DealCategory:
@@ -2921,13 +3156,101 @@ class CCrmOwnerTypeAbbr
 				return CCrmOwnerType::CustomActivityTypeName;
 			case self::System:
 				return CCrmOwnerType::SystemName;
+			default:
+				$typeId = self::extractTypeIdFromDynamicTypeAbbreviation($abbr);
+				if (!is_null($typeId))
+				{
+					return CCrmOwnerType::ResolveName($typeId);
+				}
+
+				$suspendedTypeId = self::extractTypeIdFromSuspendedDynamicTypeAbbreviation($abbr);
+				if (!is_null($suspendedTypeId))
+				{
+					return CCrmOwnerType::ResolveName($suspendedTypeId);
+				}
 		}
 		return '';
 	}
 
-	public static function ResolveTypeID($abbr)
+	private static function getDynamicTypeAbbreviation(int $typeId): string
 	{
-		return CCrmOwnerType::ResolveID(self::ResolveName($abbr));
+		return (self::DynamicTypeAbbreviationPrefix . self::normalizeTypeIdForAbbreviation($typeId));
+	}
+
+	private static function getSuspendedTypeAbbreviation(int $typeId): string
+	{
+		return (self::SuspendedDynamicTypeAbbreviationPrefix . self::normalizeTypeIdForAbbreviation($typeId));
+	}
+
+	/**
+	 * Returns true if the provided abbreviation describes a dynamic entity type
+	 *
+	 * @param string $abbr
+	 *
+	 * @return bool
+	 */
+	public static function isDynamicTypeAbbreviation(string $abbr): bool
+	{
+		$isMatchesPrefix = (mb_strpos($abbr, self::DynamicTypeAbbreviationPrefix) !== false);
+
+		$typeId = self::extractTypeIdFromDynamicTypeAbbreviation($abbr);
+		$isTypeIdValid = !is_null($typeId);
+
+		return ($isMatchesPrefix && $isTypeIdValid);
+	}
+
+	/**
+	 * Returns true if the provided abbreviation describes a suspended dynamic entity type
+	 *
+	 * @param string $abbr
+	 *
+	 * @return bool
+	 */
+	public static function isSuspendedDynamicTypeAbbreviation(string $abbr): bool
+	{
+		$isMatchesPrefix = (mb_strpos($abbr, self::SuspendedDynamicTypeAbbreviationPrefix) !== false);
+
+		$typeId = self::extractTypeIdFromSuspendedDynamicTypeAbbreviation($abbr);
+		$isTypeIdValid = !is_null($typeId);
+
+		return ($isMatchesPrefix && $isTypeIdValid);
+	}
+
+	private static function extractTypeIdFromDynamicTypeAbbreviation(string $abbr): ?int
+	{
+		$typeId = mb_substr($abbr, mb_strlen(self::DynamicTypeAbbreviationPrefix));
+		$typeIdNormalized = self::normalizeTypeIdFromAbbreviation($typeId);
+		if (CCrmOwnerType::isPossibleDynamicTypeId($typeIdNormalized))
+		{
+			return $typeIdNormalized;
+		}
+
+		return null;
+	}
+
+	private static function extractTypeIdFromSuspendedDynamicTypeAbbreviation(string $abbr): ?int
+	{
+		$typeId = mb_substr($abbr, mb_strlen(self::SuspendedDynamicTypeAbbreviationPrefix));
+		$typeIdNormalized = self::normalizeTypeIdFromAbbreviation($typeId);
+		if (CCrmOwnerType::isPossibleSuspendedDynamicTypeId($typeIdNormalized))
+		{
+			return $typeIdNormalized;
+		}
+
+		return null;
+	}
+
+	private static function normalizeTypeIdForAbbreviation(int $typeId): string
+	{
+		// In dynamic type abbreviation typeId is being converted to Hex
+		// in order to fit the resulting abbreviation into 3 symbols. It's a limitation of several CRM tables
+		return dechex($typeId);
+	}
+
+	private static function normalizeTypeIdFromAbbreviation(string $typeIdFromAbbreviation): int
+	{
+		// In dynamic type abbreviation typeId is being converted to Hex
+		// in order to fit the resulting abbreviation into 3 symbols. It's a limitation of several CRM tables
+		return (int)hexdec($typeIdFromAbbreviation);
 	}
 }
-

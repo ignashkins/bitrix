@@ -49,7 +49,7 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $_POST["action"] <> '' && check_bitrix
 	}
 	else
 	{
-		$dbSite = CSite::GetList($by="sort", $order="desc", array("DEFAULT"=>"Y"));
+		$dbSite = CSite::GetList("sort", "desc", array("DEFAULT"=>"Y"));
 		if ($arSite = $dbSite->Fetch())
 		{
 			$siteID = $arSite["LID"];
@@ -396,8 +396,11 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $_POST["action"] <> '' && check_bitrix
 
 			if (isset($_POST["itemInfo"]) && is_array($_POST["itemInfo"]))
 			{
+				$itemText = trim($_POST["itemInfo"]["text"]);
+				$itemText = \Bitrix\Main\Text\Emoji::encode($itemText);
+
 				$itemData = array(
-					"TEXT" => $_POST["itemInfo"]["text"],
+					"TEXT" => $itemText,
 					"LINK" => $_POST["itemInfo"]["link"],
 					"ID" => $_POST["itemInfo"]["id"],
 				);
@@ -409,11 +412,11 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $_POST["action"] <> '' && check_bitrix
 				if (!empty($_POST["itemInfo"]["counterId"]))
 					$itemData["COUNTER_ID"] = $_POST["itemInfo"]["counterId"];
 
-				$adminOption = COption::GetOptionString("intranet", "left_menu_items_to_all_".$siteID);
+				$adminOption = COption::GetOptionString("intranet", "left_menu_items_to_all_".$siteID, "", $siteID);
 
 				if (!empty($adminOption))
 				{
-					$adminOption = unserialize($adminOption);
+					$adminOption = unserialize($adminOption, ["allowed_classes" => false]);
 					foreach ($adminOption as $item)
 					{
 						if ($item["ID"] == $itemData["ID"])
@@ -438,11 +441,11 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $_POST["action"] <> '' && check_bitrix
 			if (!isset($_POST["menu_item_id"]))
 				break;
 
-			$adminOption = COption::GetOptionString("intranet", "left_menu_items_to_all_".$siteID);
+			$adminOption = COption::GetOptionString("intranet", "left_menu_items_to_all_".$siteID, "", $siteID);
 
 			if (!empty($adminOption))
 			{
-				$adminOption = unserialize($adminOption);
+				$adminOption = unserialize($adminOption, ["allowed_classes" => false]);
 				foreach ($adminOption as $key => $item)
 				{
 					if ($item["ID"] == $_POST["menu_item_id"])
@@ -472,7 +475,7 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $_POST["action"] <> '' && check_bitrix
 
 			if (!empty($customItems))
 			{
-				$customItems = unserialize($customItems);
+				$customItems = unserialize($customItems, ["allowed_classes" => false]);
 				foreach ($customItems as $key => $item)
 				{
 					if ($item["ID"] == $_POST["menu_item_id"])
@@ -495,7 +498,7 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $_POST["action"] <> '' && check_bitrix
 			$customItemsSort = COption::GetOptionString("intranet", "left_menu_custom_preset_sort", "", $siteID);
 			if (!empty($customItemsSort))
 			{
-				$customItemsSort = unserialize($customItemsSort);
+				$customItemsSort = unserialize($customItemsSort, ["allowed_classes" => false]);
 				foreach (array("show", "hide") as $status)
 				{
 					foreach ($customItemsSort[$status] as $key=>$itemId)
@@ -517,7 +520,7 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $_POST["action"] <> '' && check_bitrix
 			{
 				$adminOption = COption::GetOptionString("intranet", "admin_menu_items", "", $siteID);
 				if ($adminOption)
-					$adminOption = unserialize($adminOption);
+					$adminOption = unserialize($adminOption, ["allowed_classes" => false]);
 				else
 					$adminOption = array();
 				if (is_array($adminOption) && !in_array($menuItemID, $adminOption))
@@ -538,7 +541,7 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $_POST["action"] <> '' && check_bitrix
 			{
 				$adminOption = COption::GetOptionString("intranet", "admin_menu_items", "", $siteID);
 				if ($adminOption)
-					$adminOption = unserialize($adminOption);
+					$adminOption = unserialize($adminOption, ["allowed_classes" => false]);
 				else
 					$adminOption = array();
 				if (is_array($adminOption) && in_array($menuItemID, $adminOption))
@@ -743,5 +746,5 @@ if ($_SERVER["REQUEST_METHOD"]=="POST" && $_POST["action"] <> '' && check_bitrix
 
 	$APPLICATION->RestartBuffer();
 	echo \Bitrix\Main\Web\Json::encode($arJsonData);
-	die();
+	\Bitrix\Main\Application::getInstance()->end();
 }

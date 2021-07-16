@@ -1,0 +1,21 @@
+<?php
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_ATTACHMENTS_DIALOG_TITLE"] = "Dateien in der Nachricht: #NUM#";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_BACKGROUNDS_DIALOG_TITLE"] = "Hintergrund auswählen";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_CHANGETYPE_BACKGROUND_CONFIRM_MESSAGE"] = "Sie haben vor, den Nachrichtentyp zu ändern. Der Nachrichtenhintergrund wird zurückgesetzt.";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_CHANGETYPE_CONFIRM_BUTTON_CANCEL"] = "Abbrechen";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_CHANGETYPE_CONFIRM_BUTTON_OK"] = "OK";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_CHANGETYPE_CONFIRM_TITLE"] = "Warnung";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_CHANGETYPE_IMPORTANT_CONFIRM_MESSAGE"] = "Sie haben vor, den Nachrichtentyp zu ändern. Der Typ Ankündigung wird dabei verloren gehen.";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_CHANGETYPE_MEDAL_CONFIRM_MESSAGE"] = "Sie haben vor, den Nachrichtentyp zu ändern. Die Information über Auszeichnung wird verloren gehen.";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_CHANGETYPE_VOTE_CONFIRM_MESSAGE"] = "Sie haben vor, den Nachrichtentyp zu ändern. Die Informationen aus der Umfrage werden verloren gehen.";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_CLOSE_CONFIRM_BUTTON_CANCEL"] = "Abbrechen";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_CLOSE_CONFIRM_BUTTON_OK"] = "OK";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_CLOSE_CONFIRM_MESSAGE"] = "Ihre Nachricht wird verlorengehen, wenn Sie das Formular schließen. Fortfahren?";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_CLOSE_CONFIRM_TITLE"] = "Warnung";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_DESTINATIONS_EMPTY"] = "Geben Sie mindestens einen Empfänger an";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_DIALOG_MENTION_TITLE"] = "Erwähnen";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_GRATITUDE_EMPLOYEE_EMPTY"] = "Es wurden keine Mitarbeiter für Auszeichnung ausgewählt.";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_PANEL_ITEM_SELECTOR_VALUE_ALL"] = "An alle Mitarbeiter";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_TEXT_EMPTY"] = "Geben Sie den Nachrichtentext ein";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_TITLE_PLACEHOLDER"] = "Geben Sie das Thema der Nachricht ein";
+$MESS["MOBILE_EXT_LAYOUT_POSTFORM_TITLE_PLACEHOLDER2"] = "Überschrift anzeigen, wenn erforderlich";

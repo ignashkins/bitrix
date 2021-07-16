@@ -93,6 +93,8 @@ export default Vue.extend({
 										<performer
 											:name="fields.PERFORMER_NAME"
 											:phone="fields.PERFORMER_PHONE"
+											:phoneExt="fields.PERFORMER_PHONE_EXT"
+											:canUseTelephony="fields.CAN_USE_TELEPHONY"
 										></performer>
 									</td>
 								</tr>

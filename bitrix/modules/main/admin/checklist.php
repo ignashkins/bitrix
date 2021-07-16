@@ -957,7 +957,7 @@ if ((($res = CCheckListResult::GetList(Array(),Array("REPORT"=>"N"))->Fetch()) |
 	else
 	{
 		$allowedDomains = array($_SERVER['HTTP_HOST']);
-		$langs = CLang::GetList($by, $order, Array());
+		$langs = CLang::GetList('', '', Array());
 		while ($arLang = $langs->Fetch())
 		{
 			$domains = trim($arLang['DOMAINS']);
@@ -1288,7 +1288,7 @@ function SendReportToBitrix ($arFields)
 	$arFields['LICENSE_KEY'] = md5(trim(LICENSE_KEY));
 ?>
 	<?=GetMessage('CL_SENDING_QC_REPORT')?>
-	<form id="bx_project_tests_send" style="display:none;" action="http://partners.1c-bitrix.ru/personal/send_quality_control.php" method="POST">
+	<form id="bx_project_tests_send" style="display:none;" action="https://partners.1c-bitrix.ru/personal/send_quality_control.php" method="POST">
 		<input type="hidden" name="charset" value="<?=htmlspecialcharsbx(LANG_CHARSET)?>" />
 		<?foreach ($arFields as $key=>$val)
 		{

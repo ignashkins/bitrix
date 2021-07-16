@@ -33,10 +33,10 @@ class CBitrixMenuComponent extends CBitrixComponent
 				""
 			;
 
-			if($this->arParams["MENU_CACHE_USE_GROUPS"] === "Y")
+			if(($this->arParams["MENU_CACHE_USE_GROUPS"] ?? '') === "Y")
 				$strCacheID .= ":".$USER->GetGroups();
 
-			if($this->arParams["MENU_CACHE_USE_USERS"] === "Y")
+			if(($this->arParams["MENU_CACHE_USE_USERS"] ?? '') === "Y")
 				$strCacheID .= ":".$USER->GetID();
 
 			if(is_array($this->arParams["MENU_CACHE_GET_VARS"]))
@@ -58,7 +58,7 @@ class CBitrixMenuComponent extends CBitrixComponent
 	public function getGenerationCachePath($id)
 	{
 		$hash = md5($id);
-		$path = $this->getRelativePath()."/".mb_substr($hash, -5, 2)."/".mb_substr($hash, -3);
+		$path = $this->getRelativePath()."/".substr($hash, -5, 2)."/".substr($hash, -3)."/".(int)$id;
 		return $path;
 	}
 

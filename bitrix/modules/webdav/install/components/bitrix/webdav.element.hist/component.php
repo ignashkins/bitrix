@@ -228,8 +228,7 @@ if ($LAST_ID != $arResult["ELEMENT"]["ID"])
 }
 
 /************** Versions *******************************************/
-$db_res = CIBlockElement::WF_GetHistoryList($arParams['ELEMENT_ID'], $by = 's_id', $order = 'desc',
-	array("IBLOCK_ID" => $arParams['IBLOCK_ID']), $is_filtered);
+$db_res = CIBlockElement::WF_GetHistoryList($arParams['ELEMENT_ID'], 's_id', 'desc', array("IBLOCK_ID" => $arParams['IBLOCK_ID']));
 if ($db_res)
 {
 	$db_res->NavStart($arParams["PAGE_ELEMENTS"]);

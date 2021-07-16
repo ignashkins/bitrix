@@ -12,7 +12,7 @@
 
 namespace Bitrix\Tasks\Dispatcher\PublicAction;
 
-use Bitrix\Tasks\Internals\Counter;
+use Bitrix\Tasks\Comments\Task\CommentPoster;
 use Bitrix\Tasks\Internals\UserOption;
 use Bitrix\Tasks\Item;
 use Bitrix\Tasks\Manager;
@@ -606,13 +606,44 @@ final class Task extends \Bitrix\Tasks\Dispatcher\RestrictedAction
 		return UserOption::delete($id, Util\User::getId(), UserOption\Option::MUTED);
 	}
 
-	public function pin($id)
+	public function pin($id, $groupId = 0)
 	{
-		return UserOption::add($id, Util\User::getId(), UserOption\Option::PINNED);
+		$option = UserOption\Option::PINNED;
+		$groupId = (int)$groupId;
+		if ($groupId)
+		{
+			$option = UserOption\Option::PINNED_IN_GROUP;
+		}
+		return UserOption::add($id, Util\User::getId(), $option);
 	}
 
-	public function unpin($id)
+	public function unpin($id, $groupId = 0)
 	{
-		return UserOption::delete($id, Util\User::getId(), UserOption\Option::PINNED);
+		$option = UserOption\Option::PINNED;
+		$groupId = (int)$groupId;
+		if ($groupId)
+		{
+			$option = UserOption\Option::PINNED_IN_GROUP;
+		}
+		return UserOption::delete($id, Util\User::getId(), $option);
+	}
+
+	public function ping($id): array
+	{
+		$result = [];
+
+		$userId = Util\User::getId();
+		$task = \CTaskItem::getInstance($id, $userId);
+		$taskData = $task->getData(false);
+
+		if ($taskData)
+		{
+			$commentPoster = CommentPoster::getInstance($id, $userId);
+			$commentPoster && $commentPoster->postCommentsOnTaskStatusPinged($taskData);
+
+			\CTaskNotifications::sendPingStatusMessage($taskData, $userId);
+		}
+
+		return $result;
 	}
 }

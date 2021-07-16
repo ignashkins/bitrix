@@ -1,7 +1,9 @@
-<?
+<?php
 $MESS["CONTACT_BUILD_REQUISITES"] = "Створення реквізитів";
 $MESS["CONTACT_BUILD_REQUISITES_TITLE"] = "Створення реквізитів для контактів";
 $MESS["CONTACT_DEDUPE"] = "Контроль дублікатів";
+$MESS["CONTACT_DEDUPE_AUTOSEARCH"] = "Автоматичний пошук дублікатів";
+$MESS["CONTACT_DEDUPE_HELP"] = "Як працювати з дублікатами";
 $MESS["CONTACT_DEDUPE_TITLE"] = "Контроль дублікатів";
 $MESS["CRM_CONTACT_ADD"] = "Додати контакт";
 $MESS["CRM_CONTACT_ADD_ACTIVITY"] = "Додати";
@@ -25,14 +27,13 @@ $MESS["CRM_CONTACT_COPY"] = "Копіювати";
 $MESS["CRM_CONTACT_COPY_TITLE"] = "Копіювати контакт";
 $MESS["CRM_CONTACT_DEAL_ADD"] = "Додати угоду";
 $MESS["CRM_CONTACT_DEAL_ADD_TITLE"] = "Додати угоду";
-$MESS["CRM_CONTACT_DELETE"] = "Видалити контакт";
+$MESS["CRM_CONTACT_DELETE"] = "Видалити";
 $MESS["CRM_CONTACT_DELETE_DLG_BTNTITLE"] = "Видалити контакт";
 $MESS["CRM_CONTACT_DELETE_DLG_MESSAGE"] = "Ви впевнені, що хочете видалити?";
 $MESS["CRM_CONTACT_DELETE_DLG_TITLE"] = "Видалення контакту";
 $MESS["CRM_CONTACT_DELETE_TITLE"] = "Видалити контакт";
 $MESS["CRM_CONTACT_EDIT"] = "Редагувати";
 $MESS["CRM_CONTACT_EDIT_TITLE"] = "Редагувати контакт";
-$MESS["CRM_CONTACT_EXPORT"] = "Експорт контактів";
 $MESS["CRM_CONTACT_EXPORT_CARDDAV"] = "Експорт контактів через CardDAV";
 $MESS["CRM_CONTACT_EXPORT_CARDDAV_TITLE"] = "Експорт контактів через CardDAV";
 $MESS["CRM_CONTACT_EXPORT_CSV"] = "Експорт контактів у CSV";
@@ -89,4 +90,3 @@ $MESS["CRM_TASK_TAG"] = "crm";
 $MESS["CRM_TASK_TITLE_PREFIX"] = "CRM:";
 $MESS["DOCUMENT_BUTTON_TEXT"] = "Документи";
 $MESS["DOCUMENT_BUTTON_TITLE"] = "Створити документ на основі контакту";
-?>

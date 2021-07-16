@@ -98,10 +98,12 @@ class Agent
 			return '';
 		}
 
-		Counter\CounterService::addEvent(Counter\CounterDictionary::EVENT_TASK_EXPIRED, $taskData);
+		Counter\CounterService::addEvent(Counter\Event\EventDictionary::EVENT_TASK_EXPIRED, $taskData);
 
 		$commentPoster = CommentPoster::getInstance($taskId, (int)$taskData['CREATED_BY']);
 		$commentPoster && $commentPoster->postCommentsOnTaskExpired($taskData);
+
+		\CTaskNotifications::sendExpiredMessage($taskData);
 
 		$event = new Event('tasks', self::EVENT_TASK_EXPIRED, [
 			'TASK_ID' => $taskId,
@@ -139,10 +141,12 @@ class Agent
 			return '';
 		}
 
-		Counter\CounterService::addEvent(Counter\CounterDictionary::EVENT_TASK_EXPIRED_SOON, $taskData);
+		Counter\CounterService::addEvent(Counter\Event\EventDictionary::EVENT_TASK_EXPIRED_SOON, $taskData);
 
 		$commentPoster = CommentPoster::getInstance($taskId, (int)$taskData['CREATED_BY']);
 		$commentPoster && $commentPoster->postCommentsOnTaskExpiredSoon($taskData);
+
+		\CTaskNotifications::sendExpiredSoonMessage($taskData);
 
 		$event = new Event('tasks', self::EVENT_TASK_EXPIRED_SOON, [
 			'TASK_ID' => $taskId,

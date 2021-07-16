@@ -38,11 +38,8 @@ CModule::AddAutoloadClasses(
 		'CCrmDocumentCompany' => 'classes/general/crm_document_company.php',
 		'CCrmDocumentDeal' => 'classes/general/crm_document_deal.php',
 		'CCrmReportHelper' => 'classes/general/crm_report_helper.php',
-		'\Bitrix\Crm\EventTable' => 'lib/event.php',
-		'\Bitrix\Crm\EventRelationsTable' => 'lib/event.php',
 		'\Bitrix\Crm\DealTable' => 'lib/deal.php',
 		'\Bitrix\Crm\LeadTable' => 'lib/lead.php',
-		'\Bitrix\Crm\ContactTable' => 'lib/contact.php',
 		'\Bitrix\Crm\CompanyTable' => 'lib/company.php',
 		'\Bitrix\Crm\QuoteTable' => 'lib/quote.php',
 		'CCrmExternalSale' => 'classes/general/crm_external_sale.php',
@@ -65,14 +62,8 @@ CModule::AddAutoloadClasses(
 		'CCrmQuote' => 'classes/'.$DBType.'/crm_quote.php',
 		'CCrmOwnerType' => 'classes/general/crm_owner_type.php',
 		'CCrmOwnerTypeAbbr' => 'classes/general/crm_owner_type.php',
-		'Bitrix\Crm\ProductTable' => 'lib/product.php',
-		'Bitrix\Crm\ProductRowTable' => 'lib/productrow.php',
 		'Bitrix\Crm\IBlockElementProxyTable' => 'lib/iblockelementproxy.php',
 		'Bitrix\Crm\IBlockElementGrcProxyTable' => 'lib/iblockelementproxy.php',
-		'\Bitrix\Crm\ProductTable' => 'lib/product.php',
-		'\Bitrix\Crm\ProductRowTable' => 'lib/productrow.php',
-		'\Bitrix\Crm\IBlockElementProxyTable' => 'lib/iblockelementproxy.php',
-		'\Bitrix\Crm\IBlockElementGrcProxyTable' => 'lib/iblockelementproxy.php',
 		'CCrmAccountingHelper' => 'classes/general/crm_accounting_helper.php',
 		'Bitrix\Crm\ExternalSaleTable' => 'lib/externalsale.php',
 		'\Bitrix\Crm\ExternalSaleTable' => 'lib/externalsale.php',
@@ -175,7 +166,6 @@ CModule::AddAutoloadClasses(
 		'\Bitrix\Crm\Conversion\DealConversionConfig' => 'lib/conversion/dealconversionconfig.php',
 		'\Bitrix\Crm\Conversion\DealConversionScheme' => 'lib/conversion/dealconversionscheme.php',
 		'\Bitrix\Crm\Conversion\EntityConversionFileViewer' => 'lib/conversion/entityconversionfileviewer.php',
-		'\Bitrix\Crm\Conversion\Entity\EntityConversionMapTable' => 'lib/conversion/entity/entityconversionmap.php',
 		'\Bitrix\Crm\Conversion\ConversionWizardStep' => 'lib/conversion/conversionwizardstep.php',
 		'\Bitrix\Crm\Conversion\ConversionWizard' => 'lib/conversion/conversionwizard.php',
 		'\Bitrix\Crm\Synchronization\UserFieldSynchronizer' => 'lib/synchronization/userfieldsynchronizer.php',
@@ -250,8 +240,6 @@ CModule::AddAutoloadClasses(
 		'\Bitrix\Crm\AddressTable' => 'lib/address.php',
 		'\Bitrix\Crm\UserField\Types\ElementType' => 'lib/userfield/types/elementtype.php',
 		'\Bitrix\Crm\UtmTable' => 'lib/utm.php',
-		'\Bitrix\Crm\StatusTable' => 'lib/statustable.php',
-		'\Bitrix\Crm\Category\Entity\DealCategoryTable' => 'lib/category/entity/dealcategory.php',
 	)
 );
 
@@ -259,6 +247,14 @@ CModule::AddAutoloadClasses(
 $classAliases = [
 	['Bitrix\Crm\Communication\Type', 'Bitrix\Crm\CommunicationType'],
 ];
+
+if (IsModuleInstalled('sale'))
+{
+	$classAliases[] = ['Bitrix\Crm\Order\Builder\OrderBuilderCrm', 'Bitrix\Crm\Order\OrderBuilderCrm'];
+	$classAliases[] = ['Bitrix\Crm\Order\Builder\OrderBuilderRest', 'Bitrix\Crm\Order\OrderBuilderRest'];
+	$classAliases[] = ['Bitrix\Crm\Order\Builder\BasketBuilderCrm', 'Bitrix\Crm\Order\BasketBuilderCrm'];
+}
+
 foreach ($classAliases as $classAlias)
 {
 	class_alias($classAlias[0], $classAlias[1]);

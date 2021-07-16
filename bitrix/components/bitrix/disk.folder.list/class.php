@@ -425,7 +425,7 @@ class CDiskFolderListComponent extends DiskComponent implements \Bitrix\Main\Eng
 		}
 
 		$rows = array();
-		foreach ($this->folder->getList($parameters) as $row)
+		foreach (Folder::getList($parameters) as $row)
 		{
 			$countObjectsOnPage++;
 
@@ -636,7 +636,7 @@ class CDiskFolderListComponent extends DiskComponent implements \Bitrix\Main\Eng
 					$actionToShare[] = array(
 						"id" => "share",
 						'className' => 'disk-folder-list-context-menu-item',
-						"text" => Loc::getMessage('DISK_FOLDER_LIST_ACT_SHOW_SHARING_DETAIL_2'),
+						"text" => Loc::getMessage('DISK_FOLDER_LIST_ACT_SHOW_SHARING_DETAIL_3'),
 						"onclick" =>
 							$this->filterB24Feature(
 								$isFolder? 'disk_folder_sharing' : 'disk_file_sharing',
@@ -656,7 +656,7 @@ class CDiskFolderListComponent extends DiskComponent implements \Bitrix\Main\Eng
 					$actionToShare[] = array(
 						"id" => "share",
 						'className' => 'disk-folder-list-context-menu-item',
-						"text" => Loc::getMessage('DISK_FOLDER_LIST_ACT_SHOW_SHARING_DETAIL_2'),
+						"text" => Loc::getMessage('DISK_FOLDER_LIST_ACT_SHOW_SHARING_DETAIL_3'),
 						"onclick" =>
 							$this->filterB24Feature(
 								$isFolder? 'disk_folder_sharing' : 'disk_file_sharing',
@@ -675,7 +675,7 @@ class CDiskFolderListComponent extends DiskComponent implements \Bitrix\Main\Eng
 					$actionToShare[] = array(
 						"id" => "share",
 						'className' => 'disk-folder-list-context-menu-item',
-						"text" => Loc::getMessage('DISK_FOLDER_LIST_ACT_SHOW_SHARING_DETAIL_2'),
+						"text" => Loc::getMessage('DISK_FOLDER_LIST_ACT_SHOW_SHARING_DETAIL_3'),
 						"onclick" =>
 							$this->filterB24Feature(
 								$isFolder? 'disk_folder_sharing' : 'disk_file_sharing',
@@ -2399,8 +2399,8 @@ class CDiskFolderListComponent extends DiskComponent implements \Bitrix\Main\Eng
 			$defaultDocumentHandler = Driver::getInstance()->getDocumentHandlersManager()->getDefaultServiceForCurrentUser();
 			if ($defaultDocumentHandler)
 			{
-				$documentHandlerName = $defaultDocumentHandler->getName();
-				$documentHandlerCode = $defaultDocumentHandler->getCode();
+				$documentHandlerName = $defaultDocumentHandler::getName();
+				$documentHandlerCode = $defaultDocumentHandler::getCode();
 			}
 		}
 
@@ -2414,8 +2414,8 @@ class CDiskFolderListComponent extends DiskComponent implements \Bitrix\Main\Eng
 		$conf = array(
 			'DEFAULT_SERVICE' => $documentHandlerCode,
 			'DEFAULT_SERVICE_LABEL' => $documentHandlerName,
-			'CREATE_BLANK_FILE_URL' => $urlManager->getUrlForStartCreateFile('docx', $documentHandlerCode),
-			'RENAME_BLANK_FILE_URL' => $urlManager->getUrlDocumentController(
+			'CREATE_BLANK_FILE_URL' => $urlManager::getUrlForStartCreateFile('docx', $documentHandlerCode),
+			'RENAME_BLANK_FILE_URL' => $urlManager::getUrlDocumentController(
 				'rename',
 				array('document_action' => 'rename')
 			),

@@ -42,12 +42,18 @@ class VisibilityManager
 	 */
 	public static function saveEntityConfiguration($accessCodes, string $fieldName, int $entityTypeId, string $permissionId): void
 	{
-		UserFieldPermissionTable::saveEntityConfiguration($accessCodes, $fieldName, $entityTypeId, $permissionId);
+		UserFieldPermissionTable::saveEntityConfiguration(
+			$accessCodes,
+			$fieldName,
+			$entityTypeId,
+			$permissionId,
+			\CCrmOwnerType::ResolveUserFieldEntityID($entityTypeId)
+		);
 	}
 
 	/**
 	 * @param int $entityTypeId
-	 * @param array $userAccessCodes
+	 * @param array|null $userAccessCodes
 	 * @return array
 	 */
 	public static function getNotAccessibleFields(int $entityTypeId, ?array $userAccessCodes = null): array
@@ -74,6 +80,30 @@ class VisibilityManager
 		return $excludedFields;
 	}
 
+	/**
+	 * @param int $entityTypeId
+	 * @param array $fieldNames
+	 * @param array|null $userAccessCodes
+	 * @return array
+	 */
+	public static function filterNotAccessibleFields(
+		int $entityTypeId,
+		array $fieldNames,
+		?array $userAccessCodes = null
+	): array
+	{
+		if(empty($fieldNames))
+		{
+			return $fieldNames;
+		}
+		$notAccessibleFields = static::getNotAccessibleFields($entityTypeId, $userAccessCodes);
+
+		return array_diff($fieldNames, $notAccessibleFields);
+	}
+
+	/**
+	 * @return array
+	 */
 	private static function getUserAccessCodes(): array
 	{
 		$user = \CCrmSecurityHelper::getCurrentUser();

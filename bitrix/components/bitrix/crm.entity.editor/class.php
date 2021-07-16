@@ -500,13 +500,10 @@ class CCrmEntityEditorComponent extends UIFormComponent
 			{
 				$isPermitted = FieldAttributeManager::isEnabled();
 				$isPhaseDependent = FieldAttributeManager::isPhaseDependent();
+				$isEntitySupported = FieldAttributeManager::isEntitySupported((int)$this->entityTypeID);
 				$this->arResult['ATTRIBUTE_CONFIG']['IS_PERMITTED'] = $isPermitted;
 				$this->arResult['ATTRIBUTE_CONFIG']['IS_PHASE_DEPENDENT'] = $isPhaseDependent;
-				$this->arResult['ATTRIBUTE_CONFIG']['IS_ATTR_CONFIG_BUTTON_HIDDEN'] = in_array(
-					$this->entityTypeID,
-					[CCrmOwnerType::Company, CCrmOwnerType::Contact],
-					true
-				);
+				$this->arResult['ATTRIBUTE_CONFIG']['IS_ATTR_CONFIG_BUTTON_HIDDEN'] = !$isEntitySupported;
 				if(!($isPermitted && $isPhaseDependent))
 				{
 					$this->arResult['ATTRIBUTE_CONFIG']['LOCK_SCRIPT'] =
@@ -555,6 +552,10 @@ class CCrmEntityEditorComponent extends UIFormComponent
 			$this->arResult['REST_USE'] = true;
 
 			$this->arResult['USERFIELD_TYPE_ADDITIONAL'] = $this->getAdditionalUserFieldTypeList();
+			$this->arResult['USERFIELD_TYPE_REST_CREATE_URL'] = \Bitrix\Rest\Marketplace\Url::getBookletUrl(
+				'crm_field',
+				'crm_' . $this->configID . '_add_field'
+			);
 			$this->arResult['REST_PLACEMENT_TAB_CONFIG'] = array(
 				'entity' => \CCrmOwnerType::ResolveName($this->entityTypeID),
 				'placement' => \Bitrix\Rest\Api\UserFieldType::PLACEMENT_UF_TYPE,
@@ -580,6 +581,8 @@ class CCrmEntityEditorComponent extends UIFormComponent
 		}
 
 		$this->arResult['CONTEXT']['EDITOR_CONFIG_ID'] = $this->configID;
+
+		$this->arResult['MESSAGES'] = (array)($this->arParams['MESSAGES'] ?? []);
 
 		$this->prepareUfAccessRightRestriction();
 	}

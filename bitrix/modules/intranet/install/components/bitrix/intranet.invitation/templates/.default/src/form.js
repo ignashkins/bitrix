@@ -2,6 +2,7 @@ import {Type, Dom, Event, Loc} from 'main.core';
 import {Submit} from './submit';
 import {SelfRegister} from './self-register';
 import {Row} from "./row";
+import {Selector} from "./selector";
 import {EventEmitter} from "main.core.events";
 
 export default class Form extends EventEmitter
@@ -67,6 +68,20 @@ export default class Form extends EventEmitter
 		{
 			this.selfRegister = new SelfRegister(this);
 		}
+
+		this.arrowBox = document.querySelector('.invite-wrap-decal-arrow');
+		if (Type.isDomNode(this.arrowBox))
+		{
+			this.arrowRect = this.arrowBox.getBoundingClientRect();
+			this.arrowHeight = this.arrowRect.height;
+			this.setSetupArrow();
+		}
+	}
+
+	renderSelector(params)
+	{
+		this.selector = new Selector(this, params);
+		this.selector.render();
 	}
 
 	changeContent(action)
@@ -97,14 +112,44 @@ export default class Form extends EventEmitter
 					else if (action === 'invite-with-group-dp')
 					{
 						row.renderInviteInputs(3);
+
+						const selectorParams = {
+							contentBlock: this.contentBlocks[action]
+								.querySelector("[data-role='entity-selector-container']"),
+							options: {
+								department: true,
+								project: true,
+							}
+						};
+						this.renderSelector(selectorParams);
 					}
 					else if (action === 'extranet')
 					{
 						row.renderInviteInputs(3);
+
+						const selectorParams = {
+							contentBlock: this.contentBlocks[action]
+								.querySelector("[data-role='entity-selector-container']"),
+							options: {
+								department: false,
+								project: "extranet",
+							}
+						};
+						this.renderSelector(selectorParams);
 					}
 					else if (action === "add")
 					{
 						row.renderRegisterInputs();
+
+						const selectorParams = {
+							contentBlock: this.contentBlocks[action]
+								.querySelector("[data-role='entity-selector-container']"),
+							options: {
+								department: true,
+								project: true,
+							}
+						};
+						this.renderSelector(selectorParams);
 					}
 					else if (action === "integrator")
 					{
@@ -133,6 +178,8 @@ export default class Form extends EventEmitter
 			});
 			return;
 		}
+
+		this.activateButton();
 
 		if (action === "invite")
 		{
@@ -169,9 +216,13 @@ export default class Form extends EventEmitter
 		else if (action === "self")
 		{
 			this.button.innerText = Loc.getMessage('BX24_INVITE_DIALOG_ACTION_SAVE');
+			this.disableButton();
 
 			Event.bind(this.button, 'click', () => {
-				this.submit.submitSelf();
+				if (this.isButtonActive())
+				{
+					this.submit.submitSelf();
+				}
 			});
 		}
 		else if (action === "integrator")
@@ -198,6 +249,21 @@ export default class Form extends EventEmitter
 				BX.fireEvent(this.menuItems[0], 'click');
 			});
 		}
+	}
+
+	disableButton()
+	{
+		Dom.addClass(this.button, "ui-btn-disabled");
+	}
+
+	activateButton()
+	{
+		Dom.removeClass(this.button, "ui-btn-disabled");
+	}
+
+	isButtonActive()
+	{
+		return !Dom.hasClass(this.button, "ui-btn-disabled");
 	}
 
 	showSuccessMessage(successText)
@@ -244,5 +310,51 @@ export default class Form extends EventEmitter
 		{
 			this.errorMessageBlock.style.display = "none";
 		}
+	}
+
+	getSetupArrow()
+	{
+		this.body = document.querySelector('.invite-body');
+		this.panelConfirmBtn = document.getElementById('intranet-invitation-btn');
+		this.sliderContent = document.querySelector('.ui-page-slider-workarea');
+		this.sliderHeader = document.querySelector('.ui-side-panel-wrap-title-wrap');
+		this.buttonPanel = document.querySelector('.ui-button-panel');
+		this.inviteButton = document.querySelector('.invite-form-buttons');
+
+		this.sliderHeaderHeight = this.sliderHeader.getBoundingClientRect().height;
+		this.buttonPanelRect = this.buttonPanel.getBoundingClientRect();
+		this.panelRect = this.panelConfirmBtn.getBoundingClientRect();
+		this.btnWidth = Math.ceil(this.panelRect.width);
+		this.arrowWidth = Math.ceil(this.arrowRect.width);
+		this.delta = (this.btnWidth - this.arrowWidth) / 2;
+		this.sliderContentRect = this.sliderContent.getBoundingClientRect();
+
+		this.bodyHeight = this.body.getBoundingClientRect().height - this.buttonPanelRect.height + this.sliderHeaderHeight;
+		this.contentHeight = this.arrowHeight + this.sliderContentRect.height + this.buttonPanelRect.height + this.sliderHeaderHeight - 65;
+	}
+
+	updateArrow()
+	{
+		this.bodyHeight = this.body.getBoundingClientRect().height - this.buttonPanelRect.height + this.sliderHeaderHeight;
+		this.contentHeight = this.arrowHeight + this.sliderContentRect.height + this.buttonPanelRect.height + this.sliderHeaderHeight - 65;
+		this.contentHeight > this.bodyHeight ? this.body.classList.add('js-intranet-invitation-arrow-hide') : this.body.classList.remove('js-intranet-invitation-arrow-hide');
+	}
+
+	setSetupArrow()
+	{
+		this.getSetupArrow();
+		this.arrowBox.style.left = (this.panelRect.left - this.delta) + 'px';
+		this.contentHeight > this.bodyHeight ? this.body.classList.add('js-intranet-invitation-arrow-hide') : this.body.classList.remove('js-intranet-invitation-arrow-hide');
+
+		window.addEventListener('resize', function() {
+			this.arrowBox.style.left = (this.panelRect.left - this.delta) + 'px';
+			this.getSetupArrow();
+			this.updateArrow();
+		}.bind(this))
+
+		this.inviteButton.addEventListener('click', function() {
+			this.getSetupArrow();
+			this.updateArrow();
+		}.bind(this))
 	}
 }

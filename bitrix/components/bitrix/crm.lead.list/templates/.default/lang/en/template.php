@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["CRM_ALL"] = "Total";
 $MESS["CRM_LEAD_ACTION_DELETE"] = "Delete";
 $MESS["CRM_LEAD_ACTION_MERGE"] = "Merge";
@@ -24,9 +24,6 @@ $MESS["CRM_LEAD_BATCH_CONVERSION_TITLE"] = "Convert Leads";
 $MESS["CRM_LEAD_BATCH_DELETION_COMPLETED"] = "Leads have been deleted.";
 $MESS["CRM_LEAD_BATCH_DELETION_COUNT_FAILED"] = "Failed to delete: #number#.";
 $MESS["CRM_LEAD_BATCH_DELETION_COUNT_SUCCEEDED"] = "Successfully deleted: #number#.";
-$MESS["CRM_LEAD_BATCH_MERGE_COMPLETED"] = "Leads have been merged.";
-$MESS["CRM_LEAD_BATCH_MERGE_COUNT_FAILED"] = "Cannot merge: #number#.";
-$MESS["CRM_LEAD_BATCH_MERGE_COUNT_SUCCEEDED"] = "Leads merged successfully: #number#.";
 $MESS["CRM_LEAD_BIZPROC"] = "Business Process";
 $MESS["CRM_LEAD_BIZPROC_LIST"] = "New business process";
 $MESS["CRM_LEAD_BIZPROC_LIST_TITLE"] = "Run new business process";
@@ -53,7 +50,7 @@ $MESS["CRM_LEAD_CONV_ENTITY_SEL_SEARCH_NO_RESULT"] = "No entries have been found
 $MESS["CRM_LEAD_CONV_ENTITY_SEL_TITLE"] = "Select contact and company";
 $MESS["CRM_LEAD_CONV_GENERAL_ERROR"] = "Generic conversion error.";
 $MESS["CRM_LEAD_CONV_OPEN_ENTITY_SEL"] = "Select from list...";
-$MESS["CRM_LEAD_COPY"] = "Copy Lead";
+$MESS["CRM_LEAD_COPY"] = "Copy";
 $MESS["CRM_LEAD_COPY_TITLE"] = "Copy lead";
 $MESS["CRM_LEAD_CREATE_CALL_LIST"] = "Create call list";
 $MESS["CRM_LEAD_CREATE_ON_BASIS"] = "Generate";
@@ -82,8 +79,6 @@ $MESS["CRM_LEAD_LIST_FILTER_NAV_BUTTON_CALENDAR"] = "Calendar";
 $MESS["CRM_LEAD_LIST_FILTER_NAV_BUTTON_KANBAN"] = "Kanban";
 $MESS["CRM_LEAD_LIST_FILTER_NAV_BUTTON_LIST"] = "List";
 $MESS["CRM_LEAD_LIST_FILTER_NAV_BUTTON_WIDGET"] = "Reports";
-$MESS["CRM_LEAD_LIST_MERGE_PROC_DLG_SUMMARY"] = "Selected leads will now be merged. This may take some time.";
-$MESS["CRM_LEAD_LIST_MERGE_PROC_DLG_TITLE"] = "Merge leads";
 $MESS["CRM_LEAD_LRP_DLG_BTN_CLOSE"] = "Close";
 $MESS["CRM_LEAD_LRP_DLG_BTN_START"] = "Run";
 $MESS["CRM_LEAD_LRP_DLG_BTN_STOP"] = "Stop";
@@ -121,4 +116,3 @@ $MESS["CRM_SIP_MGR_MAKE_CALL"] = "Call";
 $MESS["CRM_SIP_MGR_UNKNOWN_RECIPIENT"] = "Unknown recipient";
 $MESS["CRM_STATUS_INIT"] = "- Status -";
 $MESS["CRM_TIMELINE_REBUILD_SEARCH_CONTENT_DLG_TITLE"] = "Rebuild search index for leads, deals, contacts, companies and other entities";
-?>

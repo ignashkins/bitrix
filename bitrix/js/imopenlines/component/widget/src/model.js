@@ -66,6 +66,7 @@ export class WidgetModel extends VuexBuilderModel
 				consentUrl: '',
 				dialogStart: false,
 				watchTyping: false,
+				showSessionId: false,
 			},
 			dialog:
 			{
@@ -73,6 +74,7 @@ export class WidgetModel extends VuexBuilderModel
 				sessionClose: true,
 				sessionStatus: 0,
 				userVote: VoteType.none,
+				closeVote: false,
 				userConsent: false,
 				operatorChatId: 0,
 				operator: {
@@ -224,6 +226,10 @@ export class WidgetModel extends VuexBuilderModel
 				{
 					state.common.watchTyping = payload.watchTyping;
 				}
+				if (typeof payload.showSessionId === 'boolean')
+				{
+					state.common.showSessionId = payload.showSessionId;
+				}
 				if (payload.operators instanceof Array)
 				{
 					state.common.operators = payload.operators;
@@ -234,6 +240,10 @@ export class WidgetModel extends VuexBuilderModel
 				}
 				if (typeof payload.showForm === 'string' && typeof FormType[payload.showForm] !== 'undefined')
 				{
+					if (payload.showForm === FormType.like && !!state.dialog.closeVote)
+					{
+						payload.showForm = FormType.none;
+					}
 					state.common.showForm = payload.showForm;
 				}
 				if (typeof payload.location === 'number' && typeof LocationStyle[payload.location] !== 'undefined')
@@ -272,6 +282,18 @@ export class WidgetModel extends VuexBuilderModel
 				if (typeof payload.userVote === 'string' && typeof payload.userVote !== 'undefined')
 				{
 					state.dialog.userVote = payload.userVote;
+				}
+				if (typeof payload.closeVote === 'boolean')
+				{
+					state.dialog.closeVote = payload.closeVote;
+
+					if (
+						!!payload.closeVote
+						&& state.common.showForm === FormType.like
+					)
+					{
+						state.common.showForm = FormType.none;
+					}
 				}
 				if (typeof payload.operatorChatId === 'number')
 				{
@@ -382,6 +404,50 @@ export class WidgetModel extends VuexBuilderModel
 			show: ({ commit }) =>
 			{
 				commit('common', {showed: true});
+			},
+			setVoteDateFinish: ({ commit, dispatch, state }, payload) =>
+			{
+				if (!payload)
+				{
+					clearTimeout(this.setVoteDateTimeout);
+					commit('dialog', {closeVote: false});
+					return true;
+				}
+
+				const totalDelay = new Date(payload).getTime() - new Date().getTime();
+				const dayTimestamp = 10000;
+				clearTimeout(this.setVoteDateTimeout);
+
+				if (payload)
+				{
+					if (totalDelay && !state.dialog.closeVote)
+					{
+						commit('dialog', {closeVote: false});
+					}
+
+					var delay = totalDelay;
+
+					if(totalDelay > dayTimestamp)
+					{
+						delay = dayTimestamp;
+					}
+
+					this.setVoteDateTimeout = setTimeout(function requestCloseVote() {
+						delay = new Date(payload).getTime() - new Date().getTime();
+						if(delay > 0)
+						{
+							if(delay > dayTimestamp)
+							{
+								delay = dayTimestamp;
+							}
+							setTimeout(requestCloseVote, delay);
+						}
+						else
+						{
+							commit('dialog', {closeVote: true});
+						}
+					}, delay);
+				}
 			}
 		}
 	}

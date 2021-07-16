@@ -20,14 +20,14 @@ if(Loader::includeModule('rest'))
 
 \Bitrix\Main\UI\Extension::load(["ui.icons", "applayout", "ui.hint"]);
 
-if(\Bitrix\Main\ModuleManager::isModuleInstalled('imconnector'))
+if (Loader::includeModule('imopenlines'))
 {
 	if (Loader::includeModule('bitrix24'))
 	{
 		$APPLICATION->IncludeComponent('bitrix:ui.info.helper', '', []);
 	}
 
-	Bitrix\Main\Page\Asset::getInstance()->addJs('/bitrix/components/bitrix/imconnector.connector.settings/templates/.default/script.js');
+	\Bitrix\Main\UI\Extension::load(["imopenlines.create-line"]);
 }
 
 if(!empty($arResult["ADDITIONAL_STYLES"]))
@@ -43,10 +43,6 @@ if(!empty($arResult["ADDITIONAL_STYLES"]))
 	BX.ready(function() {
 		new BX.ContactCenter.Init(params);
 	})
-
-	BX.message({
-		IMCONNECTOR_COMPONENT_CONNECTOR_SETTINGS_LIMIT_INFO_HELPER: 'limit_contact_center_ol_number',
-	});
 </script>
 <div class="intranet-contact-block">
 	<div class="intranet-contact-wrap" id="intranet-contact-wrap">
@@ -71,6 +67,19 @@ if(!empty($arResult["ADDITIONAL_STYLES"]))
 							<div class="intranet-contact-name">
 								<span class="intranet-contact-name-text"><?=$item["NAME"]?></span>
 							</div>
+							<?php if (isset($item["IS_NEW"]) && $item["IS_NEW"] === true):
+								$phrase = $item["NEW_PHRASE"] ?? 'CONTACT_CENTER_NEW_LABEL';
+								$className = $item["SELECTED"]
+									? 'intranet-contact-center-item-label-new-active'
+									: 'intranet-contact-center-item-label-new';
+								$textClassName = $item["SELECTED"]
+									? 'intranet-contact-center-item-label-new-text-active'
+									: 'intranet-contact-center-item-label-new-text';
+								?>
+								<div data-role="item-new-label" class="<?=$className?>">
+									<div class="<?=$textClassName?>"><?=htmlspecialcharsbx(Loc::getMessage($phrase))?></div>
+								</div>
+							<?php endif;?>
 						</div>
 					</div>
 				<?

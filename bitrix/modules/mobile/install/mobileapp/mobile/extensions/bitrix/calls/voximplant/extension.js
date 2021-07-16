@@ -18,14 +18,18 @@
 
 	var pullEvents = {
 		ping: "Call::ping",
+		answer: "Call::answer",
 		hangup: "Call::hangup",
 		userInviteTimeout: "Call::userInviteTimeout",
+		repeatAnswer: "Call::repeatAnswer",
 	};
 
 	var clientEvents = {
 		voiceStarted: "Call::voiceStarted",
 		voiceStopped: "Call::voiceStopped",
 		microphoneState: "Call::microphoneState",
+		cameraState: "Call::cameraState",
+		videoPaused: "Call::videoPaused",
 		screenState: "Call::screenState",
 		floorRequest: "Call::floorRequest",
 		emotion: "Call::emotion",
@@ -126,6 +130,8 @@
 
 			this.lastPingReceivedTimeout = null;
 			this.lastSelfPingReceivedTimeout = null;
+
+			this.created = new Date();
 		}
 
 		log()
@@ -195,6 +201,11 @@
 			{
 				this.signaling.sendPingToBackend();
 			}
+		}
+
+		repeatAnswerEvents()
+		{
+			this.signaling.sendRepeatAnswer({userId: this.userId});
 		}
 
 		createPeer(userId)
@@ -356,7 +367,23 @@
 			this.videoEnabled = videoEnabled;
 			if (this.voximplantCall)
 			{
-				this.voximplantCall.setSendVideo(this.videoEnabled);
+				this.voximplantCall.setSendVideo(this.videoEnabled && !this.videoPaused);
+				this.signaling.sendCameraState(this.videoEnabled);
+			}
+		}
+
+		setVideoPaused(videoPaused)
+		{
+			if (this.videoPaused == videoPaused)
+			{
+				return;
+			}
+
+			this.videoPaused = videoPaused;
+			if (this.voximplantCall)
+			{
+				this.voximplantCall.setSendVideo(this.videoEnabled && !this.videoPaused);
+				this.signaling.sendVideoPaused(this.videoPaused);
 			}
 		}
 
@@ -561,9 +588,15 @@
 					client.on(VIClient.Events.LogMessage, this.__onSDKLogMessageHandler);
 					try
 					{
+						if (typeof(JNVICameraManager.setResolutionConstraints) === 'function')
+						{
+							//JNVICameraManager.setResolutionConstraints(1280, 720);
+							JNVICameraManager.setResolutionConstraints(960, 540); //force 16:9 aspect ratio
+						}
+
 						this.voximplantCall = client.callConference(
 							"bx_conf_" + this.id,
-							{sendVideo: this.videoEnabled, receiveVideo: true},
+							{sendVideo: this.videoEnabled, receiveVideo: true, enableSimulcast: true},
 						);
 					} catch (e)
 					{
@@ -591,9 +624,10 @@
 
 						if (this.muted)
 						{
-							this.voximplantCall.muteMicrophone();
+							this.voximplantCall.sendAudio = false;
 						}
 						this.signaling.sendMicrophoneState(!this.muted);
+						this.signaling.sendCameraState(this.videoEnabled);
 
 						if (this.videoAllowedFrom == BX.Call.UserMnemonic.none)
 						{
@@ -773,6 +807,7 @@
 				"Call::userInviteTimeout": this.__onPullEventUserInviteTimeout.bind(this),
 				"Call::ping": this.__onPullEventPing.bind(this),
 				"Call::finish": this.__onPullEventFinish.bind(this),
+				[pullEvents.repeatAnswer]: this.__onPullEventRepeatAnswer.bind(this),
 			};
 
 			if (handlers[command])
@@ -930,6 +965,14 @@
 			this.destroy();
 		}
 
+		__onPullEventRepeatAnswer()
+		{
+			if (this.ready)
+			{
+				this.signaling.sendAnswer({userId: this.userId}, true);
+			}
+		}
+
 		__onLocalDevicesUpdated(e)
 		{
 			this.log("__onLocalDevicesUpdated", e);
@@ -937,6 +980,7 @@
 
 		__onLocalVideoStreamReceived(stream)
 		{
+			this.log("__onLocalVideoStreamReceived")
 			this.eventEmitter.emit(BX.Call.Event.onLocalMediaReceived, [stream]);
 		}
 
@@ -1078,6 +1122,13 @@
 				this.eventEmitter.emit(BX.Call.Event.onUserScreenState, [
 					message.senderId,
 					message.screenState === "Y",
+				]);
+			}
+			else if (eventName === clientEvents.videoPaused)
+			{
+				this.eventEmitter.emit(BX.Call.Event.onUserVideoPaused, [
+					message.senderId,
+					message.videoPaused === "Y",
 				]);
 			}
 			else if (eventName === clientEvents.floorRequest)
@@ -1237,9 +1288,16 @@
 			return this.__runRestAction(ajaxActions.invite, data);
 		}
 
-		sendAnswer(data)
+		sendAnswer(data, repeated)
 		{
-			return this.__runRestAction(ajaxActions.answer, data);
+			if (repeated)
+			{
+				this.__sendPullEventOrCallRest(pullEvents.answer, ajaxActions.answer, data, 30);
+			}
+			else
+			{
+				return this.__runRestAction(ajaxActions.answer, data);
+			}
 		}
 
 		sendCancel(data)
@@ -1276,6 +1334,20 @@
 		{
 			return this.__sendMessage(clientEvents.microphoneState, {
 				microphoneState: microphoneState ? "Y" : "N",
+			});
+		}
+
+		sendCameraState(cameraState)
+		{
+			return this.__sendMessage(clientEvents.cameraState, {
+				cameraState: cameraState ? "Y" : "N",
+			});
+		}
+
+		sendVideoPaused(videoPaused)
+		{
+			return this.__sendMessage(clientEvents.videoPaused, {
+				videoPaused: videoPaused ? "Y" : "N",
 			});
 		}
 
@@ -1332,12 +1404,22 @@
 			this.__runRestAction(ajaxActions.ping, {retransmit: false});
 		}
 
+		sendRepeatAnswer(data)
+		{
+			this.__sendPullEvent(pullEvents.repeatAnswer, data);
+		}
+
 		sendUserInviteTimeout(data)
 		{
 			if (this.isPublishingEnabled())
 			{
 				this.__sendPullEvent(pullEvents.userInviteTimeout, data, 0);
 			}
+		}
+
+		getPublishingState()
+		{
+			return BX.PULL.getPublishingState();
 		}
 
 		__sendPullEvent(eventName, data, expiry)
@@ -1364,7 +1446,7 @@
 			data.requestId = CallEngine.getUuidv4();
 
 			this.call.log("Sending p2p signaling event " + eventName + "; " + JSON.stringify(data));
-			CallEngine.getPullClient().sendMessage(data.userId, "im", eventName, data, expiry);
+			BX.PULL.sendMessage(data.userId, "im", eventName, data, expiry);
 		}
 
 		__sendMessage(eventName, data)
@@ -1395,6 +1477,25 @@
 			data.callInstanceId = this.call.instanceId;
 			data.requestId = CallEngine.getUuidv4();
 			return CallEngine.getRestClient().callMethod(signalName, data);
+		}
+
+		__sendPullEventOrCallRest(eventName, restMethod, data, expiry)
+		{
+			this.getPublishingState().then(result =>
+			{
+				if (result)
+				{
+					this.__sendPullEvent(eventName, data, expiry);
+				}
+				else if (restMethod != "")
+				{
+					this.__runRestAction(restMethod, data);
+				}
+			}).catch(error =>
+			{
+				console.error(error);
+				this.call.log(error);
+			});
 		}
 	}
 

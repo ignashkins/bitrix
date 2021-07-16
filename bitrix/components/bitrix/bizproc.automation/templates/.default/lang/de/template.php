@@ -1,4 +1,7 @@
 <?php
+$MESS["BIZPROC_AUTOMATION_ASK_CONSTANT"] = "Durch Administrator vor dem Start angeben";
+$MESS["BIZPROC_AUTOMATION_ASK_MANUAL"] = "Jetzt auswählen";
+$MESS["BIZPROC_AUTOMATION_ASK_PARAMETER"] = "Vor dem Starten fragen";
 $MESS["BIZPROC_AUTOMATION_CLOSE_CAPTION"] = "Schließen";
 $MESS["BIZPROC_AUTOMATION_CMP_ADD"] = "hinzufügen";
 $MESS["BIZPROC_AUTOMATION_CMP_AFTER"] = "nach";

@@ -9543,7 +9543,7 @@
 	  }, {
 	    key: "isFile",
 	    value: function isFile(value) {
-	      return Type.isBlob(value) && Type.isObjectLike(value.lastModifiedDate) && Type.isNumber(value.lastModified) && Type.isString(value.name);
+	      return Type.isBlob(value) && Type.isNumber(value.lastModified) && Type.isString(value.name);
 	    }
 	    /**
 	     * Checks that value is FormData
@@ -10369,13 +10369,21 @@
 
 	      if (Type.isDomNode(node)) {
 	        if (params.htmlFirst || !externalJs.length && !externalCss.length) {
-	          node.innerHTML = parsedHtml.HTML;
+	          if (params.useAdjacentHTML) {
+	            node.insertAdjacentHTML('beforeend', parsedHtml.HTML);
+	          } else {
+	            node.innerHTML = parsedHtml.HTML;
+	          }
 	        }
 	      }
 
 	      return Promise.all([loadAll(externalJs), loadAll(externalCss)]).then(function () {
 	        if (Type.isDomNode(node) && (externalJs.length > 0 || externalCss.length > 0)) {
-	          node.innerHTML = parsedHtml.HTML;
+	          if (params.useAdjacentHTML) {
+	            node.insertAdjacentHTML('beforeend', parsedHtml.HTML);
+	          } else {
+	            node.innerHTML = parsedHtml.HTML;
+	          }
 	        } // eslint-disable-next-line
 
 
@@ -10824,12 +10832,6 @@
 	  return EventStore;
 	}();
 
-	function _createForOfIteratorHelper(o, allowArrayLike) { var it; if (typeof Symbol === "undefined" || o[Symbol.iterator] == null) { if (Array.isArray(o) || (it = _unsupportedIterableToArray(o)) || allowArrayLike && o && typeof o.length === "number") { if (it) o = it; var i = 0; var F = function F() {}; return { s: F, n: function n() { if (i >= o.length) return { done: true }; return { done: false, value: o[i++] }; }, e: function e(_e) { throw _e; }, f: F }; } throw new TypeError("Invalid attempt to iterate non-iterable instance.\nIn order to be iterable, non-array objects must have a [Symbol.iterator]() method."); } var normalCompletion = true, didErr = false, err; return { s: function s() { it = o[Symbol.iterator](); }, n: function n() { var step = it.next(); normalCompletion = step.done; return step; }, e: function e(_e2) { didErr = true; err = _e2; }, f: function f() { try { if (!normalCompletion && it.return != null) it.return(); } finally { if (didErr) throw err; } } }; }
-
-	function _unsupportedIterableToArray(o, minLen) { if (!o) return; if (typeof o === "string") return _arrayLikeToArray(o, minLen); var n = Object.prototype.toString.call(o).slice(8, -1); if (n === "Object" && o.constructor) n = o.constructor.name; if (n === "Map" || n === "Set") return Array.from(o); if (n === "Arguments" || /^(?:Ui|I)nt(?:8|16|32)(?:Clamped)?Array$/.test(n)) return _arrayLikeToArray(o, minLen); }
-
-	function _arrayLikeToArray(arr, len) { if (len == null || len > arr.length) len = arr.length; for (var i = 0, arr2 = new Array(len); i < len; i++) { arr2[i] = arr[i]; } return arr2; }
-
 	var WarningStore = /*#__PURE__*/function () {
 	  function WarningStore() {
 	    babelHelpers.classCallCheck(this, WarningStore);
@@ -10862,27 +10864,13 @@
 	  }, {
 	    key: "print",
 	    value: function print() {
-	      var _iterator = _createForOfIteratorHelper(this.warnings),
-	          _step;
-
-	      try {
-	        for (_iterator.s(); !(_step = _iterator.n()).done;) {
-	          var _step$value = babelHelpers.slicedToArray(_step.value, 2),
-	              target = _step$value[0],
-	              warnings = _step$value[1];
-
-	          for (var eventName in warnings) {
-	            console.groupCollapsed('Possible BX.Event.EventEmitter memory leak detected. ' + warnings[eventName].size + ' "' + eventName + '" listeners added. ' + 'Use emitter.setMaxListeners() to increase limit.');
-	            console.dir(warnings[eventName].errors);
-	            console.groupEnd();
-	          }
+	      this.warnings.forEach(function (warnings) {
+	        for (var eventName in warnings) {
+	          console.groupCollapsed('Possible BX.Event.EventEmitter memory leak detected. ' + warnings[eventName].size + ' "' + eventName + '" listeners added. ' + 'Use emitter.setMaxListeners() to increase limit.');
+	          console.dir(warnings[eventName].errors);
+	          console.groupEnd();
 	        }
-	      } catch (err) {
-	        _iterator.e(err);
-	      } finally {
-	        _iterator.f();
-	      }
-
+	      });
 	      this.clear();
 	    }
 	  }, {
@@ -10916,8 +10904,6 @@
 	var EventEmitter = /*#__PURE__*/function () {
 	  /** @private */
 	  function EventEmitter() {
-	    var _this = this;
-
 	    babelHelpers.classCallCheck(this, EventEmitter);
 	    this[targetProperty] = null;
 	    this[namespaceProperty] = null;
@@ -10935,11 +10921,6 @@
 	      }
 
 	    this[targetProperty] = target;
-	    setTimeout(function () {
-	      if (_this.getEventNamespace() === null) {
-	        console.warn('The instance of BX.Event.EventEmitter is supposed to have an event namespace. ' + 'Use emitter.setEventNamespace() to make events more unique.');
-	      }
-	    }, 500);
 	  }
 	  /**
 	   * Makes a target observable
@@ -10991,7 +10972,7 @@
 	  }, {
 	    key: "subscribeFromOptions",
 	    value: function subscribeFromOptions(options, aliases, compatMode) {
-	      var _this2 = this;
+	      var _this = this;
 
 	      if (!Type.isPlainObject(options)) {
 	        return;
@@ -11009,11 +10990,11 @@
 
 	        if (aliases[eventName]) {
 	          var actualName = aliases[eventName].eventName;
-	          EventEmitter.subscribe(_this2, actualName, listener, {
+	          EventEmitter.subscribe(_this, actualName, listener, {
 	            compatMode: compatMode !== false
 	          });
 	        } else {
-	          EventEmitter.subscribe(_this2, eventName, listener, {
+	          EventEmitter.subscribe(_this, eventName, listener, {
 	            compatMode: compatMode === true
 	          });
 	        }
@@ -11097,6 +11078,10 @@
 	     * @return {this}
 	     */
 	    value: function emit(eventName, event) {
+	      if (this.getEventNamespace() === null) {
+	        console.warn('The instance of BX.Event.EventEmitter is supposed to have an event namespace. ' + 'Use emitter.setEventNamespace() to make events more unique.');
+	      }
+
 	      EventEmitter.emit(this, eventName, event);
 	      return this;
 	    }
@@ -11124,6 +11109,10 @@
 	     * @return {Promise<Array>}
 	     */
 	    value: function emitAsync(eventName, event) {
+	      if (this.getEventNamespace() === null) {
+	        console.warn('The instance of BX.Event.EventEmitter is supposed to have an event namespace. ' + 'Use emitter.setEventNamespace() to make events more unique.');
+	      }
+
 	      return EventEmitter.emitAsync(this, eventName, event);
 	    }
 	    /**
@@ -11370,7 +11359,7 @@
 	  }, {
 	    key: "subscribeOnce",
 	    value: function subscribeOnce(target, eventName, listener) {
-	      var _this3 = this;
+	      var _this2 = this;
 
 	      if (Type.isString(target)) {
 	        listener = eventName;
@@ -11405,7 +11394,7 @@
 	        console.error("You cannot subscribe the same \"".concat(fullEventName, "\" event listener twice."));
 	      } else {
 	        var once = function once() {
-	          _this3.unsubscribe(target, eventName, once);
+	          _this2.unsubscribe(target, eventName, once);
 
 	          onceListeners.delete(listener);
 	          listener.apply(void 0, arguments);
@@ -11869,7 +11858,7 @@
 	  }, {
 	    key: "mergeEventAliases",
 	    value: function mergeEventAliases(aliases) {
-	      var _this4 = this;
+	      var _this3 = this;
 
 	      var globalEvents = eventStore.get(this.GLOBAL_TARGET);
 
@@ -11879,9 +11868,9 @@
 
 	      Object.keys(aliases).forEach(function (alias) {
 	        var options = aliases[alias];
-	        alias = _this4.normalizeEventName(alias);
+	        alias = _this3.normalizeEventName(alias);
 
-	        var fullEventName = _this4.makeFullEventName(options.namespace, options.eventName);
+	        var fullEventName = _this3.makeFullEventName(options.namespace, options.eventName);
 
 	        var aliasListeners = globalEvents.eventsMap.get(alias);
 
@@ -12799,7 +12788,7 @@
 	  }, {
 	    key: "isIPad",
 	    value: function isIPad() {
-	      return UA.includes('ipad;');
+	      return UA.includes('ipad;') || this.isMac() && this.isTouchDevice();
 	    }
 	  }, {
 	    key: "isIPhone",
@@ -12820,6 +12809,11 @@
 	    key: "isRetina",
 	    value: function isRetina() {
 	      return window.devicePixelRatio && window.devicePixelRatio >= 2;
+	    }
+	  }, {
+	    key: "isTouchDevice",
+	    value: function isTouchDevice() {
+	      return 'ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0;
 	    }
 	  }, {
 	    key: "isDoctype",
@@ -13204,10 +13198,28 @@
 	    /**
 	     * Gets message by id
 	     * @param {string} messageId
+	     * @param {object} replacements
 	     * @return {?string}
 	     */
 	    value: function getMessage(messageId) {
-	      return message(messageId);
+	      var replacements = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : null;
+	      var mess = message(messageId);
+
+	      if (Type.isString(mess) && Type.isPlainObject(replacements)) {
+	        Object.keys(replacements).forEach(function (replacement) {
+	          var globalRegexp = new RegExp(replacement, 'gi');
+	          mess = mess.replace(globalRegexp, function () {
+	            return Type.isNil(replacements[replacement]) ? '' : String(replacements[replacement]);
+	          });
+	        });
+	      }
+
+	      return mess;
+	    }
+	  }, {
+	    key: "hasMessage",
+	    value: function hasMessage(messageId) {
+	      return Type.isString(messageId) && !Type.isNil(message[messageId]);
 	    }
 	    /**
 	     * Sets message or messages
@@ -14212,6 +14224,549 @@
 	babelHelpers.defineProperty(Cache, "MemoryCache", MemoryCache);
 	babelHelpers.defineProperty(Cache, "LocalStorageCache", LocalStorageCache);
 
+	var _Symbol$iterator;
+
+	function _classPrivateMethodGet(receiver, privateSet, fn) { if (!privateSet.has(receiver)) { throw new TypeError("attempted to get private field on non-instance"); } return fn; }
+
+	var _searchIndexToInsert = new WeakSet();
+
+	_Symbol$iterator = Symbol.iterator;
+
+	var OrderedArray = /*#__PURE__*/function () {
+	  function OrderedArray() {
+	    var comparator = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : null;
+	    babelHelpers.classCallCheck(this, OrderedArray);
+
+	    _searchIndexToInsert.add(this);
+
+	    babelHelpers.defineProperty(this, "comparator", null);
+	    babelHelpers.defineProperty(this, "items", []);
+	    this.comparator = Type.isFunction(comparator) ? comparator : null;
+	  }
+
+	  babelHelpers.createClass(OrderedArray, [{
+	    key: "add",
+	    value: function add(item) {
+	      var index = -1;
+
+	      if (this.comparator) {
+	        index = _classPrivateMethodGet(this, _searchIndexToInsert, _searchIndexToInsert2).call(this, item);
+	        this.items.splice(index, 0, item);
+	      } else {
+	        this.items.push(item);
+	      }
+
+	      return index;
+	    }
+	  }, {
+	    key: "has",
+	    value: function has(item) {
+	      return this.items.includes(item);
+	    }
+	  }, {
+	    key: "getIndex",
+	    value: function getIndex(item) {
+	      return this.items.indexOf(item);
+	    }
+	  }, {
+	    key: "getByIndex",
+	    value: function getByIndex(index) {
+	      if (Type.isNumber(index) && index >= 0) {
+	        var item = this.items[index];
+	        return Type.isUndefined(item) ? null : item;
+	      }
+
+	      return null;
+	    }
+	  }, {
+	    key: "getFirst",
+	    value: function getFirst() {
+	      var first = this.items[0];
+	      return Type.isUndefined(first) ? null : first;
+	    }
+	  }, {
+	    key: "getLast",
+	    value: function getLast() {
+	      var last = this.items[this.count() - 1];
+	      return Type.isUndefined(last) ? null : last;
+	    }
+	  }, {
+	    key: "count",
+	    value: function count() {
+	      return this.items.length;
+	    }
+	  }, {
+	    key: "delete",
+	    value: function _delete(item) {
+	      var index = this.getIndex(item);
+
+	      if (index !== -1) {
+	        this.items.splice(index, 1);
+	        return true;
+	      }
+
+	      return false;
+	    }
+	  }, {
+	    key: "clear",
+	    value: function clear() {
+	      this.items = [];
+	    }
+	  }, {
+	    key: _Symbol$iterator,
+	    value: function value() {
+	      return this.items[Symbol.iterator]();
+	    }
+	  }, {
+	    key: "forEach",
+	    value: function forEach(callbackfn, thisArg) {
+	      return this.items.forEach(callbackfn, thisArg);
+	    }
+	  }, {
+	    key: "getAll",
+	    value: function getAll() {
+	      return this.items;
+	    }
+	  }, {
+	    key: "getComparator",
+	    value: function getComparator() {
+	      return this.comparator;
+	    }
+	  }, {
+	    key: "sort",
+	    value: function sort() {
+	      var _this = this;
+
+	      var comparator = this.getComparator();
+
+	      if (comparator === null) {
+	        return;
+	      }
+	      /*
+	      Simple implementation
+	      this.items.sort((item1, item2) => {
+	      	return comparator(item1, item2);
+	      });
+	      */
+	      // For stable sorting https://v8.dev/features/stable-sort
+
+
+	      var length = this.items.length;
+	      var indexes = new Array(length);
+
+	      for (var i = 0; i < length; i++) {
+	        indexes[i] = i;
+	      } // If the comparator returns zero, use the original indexes
+
+
+	      indexes.sort(function (index1, index2) {
+	        return comparator(_this.items[index1], _this.items[index2]) || index1 - index2;
+	      });
+
+	      for (var _i = 0; _i < length; _i++) {
+	        indexes[_i] = this.items[indexes[_i]];
+	      }
+
+	      for (var _i2 = 0; _i2 < length; _i2++) {
+	        this.items[_i2] = indexes[_i2];
+	      }
+	    }
+	  }]);
+	  return OrderedArray;
+	}();
+
+	var _searchIndexToInsert2 = function _searchIndexToInsert2(value) {
+	  var low = 0;
+	  var high = this.items.length;
+
+	  while (low < high) {
+	    var mid = Math.floor((low + high) / 2);
+
+	    if (this.comparator(this.items[mid], value) >= 0) {
+	      high = mid;
+	    } else {
+	      low = mid + 1;
+	    }
+	  }
+
+	  return low;
+	};
+
+	var ZIndexComponent = /*#__PURE__*/function (_EventEmitter) {
+	  babelHelpers.inherits(ZIndexComponent, _EventEmitter);
+
+	  function ZIndexComponent(element) {
+	    var _this;
+
+	    var componentOptions = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+	    babelHelpers.classCallCheck(this, ZIndexComponent);
+	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(ZIndexComponent).call(this));
+	    babelHelpers.defineProperty(babelHelpers.assertThisInitialized(_this), "sort", 0);
+	    babelHelpers.defineProperty(babelHelpers.assertThisInitialized(_this), "alwaysOnTop", false);
+	    babelHelpers.defineProperty(babelHelpers.assertThisInitialized(_this), "zIndex", 0);
+	    babelHelpers.defineProperty(babelHelpers.assertThisInitialized(_this), "element", null);
+	    babelHelpers.defineProperty(babelHelpers.assertThisInitialized(_this), "overlay", null);
+	    babelHelpers.defineProperty(babelHelpers.assertThisInitialized(_this), "overlayGap", -5);
+	    babelHelpers.defineProperty(babelHelpers.assertThisInitialized(_this), "stack", null);
+
+	    _this.setEventNamespace('BX.Main.ZIndexManager.Component');
+
+	    if (!Type.isElementNode(element)) {
+	      throw new Error('ZIndexManager.Component: The argument \'element\' must be a DOM element.');
+	    }
+
+	    _this.element = element;
+	    var options = Type.isPlainObject(componentOptions) ? componentOptions : {};
+
+	    _this.setAlwaysOnTop(options.alwaysOnTop);
+
+	    _this.setOverlay(options.overlay);
+
+	    _this.setOverlayGap(options.overlayGap);
+
+	    _this.subscribeFromOptions(options.events);
+
+	    return _this;
+	  }
+
+	  babelHelpers.createClass(ZIndexComponent, [{
+	    key: "getSort",
+	    value: function getSort() {
+	      return this.sort;
+	    }
+	    /**
+	     * @internal
+	     * @param sort
+	     */
+
+	  }, {
+	    key: "setSort",
+	    value: function setSort(sort) {
+	      if (Type.isNumber(sort)) {
+	        this.sort = sort;
+	      }
+	    }
+	    /**
+	     * @internal
+	     * @param stack
+	     */
+
+	  }, {
+	    key: "setStack",
+	    value: function setStack(stack) {
+	      this.stack = stack;
+	    }
+	  }, {
+	    key: "getStack",
+	    value: function getStack() {
+	      return this.stack;
+	    }
+	  }, {
+	    key: "getZIndex",
+	    value: function getZIndex() {
+	      return this.zIndex;
+	    }
+	    /**
+	     * @internal
+	     */
+
+	  }, {
+	    key: "setZIndex",
+	    value: function setZIndex(zIndex) {
+	      var changed = this.getZIndex() !== zIndex;
+	      this.getElement().style.setProperty('z-index', zIndex, 'important');
+	      this.zIndex = zIndex;
+
+	      if (this.getOverlay() !== null) {
+	        this.getOverlay().style.setProperty('z-index', zIndex + this.getOverlayGap(), 'important');
+	      }
+
+	      if (changed) {
+	        this.emit('onZIndexChange', {
+	          component: this
+	        });
+	      }
+	    }
+	  }, {
+	    key: "getAlwaysOnTop",
+	    value: function getAlwaysOnTop() {
+	      return this.alwaysOnTop;
+	    }
+	  }, {
+	    key: "setAlwaysOnTop",
+	    value: function setAlwaysOnTop(value) {
+	      if (Type.isNumber(value) || Type.isBoolean(value)) {
+	        this.alwaysOnTop = value;
+	      }
+	    }
+	  }, {
+	    key: "getElement",
+	    value: function getElement() {
+	      return this.element;
+	    }
+	  }, {
+	    key: "setOverlay",
+	    value: function setOverlay(overlay, gap) {
+	      if (Type.isElementNode(overlay) || overlay === null) {
+	        this.overlay = overlay;
+	        this.setOverlayGap(gap);
+
+	        if (this.getStack()) {
+	          this.getStack().sort();
+	        }
+	      }
+	    }
+	  }, {
+	    key: "getOverlay",
+	    value: function getOverlay() {
+	      return this.overlay;
+	    }
+	  }, {
+	    key: "setOverlayGap",
+	    value: function setOverlayGap(gap) {
+	      if (Type.isNumber(gap)) {
+	        this.overlayGap = gap;
+	      }
+	    }
+	  }, {
+	    key: "getOverlayGap",
+	    value: function getOverlayGap() {
+	      return this.overlayGap;
+	    }
+	  }]);
+	  return ZIndexComponent;
+	}(EventEmitter);
+
+	var ZIndexStack = /*#__PURE__*/function () {
+	  function ZIndexStack(container) {
+	    babelHelpers.classCallCheck(this, ZIndexStack);
+	    babelHelpers.defineProperty(this, "container", null);
+	    babelHelpers.defineProperty(this, "components", null);
+	    babelHelpers.defineProperty(this, "elements", new WeakMap());
+	    babelHelpers.defineProperty(this, "baseIndex", 1000);
+	    babelHelpers.defineProperty(this, "baseStep", 50);
+	    babelHelpers.defineProperty(this, "sortCount", 0);
+
+	    if (!Type.isDomNode(container)) {
+	      throw new Error('ZIndexManager.Stack: The \'container\' argument must be a DOM element.');
+	    }
+
+	    this.container = container;
+
+	    var comparator = function comparator(componentA, componentB) {
+	      var result = (componentA.getAlwaysOnTop() || 0) - (componentB.getAlwaysOnTop() || 0);
+
+	      if (!result) {
+	        result = componentA.getSort() - componentB.getSort();
+	      }
+
+	      return result;
+	    };
+
+	    this.components = new OrderedArray(comparator);
+	  }
+
+	  babelHelpers.createClass(ZIndexStack, [{
+	    key: "getBaseIndex",
+	    value: function getBaseIndex() {
+	      return this.baseIndex;
+	    }
+	  }, {
+	    key: "setBaseIndex",
+	    value: function setBaseIndex(index) {
+	      if (Type.isNumber(index) && index >= 0) {
+	        this.baseIndex = index;
+	        this.sort();
+	      }
+	    }
+	  }, {
+	    key: "setBaseStep",
+	    value: function setBaseStep(step) {
+	      if (Type.isNumber(step) && step > 0) {
+	        this.baseStep = step;
+	        this.sort();
+	      }
+	    }
+	  }, {
+	    key: "getBaseStep",
+	    value: function getBaseStep() {
+	      return this.baseStep;
+	    }
+	  }, {
+	    key: "register",
+	    value: function register(element) {
+	      var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+	      if (this.getComponent(element)) {
+	        console.warn('ZIndexManager: You cannot register the element twice.', element);
+	        return this.getComponent(element);
+	      }
+
+	      var component = new ZIndexComponent(element, options);
+	      component.setStack(this);
+	      component.setSort(++this.sortCount);
+	      this.elements.set(element, component);
+	      this.components.add(component);
+	      this.sort();
+	      return component;
+	    }
+	  }, {
+	    key: "unregister",
+	    value: function unregister(element) {
+	      var component = this.elements.get(element);
+	      this.components.delete(component);
+	      this.elements.delete(element);
+	      this.sort();
+	    }
+	  }, {
+	    key: "getComponent",
+	    value: function getComponent(element) {
+	      return this.elements.get(element) || null;
+	    }
+	  }, {
+	    key: "getComponents",
+	    value: function getComponents() {
+	      return this.components.getAll();
+	    }
+	  }, {
+	    key: "getMaxZIndex",
+	    value: function getMaxZIndex() {
+	      var last = this.components.getLast();
+	      return last ? last.getZIndex() : this.baseIndex;
+	    }
+	  }, {
+	    key: "sort",
+	    value: function sort() {
+	      var _this = this;
+
+	      this.components.sort();
+	      var zIndex = this.baseIndex;
+	      this.components.forEach(function (component) {
+	        component.setZIndex(zIndex);
+	        zIndex += _this.baseStep;
+	      });
+	    }
+	  }, {
+	    key: "bringToFront",
+	    value: function bringToFront(element) {
+	      var component = this.getComponent(element);
+
+	      if (!component) {
+	        console.error('ZIndexManager: element was not found in the stack.', element);
+	        return null;
+	      }
+
+	      component.setSort(++this.sortCount);
+	      this.sort();
+	      return component;
+	    }
+	  }]);
+	  return ZIndexStack;
+	}();
+
+	function _classStaticPrivateMethodGet(receiver, classConstructor, method) { if (receiver !== classConstructor) { throw new TypeError("Private static access of wrong provenance"); } return method; }
+
+	/**
+	 * @memberof BX
+	 */
+	var ZIndexManager = /*#__PURE__*/function () {
+	  function ZIndexManager() {
+	    babelHelpers.classCallCheck(this, ZIndexManager);
+	  }
+
+	  babelHelpers.createClass(ZIndexManager, null, [{
+	    key: "register",
+	    value: function register(element) {
+	      var options = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
+
+	      var parentNode = _classStaticPrivateMethodGet(this, ZIndexManager, _getParentNode).call(this, element);
+
+	      if (!parentNode) {
+	        return null;
+	      }
+
+	      var stack = this.getOrAddStack(parentNode);
+	      return stack.register(element, options);
+	    }
+	  }, {
+	    key: "unregister",
+	    value: function unregister(element) {
+	      var parentNode = _classStaticPrivateMethodGet(this, ZIndexManager, _getParentNode).call(this, element);
+
+	      var stack = this.getStack(parentNode);
+
+	      if (stack) {
+	        stack.unregister(element);
+	      }
+	    }
+	  }, {
+	    key: "addStack",
+	    value: function addStack(container) {
+	      var stack = new ZIndexStack(container);
+	      this.stacks.set(container, stack);
+	      return stack;
+	    }
+	  }, {
+	    key: "getStack",
+	    value: function getStack(container) {
+	      return this.stacks.get(container) || null;
+	    }
+	  }, {
+	    key: "getOrAddStack",
+	    value: function getOrAddStack(container) {
+	      return this.getStack(container) || this.addStack(container);
+	    }
+	  }, {
+	    key: "getComponent",
+	    value: function getComponent(element) {
+	      var parentNode = _classStaticPrivateMethodGet(this, ZIndexManager, _getParentNode).call(this, element, true);
+
+	      if (!parentNode) {
+	        return null;
+	      }
+
+	      var stack = this.getStack(parentNode);
+	      return stack ? stack.getComponent(element) : null;
+	    }
+	  }, {
+	    key: "bringToFront",
+	    value: function bringToFront(element) {
+	      var parentNode = _classStaticPrivateMethodGet(this, ZIndexManager, _getParentNode).call(this, element);
+
+	      var stack = this.getStack(parentNode);
+
+	      if (stack) {
+	        return stack.bringToFront(element);
+	      }
+
+	      return null;
+	    }
+	  }]);
+	  return ZIndexManager;
+	}();
+
+	var _getParentNode = function _getParentNode(element) {
+	  var suppressWarnings = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : false;
+
+	  if (!Type.isElementNode(element)) {
+	    if (!suppressWarnings) {
+	      console.error('ZIndexManager: The argument \'element\' must be a DOM element.', element);
+	    }
+
+	    return null;
+	  } else if (!Type.isElementNode(element.parentNode)) {
+	    if (!suppressWarnings) {
+	      console.error('ZIndexManager: The \'element\' doesn\'t have a parent node.', element);
+	    }
+
+	    return null;
+	  }
+
+	  return element.parentNode;
+	};
+
+	babelHelpers.defineProperty(ZIndexManager, "stacks", new WeakMap());
+
 	function getElement(element) {
 	  if (Type.isString(element)) {
 	    return document.getElementById(element);
@@ -14546,6 +15101,7 @@
 	exports.Validation = Validation;
 	exports.Cache = Cache;
 	exports.BaseError = BaseError;
+	exports.ZIndexManager = ZIndexManager;
 	exports.getClass = getClass;
 	exports.namespace = namespace;
 	exports.message = message$1;

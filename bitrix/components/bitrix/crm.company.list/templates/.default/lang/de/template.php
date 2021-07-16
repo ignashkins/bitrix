@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["CRM_ALL"] = "Gesamt";
 $MESS["CRM_COMPANY_ACTION_DELETE"] = "Löschen";
 $MESS["CRM_COMPANY_ACTION_MERGE"] = "Vereinigen";
@@ -21,9 +21,6 @@ $MESS["CRM_COMPANY_ASSIGN_TO"] = "Verantwortliche Person bestimmen";
 $MESS["CRM_COMPANY_BATCH_DELETION_COMPLETED"] = "Unternehmen wurden gelöscht.";
 $MESS["CRM_COMPANY_BATCH_DELETION_COUNT_FAILED"] = "Löschen fehlgeschlagen: #number#.";
 $MESS["CRM_COMPANY_BATCH_DELETION_COUNT_SUCCEEDED"] = "Erfolgreich gelöscht: #number#.";
-$MESS["CRM_COMPANY_BATCH_MERGE_COMPLETED"] = "Unternehmen wurden vereinigt.";
-$MESS["CRM_COMPANY_BATCH_MERGE_COUNT_FAILED"] = "Konnten nicht vereinigt werden #number#.";
-$MESS["CRM_COMPANY_BATCH_MERGE_COUNT_SUCCEEDED"] = "Erfolgreich vereinigt: #number#.";
 $MESS["CRM_COMPANY_BIZPROC"] = "Workflow";
 $MESS["CRM_COMPANY_BIZPROC_LIST"] = "Neuer Workflow";
 $MESS["CRM_COMPANY_BIZPROC_LIST_TITLE"] = "Neuen Workflow initiieren";
@@ -41,7 +38,7 @@ $MESS["CRM_COMPANY_CONVERT_ADDRESSES_DLG_TITLE"] = "Alte Adressen der Unternehme
 $MESS["CRM_COMPANY_CONVERT_ADDRESSES_STATE"] = "#processed# von #total#";
 $MESS["CRM_COMPANY_CONVERT_UF_ADDRESSES_DLG_TITLE"] = "Adressen aus Nutzerfeldern in detaillierte Informationen der Unternehmen verschieben";
 $MESS["CRM_COMPANY_CONVERT_UF_ADDRESSES_STATE"] = "#processed# von #total#";
-$MESS["CRM_COMPANY_COPY"] = "Unternehmen kopieren";
+$MESS["CRM_COMPANY_COPY"] = "Kopieren";
 $MESS["CRM_COMPANY_COPY_TITLE"] = "Unternehmen kopieren";
 $MESS["CRM_COMPANY_CREATE_CALL_LIST"] = "Anrufliste erstellen";
 $MESS["CRM_COMPANY_DEAL_ADD"] = "Auftrag hinzufügen";
@@ -62,8 +59,6 @@ $MESS["CRM_COMPANY_LIST_DEL_PROC_DLG_SUMMARY"] = "Die ausgewählten Unternehmen 
 $MESS["CRM_COMPANY_LIST_DEL_PROC_DLG_TITLE"] = "Unternehmen löschen";
 $MESS["CRM_COMPANY_LIST_FILTER_NAV_BUTTON_LIST"] = "Liste";
 $MESS["CRM_COMPANY_LIST_FILTER_NAV_BUTTON_WIDGET"] = "Berichte";
-$MESS["CRM_COMPANY_LIST_MERGE_PROC_DLG_SUMMARY"] = "Die ausgewählten Unternehmen werden vereinigt. Das kann einige Zeit in Anspruch nehmen.";
-$MESS["CRM_COMPANY_LIST_MERGE_PROC_DLG_TITLE"] = "Unternehmen vereinigen";
 $MESS["CRM_COMPANY_LRP_DLG_BTN_CLOSE"] = "Schließen";
 $MESS["CRM_COMPANY_LRP_DLG_BTN_START"] = "Starten";
 $MESS["CRM_COMPANY_LRP_DLG_BTN_STOP"] = "Stopp";
@@ -102,4 +97,3 @@ $MESS["CRM_SHOW_ROW_COUNT"] = "Menge anzeigen";
 $MESS["CRM_SIP_MGR_MAKE_CALL"] = "Anrufen";
 $MESS["CRM_SIP_MGR_UNKNOWN_RECIPIENT"] = "Unbekannter Empfänger";
 $MESS["CRM_STATUS_INIT"] = "- Status -";
-?>

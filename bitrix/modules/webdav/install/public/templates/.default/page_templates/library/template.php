@@ -134,7 +134,7 @@ window.library_CheckFolderPath = function(el)
 </tr>';
 		//user rights
 		$script = '<select onchange="library_SetGroupIDFolder(this)"><option>'.GetMessage("library_wizard_group_select").'</option>';
-		$db_res = CGroup::GetList($by = "c_sort", $order = "asc");
+		$db_res = CGroup::GetList();
 		while($res = $db_res->Fetch())
 			if($res["ID"] <> 1)
 				$script .= '<option value="'.$res["ID"].'">'.htmlspecialcharsbx($res["NAME"])." [".$res["ID"]."]".'</option>';
@@ -271,7 +271,7 @@ window.library_NewIblockClick = function(el)
 ';
 		//user rights
 		$script = '<select onchange="library_SetGroupID(this)"><option>'.GetMessage("library_wizard_group_select").'</option>';
-		$db_res = CGroup::GetList($by = "c_sort", $order = "asc");
+		$db_res = CGroup::GetList();
 		while($res = $db_res->Fetch())
 			if($res["ID"] <> 1)
 				$script .= '<option value="'.$res["ID"].'">'.htmlspecialcharsbx($res["NAME"])." [".$res["ID"]."]".'</option>';
@@ -402,7 +402,7 @@ window.library_NewForumClick = function(el)
 ';
 		//forum user rights
 		$script = '<select onchange="library_SetForumGroupID(this)"><option>'.GetMessage("library_wizard_group_select").'</option>';
-		$db_res = CGroup::GetList($by = "c_sort", $order = "asc");
+		$db_res = CGroup::GetList();
 		while($res = $db_res->Fetch())
 			if($res["ID"] <> 1)
 				$script .= '<option value="'.$res["ID"].'">'.htmlspecialcharsbx($res["NAME"])." [".$res["ID"]."]".'</option>';

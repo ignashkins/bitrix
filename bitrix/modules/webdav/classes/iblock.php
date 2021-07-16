@@ -102,7 +102,7 @@ class CWebDavIblock extends CWebDavBase
 	private static $_metaSectionData = array();
 	//new end
 
-	function CWebDavIblock($IBLOCK_ID, $base_url, $arParams = array())
+	public function __construct($IBLOCK_ID, $base_url, $arParams = array())
 	{
 		$arParams = (is_array($arParams) ? $arParams : array());
 
@@ -174,7 +174,7 @@ class CWebDavIblock extends CWebDavBase
 			}
 		}
 
-		$this->CWebDavBase($base_url);
+		parent::__construct($base_url);
 
 		if (!IsModuleInstalled("iblock"))
 		{
@@ -535,7 +535,7 @@ class CWebDavIblock extends CWebDavBase
 		return $SEF_URL_TEMPLATES;
 	}
 
-	static function LibOptions($title, $user = true, $key = false, $value = false)
+	public static function LibOptions($title, $user = true, $key = false, $value = false)
 	{
 		$arLibOptions = array();
 		$user = (!!$user);
@@ -546,7 +546,7 @@ class CWebDavIblock extends CWebDavBase
 		else
 		{
 			$sLibOptions = COption::GetOptionString('webdav', $title, '');
-			$arLibOptions = @unserialize($sLibOptions, false);
+			$arLibOptions = @unserialize($sLibOptions, ['allowed_classes' => false]);
 		}
 
 		if (!is_array($arLibOptions))
@@ -573,7 +573,7 @@ class CWebDavIblock extends CWebDavBase
 		return $result;
 	}
 
-	/*static*/ function _get_ib_rights_object($type, $id, $IBLOCK_ID=null)
+	public static function _get_ib_rights_object($type, $id, $IBLOCK_ID=null)
 	{
 		if ($type !== 'SECTION' && $type !== 'ELEMENT' && $type !== 'IBLOCK')
 			throw new Exception("_get_ib_rights_object invalid type \"".htmlspecialcharsbx($type)."\"");
@@ -606,7 +606,7 @@ class CWebDavIblock extends CWebDavBase
 	//{
 	//}
 
-	static function CheckRight($IBlockPermission, $permission)
+	public static function CheckRight($IBlockPermission, $permission)
 	{
 		if ($GLOBALS['USER']->CanDoOperation('webdav_change_settings'))
 			return 'Z';
@@ -634,7 +634,7 @@ class CWebDavIblock extends CWebDavBase
 			return false;
 	}
 
-	/*static*/ function GetPermissions($type, $arID, $IBLOCK_ID=null)
+	public static function GetPermissions($type, $arID, $IBLOCK_ID=null)
 	{
 		static $cache = array();
 		if ($IBLOCK_ID === null && isset($this))
@@ -735,7 +735,7 @@ class CWebDavIblock extends CWebDavBase
 		}
 
 		$ID = $object["item_id"];
-		$arProps = @unserialize($strProps, false);
+		$arProps = @unserialize($strProps, ['allowed_classes' => false]);
 		$arProps = (!is_array($arProps) ? array() : $arProps);
 
 		foreach ($options["props"] as $key => $prop)
@@ -953,7 +953,7 @@ class CWebDavIblock extends CWebDavBase
 
 				if (isset($arParams["FILTER"]["doctype"]))
 				{
-					$arFileTypes = @unserialize(COption::GetOptionString("webdav", "file_types"), false);
+					$arFileTypes = @unserialize(COption::GetOptionString("webdav", "file_types"), ['allowed_classes' => false]);
 					if ($arFileTypes !== false)
 					{
 						foreach ($arFileTypes as $arFileType)
@@ -1822,7 +1822,7 @@ class CWebDavIblock extends CWebDavBase
 		if($element)
 		{
 			$strProps = $element["PROPERTY_WEBDAV_INFO_VALUE"];
-			$arProps = @unserialize($strProps, false);
+			$arProps = @unserialize($strProps, ['allowed_classes' => false]);
 			$arProps = (!is_array($arProps) ? array() : $arProps);
 
 			return $arProps;
@@ -1841,7 +1841,7 @@ class CWebDavIblock extends CWebDavBase
 		{
 			$strProps = $this->arParams["element_array"]["PROPERTY_WEBDAV_INFO_VALUE"];
 		}
-		$arProps = @unserialize($strProps, false);
+		$arProps = @unserialize($strProps, ['allowed_classes' => false]);
 		$arProps = (!is_array($arProps) ? array() : $arProps);
 
 		return $arProps;
@@ -2051,7 +2051,7 @@ class CWebDavIblock extends CWebDavBase
 
 	}
 
-	static function _move_from_iblock_to_iblock($elementId, $targetIblockId, $targetSectionId = 0, $delete = true, $setNewNameIfNonUnique = false)
+	public static function _move_from_iblock_to_iblock($elementId, $targetIblockId, $targetSectionId = 0, $delete = true, $setNewNameIfNonUnique = false)
 	{
 		$elementId = intval($elementId);
 		$targetIblockId = intval($targetIblockId);
@@ -2220,7 +2220,7 @@ class CWebDavIblock extends CWebDavBase
 		if($destUrl !== "" && $destName !== "")
 		{
 			$destParentDir  = GetDirPath($destUrl);
-			$destParentDir = (count($destParentDir) > 0 ? $destParentDir : "/");
+			$destParentDir = $destParentDir ?: '/';
 
 			$o = array("path" => $destParentDir, "depth" => 1);
 			$result = $this->PROPFIND($o, $files, array("COLUMNS" => array("ID", "NAME"), "return" => "array"));
@@ -4787,7 +4787,7 @@ class CWebDavIblock extends CWebDavBase
 			$this->CACHE['CWebDavIblock::GetObject'] = array();
 	}
 
-	static function GetReaders($ID, $iblockID = null)
+	public static function GetReaders($ID, $iblockID = null)
 	{
 		static $arValidTasks = null;
 		static $readersCache = array();
@@ -4877,7 +4877,7 @@ class CWebDavIblock extends CWebDavBase
 		return $readersCache[$ID];
 	}
 
-	static function UpdateSearchRights($ID, $iblockID = null)
+	public static function UpdateSearchRights($ID, $iblockID = null)
 	{
 		if (!CModule::IncludeModule('search'))
 			return true;
@@ -5875,7 +5875,7 @@ class CWebDavIblock extends CWebDavBase
 		}
 	}
 
-	static function GetTasks()
+	public static function GetTasks()
 	{
 		static $arTasks = null;
 		if ($arTasks == null)
@@ -5895,7 +5895,6 @@ class CWebDavIblock extends CWebDavBase
 
 		return $arTasks;
 	}
-
 
 	function MetaSectionHide(&$sectionData, $excludeByDiskCondition = false)
 	{
@@ -6511,14 +6510,14 @@ class CWebDavIblock extends CWebDavBase
 	{
 		if (isset($res["PROPERTY_WEBDAV_INFO_VALUE"]) && $res["PROPERTY_WEBDAV_INFO_VALUE"] <> '')
 		{
-			$arProps = @unserialize(($res["~PROPERTY_WEBDAV_INFO_VALUE"] <> '' ? $res["~PROPERTY_WEBDAV_INFO_VALUE"] : $res["PROPERTY_WEBDAV_INFO_VALUE"]), false);
+			$arProps = @unserialize(($res["~PROPERTY_WEBDAV_INFO_VALUE"] <> '' ? $res["~PROPERTY_WEBDAV_INFO_VALUE"] : $res["PROPERTY_WEBDAV_INFO_VALUE"]), ['allowed_classes' => false]);
 			if (is_array($arProps["PROPS"]))
 				$res["PROPS"] = $arProps["PROPS"];
 			return true;
 		}
 		elseif (isset($res["DESCRIPTION"]) && $res["DESCRIPTION"] <> '')
 		{
-			$arProps = @unserialize(($res["~DESCRIPTION"] <> '' ? $res["~DESCRIPTION"] : $res["DESCRIPTION"]), false);
+			$arProps = @unserialize(($res["~DESCRIPTION"] <> '' ? $res["~DESCRIPTION"] : $res["DESCRIPTION"]), ['allowed_classes' => false]);
 			if (is_array($arProps["PROPS"]))
 				$res["PROPS"] = $arProps["PROPS"];
 			return true;
@@ -7933,7 +7932,7 @@ class CWebDavIblock extends CWebDavBase
 	/********** IBlock Rights **********/
 	/* $this->workflow != "workflow" && $this->workflow != "bizproc" */
 
-	static protected function GetIBlockRightsObject($type, $iBlockID, $id = null)
+	protected static function GetIBlockRightsObject($type, $iBlockID, $id = null)
 	{
 		if ($type !== self::OBJ_TYPE_IBLOCK && $type !== self::OBJ_TYPE_SECTION && $type !== self::OBJ_TYPE_ELEMENT)
 		{
@@ -7967,7 +7966,7 @@ class CWebDavIblock extends CWebDavBase
 		return $ibRights;
 	}
 
-	static function CheckUserIBlockPermission($permission, $type, $iBlockID, $id = null)
+	public static function CheckUserIBlockPermission($permission, $type, $iBlockID, $id = null)
 	{
 		$obj = self::GetIBlockRightsObject($type, $iBlockID, $id);
 		if(!is_object($obj))

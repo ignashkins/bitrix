@@ -19,6 +19,7 @@ use \Bitrix\Main\Config\Option;
 use \Bitrix\Main\Application;
 use \Bitrix\Main\Event;
 use \Bitrix\Crm\UI\Webpack\CallTracker;
+use \Bitrix\Crm\MessageSender\NotificationsPromoManager;
 
 Loc::loadMessages(__FILE__);
 
@@ -593,10 +594,11 @@ class LandingPubComponent extends LandingBaseComponent
 					array(
 						'ID' => $site['LANDING_ID_404']
 					),
-					array(
-						'ID' => $site['LANDING_ID_INDEX'],
-						'FOLDER_ID' => false
+					$site['LANDING_ID_INDEX']
+					? array(
+						'ID' => $site['LANDING_ID_INDEX']
 					)
+					: array()
 				),
 				$this->isPreviewMode
 				? array()
@@ -606,16 +608,18 @@ class LandingPubComponent extends LandingBaseComponent
 						'=ACTIVE' => ['Y', 'N'],
 						'FOLDER_ID' => false
 					),
-					array(
-						'ID' => $site['LANDING_ID_INDEX'],
-						'FOLDER_ID' => false
-					),
+					$site['LANDING_ID_INDEX']
+					? array(
+						'ID' => $site['LANDING_ID_INDEX']
+					)
+					: array(),
 					array(
 						'ID' => $site['LANDING_ID_404']
 					)
 				)
 			),
 			'order' => array(
+				'RULE' => 'asc',
 				'ID' => 'asc'
 			)
 		));
@@ -643,10 +647,11 @@ class LandingPubComponent extends LandingBaseComponent
 						($landing['ACTIVE'] == 'Y' || $this->isPreviewMode)
 					)
 					{
+						$fullMatch = null;
 						// check landing in subfolder
 						$resSub = Landing::getList(array(
 							'select' => array(
-								'ID', 'CODE', 'RULE', 'ACTIVE', 'DELETED'
+								'ID', 'CODE', 'RULE', 'ACTIVE', 'DELETED', 'FOLDER_ID'
 							),
 							'filter' => array(
 								'SITE_ID' => $site['ID'],
@@ -664,17 +669,22 @@ class LandingPubComponent extends LandingBaseComponent
 								)
 							),
 							'order' => array(
+								'RULE' => 'asc',
 								'ID' => 'asc'
 							)
 						));
 						while ($row = $resSub->fetch())
 						{
+							if ($landingIdExec)
+							{
+								continue;
+							}
 							if ($row['CODE'] == $landingSubUrl)
 							{
 								$landingIdExec = $checkExecId($row);
 							}
 							else if (
-								$row['RULE'] &&
+								$row['RULE'] && $row['RULE'] !== '(.*?)' &&
 								preg_match('@^'. trim($row['RULE']) . '$@i', $landingSubUrl, $matches)
 							)
 							{
@@ -682,6 +692,19 @@ class LandingPubComponent extends LandingBaseComponent
 								array_shift($matches);
 								$this->sefVariables = $matches;
 							}
+							if ($row['RULE'] === '(.*?)')
+							{
+								$fullMatch = $row;
+							}
+						}
+						if (
+							!$landingIdExec && $fullMatch &&
+							preg_match('@^'. trim($fullMatch['RULE']) . '$@i', $landingSubUrl, $matches)
+						)
+						{
+							$landingIdExec = $checkExecId($fullMatch);
+							array_shift($matches);
+							$this->sefVariables = $matches;
 						}
 					}
 				}
@@ -810,7 +833,7 @@ class LandingPubComponent extends LandingBaseComponent
 			return '';
 		}
 
-		$urls = Landing::getPublicUrl(array_keys($ids));
+		$urls = Landing::createInstance(0)->getPublicUrl(array_keys($ids));
 		$sitemap = '<?xml version="1.0" encoding="' . SITE_CHARSET . '"?>';
 		$sitemap .= '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">';
 		foreach ($ids as $id => $date)
@@ -911,7 +934,7 @@ class LandingPubComponent extends LandingBaseComponent
 						$row['ITEM_ID'] = mb_substr($row['ITEM_ID'], 1);
 						$urlType = 'section';
 					}
-					$row['URL'] = \Bitrix\Landing\Node\Component::getIblockURL(
+					$row['URL'] = \Bitrix\Landing\PublicAction\Utils::getIblockURL(
 						$row['ITEM_ID'],
 						$urlType
 					);
@@ -1014,16 +1037,12 @@ class LandingPubComponent extends LandingBaseComponent
 				{
 					$personalLandingId = $sysPages['personal']['LANDING_ID'];
 					$params['BODY'] = preg_replace_callback(
-						'@(https|http)://([^/]+)/auth/index\.php\?' .
+						'@(https|http)://([^/]+)/.*?/index\.php\?' .
 						'change_password=yes&lang=([^&]+)&' .
 						'USER_CHECKWORD=([a-z0-9]+)@',
 						function ($matches) use($landing, $personalLandingId)
 						{
 							$url = $landing->getPublicUrl($personalLandingId);
-							if (mb_substr($url, 0, 1) == '/')
-							{
-								$url = $matches[1] . '://' . $matches[2] . $url;
-							}
 							$url .= '?' . http_build_query([
 								'SECTION' => 'password_change',
 								'USER_CHECKWORD' => $matches[4]
@@ -1206,7 +1225,7 @@ class LandingPubComponent extends LandingBaseComponent
 		$canonical = $domainName . Manager::getApplication()->getCurDir();
 		Manager::setPageView(
 			'MetaOG',
-			'<meta name="og:url" content="' . $canonical . '" />' . "\n" .
+			'<meta property="og:url" content="' . $canonical . '" />' . "\n" .
 			'<link rel="canonical" href="' . $canonical . '"/>'
 		);
 	}
@@ -1282,6 +1301,28 @@ class LandingPubComponent extends LandingBaseComponent
 		}
 
 		return false;
+	}
+
+	/**
+	 * Sends push on landing first view.
+	 * @param int $landingId Landing id.
+	 * @return void
+	 */
+	protected function sendPageViewPush(int $landingId): void
+	{
+		if (\Bitrix\Main\Loader::includeModule('pull'))
+		{
+			\CPullWatch::addToStack(
+				'LANDING_ENTITY_LANDING',
+				[
+					'module_id' => 'landing',
+					'command' => 'onLandingFirstView',
+					'params' => [
+						'ladingId' => $landingId
+					]
+				]
+			);
+		}
 	}
 
 	/**
@@ -1438,10 +1479,10 @@ class LandingPubComponent extends LandingBaseComponent
 							{
 								$robotsContent .= PHP_EOL . PHP_EOL;
 							}
-							if (mb_strpos($robotsContent, 'User-agent: *') !== false)
+							if (mb_strpos(strtolower($robotsContent), 'user-agent:') !== false)
 							{
-								$robotsContent = str_replace(
-									'User-agent: *',
+								$robotsContent = preg_replace(
+									'/user-agent:\s+\*/i',
 									$this->getForceRobots(),
 									$robotsContent
 								);
@@ -1509,6 +1550,15 @@ class LandingPubComponent extends LandingBaseComponent
 						);
 					}
 					// views
+					if ($this->request('promo') == 'Y')// only for promo hit
+					{
+						$this->sendPageViewPush($landing->getId());
+						if (\Bitrix\Main\Loader::includeModule('crm'))
+						{
+							NotificationsPromoManager::enablePromoSession($landing->getId());
+						}
+
+					}
 					\Bitrix\Landing\Landing\View::inc($lid);
 				}
 			}

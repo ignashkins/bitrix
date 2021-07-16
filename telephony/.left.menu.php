@@ -19,5 +19,17 @@ if(CModule::IncludeModule('voximplant'))
 			'Bitrix\Voximplant\Security\Helper::isBalanceMenuEnabled()'
 		),
 	);
+
+	if (CModule::IncludeModule('report'))
+	{
+		\Bitrix\Main\UI\Extension::load('report.js.analytics');
+		$aMenuLinks[] = Array(
+			GetMessage("SERVICES_MENU_TELEPHONY_ANALYTICS"),
+			"/report/telephony/?analyticBoardKey=telephony_calls_dynamics",
+			Array(),
+			Array("menu_item_id" => "menu_telephony_reports"),
+			""
+		);
+	}
 }
 ?>

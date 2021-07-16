@@ -6,6 +6,7 @@ namespace Bitrix\Disk;
 
 use Bitrix\Disk\Document\BitrixHandler;
 use Bitrix\Disk\Document\LocalDocumentController;
+use Bitrix\Disk\Document\OnlyOffice\OnlyOfficeHandler;
 use Bitrix\Disk\Integration\Bitrix24Manager;
 use Bitrix\Main\Config\Option;
 use Bitrix\Main\UI\Viewer\Transformation\Document;
@@ -33,6 +34,17 @@ final class Configuration
 		{
 			$isAllow = 'Y' == Option::get(Driver::INTERNAL_MODULE_ID, 'disk_keep_version', 'Y');
 		}
+		return $isAllow;
+	}
+
+	public static function isEnabledDocuments()
+	{
+		static $isAllow = null;
+		if($isAllow === null)
+		{
+			$isAllow = ('Y' == Option::get(Driver::INTERNAL_MODULE_ID, 'documents_enabled', 'N'));
+		}
+
 		return $isAllow;
 	}
 
@@ -102,6 +114,33 @@ final class Configuration
 			$isAllow = 'Y' == Option::get(Driver::INTERNAL_MODULE_ID, 'disk_object_lock_enabled', 'N');
 		}
 		return $isAllow;
+	}
+
+	public static function shouldAutoLockObjectOnEdit(): bool
+	{
+		static $isAllow = null;
+		if ($isAllow === null)
+		{
+			$isAllow = 'Y' === Option::get(Driver::INTERNAL_MODULE_ID, 'disk_auto_lock_on_object_edit', 'N');
+		}
+
+		return $isAllow;
+	}
+
+	public static function shouldAutoUnlockObjectOnSave(): bool
+	{
+		static $isAllow = null;
+		if ($isAllow === null)
+		{
+			$isAllow = 'Y' === Option::get(Driver::INTERNAL_MODULE_ID, 'disk_auto_release_lock_on_save', 'N');
+		}
+
+		return $isAllow;
+	}
+
+	public static function getMinutesToAutoReleaseObjectLock(): int
+	{
+		return (int)Option::get(Driver::INTERNAL_MODULE_ID, 'disk_time_auto_release_object_lock', 0);
 	}
 
 	public static function getDocumentServiceCodeForCurrentUser()
@@ -343,7 +382,14 @@ final class UserConfiguration
 {
 	public static function resetDocumentServiceCode()
 	{
-		\CUserOptions::setOption(Driver::INTERNAL_MODULE_ID, 'doc_service', array('default' => ''));
+		\CUserOptions::getOption(
+			Driver::INTERNAL_MODULE_ID,
+			'doc_service',
+			[
+				'default' => '',
+				'primary' => ''
+			]
+		);
 	}
 
 	public static function getDocumentServiceCode()
@@ -351,19 +397,42 @@ final class UserConfiguration
 		global $USER;
 		static $service = null;
 
-		if ($service !== null || !$USER instanceof \CUser || !$USER->getId() )
+		if ($service !== null || !($USER instanceof \CUser) || !$USER->getId() )
 		{
 			return $service;
 		}
-		/** @noinspection PhpParamsInspection */
-		$userSettings = \CUserOptions::getOption(Driver::INTERNAL_MODULE_ID, 'doc_service', array('default' => ''));
-		if(empty($userSettings['default']))
-		{
-			$userSettings['default'] = '';
-		}
-		$service = $userSettings['default'];
 
-		return $userSettings['default'];
+		/** @noinspection PhpParamsInspection */
+		$userSettings = \CUserOptions::getOption(
+			Driver::INTERNAL_MODULE_ID,
+			'doc_service',
+			[
+				'default' => '',
+				'primary' => ''
+			]
+		);
+
+		$defaultService = $userSettings['default'] ?? '';
+		$primaryService = $userSettings['primary'] ?? '';
+
+		if ($primaryService === OnlyOfficeHandler::getCode() || empty($primaryService))
+		{
+			if (Configuration::isEnabledDocuments())
+			{
+				$defaultHandlerForView = Driver::getInstance()->getDocumentHandlersManager()->getDefaultHandlerForView();
+				if ($defaultHandlerForView instanceof OnlyOfficeHandler)
+				{
+					$service = OnlyOfficeHandler::getCode();
+
+					return $service;
+				}
+			}
+			$primaryService = '';
+		}
+
+		$service = $primaryService?: $defaultService;
+
+		return $service;
 	}
 
 	public static function isSetLocalDocumentService()

@@ -47,6 +47,10 @@ import {Utils} from "im.lib.utils";
 import {LocalStorage} from "im.lib.localstorage";
 import {Logger} from "im.lib.logger";
 
+import {Uploader} from "im.lib.uploader";
+import { EventEmitter } from "main.core.events";
+import { ZIndexManager } from "main.core.minimal";
+
 // TODO change BX.Promise, BX.Main.Date to IMPORT
 
 export class Widget
@@ -83,6 +87,7 @@ export class Widget
 			.then(() => this.initPullClient())
 			.then(() => this.initCore())
 			.then(() => this.initWidget())
+			.then(() => this.initUploader())
 			.then(() => this.initComplete())
 		;
 	}
@@ -264,6 +269,142 @@ export class Widget
 		return new Promise((resolve, reject) => resolve());
 	}
 
+	initUploader()
+	{
+		this.uploader = new Uploader({
+			generatePreview: true,
+			sender: {
+				host: this.host,
+				customHeaders: {
+					'Livechat-Auth-Id': this.getUserHash()
+				},
+				actionUploadChunk: 'imopenlines.widget.disk.upload',
+				actionCommitFile: 'imopenlines.widget.disk.commit',
+				actionRollbackUpload: 'imopenlines.widget.disk.rollbackUpload',
+			}
+		});
+
+		this.uploader.subscribe('onStartUpload', event => {
+			const eventData = event.getData();
+			Logger.log('Uploader: onStartUpload', eventData);
+
+			this.controller.getStore().dispatch('files/update', {
+				chatId: this.getChatId(),
+				id: eventData.id,
+				fields: {
+					status: FileStatus.upload,
+					progress: 0
+				}
+			});
+		});
+
+		this.uploader.subscribe('onProgress', (event) => {
+			const eventData = event.getData();
+			Logger.log('Uploader: onProgress', eventData);
+
+			this.controller.getStore().dispatch('files/update', {
+				chatId: this.getChatId(),
+				id: eventData.id,
+				fields: {
+					status: FileStatus.upload,
+					progress: (eventData.progress === 100 ? 99 : eventData.progress),
+				}
+			});
+		});
+
+		this.uploader.subscribe('onSelectFile', (event) => {
+			const eventData = event.getData();
+			const file = eventData.file;
+			Logger.log('Uploader: onSelectFile', eventData);
+
+			let fileType = 'file';
+			if (file.type.toString().startsWith('image'))
+			{
+				fileType = 'image';
+			}
+			else if (file.type.toString().startsWith('video'))
+			{
+				fileType = 'video';
+			}
+
+			this.controller.getStore().dispatch('files/add', {
+				chatId: this.getChatId(),
+				authorId: this.getUserId(),
+				name: eventData.file.name,
+				type: fileType,
+				extension: file.name.split('.').splice(-1)[0],
+				size: eventData.file.size,
+				image: !eventData.previewData? false: {
+					width: eventData.previewDataWidth,
+					height: eventData.previewDataHeight,
+				},
+				status: FileStatus.upload,
+				progress: 0,
+				authorName: this.controller.application.getCurrentUser().name,
+				urlPreview: eventData.previewData? URL.createObjectURL(eventData.previewData) : "",
+			}).then(fileId => {
+				this.addMessage('', {id: fileId, source: eventData, previewBlob: eventData.previewData})
+			});
+		});
+
+		this.uploader.subscribe('onComplete', (event) => {
+			const eventData = event.getData();
+			Logger.log('Uploader: onComplete', eventData);
+
+			this.controller.getStore().dispatch('files/update', {
+				chatId: this.getChatId(),
+				id: eventData.id,
+				fields: {
+					status: FileStatus.wait,
+					progress: 100
+				}
+			});
+
+			const message = this.messagesQueue.find(message => {
+				return message.file.id === eventData.id
+			});
+			const fileType = this.controller.getStore().getters['files/get'](this.getChatId(), message.file.id, true).type;
+
+			this.fileCommit({
+				chatId: this.getChatId(),
+				uploadId: eventData.result.data.file.id,
+				messageText: message.text,
+				messageId: message.id,
+				fileId: message.file.id,
+				fileType
+			}, message);
+		});
+
+		this.uploader.subscribe('onUploadFileError', (event) => {
+			const eventData = event.getData();
+			Logger.log('Uploader: onUploadFileError', eventData);
+
+			const message = this.messagesQueue.find(message => {
+				return message.file.id === eventData.id
+			});
+
+			if (typeof message === 'undefined')
+			{
+				return;
+			}
+
+			this.fileError(this.getChatId(), message.file.id, message.id);
+		});
+
+		this.uploader.subscribe('onCreateFileError', (event) => {
+			const eventData = event.getData();
+			Logger.log('Uploader: onCreateFileError', eventData);
+
+			const message = this.messagesQueue.find(message => {
+				return message.file.id === eventData.id
+			});
+
+			this.fileError(this.getChatId(), message.file.id, message.id);
+		});
+
+		return new Promise((resolve, reject) => resolve());
+	}
+
 	initComplete()
 	{
 		window.dispatchEvent(new CustomEvent('onBitrixLiveChat', {detail: {
@@ -340,6 +481,7 @@ export class Widget
 
 	requestData()
 	{
+		Logger.log('requesting data from widget');
 		if (this.requestDataSend)
 		{
 			return true;
@@ -598,8 +740,7 @@ export class Widget
 
 		if (this.template)
 		{
-			this.template.$root.$bitrixPullClient = this.pullClient;
-			this.template.$root.$emit('onBitrixPullClientInited', this.pullClient);
+			this.template.$Bitrix.PullClient.set(this.pullClient);
 		}
 
 		this.pullClient.start({
@@ -638,9 +779,18 @@ export class Widget
 
 			if (this.pullRequestMessage)
 			{
-				this.getDialogUnread().then(() => {
+				this.controller.pullBaseHandler.option.skip = true;
+
+				Logger.warn('Requesting getDialogUnread after going online');
+				EventEmitter.emitAsync(EventType.dialog.requestUnread, {chatId: this.controller.application.getChatId()}).then(() => {
+					EventEmitter.emit(EventType.dialog.scrollOnStart, {chatId: this.controller.application.getChatId()});
+					this.controller.pullBaseHandler.option.skip = false;
 					this.processSendMessages();
+				})
+				.catch(() => {
+					this.controller.pullBaseHandler.option.skip = false;
 				});
+
 				this.pullRequestMessage = false;
 			}
 			else
@@ -682,6 +832,14 @@ export class Widget
 					type: SubscriptionType.widgetOpen,
 					data: {}
 				});
+				application.template = this;
+
+				if (ZIndexManager !== undefined)
+				{
+					const stack = ZIndexManager.getOrAddStack(document.body);
+					stack.setBaseIndex(1000000); // some big value
+					this.$bitrix.Data.set('zIndexStack', stack);
+				}
 			},
 			destroyed()
 			{
@@ -693,8 +851,7 @@ export class Widget
 				application.templateAttached = false;
 				application.rootNode.innerHTML = '';
 			}
-		}).then(vue => {
-			this.template = vue;
+		}).then(() => {
 			return new Promise((resolve, reject) => resolve());
 		});
 	}
@@ -727,6 +884,32 @@ export class Widget
 			return false;
 		}
 
+		const quoteId = this.controller.getStore().getters['dialogues/getQuoteId'](this.controller.application.getDialogId());
+		if (quoteId)
+		{
+			const quoteMessage = this.controller.getStore().getters['messages/getMessage'](this.controller.application.getChatId(), quoteId);
+			if (quoteMessage)
+			{
+				let user = null;
+				if (quoteMessage.authorId)
+				{
+					user = this.controller.getStore().getters['users/get'](quoteMessage.authorId);
+				}
+
+				const files = this.controller.getStore().getters['files/getList'](this.controller.application.getChatId());
+
+				const message = [];
+				message.push('-'.repeat(54));
+				message.push((user && user.name? user.name: this.getLocalize('BX_LIVECHAT_SYSTEM_MESSAGE'))+' ['+Utils.date.format(quoteMessage.date, null, this.getLocalize())+']');
+				message.push(Utils.text.quote(quoteMessage.text, quoteMessage.params, files, this.getLocalize()));
+				message.push('-'.repeat(54));
+				message.push(text);
+				text = message.join("\n");
+
+				this.quoteMessageClear();
+			}
+		}
+
 		Logger.warn('addMessage', text, file);
 
 		if (!this.controller.application.isUnreadMessagesLoaded())
@@ -736,8 +919,6 @@ export class Widget
 
 			return true;
 		}
-
-		this.controller.getStore().commit('application/increaseDialogExtraCount');
 
 		let params = {};
 		if (file)
@@ -752,11 +933,12 @@ export class Widget
 			params,
 			sending: !file,
 		}).then(messageId => {
-
 			if (!this.isDialogStart())
 			{
 				this.controller.getStore().commit('widget/common', {dialogStart:true});
 			}
+
+			EventEmitter.emit(EventType.dialog.scrollToBottom, {chatId: this.getChatId(), cancelIfScrollChange: true});
 
 			this.messagesQueue.push({
 				id: messageId,
@@ -778,44 +960,19 @@ export class Widget
 		return true;
 	}
 
-	uploadFile(fileInput)
+	uploadFile(event)
 	{
-		if (!fileInput)
+		if (!event)
 		{
 			return false;
 		}
 
-		Logger.warn('addFile', fileInput.files[0].name, fileInput.files[0].size, fileInput.files[0]);
-
-		let file = fileInput.files[0];
-
-		let fileType = 'file';
-		if (file.type.toString().startsWith('image'))
+		if (!this.getChatId())
 		{
-			fileType = 'image';
+			this.requestData();
 		}
 
-		if (!this.controller.application.isUnreadMessagesLoaded())
-		{
-			this.addMessage('', {id: 0, source: fileInput});
-			return true;
-		}
-
-		this.controller.getStore().dispatch('files/add', {
-			chatId: this.getChatId(),
-			authorId: this.getUserId(),
-			name: file.name,
-			type: fileType,
-			extension: file.name.split('.').splice(-1)[0],
-			size: file.size,
-			image: false,
-			status: FileStatus.upload,
-			progress: 0,
-			authorName: this.controller.application.getCurrentUser().name,
-			urlPreview: "",
-		}).then(fileId => this.addMessage('', {id: fileId, source: fileInput}));
-
-		return true;
+		this.uploader.addFilesFromEvent(event);
 	}
 
 	cancelUploadFile(fileId)
@@ -823,6 +980,8 @@ export class Widget
 		let element = this.messagesQueue.find(element => element.file && element.file.id === fileId);
 		if (element)
 		{
+			this.uploader.deleteTask(fileId);
+
 			if (element.xhr)
 			{
 				element.xhr.abort();
@@ -842,6 +1001,18 @@ export class Widget
 
 	processSendMessages()
 	{
+		if (!this.getDiskFolderId())
+		{
+			this.requestDiskFolderId().then(() => {
+				this.processSendMessages();
+			}).catch(() => {
+				Logger.warn('uploadFile', 'Error get disk folder id');
+				return false;
+			});
+
+			return false;
+		}
+
 		if (this.offline)
 		{
 			return false;
@@ -909,108 +1080,21 @@ export class Widget
 	{
 		this.controller.application.stopWriting();
 
-		let fileType = this.controller.getStore().getters['files/get'](this.getChatId(), message.file.id, true).type;
+		const diskFolderId = this.getDiskFolderId();
+		message.chatId = this.getChatId();
 
-		let diskFolderId = this.getDiskFolderId();
+		this.uploader.senderOptions.customHeaders['Livechat-Dialog-Id'] = message.chatId;
+		this.uploader.senderOptions.customHeaders['Livechat-Auth-Id'] = this.getUserHash();
 
-		let query = {};
-
-		if (diskFolderId)
-		{
-			query[ImRestMethodHandler.imDiskFileUpload] = [ImRestMethod.imDiskFileUpload, {
-				id : diskFolderId,
-				data : {NAME : message.file.source.files[0].name},
-				fileContent: message.file.source,
-				generateUniqueName: true
-			}];
-		}
-		else
-		{
-			query[ImRestMethodHandler.imDiskFolderGet] = [ImRestMethod.imDiskFolderGet, {chat_id: this.getChatId()}];
-			query[ImRestMethodHandler.imDiskFileUpload] = [ImRestMethod.imDiskFileUpload, {
-				id: '$result[' + ImRestMethodHandler.imDiskFolderGet + '][ID]',
-				data: {
-					NAME: message.file.source.files[0].name
-				},
-				fileContent: message.file.source,
-				generateUniqueName: true
-			}];
-		}
-
-		this.controller.restClient.callBatch(query, (response) =>
-		{
-			if (!response)
-			{
-				this.requestDataSend = false;
-				console.warn('EMPTY_RESPONSE', 'Server returned an empty response. [1]');
-				this.fileError(this.getChatId, message.file.id, message.id);
-				return false;
-			}
-
-			if (!diskFolderId)
-			{
-				let diskFolderGet = response[ImRestMethodHandler.imDiskFolderGet];
-				if (diskFolderGet && diskFolderGet.error())
-				{
-					console.warn(diskFolderGet.error().ex.error, diskFolderGet.error().ex.error_description);
-					this.fileError(this.getChatId(), message.file.id, message.id);
-					return false;
-				}
-				this.controller.executeRestAnswer(ImRestMethodHandler.imDiskFolderGet, diskFolderGet);
-			}
-
-			let diskId = 0;
-			let diskFileUpload = response[ImRestMethodHandler.imDiskFileUpload];
-			if (diskFileUpload)
-			{
-				let result = diskFileUpload.data();
-				if (diskFileUpload.error())
-				{
-					console.warn(diskFileUpload.error().ex.error, diskFileUpload.error().ex.error_description);
-					this.fileError(this.getChatId(), message.file.id, message.id);
-					return false;
-				}
-				else if (!result)
-				{
-					console.warn('EMPTY_RESPONSE', 'Server returned an empty response. [2]');
-					this.fileError(this.getChatId(), message.file.id, message.id);
-					return false;
-				}
-
-				diskId = result.ID;
-			}
-			else
-			{
-				console.warn('EMPTY_RESPONSE', 'Server returned an empty response. [3]');
-				this.fileError(this.getChatId(), message.file.id, message.id);
-				return false;
-			}
-
-			message.chatId = this.getChatId();
-
-			this.controller.getStore().dispatch('files/update', {
-				chatId: message.chatId,
-				id: message.file.id,
-				fields: {
-					status: FileStatus.wait,
-					progress: 95
-				}
-			});
-
-			this.fileCommit({
-				chatId: message.chatId,
-				uploadId: diskId,
-				messageText: message.text,
-				messageId: message.id,
-				fileId: message.file.id,
-				fileType
-			}, message);
-
-		}, false, (xhr) => {message.xhr = xhr}, Utils.getLogTrackingParams({
-			name: ImRestMethodHandler.imDiskFileCommit,
-			data: {timMessageType: fileType},
-			dialog: this.getDialogData()
-		}));
+		this.uploader.addTask({
+			taskId: message.file.id,
+			fileData: message.file.source.file,
+			fileName: message.file.source.file.name,
+			generateUniqueName: true,
+			diskFolderId: diskFolderId,
+			previewBlob: message.file.previewBlob,
+			chunkSize: this.localize.isCloud ? Uploader.CLOUD_MAX_CHUNK_SIZE : Uploader.BOX_MIN_CHUNK_SIZE,
+		});
 	}
 
 	fileError(chatId, fileId, messageId = 0)
@@ -1031,6 +1115,41 @@ export class Widget
 				retry: false,
 			});
 		}
+	}
+
+	requestDiskFolderId()
+	{
+		if (this.requestDiskFolderPromise)
+		{
+			return this.requestDiskFolderPromise;
+		}
+
+		this.requestDiskFolderPromise = new Promise((resolve, reject) =>
+		{
+			if (
+				this.flagRequestDiskFolderIdSended
+				|| this.getDiskFolderId()
+			)
+			{
+				this.flagRequestDiskFolderIdSended = false;
+				resolve();
+				return true;
+			}
+
+			this.flagRequestDiskFolderIdSended = true;
+
+			this.controller.restClient.callMethod(ImRestMethod.imDiskFolderGet, {chat_id: this.controller.application.getChatId()}).then(response => {
+				this.controller.executeRestAnswer(ImRestMethodHandler.imDiskFolderGet, response);
+				this.flagRequestDiskFolderIdSended = false;
+				resolve();
+			}).catch(error => {
+				this.flagRequestDiskFolderIdSended = false;
+				this.controller.executeRestAnswer(ImRestMethodHandler.imDiskFolderGet, error);
+				reject();
+			});
+		});
+
+		return this.requestDiskFolderPromise;
 	}
 
 	fileCommit(params, message)
@@ -1169,16 +1288,6 @@ export class Widget
 		return this.controller.application.readMessage(messageId);
 	}
 
-	quoteMessage(id)
-	{
-		this.controller.getStore().dispatch('dialogues/update', {
-			dialogId: this.controller.application.getDialogId(),
-			fields: {
-				quoteId: id
-			}
-		});
-	}
-
 	reactMessage(id, reaction)
 	{
 		this.controller.application.reactMessage(id, reaction.type, reaction.action);
@@ -1186,6 +1295,27 @@ export class Widget
 
 	execMessageKeyboardCommand(data)
 	{
+		if (data.action === 'ACTION' && data.params.action === 'LIVECHAT')
+		{
+			let {dialogId, messageId} = data.params;
+			let values = JSON.parse(data.params.value);
+
+			let sessionId = parseInt(values.SESSION_ID);
+			if (sessionId !== this.getSessionId() || this.isSessionClose())
+			{
+				alert(this.localize.BX_LIVECHAT_ACTION_EXPIRED);
+				return false;
+			}
+
+			this.controller.restClient.callMethod(RestMethod.widgetActionSend, {
+				'MESSAGE_ID': messageId,
+				'DIALOG_ID': dialogId,
+				'ACTION_VALUE': data.params.value,
+			});
+
+			return true;
+		}
+
 		if (data.action !== 'COMMAND')
 		{
 			return false;
@@ -1278,6 +1408,80 @@ export class Widget
 
 	}
 
+	getHtmlHistory()
+	{
+		const chatId = this.getChatId();
+		if (chatId <= 0)
+		{
+			console.error('Incorrect chatId value');
+		}
+
+		const config = {
+			chatId: this.getChatId()
+		};
+		this.requestControllerAction('imopenlines.widget.history.download', config)
+			.then(response => {
+				const contentType = response.headers.get('Content-Type');
+				if (contentType.startsWith('application/json'))
+				{
+					return response.json();
+				}
+
+				return response.blob();
+			})
+			.then(result => {
+				if (result instanceof Blob)
+				{
+					const url = window.URL.createObjectURL(result);
+					const a = document.createElement('a');
+					a.href = url;
+					a.download = chatId + '.html';
+					document.body.appendChild(a);
+					a.click();
+					a.remove();
+				}
+				else if (result.hasOwnProperty('errors'))
+				{
+					console.error(result.errors[0]);
+				}
+				else
+				{
+					console.error('Unknown error.');
+				}
+			})
+			.catch(() => console.error('Fetch error.'));
+	}
+
+	/**
+	 * Basic method to run actions.
+	 * If you need to extend it, check BX.ajax.runAction to extend this method.
+	 */
+	requestControllerAction(action, config)
+	{
+		const host = this.host ? this.host : '';
+		const ajaxEndpoint = '/bitrix/services/main/ajax.php';
+
+		const url = new URL(ajaxEndpoint, host);
+		url.searchParams.set('action', action);
+
+		const formData = new FormData();
+		for (const key in config)
+		{
+			if (config.hasOwnProperty(key))
+			{
+				formData.append(key, config[key]);
+			}
+		}
+
+		return fetch(url, {
+			method: 'POST',
+			headers: {
+				'Livechat-Auth-Id': this.getUserHash()
+			},
+			body: formData
+		})
+	}
+
 	sendConsentDecision(result)
 	{
 		result = result === true;
@@ -1363,7 +1567,7 @@ export class Widget
 
 	showNotification(params)
 	{
-		if (!this.controller.getStore())
+		if (!this.controller || !this.controller.getStore())
 		{
 			console.error('LiveChatWidget.showNotification: method can be called after fired event - onBitrixLiveChat');
 			return false;
@@ -1470,7 +1674,7 @@ export class Widget
 		}
 		else
 		{
-			customData = [{MESSAGE: this.localize.BX_LIVECHAT_EXTRA_SITE+': '+location.href}];
+			customData = [{MESSAGE: this.localize.BX_LIVECHAT_EXTRA_SITE+': [URL]'+location.href+'[/URL]'}];
 		}
 
 		return JSON.stringify(customData);
@@ -1526,6 +1730,11 @@ export class Widget
 		return this.controller.getStore().state.widget.dialog.sessionId;
 	}
 
+	isSessionClose()
+	{
+		return this.controller.getStore().state.widget.dialog.sessionClose;
+	}
+
 	getUserHash()
 	{
 		return this.controller.getStore().state.widget.user.hash;
@@ -1559,7 +1768,7 @@ export class Widget
 
 	getUserData()
 	{
-		if (!this.controller.getStore())
+		if (!this.controller || !this.controller.getStore())
 		{
 			console.error('LiveChatWidget.getUserData: method can be called after fired event - onBitrixLiveChat');
 			return false;
@@ -1592,7 +1801,7 @@ export class Widget
 
 	setUserRegisterData(params)
 	{
-		if (!this.controller.getStore())
+		if (!this.controller || !this.controller.getStore())
 		{
 			console.error('LiveChatWidget.getUserData: method can be called after fired event - onBitrixLiveChat');
 			return false;
@@ -1654,7 +1863,7 @@ export class Widget
 
 	setCustomData(params)
 	{
-		if (!this.controller.getStore())
+		if (!this.controller || !this.controller.getStore())
 		{
 			console.error('LiveChatWidget.getUserData: method can be called after fired event - onBitrixLiveChat');
 			return false;

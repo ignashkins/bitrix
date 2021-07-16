@@ -1,3 +1,5 @@
+import {Type} from "main.core";
+
 ;(function() {
 	'use strict';
 
@@ -23,7 +25,9 @@
 		this.parentId = null;
 		this.editData = null;
 		this.custom = null;
+		this.onElementClick = this.onElementClick.bind(this);
 		this.init(parent, node);
+		this.initElementsEvents();
 	};
 
 	//noinspection JSUnusedGlobalSymbols,JSUnusedGlobalSymbols
@@ -50,7 +54,7 @@
 							row.addEventListener("click", function() {
 								if (this.isSelected())
 								{
-									this.unselect()
+									this.unselect();
 								}
 								else
 								{
@@ -167,6 +171,10 @@
 				{
 					result = this.getMoneyValue(editor);
 				}
+				else if(BX.hasClass(editor, 'main-ui-multi-select'))
+				{
+					result = this.getMultiSelectValues(editor);
+				}
 				else
 				{
 					result = this.getImageValue(editor);
@@ -204,25 +212,16 @@
 
 		getContentContainer: function(target)
 		{
-			var result = null;
-
-			if (!BX.hasClass(target, this.parent.settings.get('classCellContainer')))
+			if (BX.Type.isDomNode(target))
 			{
-				if (target.nodeName === 'TD' || target.nodeName === 'TR')
+				const cell = target.closest('.main-grid-cell');
+				if (BX.Type.isDomNode(cell))
 				{
-					result = BX.Grid.Utils.getByClass(target, this.parent.settings.get('classCellContainer'), true);
-				}
-				else
-				{
-					result = BX.findParent(target, {className: this.parent.settings.get('classCellContainer')}, true, false);
+					return cell.querySelector('.main-grid-cell-content');
 				}
 			}
-			else
-			{
-				result = target;
-			}
 
-			return result;
+			return target;
 		},
 
 		getContent: function(cell)
@@ -408,6 +407,15 @@
 			}
 
 			return result;
+		},
+
+		getMultiSelectValues: function(editor)
+		{
+			const value = JSON.parse(BX.data(editor, 'value'));
+			return {
+				'NAME': editor.getAttribute('name'),
+				'VALUE': Type.isArrayFilled(value) ? value : ''
+			};
 		},
 
 		/**
@@ -801,6 +809,16 @@
 			return BX.data(this.getCellByIndex(index), 'name');
 		},
 
+		resetEditData: function()
+		{
+			this.editData = null;
+		},
+
+		setEditData: function(editData)
+		{
+			this.editData = editData;
+		},
+
 		getEditData: function()
 		{
 			if (this.editData === null)
@@ -905,7 +923,7 @@
 
 		getId: function()
 		{
-			return (BX.data(this.getNode(), 'id')).toString();
+			return String(BX.data(this.getNode(), 'id'));
 		},
 
 		getGroupId: function()
@@ -1012,6 +1030,7 @@
 				var pos = BX.pos(this.getActionsButton());
 
 				BX.style(popupWindow.getPopupContainer(), 'top', pos.top - 20 + 'px');
+				BX.style(popupWindow.getPopupContainer(), 'left', pos.left + 25 + 'px');
 			}
 		},
 
@@ -1167,6 +1186,11 @@
 			BX.Dom.prepend(this.getNode(), target);
 		},
 
+		appendTo: function(target)
+		{
+			BX.Dom.append(this.getNode(), target);
+		},
+
 		setId: function(id)
 		{
 			BX.Dom.attr(this.getNode(), 'data-id', id);
@@ -1214,18 +1238,189 @@
 			BX.Dom.addClass(this.getNode(), 'main-grid-not-count');
 		},
 
+		getColumnOptions: function(columnId)
+		{
+			const columns = this.parent.getParam('COLUMNS_ALL');
+			if (
+				BX.Type.isPlainObject(columns)
+				&& Reflect.has(columns, columnId)
+			)
+			{
+				return columns[columnId];
+			}
+
+			return null;
+		},
+
 		setCellsContent: function(content)
 		{
 			const headRow = this.parent.getRows().getHeadFirstChild();
 
 			[...this.getCells()].forEach((cell, cellIndex) => {
 				const cellName = headRow.getCellNameByCellIndex(cellIndex);
-				const cellContent = content[cellName];
 
-				if (cellContent)
+				if (Reflect.has(content, cellName))
 				{
+					const columnOptions = this.getColumnOptions(cellName);
 					const container = this.getContentContainer(cell);
-					BX.Runtime.html(container, cellContent);
+					const cellContent = content[cellName];
+					if (
+						columnOptions.type === 'labels'
+						&& BX.Type.isArray(cellContent)
+					)
+					{
+						const labels = cellContent.map((labelOptions) => {
+							const label = BX.Tag.render`
+								<span class="ui-label ${labelOptions.color}"></span>
+							`;
+
+							if (labelOptions.light !== true)
+							{
+								BX.Dom.addClass(label, 'ui-label-fill');
+							}
+
+							if (BX.Type.isPlainObject(labelOptions.events))
+							{
+								if (Reflect.has(labelOptions.events, 'click'))
+								{
+									BX.Dom.addClass(label, 'ui-label-link');
+								}
+
+								this.bindOnEvents(label, labelOptions.events);
+							}
+
+							const labelContent = (() => {
+								if (BX.Type.isStringFilled(labelOptions.html))
+								{
+									return labelOptions.html;
+								}
+
+								return labelOptions.text;
+							})();
+
+							const inner = BX.Tag.render`
+								<span class="ui-label-inner">${labelContent}</span>
+							`;
+
+							BX.Dom.append(inner, label);
+
+							if (BX.Type.isPlainObject(labelOptions.removeButton))
+							{
+								const button = (() => {
+									if (labelOptions.removeButton.type === BX.Grid.Label.RemoveButtonType.INSIDE)
+									{
+										return BX.Tag.render`
+											<span class="ui-label-icon"></span>	
+										`;
+									}
+
+									return BX.Tag.render`
+										<span class="main-grid-label-remove-button ${labelOptions.removeButton.type}"></span>	
+									`;
+								})();
+
+								if (BX.Type.isPlainObject(labelOptions.removeButton.events))
+								{
+									this.bindOnEvents(button, labelOptions.removeButton.events);
+								}
+
+								BX.Dom.append(button, label);
+							}
+
+							return label;
+						});
+
+						const labelsContainer = BX.Tag.render`
+							<div class="main-grid-labels">${labels}</div>
+						`;
+
+						const oldLabelsContainer = container.querySelector('.main-grid-labels');
+						if (BX.Type.isDomNode(oldLabelsContainer))
+						{
+							BX.Dom.replace(oldLabelsContainer, labelsContainer);
+						}
+						else
+						{
+							BX.Dom.append(labelsContainer, container);
+						}
+					}
+					else if (
+						columnOptions.type === 'tags'
+						&& BX.Type.isPlainObject(cellContent)
+					)
+					{
+						const tags = cellContent.items.map((tagOptions) => {
+							const tag = BX.Tag.render`
+								<span class="main-grid-tag"></span>
+							`;
+
+							this.bindOnEvents(tag, tagOptions.events);
+
+							if (tagOptions.active === true)
+							{
+								BX.Dom.addClass(tag, 'main-grid-tag-active');
+							}
+
+							const tagContent = (() => {
+								if (BX.Type.isStringFilled(tagOptions.html))
+								{
+									return tagOptions.html;
+								}
+
+								return BX.Text.encode(tagOptions.text);
+							})();
+
+							const tagInner = BX.Tag.render`
+								<span class="main-grid-tag-inner">${tagContent}</span>
+							`;
+
+							BX.Dom.append(tagInner, tag);
+
+							if (tagOptions.active === true)
+							{
+								const removeButton = BX.Tag.render`
+									<span class="main-grid-tag-remove"></span>
+								`;
+
+								BX.Dom.append(removeButton, tag);
+
+								if (BX.Type.isPlainObject(tagOptions.removeButton))
+								{
+									this.bindOnEvents(removeButton, tagOptions.removeButton.events);
+								}
+							}
+
+							return tag;
+						});
+
+						const tagsContainer = BX.Tag.render`
+							<span class="main-grid-tags">${tags}</span>
+						`;
+
+						const addButton = BX.Tag.render`
+							<span class="main-grid-tag-add"></span>
+						`;
+						if (BX.Type.isPlainObject(cellContent.addButton))
+						{
+							this.bindOnEvents(addButton, cellContent.addButton.events);
+						}
+
+						BX.Dom.append(addButton, tagsContainer);
+
+						const oldTagsContainer = container.querySelector('.main-grid-tags');
+						if (BX.Type.isDomNode(oldTagsContainer))
+						{
+							BX.Dom.replace(oldTagsContainer, tagsContainer);
+						}
+						else
+						{
+							BX.Dom.append(tagsContainer, container);
+						}
+					}
+					else
+					{
+						BX.Runtime.html(container, cellContent);
+					}
 				}
 			});
 		},
@@ -1242,6 +1437,324 @@
 		isTemplate: function()
 		{
 			return this.isBodyChild() && /^template_[0-9]$/.test(this.getId());
-		}
+		},
+
+		enableAbsolutePosition: function()
+		{
+			const headCells = [...this.parent.getRows().getHeadFirstChild().getCells()];
+			const cellsWidth = headCells.map((cell) => {
+				return BX.Dom.style(cell, 'width');
+			});
+
+			const cells = this.getCells();
+			cellsWidth.forEach((width, index) => {
+				BX.Dom.style(cells[index], 'width', width);
+			});
+
+			BX.Dom.style(this.getNode(), 'position', 'absolute');
+		},
+
+		disableAbsolutePosition: function()
+		{
+			BX.Dom.style(this.getNode(), 'position', null);
+		},
+
+		getHeight: function()
+		{
+			return BX.Text.toNumber(BX.Dom.style(this.getNode(), 'height'));
+		},
+
+		setCellActions: function(cellActions)
+		{
+			Object.entries(cellActions).forEach(([cellId, actions]) => {
+				const cell = this.getCellById(cellId);
+				if (cell)
+				{
+					const inner = cell.querySelector('.main-grid-cell-inner');
+					if (inner)
+					{
+						const container = (() => {
+							const currentContainer = inner.querySelector('.main-grid-cell-content-actions');
+							if (currentContainer)
+							{
+								BX.Dom.clean(currentContainer);
+								return currentContainer;
+							}
+
+							const newContainer = BX.Tag.render`
+								<div class="main-grid-cell-content-actions"></div>
+							`;
+
+							BX.Dom.append(newContainer, inner);
+
+							return newContainer;
+						})();
+
+						if (BX.Type.isArrayFilled(actions))
+						{
+							actions.forEach((action) => {
+								const actionClass = (() => {
+									if (BX.Type.isArrayFilled(action.class))
+									{
+										return action.class.join(' ');
+									}
+
+									return action.class;
+								})();
+
+								const button = BX.Tag.render`
+									<span class="main-grid-cell-content-action ${actionClass}"></span>
+								`;
+
+								if (BX.Type.isPlainObject(action.events))
+								{
+									this.bindOnEvents(button, action.events);
+								}
+
+								if (BX.Type.isPlainObject(action.attributes))
+								{
+									BX.Dom.attr(button, action.attributes);
+								}
+
+								BX.Dom.append(button, container);
+							});
+						}
+					}
+				}
+			});
+		},
+
+		/**
+		 * @private
+		 */
+		initElementsEvents: function()
+		{
+			const buttons = [
+				...this.getNode().querySelectorAll('.main-grid-cell [data-events]'),
+			];
+			if (BX.Type.isArrayFilled(buttons))
+			{
+				buttons.forEach((button) => {
+					const events = eval(BX.Dom.attr(button, 'data-events'));
+					if (BX.Type.isPlainObject(events))
+					{
+						BX.Dom.attr(button, 'data-events', null);
+						this.bindOnEvents(button, events);
+					}
+				});
+			}
+		},
+
+		/**
+		 * @private
+		 * @param event
+		 */
+		onElementClick: function(event)
+		{
+			event.stopPropagation();
+		},
+
+		/**
+		 * @private
+		 */
+		bindOnEvents: function(button, events)
+		{
+			if (
+				BX.Type.isDomNode(button)
+				&& BX.Type.isPlainObject(events)
+			)
+			{
+				BX.Event.bind(button, 'click', this.onElementClick.bind(this));
+
+				const target = (() => {
+					const selector = BX.Dom.attr(button, 'data-target');
+					if (selector)
+					{
+						return button.closest(selector);
+					}
+
+					return button;
+				})();
+
+				const event = new BX.Event.BaseEvent({
+					data: {
+						button,
+						target,
+						row: this,
+					},
+				});
+
+				event.setTarget(target);
+
+				Object.entries(events).forEach(([eventName, handler]) => {
+					const preparedHandler = eval(handler);
+					BX.Event.bind(button, eventName, preparedHandler.bind(null, event));
+				});
+			}
+		},
+
+		setCounters: function(counters)
+		{
+			if (BX.Type.isPlainObject(counters))
+			{
+				Object.entries(counters).forEach(([columnId, counter]) => {
+					const cell = this.getCellById(columnId);
+					if (BX.Type.isDomNode(cell))
+					{
+						const cellInner = cell.querySelector('.main-grid-cell-inner');
+						const counterContainer = (() => {
+							const container = cell.querySelector('.main-grid-cell-counter');
+							if (BX.Type.isDomNode(container))
+							{
+								return container;
+							}
+
+							return BX.Tag.render`
+								<span class="main-grid-cell-counter"></span>
+							`;
+						})();
+
+						const uiCounter = (() => {
+							const currentCounter = counterContainer.querySelector('.ui-counter');
+							if (BX.Type.isDomNode(currentCounter))
+							{
+								return currentCounter;
+							}
+
+							const newCounter = BX.Tag.render`
+								<span class="ui-counter"></span>
+							`;
+
+							BX.Dom.append(newCounter, counterContainer);
+
+							return newCounter;
+						})();
+
+						if (BX.Type.isPlainObject(counter.events))
+						{
+							this.bindOnEvents(uiCounter, counter.events);
+						}
+
+						const counterInner = (() => {
+							const currentInner = uiCounter.querySelector('.ui-counter-inner');
+							if (BX.Type.isDomNode(currentInner))
+							{
+								return currentInner;
+							}
+
+							const newInner = BX.Tag.render`
+								<span class="ui-counter-inner"></span>
+							`;
+
+							BX.Dom.append(newInner, uiCounter);
+
+							return newInner;
+						})();
+
+						if (BX.Type.isStringFilled(counter.type))
+						{
+							Object.values(BX.Grid.Counters.Type).forEach((type) => {
+								BX.Dom.removeClass(counterContainer, `main-grid-cell-counter-${type}`);
+							});
+							BX.Dom.addClass(counterContainer, `main-grid-cell-counter-${counter.type}`);
+						}
+
+						if (BX.Type.isStringFilled(counter.color))
+						{
+							Object.values(BX.Grid.Counters.Color).forEach((color) => {
+								BX.Dom.removeClass(uiCounter, color);
+							});
+							BX.Dom.addClass(uiCounter, counter.color);
+						}
+
+						if (BX.Type.isStringFilled(counter.size))
+						{
+							Object.values(BX.Grid.Counters.Size).forEach((size) => {
+								BX.Dom.removeClass(uiCounter, size);
+							});
+							BX.Dom.addClass(uiCounter, counter.size);
+						}
+
+						if (BX.Type.isStringFilled(counter.class))
+						{
+							BX.Dom.addClass(uiCounter, counter.class);
+						}
+
+						if (
+							BX.Type.isStringFilled(counter.value)
+							|| BX.Type.isNumber(counter.value)
+						)
+						{
+							const currentValue = BX.Text.toNumber(counterInner.innerText);
+							const value = BX.Text.toNumber(counter.value);
+
+							if (value > 0)
+							{
+								if (value < 100)
+								{
+									counterInner.innerText = counter.value;
+								}
+								else
+								{
+									counterInner.innerText = '99+';
+								}
+
+								if (counter.animation !== false)
+								{
+									if (value !== currentValue)
+									{
+										if (value > currentValue)
+										{
+											BX.Dom.addClass(counterInner, 'ui-counter-plus');
+										}
+										else
+										{
+											BX.Dom.addClass(counterInner, 'ui-counter-minus');
+										}
+									}
+
+									BX.Event.bindOnce(counterInner, 'animationend', (event) => {
+										if (
+											event.animationName === 'uiCounterPlus'
+											|| event.animationName === 'uiCounterMinus'
+										)
+										{
+											BX.Dom.removeClass(counterInner, ['ui-counter-plus', 'ui-counter-minus']);
+										}
+									});
+								}
+							}
+						}
+
+						if (BX.Text.toNumber(counter.value) > 0)
+						{
+							const align = counter.type === BX.Grid.Counters.Type.RIGHT ? 'right' : 'left';
+							if (align === 'left')
+							{
+								BX.Dom.prepend(counterContainer, cellInner);
+							}
+							else if (align === 'right')
+							{
+								BX.Dom.append(counterContainer, cellInner);
+							}
+						}
+						else
+						{
+							const leftAlignedClass = (
+								`main-grid-cell-counter-${BX.Grid.Counters.Type.LEFT_ALIGNED}`
+							);
+							if (BX.Dom.hasClass(counterContainer, leftAlignedClass))
+							{
+								BX.remove(uiCounter);
+							}
+							else
+							{
+								BX.remove(counterContainer);
+							}
+						}
+					}
+				});
+			}
+		},
 	};
 })();

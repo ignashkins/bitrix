@@ -34,7 +34,7 @@ class CSelectSiteWizardStep extends CWizardStep
 					$this->SetError(GetMessage("wiz_site_id_error"));
 					return;
 				}
-				$rsSites = CSite::GetList($by="sort", $order="desc", array());
+				$rsSites = CSite::GetList("sort", "desc");
 				while($arSite = $rsSites->Fetch())
 				{
 					if (trim($arSite["DIR"], "/") == trim($siteFolder, "/"))
@@ -57,7 +57,7 @@ class CSelectSiteWizardStep extends CWizardStep
 			}
 			elseif ($siteID <> '')
 			{
-				$db_res = CSite::GetList($by="sort", $order="desc", array("LID" => $siteID));
+				$db_res = CSite::GetList("sort", "desc", array("LID" => $siteID));
 				if (!($db_res && $res = $db_res->Fetch()))
 					$this->SetError(GetMessage("wiz_site_id_not_exists_error"));
 				return;
@@ -76,7 +76,7 @@ class CSelectSiteWizardStep extends CWizardStep
 
 		$arSites = array();
 		$arSitesSelect = array();
-		$db_res = CSite::GetList($by="sort", $order="desc", array());
+		$db_res = CSite::GetList("sort", "desc");
 		if ($db_res && $res = $db_res->GetNext())
 		{
 			do
@@ -1548,7 +1548,7 @@ class SiteSettingsStep extends CWizardStep
 				}
 				else
 				{
-					$rsSites = CSite::GetList($by="sort", $order="desc", array());
+					$rsSites = CSite::GetList("sort", "desc");
 					while($arSite = $rsSites->Fetch())
 					{
 						if ($arSite["ID"] == $site_id)
@@ -1733,11 +1733,13 @@ class SiteSettingsStep extends CWizardStep
 			$this->content .= '<label for="allow-guests">'.GetMessage("wiz_allow_anonym").'</label><br />';
 			$this->content .= '</td></tr>';
 
-			$this->content .= '<tr><td style="padding-bottom:3px;">';
-			$this->content .= $this->ShowCheckboxField("allowRegistration", "Y", Array("id" => "allow-registration", "onclick" => "OnClickAllowRegister(this)"));
-			$this->content .= '<label for="allow-registration">'.GetMessage("wiz_allow_register").'</label><br />';
-			$this->content .= '</td></tr>';
-
+			if (COption::GetOptionString("main", "new_user_registration", "N") === "Y")
+			{
+				$this->content .= '<tr><td style="padding-bottom:3px;">';
+				$this->content .= $this->ShowCheckboxField("allowRegistration", "Y", Array("id" => "allow-registration", "onclick" => "OnClickAllowRegister(this)"));
+				$this->content .= '<label for="allow-registration">'.GetMessage("wiz_allow_register").'</label><br />';
+				$this->content .= '</td></tr>';
+			}
 
 			$this->content .= '<tr><td style="padding-bottom:3px;">';
 
@@ -2139,10 +2141,21 @@ class LDAPGroupsStep extends CWizardStep
 			while($ar_group = $gr_res->GetNext())
 				$arLDAPGroups[$ar_group['ID']] = (is_set($ar_group, 'NAME') ? $ar_group['NAME'] : $ar_group['ID']);
 
-			uasort($arLDAPGroups, create_function('$a, $b', '$a=ToUpper($a);$b=ToUpper($b); if($a==$b) return 0; return $a>$b?1:-1;'));
+			uasort(
+				$arLDAPGroups,
+				function ($a, $b) {
+					$a = strtoupper($a);
+					$b = strtoupper($b);
+					if ($a == $b)
+					{
+						return 0;
+					}
+					return ($a > $b ? 1 : -1);
+				}
+			);
 		}
 
-		$dbGroups = CGroup::GetList($by = "c_sort", $order="asc", Array());
+		$dbGroups = CGroup::GetList();
 		while($arGroup = $dbGroups->GetNext())
 		{
 			if ($arGroup["ID"] == 2)
@@ -2187,7 +2200,7 @@ class DataInstallStep extends CWizardStep
 		$site_id = $wizard->GetVar("siteID");
 		if($site_id!="")
 		{
-			$db_res = CSite::GetList($by="sort", $order="desc", array("LID" => $site_id));
+			$db_res = CSite::GetList("sort", "desc", array("LID" => $site_id));
 			if($db_res)
 				$res = $db_res->Fetch();
 		}
@@ -2446,7 +2459,7 @@ class DataInstallStep extends CWizardStep
 		}
 		define("WIZARD_NEW_2011", COption::GetOptionString("main", "wizard_new_2011", false));
 
-		$dbGroupUsers = CGroup::GetList($by="id", $order="asc", Array("ACTIVE" => "Y"));
+		$dbGroupUsers = CGroup::GetList("id", "asc", Array("ACTIVE" => "Y"));
 		$arGroupsId = Array("ADMIN_SECTION", "SUPPORT", "CREATE_GROUPS", "PERSONNEL_DEPARTMENT", "DIRECTION", "MARKETING_AND_SALES", "RATING_VOTE", "RATING_VOTE_AUTHORITY");
 
 		while ($arGroupUser = $dbGroupUsers->Fetch())

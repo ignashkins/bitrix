@@ -236,15 +236,15 @@
 		if (!params)
 			params = {};
 
-		var
-			i, dayOffset,
-			grid = params.grid || this.grid,
-			viewRangeDate = this.calendar.getViewRangeDate(),
-			year = viewRangeDate.getFullYear(),
-			month = viewRangeDate.getMonth(),
-			height = this.util.getViewHeight(),
-			displayedRange = BX.clone(this.getViewRange(), true),
-			date = new Date();
+		var i;
+		var dayOffset;
+		var grid = params.grid || this.grid;
+		var viewRangeDate = this.calendar.getViewRangeDate();
+		var year = viewRangeDate.getFullYear();
+		var month = viewRangeDate.getMonth();
+		var height = this.util.getViewHeight();
+		var displayedRange = BX.clone(this.getViewRange(), true);
+		var date = new Date();
 
 		BX.cleanNode(grid);
 		date.setFullYear(year, month, 1);
@@ -256,9 +256,9 @@
 		this.currentMonthRow = false;
 		this.monthRows = [];
 
-		if (this.util.getWeekStart() != this.util.getWeekDayByInd(date.getDay()))
+		if (this.util.getWeekStart() != BX.Calendar.Util.getWeekDayByInd(date.getDay()))
 		{
-			dayOffset = this.util.getWeekDayOffset(this.util.getWeekDayByInd(date.getDay()));
+			dayOffset = this.util.getWeekDayOffset(BX.Calendar.Util.getWeekDayByInd(date.getDay()));
 			date.setDate(date.getDate() - dayOffset);
 
 			displayedRange.start = new Date(date.getTime());
@@ -278,9 +278,9 @@
 			date.setDate(date.getDate() + 1);
 		}
 
-		if (this.util.getWeekStart() != this.util.getWeekDayByInd(date.getDay()))
+		if (this.util.getWeekStart() != BX.Calendar.Util.getWeekDayByInd(date.getDay()))
 		{
-			dayOffset = this.util.getWeekDayOffset(this.util.getWeekDayByInd(date.getDay()));
+			dayOffset = this.util.getWeekDayOffset(BX.Calendar.Util.getWeekDayByInd(date.getDay()));
 			date.setFullYear(year, month + 1, 1);
 			for (i = dayOffset; i < 7; i++)
 			{
@@ -314,7 +314,7 @@
 			time = Math.round(date.getTime() / 1000) * 1000,
 			day = date.getDay(),
 			dayCode = this.util.getDayCode(date),
-			weekDay = this.util.getWeekDayByInd(day),
+			weekDay = BX.Calendar.Util.getWeekDayByInd(day),
 			weekNumber = false,
 			startNewWeek = this.util.getWeekStart() == weekDay;
 
@@ -401,11 +401,17 @@
 		{
 			// Get list of entries
 			this.entries = this.entryController.getList({
+				showLoader: !!(this.entries && !this.entries.length),
 				startDate: new Date(viewRange.start.getFullYear(), viewRange.start.getMonth(), 1),
 				finishDate: new Date(viewRange.end.getFullYear(), viewRange.end.getMonth() + 1, 1),
 				viewRange: viewRange,
 				finishCallback: BX.proxy(this.displayEntries, this)
 			});
+
+			if (this.entries === false)
+			{
+				return;
+			}
 		}
 
 		// Clean holders
@@ -639,6 +645,7 @@
 				}
 			});
 
+
 			if (startArrow)
 			{
 				partWrap.appendChild(startArrow);
@@ -666,7 +673,22 @@
 				// first part
 				if (params.part.partIndex == 0)
 				{
-					timeNode = innerNode.appendChild(BX.create('SPAN', {props: {className: 'calendar-event-line-time'}, text: this.calendar.util.formatTime(entry.from.getHours(), entry.from.getMinutes())}));
+					if (this.util.getDayCode(entry.from) !== this.util.getDayCode(from.date))
+					{
+						timeNode = innerNode.appendChild(
+							BX.create('SPAN', {
+								props: {className: 'calendar-event-line-time'},
+								text: this.calendar.util.formatTime(entry.to.getHours(), entry.to.getMinutes())
+							}));
+					}
+					else
+					{
+						timeNode = innerNode.appendChild(
+							BX.create('SPAN', {
+								props: {className: 'calendar-event-line-time'},
+								text: this.calendar.util.formatTime(entry.from.getHours(), entry.from.getMinutes())
+							}));
+					}
 					innerNode.style.width = 'calc(100% / ' + daysCount + ' - 3px)';
 				}
 
@@ -678,10 +700,12 @@
 						innerNode.style.width = 'calc(' + (daysCount - 1) + '00% / ' + daysCount + ' - 3px)';
 					}
 
-					if (!params.popupMode)
+					if (!params.popupMode && daysCount > 1)
 					{
 						endTimeNode = innerNode.appendChild(BX.create('SPAN', {
-							props: {className: (entry.parts.length > 1 && daysCount == 1) ? 'calendar-event-line-time' : 'calendar-event-line-expired-time'},
+							props: {className: (entry.parts.length > 1 && daysCount == 1)
+									? 'calendar-event-line-time'
+									: 'calendar-event-line-expired-time'},
 							text: this.calendar.util.formatTime(entry.to.getHours(), entry.to.getMinutes())
 						}));
 					}
@@ -856,9 +880,14 @@
 					this.showAllEventsInPopup({day: this.days[this.dayIndex[dayCode]]});
 				}
 			}
-			else if (!this.calendar.util.readOnlyMode()
-				&& this.entryController.canDo(false, 'add_event') &&
-				(dayCode = params.specialTarget && params.specialTarget.getAttribute('data-bx-calendar-month-day')))
+			else if (
+				!this.calendar.util.readOnlyMode()
+				&& this.entryController.canDo(false, 'add_event')
+				&& (
+					dayCode = params.specialTarget
+					&& params.specialTarget.getAttribute('data-bx-calendar-month-day')
+				)
+			)
 			{
 				this.deselectEntry();
 				if (this.dayIndex[dayCode] !== undefined && this.days[this.dayIndex[dayCode]])
@@ -879,7 +908,8 @@
 			from = params.dayFrom,
 			daysCount = 1,
 			holder = this.entryHolders[from.holderIndex],
-			section = this.calendar.sectionController.getCurrentSection(),
+			sectionId = BX.Calendar.SectionManager.getNewEntrySectionId(),
+			section = this.calendar.sectionManager.getSection(sectionId),
 			color = section.color;
 
 		var compactForm = BX.Calendar.EntryManager.getCompactViewForm(false);

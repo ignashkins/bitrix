@@ -71,12 +71,10 @@ class CBPHelper
 			if ($userId > 0)
 			{
 				$db = CUser::GetList(
-					($by = "LAST_NAME"),
-					($order = "asc"),
+					"LAST_NAME",
+					"asc",
 					array("ID_EQUAL_EXACT" => $userId),
-					array(
-						"NAV_PARAMS" => false,
-					)
+					array("NAV_PARAMS" => false)
 				);
 
 				if ($ar = $db->Fetch())
@@ -257,8 +255,8 @@ class CBPHelper
 			$arFilter = array("ID_EQUAL_EXACT" => $userId);
 
 			$dbUsers = CUser::GetList(
-				($by = "LAST_NAME"),
-				($order = "asc"),
+				"LAST_NAME",
+				"asc",
 				$arFilter,
 				['NAV_PARAMS' => false]
 			);
@@ -993,12 +991,10 @@ class CBPHelper
 		$userId = intval($userId);
 
 		$db = CUser::GetList(
-			($by = "LAST_NAME"),
-			($order = "asc"),
+			"LAST_NAME",
+			"asc",
 			array("ID_EQUAL_EXACT" => $userId),
-			array(
-				"NAV_PARAMS" => false,
-			)
+			array("NAV_PARAMS" => false)
 		);
 
 		$str = "";
@@ -1576,7 +1572,7 @@ class CBPHelper
 							if (!array_key_exists("MODULE_ID", $value) || $value["MODULE_ID"] == '')
 								$value["MODULE_ID"] = "bizproc";
 
-							$value = CFile::SaveFile($value, "bizproc_wf", true);
+							$value = CFile::SaveFile($value, "bizproc_wf");
 							if (!$value)
 							{
 								$value = null;
@@ -1895,7 +1891,7 @@ class CBPHelper
 			}
 			$result = [];
 
-			$iterator = CUser::GetList(($b = "ID"), ($o = "ASC"), array("GROUPS_ID" => $group, "ACTIVE" => "Y"));
+			$iterator = CUser::GetList("ID", "ASC", array("GROUPS_ID" => $group, "ACTIVE" => "Y"));
 			while ($user = $iterator->fetch())
 			{
 				$result[] = $user['ID'];
@@ -1912,7 +1908,7 @@ class CBPHelper
 		if ($code == 'UA' && CModule::IncludeModule('intranet'))
 		{
 			$result = [];
-			$iterator = CUser::GetList(($by="id"), ($order="asc"),
+			$iterator = CUser::GetList("id", "asc",
 				array('ACTIVE' => 'Y', '>UF_DEPARTMENT' => 0),
 				array('FIELDS' => array('ID'))
 			);
@@ -1954,7 +1950,7 @@ class CBPHelper
 				unset($iterator, $section, $filter);
 			}
 			$result = array();
-			$iterator = CUser::GetList(($by="id"), ($order="asc"),
+			$iterator = CUser::GetList("id", "asc",
 				array('ACTIVE' => 'Y', 'UF_DEPARTMENT' => $departmentIds),
 				array('FIELDS' => array('ID'))
 			);
@@ -1967,7 +1963,7 @@ class CBPHelper
 		if ($code == 'Dextranet' && CModule::IncludeModule('extranet'))
 		{
 			$result = array();
-			$iterator = CUser::GetList(($by="id"), ($order="asc"),
+			$iterator = CUser::GetList("id", "asc",
 				array(COption::GetOptionString("extranet", "extranet_public_uf_code", "UF_PUBLIC") => "1",
 					"!UF_DEPARTMENT" => false,
 					"GROUPS_ID" => array(CExtranet::GetExtranetUserGroupID())
@@ -2383,7 +2379,9 @@ class CBPHelper
 	{
 		CUtil::DecodeUriComponent($data);
 
-		foreach (['arWorkflowTemplate', 'arWorkflowParameters', 'arWorkflowVariables', 'arWorkflowGlobalConstants', 'arWorkflowConstants', 'USER_PARAMS'] as $k)
+		$jsonParams = ['arWorkflowTemplate', 'arWorkflowParameters', 'arWorkflowVariables', 'arWorkflowGlobalConstants', 'arWorkflowConstants', 'USER_PARAMS'];
+
+		foreach ($jsonParams as $k)
 		{
 			if (!isset($data[$k]) || !is_array($data[$k]))
 			{
@@ -2393,10 +2391,22 @@ class CBPHelper
 
 		if (mb_strtolower(LANG_CHARSET) != 'utf-8')
 		{
-			$data = static::decodeArrayKeys($data);
+			foreach ($data as $key => $value)
+			{
+				if (!in_array($key, $jsonParams))
+				{
+					$data[$key] = static::decodeArrayKeys($data[$key]);
+				}
+			}
 		}
 	}
 
+	/**
+	 * @deprecated
+	 * @param $item
+	 * @param false $reverse
+	 * @return array
+	 */
 	public static function decodeArrayKeys($item, $reverse = false)
 	{
 		$from = !$reverse ? 'UTF-8' : LANG_CHARSET;

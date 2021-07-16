@@ -27,6 +27,13 @@ class Landing extends \CModule
 
 	public $docRoot = '';
 	public $eventsData = [
+		'crm' => [
+			'onAfterCrmCompanyAdd' => ['\Bitrix\Landing\Connector\Crm', 'onAfterCompanyChange'],
+			'onAfterCrmCompanyUpdate' => ['\Bitrix\Landing\Connector\Crm', 'onAfterCompanyChange']
+		],
+		'iblock' => [
+			'onAfterIBlockSectionDelete' => ['\Bitrix\Landing\Connector\Iblock', 'onAfterIBlockSectionDelete']
+		],
 		'intranet' => [
 			'onBuildBindingMenu' => ['\Bitrix\Landing\Connector\Intranet', 'onBuildBindingMenu']
 		],
@@ -52,6 +59,9 @@ class Landing extends \CModule
 			'onRestApplicationConfigurationEntity' => ['\Bitrix\Landing\Transfer\AppConfiguration', 'getEntityList'],
 			'onRestApplicationConfigurationImport' => ['\Bitrix\Landing\Transfer\AppConfiguration', 'onEventImportController'],
 			'onRestApplicationConfigurationFinish' => ['\Bitrix\Landing\Transfer\AppConfiguration', 'onFinish']
+		],
+		'seo' => [
+			'onExtensionInstall' => ['\Bitrix\Landing\Hook\Page\PixelFb', 'changeBusinessPixel'],
 		],
 		'socialnetwork' => [
 			'onFillSocNetFeaturesList' => ['\Bitrix\Landing\Connector\SocialNetwork', 'onFillSocNetFeaturesList'],

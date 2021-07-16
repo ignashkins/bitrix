@@ -3,14 +3,17 @@ import {NotificationBar} from "./notificationbar";
 import {Database} from "./database";
 import {PublicationQueue} from "./publicationqueue";
 import {PostMenu} from "./menu/postmenu";
+import {PostFormManager} from "./postform";
 import {Post} from "./post";
 import {PinnedPanel} from "./pinned";
-import {Dom, Tag, Loc, Type, ajax, Runtime} from "main.core";
+import {Rating} from "./rating";
+import {ImportantManager} from "./important";
+import {Dom, Tag, Loc, Type, Runtime} from "main.core";
 import {BaseEvent, EventEmitter} from "main.core.events";
-
-import "mobile.imageviewer";
 import {Utils} from "mobile.utils";
 import {Ajax} from 'mobile.ajax';
+
+import 'mobile.imageviewer';
 
 class Feed
 {
@@ -46,7 +49,12 @@ class Feed
 			postItemInformMore: 'post-item-more',
 			postItemMore: 'post-more-block',
 			postItemPinnedBlock: 'post-item-pinned-block',
-			postItemPinActive: 'lenta-item-pin-active'
+			postItemPinActive: 'lenta-item-pin-active',
+			postItemGratitudeUsersSmallContainer: 'lenta-block-grat-users-small-cont',
+			postItemGratitudeUsersSmallHidden: 'lenta-block-grat-users-small-hidden',
+			postItemImportantUserList: 'post-item-important-list',
+
+			addPostButton: 'feed-add-post-button'
 		};
 
 		this.newPostContainer = null;
@@ -174,7 +182,10 @@ class Feed
 
 		DatabaseUnsentPostInstance.delete(groupId);
 
-		if (postId <= 0)
+		if (
+			postId <= 0
+			|| Type.isStringFilled(params.warningText)
+		)
 		{
 			return;
 		}
@@ -239,7 +250,17 @@ class Feed
 
 		params.callback = () =>
 		{
-			app.exec('showPostForm', oMSL.showNewPostForm());
+			if (BXMobileAppContext.getApiVersion() >= this.getApiVersion('layoutPostForm'))
+			{
+				PostFormManagerInstance.show({
+					pageId: this.getPageId(),
+					postId: 0
+				});
+			}
+			else
+			{
+				app.exec('showPostForm', oMSL.showNewPostForm());
+			}
 		};
 		this.showPostError(params);
 	}
@@ -443,6 +464,13 @@ class Feed
 			return;
 		}
 
+		const serverTimestamp = (
+			typeof (params.serverTimestamp) != 'undefined'
+			&& parseInt(params.serverTimestamp) > 0
+				? parseInt(params.serverTimestamp)
+				: 0
+		);
+
 		if (action === 'update')
 		{
 			let postContainer = document.getElementById('lenta_item_' + logId);
@@ -474,6 +502,22 @@ class Feed
 				this.processDetailBlock(postContainer, contentWrapper, `.${this.class.postItemTop}`);
 				this.processDetailBlock(postContainer, contentWrapper, `.${this.class.postItemPostBlock}`).then(() =>
 				{
+					const pageBlockNode = postContainer.querySelector(`.${this.class.postItemPostBlock}`);
+					const resultBlockNode = contentWrapper.querySelector(`.${this.class.postItemPostBlock}`);
+
+					if (pageBlockNode || resultBlockNode)
+					{
+						const pageClassList = this.filterPostBlockClassList(pageBlockNode.classList);
+						const resultClassList = this.filterPostBlockClassList(resultBlockNode.classList);
+
+						pageClassList.forEach((className) => {
+							pageBlockNode.classList.remove(className);
+						});
+						resultClassList.forEach((className) => {
+							pageBlockNode.classList.add(className);
+						});
+					}
+
 					BitrixMobile.LazyLoad.showImages();
 				});
 				this.processDetailBlock(postContainer, contentWrapper, `.${this.class.postItemAttachedFileWrap}`).then(() =>
@@ -489,9 +533,18 @@ class Feed
 
 				const contentPostItemTopWrap = contentWrapper.querySelector(`div.${this.class.postItemTopWrap}`);
 
-				Runtime.html(postContainer, contentPostItemTopWrap.innerHTML).then(() =>
-				{
+				Runtime.html(postContainer, contentPostItemTopWrap.innerHTML).then(() => {
+					oMSL.checkNodesHeight();
 					BitrixMobile.LazyLoad.showImages();
+
+					if (document.getElementById('framecache-block-feed'))
+					{
+						setTimeout(() => {
+							this.updateFrameCache({
+								timestamp: serverTimestamp
+							});
+						}, 750);
+					}
 				});
 			}
 
@@ -506,13 +559,6 @@ class Feed
 				const postNode = this.getNewPostContainer().querySelector(`div.${this.class.listPost}`);
 				Dom.style(this.getNewPostContainer(), 'height', `${postNode.scrollHeight + 12/*margin-bottom*/}px`);
 
-				const serverTimestamp = (
-					typeof (params.serverTimestamp) != 'undefined'
-					&& parseInt(params.serverTimestamp) > 0
-						? parseInt(params.serverTimestamp)
-						: 0
-				);
-
 				if (serverTimestamp > 0)
 				{
 					this.setOptions({
@@ -520,9 +566,14 @@ class Feed
 					});
 				}
 
-				this.updateFrameCache({
-					timestamp: serverTimestamp
-				});
+				oMSL.registerBlocksToCheck();
+				setTimeout(() => { oMSL.checkNodesHeight(); }, 100);
+
+				setTimeout(() => {
+					this.updateFrameCache({
+						timestamp: serverTimestamp
+					});
+				}, 750);
 			});
 		}
 
@@ -550,6 +601,28 @@ class Feed
 		}
 
 		itemNode.remove();
+	}
+
+	filterPostBlockClassList(classList)
+	{
+		const result = [];
+
+		Array.from(classList).forEach((className) => {
+			if (
+				className === 'info-block-background'
+				|| className === 'info-block-background-with-title'
+				|| className === 'info-block-gratitude'
+				|| className === 'info-block-important'
+				|| className === 'ui-livefeed-background'
+				|| className.match(/info-block-gratitude-(.+)/i)
+				|| className.match(/ui-livefeed-background-(.+)/i)
+			)
+			{
+				result.push(className);
+			}
+		});
+
+		return result;
 	}
 
 	handleInsertPostTransitionEnd(event)
@@ -754,6 +827,21 @@ class Feed
 			e.stopPropagation();
 			return e.preventDefault();
 		}
+		else if (e.target.classList.contains(this.class.addPostButton))
+		{
+			if (BXMobileAppContext.getApiVersion() >= this.getApiVersion('layoutPostForm'))
+			{
+				const formManager = new PostFormManager();
+				formManager.show({
+					pageId: this.getPageId(),
+					groupId: this.getOption('groupId', 0),
+				});
+			}
+			else
+			{
+				app.exec('showPostForm', oMSL.showNewPostForm());
+			}
+		}
 		else if (
 			(
 				e.target.closest(`.${this.class.listWrapper}`)
@@ -822,8 +910,31 @@ class Feed
 				|| e.target.closest(`.${this.class.postItemMore}`)
 			);
 
-			if (expand)
+			let postItemGratitudeUsersSmallContainer = null;
+			if (e.target.classList.contains(this.class.postItemGratitudeUsersSmallContainer))
 			{
+				postItemGratitudeUsersSmallContainer = e.target;
+			}
+			else
+			{
+				postItemGratitudeUsersSmallContainer = e.target.closest(`.${this.class.postItemGratitudeUsersSmallContainer}`);
+			}
+
+			if (
+				expand
+				|| Type.isDomNode(postItemGratitudeUsersSmallContainer)
+			)
+			{
+				if (Type.isDomNode(postItemGratitudeUsersSmallContainer))
+				{
+					postItemGratitudeUsersSmallContainer.style.display = 'none';
+					const postItemGratitudeUsersSmallHidden = postItemGratitudeUsersSmallContainer.parentNode.querySelector(`.${this.class.postItemGratitudeUsersSmallHidden}`);
+					if (postItemGratitudeUsersSmallHidden)
+					{
+						postItemGratitudeUsersSmallHidden.style.display = 'block';
+					}
+				}
+
 				const logId = this.getOption('logId', 0);
 				const post = new Post({
 					logId: logId
@@ -833,6 +944,52 @@ class Feed
 
 				e.stopPropagation();
 				return e.preventDefault();
+			}
+
+			let importantUserListNode = null;
+			if (e.target.classList.contains(this.class.postItemImportantUserList))
+			{
+				importantUserListNode = e.target;
+			}
+			else
+			{
+				importantUserListNode = e.target.closest(`.${this.class.postItemImportantUserList}`)
+			}
+
+			if (importantUserListNode)
+			{
+				const inputNode = importantUserListNode.parentNode.querySelector('input');
+				let postId = 0;
+				if (Type.isDomNode(inputNode))
+				{
+					postId = parseInt(inputNode.getAttribute('bx-data-post-id'));
+				}
+
+				if (postId > 0)
+				{
+					app.exec("openComponent", {
+						name: "JSStackComponent",
+						componentCode: "livefeed.important.list",
+						scriptPath: "/mobileapp/jn/livefeed.important.list/?version=1.0.0",
+
+						params: {
+							POST_ID: postId,
+							SETTINGS: this.getOption('importantData', {}),
+						},
+						rootWidget: {
+							name: 'list',
+							settings: {
+								objectName: "livefeedImportantListWidget",
+								title: BX.message('MOBILE_EXT_LIVEFEED_USERS_LIST_TITLE'),
+								modal: false,
+								backdrop: {
+									mediumPositionPercent: 75
+								}
+							}
+						}
+					}, false);
+
+				}
 			}
 		}
 	}
@@ -1017,6 +1174,38 @@ class Feed
 			});
 		}
 	}
+
+	getApiVersion(feature)
+	{
+		let result = 0;
+		switch (feature)
+		{
+			case 'layoutPostForm':
+				result = 37;
+				break;
+			default:
+		}
+
+		return result;
+	}
+
+	sendErrorEval(script)
+	{
+		BX.evalGlobal('try { ' + script + ' } catch (e) { this.sendError(e.message, e.name, e.number); }');
+	};
+
+	sendError(message, url, linenumber)
+	{
+		Ajax.runAction('socialnetwork.api.livefeed.mobileLogError', {
+			data: {
+				message: message,
+				url: url,
+				lineNumber: linenumber,
+			}
+		}).then((response) => {
+		}, (response) => {
+		});
+	}
 }
 
 const Instance = new Feed();
@@ -1025,7 +1214,10 @@ const NotificationBarInstance = new NotificationBar();
 const DatabaseUnsentPostInstance = new Database();
 const PublicationQueueInstance = new PublicationQueue();
 const PostMenuInstance = new PostMenu();
+const PostFormManagerInstance = new PostFormManager();
 const PinnedPanelInstance = new PinnedPanel();
+const RatingInstance = new Rating();
+const ImportantManagerInstance = new ImportantManager();
 
 export {
 	Instance,
@@ -1034,5 +1226,8 @@ export {
 	DatabaseUnsentPostInstance,
 	PublicationQueueInstance,
 	PostMenuInstance,
-	PinnedPanelInstance
+	PostFormManagerInstance,
+	PinnedPanelInstance,
+	RatingInstance,
+	ImportantManagerInstance,
 };

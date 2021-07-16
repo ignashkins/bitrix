@@ -9,7 +9,7 @@ use Bitrix\DocumentGenerator\DataProviderManager;
 use Bitrix\DocumentGenerator\Nameable;
 use Bitrix\DocumentGenerator\Value\Name;
 
-class Contact extends CrmEntityDataProvider implements Nameable
+class Contact extends CrmEntityDataProvider
 {
 	protected $bankDetailIds;
 	protected $nameData = [];
@@ -283,13 +283,15 @@ class Contact extends CrmEntityDataProvider implements Nameable
 	 */
 	public function getHonorificName()
 	{
+		$value = null;
+
 		if($this->data['HONORIFIC'])
 		{
 			$all = \CCrmStatus::GetStatusList('HONORIFIC');
-			return $all[$this->data['HONORIFIC']];
+			$value = $all[$this->data['HONORIFIC']];
 		}
 
-		return '';
+		return (string)$value;
 	}
 
 	/**

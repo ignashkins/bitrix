@@ -1,11 +1,12 @@
 <?php
 $MESS["TASKS_COUNTER_EMPTY"] = "Немає завдань, що вимагають оперативної реакції";
-$MESS["TASKS_COUNTER_EXPIRED_CANDIDATES_PLURAL_0"] = "майже прострочено";
+$MESS["TASKS_COUNTER_EXPIRED_CANDIDATES_PLURAL_0"] = "майже протерміноване";
 $MESS["TASKS_COUNTER_EXPIRED_CANDIDATES_PLURAL_1"] = "майже протерміновані";
 $MESS["TASKS_COUNTER_EXPIRED_CANDIDATES_PLURAL_2"] = "майже протерміновані";
-$MESS["TASKS_COUNTER_EXPIRED_PLURAL_0"] = "прострочено";
+$MESS["TASKS_COUNTER_EXPIRED_PLURAL_0"] = "протерміновано";
 $MESS["TASKS_COUNTER_EXPIRED_PLURAL_1"] = "протерміновані";
 $MESS["TASKS_COUNTER_EXPIRED_PLURAL_2"] = "протерміновані";
+$MESS["TASKS_COUNTER_FOREIGN"] = "Інші завдання:";
 $MESS["TASKS_COUNTER_NEW_COMMENTS_PLURAL_0"] = "коментар";
 $MESS["TASKS_COUNTER_NEW_COMMENTS_PLURAL_1"] = "коментарі";
 $MESS["TASKS_COUNTER_NEW_COMMENTS_PLURAL_2"] = "коментарі";

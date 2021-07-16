@@ -99,6 +99,7 @@
 	BX.Call.Notification.prototype.createPopup = function(content)
 	{
 		this.popup = new BX.PopupWindow("bx-messenger-call-notify", null, {
+			targetContainer: document.body,
 			content: content,
 			closeIcon: false,
 			noAllPaddings: true,
@@ -231,7 +232,7 @@
 				BX.create("div", {
 					props: {className: "bx-messenger-call-window-background"},
 					style: {
-						backgroundImage: 'url(' + backgroundImage + ')'
+						backgroundImage: "url('" + backgroundImage + "')"
 					},
 				}),
 				BX.create("div", {

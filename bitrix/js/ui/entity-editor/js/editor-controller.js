@@ -336,7 +336,26 @@ if (typeof BX.UI.EntityEditorController === 'undefined')
 			}
 		},
 
+		onReload: function()
+		{
+			if (!this._isChanged)
+			{
+				this.onAfterSave();
+			}
+		},
+
 		onBeforeSaveControl: function(data)
+		{
+			return this.onBeforeSaveControl(data);
+		},
+
+		/**
+		 * @deprecated Use onBeforeSaveControl instead
+		 *
+		 * This method with misprint left for backward compatibility and
+		 * will be removed in future
+		 */
+		onBeforesSaveControl: function(data)
 		{
 			return data;
 		}

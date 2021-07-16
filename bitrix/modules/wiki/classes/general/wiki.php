@@ -393,7 +393,7 @@ class CWiki
 		}
 
 		$arAddImage = array_diff(array_keys($arCurImagesNew), array_keys($arCurImages));
-		list(, $imgId) = each($arAddImage);
+		$imgId = current($arAddImage);
 		return $imgId;
 	}
 
@@ -659,7 +659,7 @@ class CWiki
 		return isset($arElement['UF_WIKI_INDEX']['VALUE']) ? $arElement['UF_WIKI_INDEX']['VALUE'] : '';
 	}
 
-	function GetCategory($NAME, $IBLOCK_ID)
+	public static function GetCategory($NAME, $IBLOCK_ID)
 	{
 		global $arParams;
 
@@ -887,19 +887,37 @@ class CWiki
 				{
 					$sTag = trim($sTag);
 					$arTag = array('NAME' => $sTag);
-					if (!empty($arComponentParams) && isset($arComponentParams['PATH_TO_SEARCH']))
+					if (
+						!empty($arComponentParams)
+						&& (
+							isset($arComponentParams['PATH_TO_SEARCH'])
+							|| isset($arComponentParams['~PATH_TO_TAG'])
+						)
+					)
 					{
-						$arP = $arComponentParams['IN_COMPLEX'] == 'Y' && $arComponentParams['SEF_MODE'] == 'N' ? array($arComponentParams['OPER_VAR'] => 'search') : array();
-						$arP['tags'] = rawurlencode($sTag);
-						$arTag['LINK'] = CHTTP::urlAddParams(
-									CComponentEngine::MakePathFromTemplate($arComponentParams['PATH_TO_SEARCH'],
-										array(
-											'wiki_name' => $arComponentParams['ELEMENT_NAME'],
-											'group_id' => CWikiSocnet::$iSocNetId
-										)
-									),
-									$arP
-								);
+						if (isset($arComponentParams['PATH_TO_TAG']))
+						{
+							$arTag['LINK'] = \CComponentEngine::MakePathFromTemplate($arComponentParams['~PATH_TO_TAG'],
+								[
+									'group_id' => CWikiSocnet::$iSocNetId,
+									'tag' => rawurlencode($sTag)
+								]
+							);
+						}
+						else
+						{
+							$arP = $arComponentParams['IN_COMPLEX'] == 'Y' && $arComponentParams['SEF_MODE'] == 'N' ? array($arComponentParams['OPER_VAR'] => 'search') : array();
+							$arP['tags'] = rawurlencode($sTag);
+							$arTag['LINK'] = CHTTP::urlAddParams(
+								CComponentEngine::MakePathFromTemplate($arComponentParams['PATH_TO_SEARCH'],
+									array(
+										'wiki_name' => $arComponentParams['ELEMENT_NAME'],
+										'group_id' => CWikiSocnet::$iSocNetId
+									)
+								),
+								$arP
+							);
+						}
 					}
 					$arResult['_TAGS'][] = $arTag;
 				}

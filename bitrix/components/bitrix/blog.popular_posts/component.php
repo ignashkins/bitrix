@@ -87,7 +87,10 @@ if ($arParams["CACHE_TIME"] > 0 && $cache->InitCache($arParams["CACHE_TIME"], $c
 	$Vars = $cache->GetVars();
 	foreach($Vars["arResult"] as $k=>$v)
 		$arResult[$k] = $v;
-	CBitrixComponentTemplate::ApplyCachedData($Vars["templateCachedData"]);
+
+	$template = new CBitrixComponentTemplate();
+	$template->ApplyCachedData($Vars["templateCachedData"]);
+
 	$cache->Output();
 }
 else
@@ -188,6 +191,9 @@ else
 		while ($arPost = $dbPosts->Fetch())
 		{
 			$arTmp = $arPost;
+			$arPost["TITLE"] = \Bitrix\Main\Text\Emoji::decode($arPost["TITLE"]);
+			$arPost["DETAIL_TEXT"] = \Bitrix\Main\Text\Emoji::decode($arPost["DETAIL_TEXT"]);
+
 			$arTmp["~BLOG_USER_ALIAS"] = $arPost["BLOG_USER_ALIAS"];
 			$arTmp["BLOG_USER_ALIAS"] = htmlspecialcharsbx($arPost["BLOG_USER_ALIAS"]);
 			$arTmp["~TITLE"] = $arPost["TITLE"];
@@ -234,7 +240,7 @@ else
 			}
 			else
 			{
-				$arTmp["TITLE"] = ($arTmp["MICRO"] == "Y" ? htmlspecialcharsback($arPost["TITLE"]) : $arPost["TITLE"]);
+				$arTmp["TITLE"] = ($arTmp["MICRO"] === "Y" ? html_entity_decode(htmlspecialcharsback($arPost["TITLE"]), ENT_QUOTES) : $arPost["TITLE"]);
 				$arTmp["TITLE"] = TruncateText($arTmp["TITLE"], $arParams["MESSAGE_LENGTH"]);
 			}
 
@@ -290,7 +296,7 @@ else
 
 		if(!empty($arUsrTmp))
 		{
-			$dbUser = CUser::GetList($b = "ID", $o = "DESC", array("ID" => implode(' | ', $arUsrTmp)), array("FIELDS" => array("ID", "LOGIN", "NAME", "LAST_NAME", "SECOND_NAME", "PERSONAL_PHOTO")));
+			$dbUser = CUser::GetList("ID", "DESC", array("ID" => implode(' | ', $arUsrTmp)), array("FIELDS" => array("ID", "LOGIN", "NAME", "LAST_NAME", "SECOND_NAME", "PERSONAL_PHOTO")));
 			while($arUser = $dbUser->GetNext())
 			{
 				$urlToAuthor = CComponentEngine::MakePathFromTemplate($arParams["PATH_TO_USER"], array("user_id" => $arUser["ID"]));

@@ -1,11 +1,9 @@
 this.BX = this.BX || {};
 this.BX.Intranet = this.BX.Intranet || {};
-(function (exports,main_core,main_core_events) {
+(function (exports,main_core,ui_entitySelector,main_core_events) {
 	'use strict';
 
-	var Submit =
-	/*#__PURE__*/
-	function (_EventEmitter) {
+	var Submit = /*#__PURE__*/function (_EventEmitter) {
 	  babelHelpers.inherits(Submit, _EventEmitter);
 
 	  function Submit(parent) {
@@ -15,9 +13,9 @@ this.BX.Intranet = this.BX.Intranet || {};
 	    _this = babelHelpers.possibleConstructorReturn(this, babelHelpers.getPrototypeOf(Submit).call(this));
 	    _this.parent = parent;
 
-	    _this.setEventNamespace('BX.Intranet.Invitation.Submit');
+	    _this.setEventNamespace("BX.Intranet.Invitation.Submit");
 
-	    _this.parent.subscribe('onButtonClick', function (event) {});
+	    _this.parent.subscribe("onButtonClick", function (event) {});
 
 	    return _this;
 	  }
@@ -73,38 +71,18 @@ this.BX.Intranet = this.BX.Intranet || {};
 	      return [items, errorInputData];
 	    }
 	  }, {
-	    key: "prepareGroupAndDepartmentData",
-	    value: function prepareGroupAndDepartmentData(inputs, form) {
-	      var groups = [];
-	      var departments = [];
+	    key: "getGroupAndDepartmentData",
+	    value: function getGroupAndDepartmentData(requestData) {
+	      var selector = this.parent.selector;
+	      var selectorItems = selector.getItems();
 
-	      function checkValue(element) {
-	        var value = element.value;
-
-	        if (value.match(/^SG(\d+)$/)) {
-	          groups.push(value);
-	        } else if (value.match(/^DR(\d+)$/)) {
-	          departments.push(parseInt(value.replace('DR', '')));
-	        } else if (value.match(/^D(\d+)$/)) {
-	          departments.push(parseInt(value.replace('D', '')));
-	        }
+	      if (selectorItems["departments"].length > 0) {
+	        requestData["UF_DEPARTMENT"] = selectorItems["departments"];
 	      }
 
-	      for (var i = 0, len = inputs.length; i < len; i++) {
-	        if (main_core.Type.isArrayLike(inputs[i])) //check RadioNodeList
-	          {
-	            inputs[i].forEach(function (element) {
-	              checkValue(element);
-	            });
-	          } else {
-	          checkValue(inputs[i]);
-	        }
+	      if (selectorItems["projects"].length > 0) {
+	        requestData["SONET_GROUPS_CODE"] = selectorItems["projects"];
 	      }
-
-	      return {
-	        groups: groups,
-	        departments: departments
-	      };
 	    }
 	  }, {
 	    key: "submitInvite",
@@ -121,7 +99,7 @@ this.BX.Intranet = this.BX.Intranet || {};
 	            error: main_core.Loc.getMessage("INTRANET_INVITE_DIALOG_EMAIL_OR_PHONE_VALIDATE_ERROR") + ": " + errorInputData.join(', ')
 	          }
 	        });
-	        this.emit('onInputError', event);
+	        this.emit("onInputError", event);
 	        return;
 	      }
 
@@ -132,14 +110,18 @@ this.BX.Intranet = this.BX.Intranet || {};
 	          }
 	        });
 
-	        this.emit('onInputError', _event);
+	        this.emit("onInputError", _event);
 	        return;
 	      }
 
 	      var requestData = {
 	        "ITEMS": items
 	      };
-	      this.sendAction("invite", requestData);
+	      var analyticsLabel = {
+	        "INVITATION_TYPE": "invite",
+	        "INVITATION_COUNT": items.length
+	      };
+	      this.sendAction("invite", requestData, analyticsLabel);
 	    }
 	  }, {
 	    key: "submitInviteWithGroupDp",
@@ -161,35 +143,19 @@ this.BX.Intranet = this.BX.Intranet || {};
 	            error: main_core.Loc.getMessage("INTRANET_INVITE_DIALOG_EMAIL_OR_PHONE_EMPTY_ERROR")
 	          }
 	        });
-	        this.emit('onInputError', event);
+	        this.emit("onInputError", event);
 	        return;
 	      }
 
 	      var requestData = {
 	        "ITEMS": items
 	      };
-
-	      if (!main_core.Type.isUndefined(inviteWithGroupDpForm["GROUP_AND_DEPARTMENT[]"])) {
-	        var arGroupsAndDepartmentInput;
-
-	        if (typeof inviteWithGroupDpForm["GROUP_AND_DEPARTMENT[]"].value == 'undefined') {
-	          arGroupsAndDepartmentInput = inviteWithGroupDpForm["GROUP_AND_DEPARTMENT[]"];
-	        } else {
-	          arGroupsAndDepartmentInput = [inviteWithGroupDpForm["GROUP_AND_DEPARTMENT[]"]];
-	        }
-
-	        var groupsAndDepartmentId = this.prepareGroupAndDepartmentData(arGroupsAndDepartmentInput, inviteWithGroupDpForm);
-
-	        if (main_core.Type.isArray(groupsAndDepartmentId["groups"])) {
-	          requestData["SONET_GROUPS_CODE"] = groupsAndDepartmentId["groups"];
-	        }
-
-	        if (main_core.Type.isArray(groupsAndDepartmentId["departments"])) {
-	          requestData["UF_DEPARTMENT"] = groupsAndDepartmentId["departments"];
-	        }
-	      }
-
-	      this.sendAction("inviteWithGroupDp", requestData);
+	      this.getGroupAndDepartmentData(requestData);
+	      var analyticsLabel = {
+	        "INVITATION_TYPE": "withGroupOrDepartment",
+	        "INVITATION_COUNT": items.length
+	      };
+	      this.sendAction("inviteWithGroupDp", requestData, analyticsLabel);
 	    }
 	  }, {
 	    key: "submitSelf",
@@ -197,7 +163,7 @@ this.BX.Intranet = this.BX.Intranet || {};
 	      var selfForm = this.parent.contentBlocks["self"].querySelector("form");
 	      var obRequestData = {
 	        "allow_register": selfForm["allow_register"].checked ? "Y" : "N",
-	        'allow_register_confirm': selfForm["allow_register_confirm"].checked ? "Y" : "N",
+	        "allow_register_confirm": selfForm["allow_register_confirm"].checked ? "Y" : "N",
 	        "allow_register_secret": selfForm["allow_register_secret"].value,
 	        "allow_register_whitelist": selfForm["allow_register_whitelist"].value
 	      };
@@ -223,31 +189,19 @@ this.BX.Intranet = this.BX.Intranet || {};
 	            error: main_core.Loc.getMessage("INTRANET_INVITE_DIALOG_EMAIL_OR_PHONE_EMPTY_ERROR")
 	          }
 	        });
-	        this.emit('onInputError', event);
+	        this.emit("onInputError", event);
 	        return;
 	      }
 
 	      var requestData = {
 	        "ITEMS": items
 	      };
-
-	      if (!main_core.Type.isUndefined(extranetForm["GROUP_AND_DEPARTMENT[]"])) {
-	        var arGroupsInput;
-
-	        if (typeof extranetForm["GROUP_AND_DEPARTMENT[]"].value == 'undefined') {
-	          arGroupsInput = extranetForm["GROUP_AND_DEPARTMENT[]"];
-	        } else {
-	          arGroupsInput = [extranetForm["GROUP_AND_DEPARTMENT[]"]];
-	        }
-
-	        var groupsAndDepartmentId = this.prepareGroupAndDepartmentData(arGroupsInput, extranetForm);
-
-	        if (main_core.Type.isArray(groupsAndDepartmentId["groups"])) {
-	          requestData["SONET_GROUPS_CODE"] = groupsAndDepartmentId["groups"];
-	        }
-	      }
-
-	      this.sendAction("extranet", requestData);
+	      this.getGroupAndDepartmentData(requestData);
+	      var analyticsLabel = {
+	        "INVITATION_TYPE": "extranet",
+	        "INVITATION_COUNT": items.length
+	      };
+	      this.sendAction("extranet", requestData, analyticsLabel);
 	    }
 	  }, {
 	    key: "submitIntegrator",
@@ -256,7 +210,10 @@ this.BX.Intranet = this.BX.Intranet || {};
 	      var obRequestData = {
 	        "integrator_email": integratorForm["integrator_email"].value
 	      };
-	      this.sendAction("inviteIntegrator", obRequestData);
+	      var analyticsLabel = {
+	        "INVITATION_TYPE": "integrator"
+	      };
+	      this.sendAction("inviteIntegrator", obRequestData, analyticsLabel);
 	    }
 	  }, {
 	    key: "submitMassInvite",
@@ -265,7 +222,10 @@ this.BX.Intranet = this.BX.Intranet || {};
 	      var obRequestData = {
 	        "ITEMS": massInviteForm["mass_invite_emails"].value
 	      };
-	      this.sendAction("massInvite", obRequestData);
+	      var analyticsLabel = {
+	        "INVITATION_TYPE": "mass"
+	      };
+	      this.sendAction("massInvite", obRequestData, analyticsLabel);
 	    }
 	  }, {
 	    key: "submitAdd",
@@ -278,38 +238,22 @@ this.BX.Intranet = this.BX.Intranet || {};
 	        "ADD_POSITION": addForm["ADD_POSITION"].value,
 	        "ADD_SEND_PASSWORD": addForm["ADD_SEND_PASSWORD"] && !!addForm["ADD_SEND_PASSWORD"].checked ? addForm["ADD_SEND_PASSWORD"].value : "N"
 	      };
-
-	      if (!main_core.Type.isUndefined(addForm["GROUP_AND_DEPARTMENT[]"])) {
-	        var arGroupsAndDepartmentInput;
-
-	        if (typeof addForm["GROUP_AND_DEPARTMENT[]"].value == 'undefined') {
-	          arGroupsAndDepartmentInput = addForm["GROUP_AND_DEPARTMENT[]"];
-	        } else {
-	          arGroupsAndDepartmentInput = [addForm["GROUP_AND_DEPARTMENT[]"]];
-	        }
-
-	        var groupsAndDepartmentId = this.prepareGroupAndDepartmentData(arGroupsAndDepartmentInput, addForm);
-
-	        if (main_core.Type.isArray(groupsAndDepartmentId["groups"])) {
-	          requestData["SONET_GROUPS_CODE"] = groupsAndDepartmentId["groups"];
-	        }
-
-	        if (main_core.Type.isArray(groupsAndDepartmentId["departments"])) {
-	          requestData["DEPARTMENT_ID"] = groupsAndDepartmentId["departments"];
-	        }
-	      }
-
-	      this.sendAction("add", requestData);
+	      this.getGroupAndDepartmentData(requestData);
+	      var analyticsLabel = {
+	        "INVITATION_TYPE": "add"
+	      };
+	      this.sendAction("add", requestData, analyticsLabel);
 	    }
 	  }, {
 	    key: "sendAction",
-	    value: function sendAction(action, requestData) {
+	    value: function sendAction(action, requestData, analyticsLabel) {
 	      this.disableSubmitButton(true);
 	      requestData["userOptions"] = this.parent.userOptions;
 	      BX.ajax.runComponentAction(this.parent.componentName, action, {
 	        signedParameters: this.parent.signedParameters,
-	        mode: 'ajax',
-	        data: requestData
+	        mode: "ajax",
+	        data: requestData,
+	        analyticsLabel: analyticsLabel
 	      }).then(function (response) {
 	        this.disableSubmitButton(false);
 
@@ -325,7 +269,7 @@ this.BX.Intranet = this.BX.Intranet || {};
 	        this.disableSubmitButton(false);
 
 	        if (response.data == "user_limit") {
-	          B24.licenseInfoPopup.show('featureID', BX.message("BX24_INVITE_DIALOG_USERS_LIMIT_TITLE"), BX.message("BX24_INVITE_DIALOG_USERS_LIMIT_TEXT"));
+	          B24.licenseInfoPopup.show("featureID", BX.message("BX24_INVITE_DIALOG_USERS_LIMIT_TITLE"), BX.message("BX24_INVITE_DIALOG_USERS_LIMIT_TEXT"));
 	        } else {
 	          this.parent.showErrorMessage(response.errors[0].message);
 	        }
@@ -341,17 +285,15 @@ this.BX.Intranet = this.BX.Intranet || {};
 	      }
 
 	      if (isDisable) {
-	        main_core.Dom.addClass(button, "ui-btn-wait");
-	        button.style.cursor = 'auto';
+	        main_core.Dom.addClass(button, ["ui-btn-wait", "invite-cursor-auto"]);
 	      } else {
-	        main_core.Dom.removeClass(button, "ui-btn-wait");
-	        button.style.cursor = 'pointer';
+	        main_core.Dom.removeClass(button, ["ui-btn-wait", "invite-cursor-auto"]);
 	      }
 	    }
 	  }, {
 	    key: "sendSuccessEvent",
 	    value: function sendSuccessEvent(users) {
-	      BX.SidePanel.Instance.postMessageAll(window, 'BX.Intranet.Invitation:onAdd', {
+	      BX.SidePanel.Instance.postMessageAll(window, "BX.Intranet.Invitation:onAdd", {
 	        users: users
 	      });
 	    }
@@ -359,9 +301,7 @@ this.BX.Intranet = this.BX.Intranet || {};
 	  return Submit;
 	}(main_core_events.EventEmitter);
 
-	var SelfRegister =
-	/*#__PURE__*/
-	function () {
+	var SelfRegister = /*#__PURE__*/function () {
 	  function SelfRegister(parent) {
 	    babelHelpers.classCallCheck(this, SelfRegister);
 	    this.parent = parent;
@@ -380,24 +320,46 @@ this.BX.Intranet = this.BX.Intranet || {};
 	      var regenerateButton = this.selfBlock.querySelector("[data-role='selfRegenerateSecretButton']");
 
 	      if (main_core.Type.isDomNode(regenerateButton)) {
-	        main_core.Event.bind(regenerateButton, 'click', BX.delegate(function () {
+	        main_core.Event.bind(regenerateButton, 'click', function () {
+	          _this.parent.activateButton();
+
 	          _this.regenerateSecret(_this.parent.regenerateUrlBase);
-	        }, this));
+	        });
 	      }
 
 	      var copyRegisterUrlButton = this.selfBlock.querySelector("[data-role='copyRegisterUrlButton']");
 
 	      if (main_core.Type.isDomNode(copyRegisterUrlButton)) {
-	        main_core.Event.bind(copyRegisterUrlButton, 'click', BX.delegate(function () {
+	        main_core.Event.bind(copyRegisterUrlButton, 'click', function () {
 	          _this.copyRegisterUrl();
-	        }, this));
+	        });
 	      }
 
 	      var selfToggleSettingsButton = this.selfBlock.querySelector("[data-role='selfToggleSettingsButton']");
 
 	      if (main_core.Type.isDomNode(selfToggleSettingsButton)) {
 	        main_core.Event.bind(selfToggleSettingsButton, 'change', function () {
+	          _this.parent.activateButton();
+
 	          _this.toggleSettings(selfToggleSettingsButton);
+	        });
+	      }
+
+	      var allowRegisterConfirm = this.selfBlock.querySelector("[data-role='allowRegisterConfirm']");
+
+	      if (main_core.Type.isDomNode(allowRegisterConfirm)) {
+	        main_core.Event.bind(allowRegisterConfirm, 'change', function () {
+	          _this.parent.activateButton();
+
+	          _this.toggleWhiteList(allowRegisterConfirm);
+	        });
+	      }
+
+	      var selfWhiteList = this.selfBlock.querySelector("[data-role='selfWhiteList']");
+
+	      if (main_core.Type.isDomNode(selfWhiteList)) {
+	        main_core.Event.bind(selfWhiteList, 'input', function () {
+	          _this.parent.activateButton();
 	        });
 	      }
 	    }
@@ -477,6 +439,15 @@ this.BX.Intranet = this.BX.Intranet || {};
 	        main_core.Dom.style(settingsBlock, 'display', inputElement.checked ? 'block' : 'none');
 	      }
 	    }
+	  }, {
+	    key: "toggleWhiteList",
+	    value: function toggleWhiteList(inputElement) {
+	      var selfWhiteList = this.selfBlock.querySelector("[data-role='selfWhiteList']");
+
+	      if (main_core.Type.isDomNode(selfWhiteList)) {
+	        main_core.Dom.style(selfWhiteList, 'display', inputElement.checked ? 'block' : 'none');
+	      }
+	    }
 	  }]);
 	  return SelfRegister;
 	}();
@@ -490,9 +461,7 @@ this.BX.Intranet = this.BX.Intranet || {};
 
 	  return data;
 	}
-	var Phone =
-	/*#__PURE__*/
-	function () {
+	var Phone = /*#__PURE__*/function () {
 	  function Phone(parent) {
 	    babelHelpers.classCallCheck(this, Phone);
 	    this.parent = parent;
@@ -603,9 +572,7 @@ this.BX.Intranet = this.BX.Intranet || {};
 
 	  return data;
 	}
-	var Row =
-	/*#__PURE__*/
-	function () {
+	var Row = /*#__PURE__*/function () {
 	  function Row(parent, params) {
 	    babelHelpers.classCallCheck(this, Row);
 	    this.parent = parent;
@@ -756,9 +723,91 @@ this.BX.Intranet = this.BX.Intranet || {};
 	  return Row;
 	}();
 
-	var Form =
-	/*#__PURE__*/
-	function (_EventEmitter) {
+	var Selector = /*#__PURE__*/function () {
+	  function Selector(parent, params) {
+	    babelHelpers.classCallCheck(this, Selector);
+	    this.parent = parent;
+	    this.contentBlock = params.contentBlock;
+	    this.options = params.options;
+	    this.entities = [];
+	    this.prepareOptions();
+	  }
+
+	  babelHelpers.createClass(Selector, [{
+	    key: "prepareOptions",
+	    value: function prepareOptions() {
+	      for (var type in this.options) {
+	        if (!this.options.hasOwnProperty(type)) {
+	          continue;
+	        }
+
+	        if (type === "department" && !!this.options[type]) {
+	          this.entities.push({
+	            id: "department",
+	            options: {
+	              selectMode: "departmentsOnly",
+	              allowSelectRootDepartment: true
+	            }
+	          });
+	        }
+
+	        if (type === "project" && !!this.options[type]) {
+	          var optionValue = {
+	            id: "project",
+	            options: {
+	              fillRecentTab: true
+	            }
+	          };
+
+	          if (this.options[type] === "extranet") {
+	            optionValue["options"]["extranet"] = true;
+	          }
+
+	          this.entities.push(optionValue);
+	        }
+	      }
+	    }
+	  }, {
+	    key: "render",
+	    value: function render() {
+	      this.tagSelector = new ui_entitySelector.TagSelector({
+	        dialogOptions: {
+	          entities: this.entities,
+	          context: 'INTRANET_INVITATION'
+	        }
+	      });
+
+	      if (main_core.Type.isDomNode(this.contentBlock)) {
+	        main_core.Dom.clean(this.contentBlock);
+	        this.tagSelector.renderTo(this.contentBlock);
+	      }
+	    }
+	  }, {
+	    key: "getItems",
+	    value: function getItems() {
+	      var departments = [];
+	      var projects = [];
+	      var tagSelectorItems = this.tagSelector.getDialog().getSelectedItems();
+	      tagSelectorItems.forEach(function (item) {
+	        var id = parseInt(item.getId());
+	        var type = item.getEntityId();
+
+	        if (type === "department") {
+	          departments.push(id);
+	        } else if (type === "project") {
+	          projects.push(id);
+	        }
+	      });
+	      return {
+	        departments: departments,
+	        projects: projects
+	      };
+	    }
+	  }]);
+	  return Selector;
+	}();
+
+	var Form = /*#__PURE__*/function (_EventEmitter) {
 	  babelHelpers.inherits(Form, _EventEmitter);
 
 	  function Form(formParams) {
@@ -814,10 +863,25 @@ this.BX.Intranet = this.BX.Intranet || {};
 	      _this.selfRegister = new SelfRegister(babelHelpers.assertThisInitialized(_this));
 	    }
 
+	    _this.arrowBox = document.querySelector('.invite-wrap-decal-arrow');
+
+	    if (main_core.Type.isDomNode(_this.arrowBox)) {
+	      _this.arrowRect = _this.arrowBox.getBoundingClientRect();
+	      _this.arrowHeight = _this.arrowRect.height;
+
+	      _this.setSetupArrow();
+	    }
+
 	    return _this;
 	  }
 
 	  babelHelpers.createClass(Form, [{
+	    key: "renderSelector",
+	    value: function renderSelector(params) {
+	      this.selector = new Selector(this, params);
+	      this.selector.render();
+	    }
+	  }, {
 	    key: "changeContent",
 	    value: function changeContent(action) {
 	      this.hideErrorMessage();
@@ -839,10 +903,34 @@ this.BX.Intranet = this.BX.Intranet || {};
 	              row.renderInviteInputs(5);
 	            } else if (action === 'invite-with-group-dp') {
 	              row.renderInviteInputs(3);
+	              var selectorParams = {
+	                contentBlock: this.contentBlocks[action].querySelector("[data-role='entity-selector-container']"),
+	                options: {
+	                  department: true,
+	                  project: true
+	                }
+	              };
+	              this.renderSelector(selectorParams);
 	            } else if (action === 'extranet') {
 	              row.renderInviteInputs(3);
+	              var _selectorParams = {
+	                contentBlock: this.contentBlocks[action].querySelector("[data-role='entity-selector-container']"),
+	                options: {
+	                  department: false,
+	                  project: "extranet"
+	                }
+	              };
+	              this.renderSelector(_selectorParams);
 	            } else if (action === "add") {
 	              row.renderRegisterInputs();
+	              var _selectorParams2 = {
+	                contentBlock: this.contentBlocks[action].querySelector("[data-role='entity-selector-container']"),
+	                options: {
+	                  department: true,
+	                  project: true
+	                }
+	              };
+	              this.renderSelector(_selectorParams2);
 	            } else if (action === "integrator") {
 	              row.renderIntegratorInput();
 	            }
@@ -869,6 +957,8 @@ this.BX.Intranet = this.BX.Intranet || {};
 	        return;
 	      }
 
+	      this.activateButton();
+
 	      if (action === "invite") {
 	        this.button.innerText = main_core.Loc.getMessage('BX24_INVITE_DIALOG_ACTION_INVITE');
 	        main_core.Event.bind(this.button, 'click', function () {
@@ -891,8 +981,11 @@ this.BX.Intranet = this.BX.Intranet || {};
 	        });
 	      } else if (action === "self") {
 	        this.button.innerText = main_core.Loc.getMessage('BX24_INVITE_DIALOG_ACTION_SAVE');
+	        this.disableButton();
 	        main_core.Event.bind(this.button, 'click', function () {
-	          _this2.submit.submitSelf();
+	          if (_this2.isButtonActive()) {
+	            _this2.submit.submitSelf();
+	          }
 	        });
 	      } else if (action === "integrator") {
 	        this.button.innerText = main_core.Loc.getMessage('BX24_INVITE_DIALOG_ACTION_INVITE');
@@ -910,6 +1003,21 @@ this.BX.Intranet = this.BX.Intranet || {};
 	          BX.fireEvent(_this2.menuItems[0], 'click');
 	        });
 	      }
+	    }
+	  }, {
+	    key: "disableButton",
+	    value: function disableButton() {
+	      main_core.Dom.addClass(this.button, "ui-btn-disabled");
+	    }
+	  }, {
+	    key: "activateButton",
+	    value: function activateButton() {
+	      main_core.Dom.removeClass(this.button, "ui-btn-disabled");
+	    }
+	  }, {
+	    key: "isButtonActive",
+	    value: function isButtonActive() {
+	      return !main_core.Dom.hasClass(this.button, "ui-btn-disabled");
 	    }
 	  }, {
 	    key: "showSuccessMessage",
@@ -953,11 +1061,53 @@ this.BX.Intranet = this.BX.Intranet || {};
 	        this.errorMessageBlock.style.display = "none";
 	      }
 	    }
+	  }, {
+	    key: "getSetupArrow",
+	    value: function getSetupArrow() {
+	      this.body = document.querySelector('.invite-body');
+	      this.panelConfirmBtn = document.getElementById('intranet-invitation-btn');
+	      this.sliderContent = document.querySelector('.ui-page-slider-workarea');
+	      this.sliderHeader = document.querySelector('.ui-side-panel-wrap-title-wrap');
+	      this.buttonPanel = document.querySelector('.ui-button-panel');
+	      this.inviteButton = document.querySelector('.invite-form-buttons');
+	      this.sliderHeaderHeight = this.sliderHeader.getBoundingClientRect().height;
+	      this.buttonPanelRect = this.buttonPanel.getBoundingClientRect();
+	      this.panelRect = this.panelConfirmBtn.getBoundingClientRect();
+	      this.btnWidth = Math.ceil(this.panelRect.width);
+	      this.arrowWidth = Math.ceil(this.arrowRect.width);
+	      this.delta = (this.btnWidth - this.arrowWidth) / 2;
+	      this.sliderContentRect = this.sliderContent.getBoundingClientRect();
+	      this.bodyHeight = this.body.getBoundingClientRect().height - this.buttonPanelRect.height + this.sliderHeaderHeight;
+	      this.contentHeight = this.arrowHeight + this.sliderContentRect.height + this.buttonPanelRect.height + this.sliderHeaderHeight - 65;
+	    }
+	  }, {
+	    key: "updateArrow",
+	    value: function updateArrow() {
+	      this.bodyHeight = this.body.getBoundingClientRect().height - this.buttonPanelRect.height + this.sliderHeaderHeight;
+	      this.contentHeight = this.arrowHeight + this.sliderContentRect.height + this.buttonPanelRect.height + this.sliderHeaderHeight - 65;
+	      this.contentHeight > this.bodyHeight ? this.body.classList.add('js-intranet-invitation-arrow-hide') : this.body.classList.remove('js-intranet-invitation-arrow-hide');
+	    }
+	  }, {
+	    key: "setSetupArrow",
+	    value: function setSetupArrow() {
+	      this.getSetupArrow();
+	      this.arrowBox.style.left = this.panelRect.left - this.delta + 'px';
+	      this.contentHeight > this.bodyHeight ? this.body.classList.add('js-intranet-invitation-arrow-hide') : this.body.classList.remove('js-intranet-invitation-arrow-hide');
+	      window.addEventListener('resize', function () {
+	        this.arrowBox.style.left = this.panelRect.left - this.delta + 'px';
+	        this.getSetupArrow();
+	        this.updateArrow();
+	      }.bind(this));
+	      this.inviteButton.addEventListener('click', function () {
+	        this.getSetupArrow();
+	        this.updateArrow();
+	      }.bind(this));
+	    }
 	  }]);
 	  return Form;
 	}(main_core_events.EventEmitter);
 
 	exports.Form = Form;
 
-}((this.BX.Intranet.Invitation = this.BX.Intranet.Invitation || {}),BX,BX.Event));
+}((this.BX.Intranet.Invitation = this.BX.Intranet.Invitation || {}),BX,BX.UI.EntitySelector,BX.Event));
 //# sourceMappingURL=script.js.map

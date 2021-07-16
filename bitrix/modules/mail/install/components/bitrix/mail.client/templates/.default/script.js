@@ -1,4 +1,3 @@
-
 ;(function() {
 
 	if (window.BXMailMessageController)
@@ -23,13 +22,13 @@
 			this.__log = {'a': 0, 'b': 0};
 
 			var details = BX('mail-msg-view-details-'+this.options.messageId);
-	
+
 			var moreA = BX.findChildByClassName(details.parentNode, 'mail-msg-view-log-more-a', true);
 			BX.bind(moreA, 'click', this.handleLogClick.bind(this, 'a'));
 
 			var moreB = BX.findChildByClassName(details.parentNode, 'mail-msg-view-log-more-b', true);
 			BX.bind(moreB, 'click', this.handleLogClick.bind(this, 'b'));
-	
+
 			var items = BX.findChildrenByClassName(details.parentNode, 'mail-msg-view-log-item', true);
 			for (var i in items)
 			{
@@ -854,9 +853,15 @@
 		return this;
 	};
 
-	BXMailMailbox.sync = function (stepper, gridId, onlySyncCurrent)
+	BXMailMailbox.sync = function (stepper, gridId, onlySyncCurrent, showProgressBar)
 	{
 		var self = this;
+
+		//if synchronization is requested by the user - show the bar even if synchronization is already in progress
+		if(showProgressBar)
+		{
+			BXMailMailbox.updateStepper(stepper, 0, -1);
+		}
 
 		if (self.syncLock)
 		{
@@ -864,8 +869,6 @@
 		}
 
 		self.syncLock = true;
-
-		BXMailMailbox.updateStepper(stepper, 0, -1);
 
 		var filter = BX.Main.filterManager.getById(gridId);
 		var dir = filter.getFilterFieldsValues()['DIR'];
@@ -933,11 +936,11 @@
 		{
 			if (self.syncData[params.sessid].new > 0 || params.updated > 0 || params.deleted > 0)
 			{
-				var gridInstance = BX.Main.gridManager.getInstanceById(gridId);
-				if (gridInstance.getRows().getCountSelected() == 0)
-				{
-					gridInstance.reload();
-				}
+				BX.onCustomEvent('BX.Mail.Sync:newLettersArrived');
+
+				var messageGrid = new BX.Mail.MessageGrid();
+				messageGrid.setGridId(gridId);
+				messageGrid.reloadTable();
 			}
 
 			if (params.final > 0)
@@ -959,6 +962,7 @@
 
 		if (params.complete < 0 && params.status >= 0)
 		{
+			//sync incomplete to end
 			BXMailMailbox.sync(stepper, gridId, true);
 		}
 	}
@@ -967,22 +971,11 @@
 	{
 		if (show)
 		{
-			BX.addClass(stepper, 'main-stepper-show');
-			BX.removeClass(stepper, 'main-stepper-hide');
-			stepper.style.display = '';
+			stepper.show();
 		}
 		else
 		{
-			BX.addClass(stepper, 'main-stepper-hide');
-			BX.removeClass(stepper, "main-stepper-show");
-
-			setTimeout(
-				function ()
-				{
-					stepper.style.display = 'none';
-				},
-				300
-			);
+			stepper.hide();
 		}
 	}
 
@@ -992,14 +985,14 @@
 
 		status = parseFloat(status);
 
-		var stepperInfo = BX.findChildByClassName(stepper, 'main-stepper-info');
-		var stepperLine = BX.findChildByClassName(stepper, 'main-stepper-bar-line');
-		var stepperSteps = BX.findChildByClassName(stepper, 'main-stepper-steps');
-		var stepperError = BX.findChildByClassName(stepper, 'main-stepper-error-text');
+		var stepperInfo = stepper.getErrorTitleNode();
+		var stepperError = stepper.getErrorTextNode();
+		var hintTextNode = stepper.getErrorHintNode();
 
+		//in case of synchronization error:
 		if (complete < 0 && status < 0)
 		{
-			stepperInfo && (stepperInfo.innerHTML = BX.message('MAIL_CLIENT_MAILBOX_SYNC_BAR_INTERRUPTED'));
+			stepperInfo && (stepperInfo.innerText = BX.message('MAIL_CLIENT_MAILBOX_SYNC_BAR_INTERRUPTED'));
 
 			if (stepperError)
 			{
@@ -1027,16 +1020,20 @@
 					var error = BX.message('MAIL_CLIENT_AJAX_ERROR');
 				}
 
-				stepperError.innerHTML = error;
-
+				stepperError.innerText = error;
+				
 				if (details.length > 0 && errors.length > 0)
 				{
-					stepperError.appendChild(
+					while (hintTextNode.firstChild)
+					{
+						hintTextNode.removeChild(hintTextNode.firstChild);
+					}
+					hintTextNode.appendChild(
 						BX.UI.Hint.createNode(details.join(': '))
 					);
 				}
 
-				BX.addClass(stepper, 'main-stepper-error');
+				stepper.showErrorBox();
 			}
 			else
 			{
@@ -1045,34 +1042,16 @@
 		}
 		else
 		{
-			BX.removeClass(stepper, 'main-stepper-error');
+			stepper.hideErrorBox();
 
 			if (complete > 0)
 			{
 				stepperInfo && (stepperInfo.innerHTML = BX.message('MAIL_CLIENT_MAILBOX_SYNC_BAR_COMPLETED'));
 
-				stepperLine && (stepperLine.style.width = '100%');
-				stepperSteps && (stepperSteps.innerHTML = '100%');
-
 				stepper.hideTimeout = setTimeout(BXMailMailbox.toggleStepper.bind(this, stepper, false), 2000);
 			}
 			else
 			{
-				stepperInfo && (stepperInfo.innerHTML = BX.message('MAIL_CLIENT_MAILBOX_SYNC_BAR'));
-
-				if (status < 0)
-				{
-					stepperLine && (stepperLine.style.width = '0%');
-					stepperSteps && (stepperSteps.innerHTML = '');
-				}
-				else
-				{
-					var percent = Math.min(Math.max(Math.round(status * 100), 1), 99);
-
-					stepperLine && (stepperLine.style.width = percent + '%');
-					stepperSteps && (stepperSteps.innerHTML = percent + '%');
-				}
-
 				BXMailMailbox.toggleStepper(stepper, true);
 			}
 		}
@@ -1108,6 +1087,15 @@
 
 	top.BX.SidePanel.Instance.bindAnchors({
 		rules: [
+			{
+				condition: [
+					siteDir + 'mail/',
+				],
+				options: {
+					cacheable: false,
+					customLeftBoundary: 0,
+				}
+			},
 			{
 				condition: [
 					'^' + siteDir + 'mail/config/(new|edit)',

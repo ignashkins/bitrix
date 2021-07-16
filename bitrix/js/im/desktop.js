@@ -18,6 +18,7 @@
 		this.disableLogin = false;
 
 		this.autorun = null;
+		this.telemetry = null;
 		this.lastSetIcon = null;
 		this.currentIcon = null;
 		this.showNotifyId = {};
@@ -40,6 +41,16 @@
 		this.inited = false;
 		this.sizeInited = false;
 
+		BXDesktopSystem.LogInfo = function()
+		{
+			for (var _len = arguments.length, params = new Array(_len), _key = 0; _key < _len; _key++) {
+				params[_key] = arguments[_key];
+			}
+
+			var context = BX.Messenger.Lib.Logger;
+			context.desktop.apply(context, params);
+		};
+
 		/* sizes */
 
 		this.minWidth = 515;
@@ -53,27 +64,24 @@
 			this.logout(terminate, reason, true);
 		}, this));
 
+		// desktop hotkeys
 		BX.bind(window, "keydown", BX.delegate(function(e) {
+			// CMD+R / CTRL+R
 			if (e.keyCode == 82 && (e.ctrlKey == true || e.metaKey == true))
 			{
-				if (e.shiftKey == true && typeof(BXIM) != 'undefined')
-				{
-					BXIM.setLocalConfig('global_msz_v2', false);
-
-					BX.desktop.apiReady = false;
-					console.log('NOTICE: User use /windowReload + /clearWindowSize');
-				}
-				else
+				if (typeof(BXIM) === 'undefined' || !BXIM.callController.hasActiveCall())
 				{
 					console.log('NOTICE: User use /windowReload');
+					this.windowReload();
 				}
-				this.windowReload();
 			}
+			// CMD+SHIFT+D / CTRL+SHIFT+D
 			else if (e.keyCode == 68 && (e.ctrlKey == true || e.metaKey == true) && e.shiftKey == true)
 			{
 				this.openDeveloperTools();
 				console.log('NOTICE: User use /openDeveloperTools');
 			}
+			// CMD+SHIFT+L / CTRL+SHIFT+L
 			else if (e.keyCode == 76 && (e.ctrlKey == true || e.metaKey == true) && e.shiftKey == true)
 			{
 				this.openLogsFolder();
@@ -121,7 +129,6 @@
 			this.setWindowResizable(true);
 			this.setWindowMinSize({ Width: BX.MessengerWindow.minWidth, Height: BX.MessengerWindow.minHeight });
 		}
-
 
 		BX.addCustomEvent("onMessengerWindowInit", BX.delegate(function() {
 			this.userInfo = BX.MessengerWindow.getUserInfo();
@@ -241,6 +248,34 @@
 		var updateContent = BX.create("div", { props : { className : "bx-desktop-update-box" }, children : [
 			BX.create("div", { props : { className : "bx-desktop-update-box-text" }, html: BX.message('BXD_NEED_UPDATE')}),
 			BX.create("div", { props : { className : "bx-desktop-update-box-btn" }, events : { click :  BX.delegate(function(){this.checkUpdate(true)}, this)}, html: BX.message('BXD_NEED_UPDATE_BTN')})
+		]});
+
+		BX.ready(function(){
+			document.body.innerHTML = '';
+			document.body.appendChild(updateContent);
+			BX.onCustomEvent(window, 'onDesktopOutdated', [this]);
+		});
+	}
+
+	Desktop.prototype.withoutPushServer = function ()
+	{
+		this.setWindowMinSize({ Width: 864, Height: 493 });
+		this.setWindowSize({ Width: 864, Height: 493 });
+		this.setWindowTitle(BX.message('BXD_DEFAULT_TITLE').replace('#VERSION#', this.getApiVersion(true)));
+
+		var updateContent = BX.create("div", { props : { className : "bx-desktop-update-box" }, children : [
+			BX.create("div", { props : { className : "bx-desktop-update-box-text" }, html: BX.message('IM_M_PP_SERVER_ERROR')}),
+			BX.create("div", { props : { className : "bx-desktop-update-box-btn" }, events : { click :  BX.delegate(function(){
+				if (BXIM.bitrixIntranet)
+				{
+					BX.Helper.show("redirect=detail&HD_ID=12715116");
+				}
+				else
+				{
+					BX.MessengerCommon.openLink(BX.message('IM_M_PP_SERVER_ERROR_BUS_LINK'));
+				}
+			}, this)
+			}, html: BX.message('IM_M_PP_SERVER_ERROR_MORE')})
 		]});
 
 		BX.ready(function(){
@@ -885,13 +920,31 @@
 		if (typeof(value) !='boolean')
 		{
 			if (this.autorun == null)
+			{
 				this.autorun = BXDesktopSystem.GetProperty("autostart");
+			}
 		}
 		else
 		{
 			this.autorun = value;
 			BXDesktopSystem.SetProperty("autostart", this.autorun);
 		}
+		return this.autorun;
+	};
+
+	Desktop.prototype.telemetryStatus = function(value)
+	{
+		if (!this.ready()) return false;
+
+		if (typeof(value) !='boolean')
+		{
+			return BXDesktopSystem.QuerySettings("bxd_telemetry", "1") === "1";
+		}
+		else
+		{
+			BXDesktopSystem.StoreSettings("bxd_telemetry", value? "1": "0");
+		}
+
 		return this.autorun;
 	};
 
@@ -902,21 +955,21 @@
 		return BitrixDisk? BitrixDisk.enabled: false;
 	};
 
-	Desktop.prototype.clipboardSelected = function (element, expandToWholeWord)
+	Desktop.prototype.clipboardSelected = function (element)
 	{
-		expandToWholeWord = expandToWholeWord || false;
+		expandToWholeWord = false;
 
 		var resultText = "";
 		var selectionStart = 0;
 		var selectionEnd = 0;
 
-		if (typeof(element) == 'object' && (element.tagName == 'TEXTAREA' || element.tagName == 'INPUT'))
+		if (typeof(element) == 'object' && (element.tagName == 'TEXTAREA' || element.tagName == 'INPUT' || !element.tagName))
 		{
 			selectionStart = element.selectionStart;
 			selectionEnd = element.selectionEnd;
 			resultText = element.value.substring(selectionStart, selectionEnd);
 
-			if (expandToWholeWord)
+			if (selectionStart == selectionEnd)
 			{
 				if (!(resultText && resultText.indexOf(" ") > -1))
 				{
@@ -938,7 +991,24 @@
 				var range = window.getSelection().getRangeAt(0).cloneContents();
 				var div = document.createElement("div");
 				div.appendChild(range);
-				resultText = div.innerHTML;
+
+				var messages = div.getElementsByClassName('bx-messenger-message');
+				if (messages.length > 0)
+				{
+					var resultMessage = [];
+					for (var index in messages)
+					{
+						if (messages.hasOwnProperty(index))
+						{
+							resultMessage.push(messages[index].innerHTML);
+						}
+					}
+					resultText = resultMessage.join('\n');
+				}
+				else
+				{
+					resultText = div.innerHTML;
+				}
 			}
 		}
 
@@ -954,7 +1024,7 @@
 			resultText = resultText.replace(/<(\/*)([buis]+)>/ig, '[$1$2]');
 			resultText = resultText.replace(/<a.*?href="([^"]*)".*?>.*?<\/a>/ig, '$1');
 			resultText = resultText.replace(/------------------------------------------------------(.*?)------------------------------------------------------/gmi, "["+BX.message("BXD_QUOTE_BLOCK")+"]");
-			resultText = resultText.replace('<br />', '\n').replace(/<\/?[^>]+>/gi, '');
+			resultText = resultText.replace(/<br( \/)?>/gi, '\n').replace(/<\/?[^>]+>/gi, '');
 		}
 		return {text: resultText, selectionStart: selectionStart, selectionEnd: selectionEnd};
 	}

@@ -1,9 +1,10 @@
-<?
+<?php
 $MESS["BIZPROC_JS_BP_SELECTOR_ACTIVITIES"] = "Additional results";
 $MESS["BIZPROC_JS_BP_SELECTOR_CONSTANTS"] = "Constants";
 $MESS["BIZPROC_JS_BP_SELECTOR_DATE"] = "Current date";
 $MESS["BIZPROC_JS_BP_SELECTOR_DOCUMENT"] = "Element";
 $MESS["BIZPROC_JS_BP_SELECTOR_EMPTY_LIST"] = "No entries have been found.";
+$MESS["BIZPROC_JS_BP_SELECTOR_EOL"] = "End of line character";
 $MESS["BIZPROC_JS_BP_SELECTOR_FUNCTIONS"] = "Functions";
 $MESS["BIZPROC_JS_BP_SELECTOR_FUNCTION_ABS_DESCRIPTION"] = "Absolute value";
 $MESS["BIZPROC_JS_BP_SELECTOR_FUNCTION_ADDWORKDAYS_DESCRIPTION"] = "Adds N workdays to a specified date";
@@ -29,8 +30,12 @@ $MESS["BIZPROC_JS_BP_SELECTOR_FUNCTION_RAND_DESCRIPTION"] = "Returns a random nu
 $MESS["BIZPROC_JS_BP_SELECTOR_FUNCTION_ROUND_DESCRIPTION"] = "Returns the value of a number rounded according to math rules";
 $MESS["BIZPROC_JS_BP_SELECTOR_FUNCTION_STRLEN_DESCRIPTION"] = "Returns string length";
 $MESS["BIZPROC_JS_BP_SELECTOR_FUNCTION_STRPOS_DESCRIPTION"] = "Returns the position of the first occurrence of a specified substring in a string";
+$MESS["BIZPROC_JS_BP_SELECTOR_FUNCTION_STRTOLOWER_DESCRIPTION"] = "Makes a string lowercase";
+$MESS["BIZPROC_JS_BP_SELECTOR_FUNCTION_STRTOUPPER_DESCRIPTION"] = "Makes a string uppercase";
 $MESS["BIZPROC_JS_BP_SELECTOR_FUNCTION_SUBSTR_DESCRIPTION"] = "Get substring (substr)";
 $MESS["BIZPROC_JS_BP_SELECTOR_FUNCTION_TOUSERDATE_DESCRIPTION"] = "Converts server time to user time";
+$MESS["BIZPROC_JS_BP_SELECTOR_FUNCTION_UCFIRST_DESCRIPTION"] = "Makes the first character of a string uppercase";
+$MESS["BIZPROC_JS_BP_SELECTOR_FUNCTION_UCWORDS_DESCRIPTION"] = "Makes the first character of each word in a string uppercase";
 $MESS["BIZPROC_JS_BP_SELECTOR_FUNCTION_URLENCODE_DESCRIPTION"] = "URL-encodes a specified string";
 $MESS["BIZPROC_JS_BP_SELECTOR_FUNCTION_WORKDATEADD_DESCRIPTION"] = "Adds workdays, hours and minutes to a specified date";
 $MESS["BIZPROC_JS_BP_SELECTOR_NOW"] = "Server time";
@@ -41,4 +46,3 @@ $MESS["BIZPROC_JS_BP_SELECTOR_TARGET_USER"] = "Workflow started by";
 $MESS["BIZPROC_JS_BP_SELECTOR_USER_ID"] = "Current user";
 $MESS["BIZPROC_JS_BP_SELECTOR_VARIABLES"] = "Variables";
 $MESS["BIZPROC_JS_BP_SELECTOR_WORKFLOW_ID"] = "Workflow ID";
-?>

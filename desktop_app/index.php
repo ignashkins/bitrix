@@ -11,12 +11,12 @@ if (!CModule::IncludeModule('im'))
 if (intval($USER->GetID()) <= 0 || \Bitrix\Im\User::getInstance()->isConnector())
 {
 	?>
-	<script type="text/javascript">
-		if (typeof(BXDesktopSystem) != 'undefined')
-			BXDesktopSystem.Login({});
-		else
-			location.href = '/';
-	</script><?
+<script type="text/javascript">
+	if (typeof(BXDesktopSystem) != 'undefined')
+		BXDesktopSystem.Login({});
+	else
+		location.href = '/';
+</script><?
 	return true;
 }
 
@@ -96,7 +96,19 @@ else
 
 			?><script type="text/javascript">
 			BX.Timeman.Monitor.init(<?=\Bitrix\Timeman\Monitor\Config::json()?>);
-		</script><?
+			</script><?
+
+			if (\Bitrix\Timeman\Monitor\Config::isMonitorEnabledForCurrentUser())
+			{
+				//tmp hack to close day in desktop app vie old popup.
+				$APPLICATION->IncludeComponent(
+					'bitrix:timeman',
+					'desktop',
+					[],
+					false,
+					["HIDE_ICONS" => "Y"]
+				);
+			}
 		}
 	}
 }

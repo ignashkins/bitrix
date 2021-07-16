@@ -146,7 +146,7 @@ if($templateID === false)
 $edit_groups = explode(",", COption::GetOptionString('fileman', 'default_edit_groups', ''));
 $arGroupList = array();
 $arEditGroups = array();
-$gr = CGroup::GetList(($v1="sort"), ($v2="asc"), array("ACTIVE"=>"Y", "ADMIN"=>"N", "ANONYMOUS"=>"N"));
+$gr = CGroup::GetList("sort", "asc", array("ACTIVE"=>"Y", "ADMIN"=>"N", "ANONYMOUS"=>"N"));
 while($group = $gr->Fetch())
 {
 	$arGroupList[$group["ID"]] = $group;
@@ -472,7 +472,7 @@ if ($_SERVER["REQUEST_METHOD"] == "POST" && isset($_REQUEST["save"]) && $strWarn
 			if(COption::GetOptionString($module_id, "log_page", "Y")=="Y")
 			{
 				$mt = COption::GetOptionString("fileman", "menutypes", $default_value, $site);
-				$mt = unserialize(str_replace("\\", "", $mt));
+				$mt = unserialize(str_replace("\\", "", $mt), ['allowed_classes' => false]);
 				$res_log['menu_name'] = $mt[$menuType];
 				$res_log['path'] = mb_substr(dirname($arUndoParams['arContent']['path']), 1);
 				CEventLog::Log(

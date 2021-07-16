@@ -711,7 +711,18 @@ this.BX = this.BX || {};
 	    _this.name = 'ServiceSelector';
 	    _this.data = params.data;
 	    _this.serviceList = [];
-	    _this.allServiceList = params.serviceList || [];
+	    _this.allServiceList = [];
+
+	    if (main_core.Type.isArray(params.serviceList)) {
+	      params.serviceList.forEach(function (service) {
+	        if (main_core.Type.isString(name)) {
+	          service.name = service.name.trim();
+	        }
+
+	        _this.allServiceList.push(service);
+	      });
+	    }
+
 	    _this.values = [];
 	    _this.changeValueCallback = main_core.Type.isFunction(params.changeValueCallback) ? params.changeValueCallback : null;
 
@@ -2587,6 +2598,11 @@ this.BX = this.BX || {};
 	        text: message
 	      });
 	    }
+	  }, {
+	    key: "isErrorSet",
+	    value: function isErrorSet() {
+	      return this.shown && main_core.Dom.hasClass(this.DOM.wrap, 'calendar-resbook-webform-block-result-error');
+	    }
 	  }]);
 	  return StatusInformer;
 	}();
@@ -2673,6 +2689,7 @@ this.BX = this.BX || {};
 	    _this.timezoneOffsetLabel = null;
 	    _this.userFieldParams = null;
 	    _this.loadedDates = [];
+	    _this.externalSiteContext = main_core.Type.isFunction(params.actionAgent);
 	    _this.accessibility = {
 	      user: {},
 	      resource: {}
@@ -2736,7 +2753,7 @@ this.BX = this.BX || {};
 	        result = false;
 	      }
 
-	      if (result && !this.dateControl.getValue()) {
+	      if (result && (!this.dateControl.getValue() || this.statusControl.isErrorSet())) {
 	        this.dateControl.showWarning();
 	        result = false;
 	      }
@@ -2761,6 +2778,12 @@ this.BX = this.BX || {};
 	        this.statusControl.refresh({});
 	        this.statusControl.setError('[UF_NOT_FOUND] ' + main_core.Loc.getMessage('WEBF_RES_BOOKING_UF_WARNING'));
 	      } else {
+	        if (this.externalSiteContext && BX.ZIndexManager) {
+	          var stack = BX.ZIndexManager.getOrAddStack(document.body);
+	          stack.baseIndex = 100000;
+	          stack.sort();
+	        }
+
 	        this.preparaAutoSelectValues();
 	        this.displayUsersControl();
 	        this.displayResourcesControl();
@@ -2852,7 +2875,7 @@ this.BX = this.BX || {};
 	      main_core.Dom.clean(this.DOM.inputsWrap);
 	      this.DOM.valueInputs = [];
 
-	      if (main_core.Type.isDate(dateFrom)) {
+	      if (main_core.Type.isDate(dateFrom) && !this.statusControl.isErrorSet()) {
 	        var resources = this.getSelectedResources();
 
 	        if (main_core.Type.isArray(resources)) {
@@ -2882,6 +2905,7 @@ this.BX = this.BX || {};
 	      }
 
 	      if (!entries.length) {
+	        allValuesValue.push('empty');
 	        this.DOM.valueInputs.push(this.DOM.inputsWrap.appendChild(main_core.Tag.render(_templateObject5$2(), main_core.Text.encode(this.inputName))));
 	      }
 
@@ -3661,11 +3685,11 @@ this.BX = this.BX || {};
 
 	      if (main_core.Type.isDate(params.date)) {
 	        if (this.getFieldParams().ALLOW_OVERBOOKING !== "Y" && (this.isUserSelectorInAutoMode() || this.isResourceSelectorInAutoMode())) {
+	          var fieldParams = this.getFieldParams();
 	          var freeSlot,
 	              i,
 	              j,
 	              time,
-	              settingsData = this.getSettingsData(),
 	              slotGap = 1,
 	              todayNowTime = 0,
 	              timeSlots = this.getTimeSlots(),
@@ -3675,7 +3699,8 @@ this.BX = this.BX || {};
 
 	          if (this.checkIsTodayDate(dateKey)) {
 	            var today = new Date();
-	            todayNowTime = today.getHours() * 60 + today.getMinutes();
+	            var deltaOffset = fieldParams.USE_USER_TIMEZONE === 'N' ? today.getTimezoneOffset() * 60 + this.timezoneOffset : 0;
+	            todayNowTime = today.getHours() * 60 + today.getMinutes() + deltaOffset / 60;
 	          } // Prefill slotIndex
 
 
@@ -3745,19 +3770,20 @@ this.BX = this.BX || {};
 	  }, {
 	    key: "getAvailableSlotIndex",
 	    value: function getAvailableSlotIndex(params) {
+	      var todayNowTime = 0;
+	      var fieldParams = this.getFieldParams();
 	      var dateKey,
 	          loadedDate,
 	          i,
 	          j,
 	          time,
-	          todayNowTime = 0,
 	          slotGap,
 	          userKey = params.user ? 'user' + params.user : null,
 	          slotsAmount = Math.ceil(params.duration / this.scale),
 	          userIsFree,
 	          resourcesAreFree,
 	          timeSlots = this.getTimeSlots(),
-	          allowOverbooking = this.getFieldParams().ALLOW_OVERBOOKING === "Y",
+	          allowOverbooking = fieldParams.ALLOW_OVERBOOKING === "Y",
 	          slotIndex = {}; // Prefill slotIndex
 
 	      timeSlots.forEach(function (slot) {
@@ -3771,7 +3797,8 @@ this.BX = this.BX || {};
 
 	        if (this.checkIsTodayDate(dateKey)) {
 	          var today = new Date();
-	          todayNowTime = today.getHours() * 60 + today.getMinutes();
+	          var deltaOffset = fieldParams.USE_USER_TIMEZONE === 'N' ? today.getTimezoneOffset() * 60 + this.timezoneOffset : 0;
+	          todayNowTime = today.getHours() * 60 + today.getMinutes() + deltaOffset / 60;
 	        }
 
 	        for (i = timeSlots.length; i--; i >= 0) {
@@ -4979,11 +5006,11 @@ this.BX = this.BX || {};
 	    key: "getLiveField",
 	    value: function getLiveField(params) {
 	      if (!params.wrap || !main_core.Type.isDomNode(params.wrap)) {
-	        throw new Error("The argument \"params.wrap\" must be a DOM node.");
+	        throw new Error('The argument "params.wrap" must be a DOM node');
 	      }
 
 	      if (main_core.Type.isNull(CoreDate)) {
-	        throw new Error("The error occured during Date extention loading");
+	        throw new Error('The error occured during Date extention loading');
 	      }
 
 	      var liveFieldController = new LiveFieldController(params);

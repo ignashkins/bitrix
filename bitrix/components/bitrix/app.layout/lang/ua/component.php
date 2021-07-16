@@ -5,4 +5,5 @@ $MESS["REST_AL_ERROR_APP_NOT_FOUND"] = "Застосунок не знайден
 $MESS["REST_AL_ERROR_APP_NOT_FOUND_MARKETPLACE"] = "Застосунок не опубліковано в каталозі рішень або знято з публікації розробником.";
 $MESS["REST_AL_ERROR_APP_NOT_INSTALLED"] = "Застосунок не встановлено. Зверніться до адміністратора порталу.";
 $MESS["REST_AL_ERROR_APP_PLACEMENT_NOT_INSTALLED"] = "Неможливо відобразити застосунок в поточному контексті.";
+$MESS["REST_AL_ERROR_APP_ACCESS_DENIED"] = "Немає доступу";
 ?>

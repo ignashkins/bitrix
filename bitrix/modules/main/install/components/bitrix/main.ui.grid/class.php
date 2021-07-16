@@ -130,6 +130,28 @@ class CMainUIGrid extends CBitrixComponent
 		return $returns;
 	}
 
+	private function prepareTemplateRow(): void
+	{
+		$templateRow = [
+			'id' => 'template_0',
+			'not_count' => true,
+			'attrs' => [
+				'hidden' => 'true',
+			],
+		];
+
+		foreach ($this->arParams['ROWS'] as $key => $row)
+		{
+			if ($row['id'] === 'template_0')
+			{
+				$templateRow = array_merge($row, $templateRow);
+				unset($this->arParams['ROWS'][$key]);
+				break;
+			}
+		}
+
+		array_unshift($this->arParams['ROWS'], $templateRow);
+	}
 
 	/**
 	 * Prepares arParams
@@ -306,6 +328,16 @@ class CMainUIGrid extends CBitrixComponent
 			false
 		);
 
+		$this->arParams["ALLOW_ROWS_SORT_IN_EDIT_MODE"] = Grid\Params::prepareBoolean(
+			array($this->arParams["ALLOW_ROWS_SORT_IN_EDIT_MODE"]),
+			false
+		);
+
+		$this->arParams["ALLOW_ROWS_SORT_INSTANT_SAVE"] = Grid\Params::prepareBoolean(
+			array($this->arParams["ALLOW_ROWS_SORT_INSTANT_SAVE"]),
+			true
+		);
+
 		$this->arParams["ALLOW_SELECT_ROWS"] = Grid\Params::prepareBoolean(
 			array($this->arParams["ALLOW_SELECT_ROWS"]),
 			false
@@ -368,6 +400,11 @@ class CMainUIGrid extends CBitrixComponent
 		$this->arParams["ADVANCED_EDIT_MODE"] = Grid\Params::prepareBoolean(
 			array($this->arParams["ADVANCED_EDIT_MODE"]),
 			false
+		);
+
+		$this->arParams["SETTINGS_WINDOW_TITLE"] = Grid\Params::prepareString(
+			array($this->arParams["SETTINGS_WINDOW_TITLE"]),
+			""
 		);
 
 		return $this->arParams;
@@ -1244,31 +1281,6 @@ class CMainUIGrid extends CBitrixComponent
 			$row["actions"] = $this->compatibleActions($row["actions"], $row);
 		}
 
-		$row["attrs_string"] = "";
-
-		if (isset($row["attrs"]) && is_array($row["attrs"]) && !empty($row["attrs"]))
-		{
-			$attrsString = " ";
-
-			foreach ($row["attrs"] as $key => $value)
-			{
-				if (is_array($value))
-				{
-					$escapedValue = Text\HtmlFilter::encode(CUtil::PhpToJSObject($value));
-				}
-				else
-				{
-					$escapedValue = Text\HtmlFilter::encode($value);
-				}
-
-				$escapedKey = Text\HtmlFilter::encode($key);
-				$attrsString .= $escapedKey."=\"".$escapedValue."\"";
-			}
-
-			$attrsString .= " ";
-			$row["attrs_string"] = $attrsString;
-		}
-
 		if(!isset($row["id"]))
 		{
 			$row["id"] = $row["data"]["ID"];
@@ -1779,6 +1791,10 @@ class CMainUIGrid extends CBitrixComponent
 				{
 					$typeName = Grid\Editor\Types::DROPDOWN;
 				}
+				elseif($columnTypeName === "multiselect")
+				{
+					$typeName = Grid\Editor\Types::MULTISELECT;
+				}
 				elseif($columnTypeName === "money")
 				{
 					$typeName = Grid\Editor\Types::MONEY;
@@ -1796,9 +1812,18 @@ class CMainUIGrid extends CBitrixComponent
 				}
 			}
 
-			if($result["TYPE"] === Grid\Editor\Types::DROPDOWN
+			if (
+				(
+					$result["TYPE"] === Grid\Editor\Types::DROPDOWN
+					|| $result["TYPE"] === Grid\Editor\Types::MULTISELECT
+				)
 				&& $result["items"] && is_array($result["items"])
-				&& !(isset($result["DATA"]) && isset($result["DATA"]["ITEMS"]) && is_array($result["DATA"]["ITEMS"])))
+				&& !(
+					isset($result["DATA"])
+					&& isset($result["DATA"]["ITEMS"])
+					&& is_array($result["DATA"]["ITEMS"])
+				)
+			)
 			{
 				if(!isset($result["DATA"]))
 				{
@@ -1848,6 +1873,634 @@ class CMainUIGrid extends CBitrixComponent
 		$column["sticked"] = $this->prepareSticked($column);
 		$column["sticked_default"] = json_encode($this->prepareSticked($column));
 		return $column;
+	}
+
+	protected function prepareColumnHeaderLayout($column): array
+	{
+		return [
+			"cell" => [
+				"class" => $this->prepareColumnHeaderClass($column),
+				"attributes" => static::stringifyAttrs([
+					"data-edit" => $column["editable"],
+					"data-name" => $column["id"],
+					"data-sort-url" => $column["sort_url"],
+					"data-sort-by" => $column["sort"],
+					"data-sort-order" => $column["next_sort_order"],
+					"title" => $column["title"],
+					"style" => $this->prepareColumnHeaderStyle($column),
+				]),
+			],
+			"container" => [
+				"attributes" => static::stringifyAttrs([
+					"style" => $this->prepareColumnHeaderContainerStyle($column),
+				]),
+			],
+		];
+	}
+
+	protected function prepareRowClass($row, $options = []): string
+	{
+		$rowClass = "";
+		if (isset($row["not_count"]) && $row["not_count"])
+		{
+			$rowClass .= " main-grid-not-count";
+		}
+
+		if (isset($row["expand"]) && $row["expand"])
+		{
+			$rowClass .= " main-grid-row-expand";
+		}
+
+		if (isset($row["draggable"]) && $row["draggable"] === false)
+		{
+			$rowClass .= " main-grid-row-drag-disabled";
+		}
+
+		if (
+			isset($this->arParams["ENABLE_COLLAPSIBLE_ROWS"])
+			&& $this->arParams["ENABLE_COLLAPSIBLE_ROWS"]
+			&& isset($row["parent_group_id"])
+			&& $row["parent_group_id"] === $options['lastCollapsedGroupId']
+		)
+		{
+			$rowClass .= " main-grid-hide";
+		}
+
+		return $rowClass;
+	}
+
+	protected function prepareRowLayout($row, $options = []): array
+	{
+		$attributes = [
+			"data-child-loaded" => (bool)$row["expand"],
+			"data-depth" => (int)$row["depth"],
+			"data-id" => $row["id"],
+		];
+
+		if (isset($this->arParams["ENABLE_COLLAPSIBLE_ROWS"]))
+		{
+			$attributes["data-parent-id"] = $row["parent_id"];
+		}
+
+		if (isset($row["default_action"]) && !empty($row["default_action"]))
+		{
+			$attributes["data-default-action"] = $row["default_action"]["js"];
+			$attributes["title"] = Loc::getMessage("interface_grid_dblclick") . $row["default_action"]["title"];
+		}
+
+		if (isset($row["attrs"]) && is_array($row["attrs"]))
+		{
+			$attributes = array_merge($row["attrs"], $attributes);
+		}
+
+		return [
+			"row" => [
+				"class" => $this->prepareRowClass($row, $options['lastCollapsedGroupId']),
+				"attributes" => static::stringifyAttrs($attributes),
+			],
+			"columns" => $this->prepareRowColumns($row, $options),
+		];
+	}
+
+	protected function prepareRowColumns($row, $options): array
+	{
+		$checkboxInputAttributes = [
+			"id" => "checkbox_" . $this->arParams["GRID_ID"] . "_" . $row["id"],
+			"name" => "ID[]",
+			"value" => $row["id"],
+		];
+
+		if ($row["editable"] !== false)
+		{
+			$checkboxInputAttributes["title"] = Loc::getMessage("interface_grid_check");
+		}
+
+		if (!$this->arResult["ALLOW_EDIT"] || $row["editable"] === false)
+		{
+			$checkboxInputAttributes["data-disabled"] = 1;
+			$checkboxInputAttributes["disabled"] = "";
+		}
+
+		$columns = [
+			"drag" => [
+				"cell" => [
+					"enabled" => (
+						$this->arParams["ALLOW_ROWS_SORT"]
+						&& $row["draggable"] !== false
+					),
+				],
+			],
+			"checkbox" => [
+				"cell" => [
+					"enabled" => $this->arParams["SHOW_ROW_CHECKBOXES"],
+				],
+				"input" => [
+					"attributes" => static::stringifyAttrs($checkboxInputAttributes),
+				],
+			],
+			"actions" => [
+				"cell" => [
+					"enabled" => (
+						$this->arParams["SHOW_ROW_ACTIONS_MENU"]
+						|| $this->arParams["SHOW_GRID_SETTINGS_MENU"]
+					),
+				],
+				"button" => [
+					"enabled" => (
+						!empty($row["actions"])
+						&& $this->arParams["SHOW_ROW_ACTIONS_MENU"]
+					),
+					"attributes" => static::stringifyAttrs([
+						"data-actions" => $row["actions"],
+					]),
+				],
+			],
+		];
+
+		foreach ($this->arResult["COLUMNS"] as $columnId => $column)
+		{
+			$cellClass = "main-grid-cell";
+			if (isset($column["align"]) && is_string($column["align"]))
+			{
+				$cellClass .= " main-grid-cell-{$column["align"]}";
+			}
+			if (
+				isset($row["columnClasses"])
+				&& is_array($row["columnClasses"])
+				&& array_key_exists($column["id"], $row["columnClasses"])
+			)
+			{
+				$cellClass .= " {$row["columnClasses"][$column["id"]]}";
+			}
+
+			$cellAttributes = [];
+			$cellStyle = "";
+			if (
+				$this->arParams["ENABLE_COLLAPSIBLE_ROWS"]
+				&& isset($column["shift"])
+				&& $column["shift"] === true
+			)
+			{
+				$cellAttributes["data-shift"] = true;
+				if (isset($row["depth"]) && $row["depth"] > 0)
+				{
+					$offsetLeft = 20;
+					$paddingLeft = $row["depth"] * $offsetLeft;
+					$cellStyle .= "padding-left: {$paddingLeft}px";
+				}
+			}
+
+			if (
+				isset($column["color"])
+				&& is_string($column["color"])
+			)
+			{
+				if (
+					strpos($column["color"], "#") === 0
+					|| strpos($column["color"], "rgb") === 0
+					|| strpos($column["color"], "hsl") === 0
+				)
+				{
+					$cellStyle .= "background-color: {$column["color"]}";
+				}
+				else
+				{
+					$cellClass .= " " . $column["color"];
+				}
+			}
+
+			$cellAttributes["data-editable"] = (
+				!isset($row["editableColumns"][$column["id"]])
+				|| (
+					isset($row["editableColumns"][$column["id"]])
+					&& $row["editableColumns"][$column["id"]] === true
+				)
+			);
+
+			$cellAttributes["style"] = $cellStyle;
+
+			$containerAttributes = [];
+			if (isset($column["prevent_default"]))
+			{
+				$containerAttributes["data-prevent-default"] = $column["prevent_default"] ? "true" : "false";
+			}
+
+			$isPlusButtonEnabled = (
+				$this->arParams["ENABLE_COLLAPSIBLE_ROWS"]
+				&& $row["has_child"] === true
+				&& $column["shift"] === true
+			);
+
+			$isCellActionsEnabled = $options["hasCellActions"][$column['id']] === true;
+			$cellActions = [];
+			if (
+				isset($row['cellActions'][$column['id']])
+				&& is_array($row['cellActions'][$column['id']])
+				&& !empty($row['cellActions'][$column['id']])
+			)
+			{
+				$isCellActionsEnabled = true;
+				foreach ($row['cellActions'][$column['id']] as $action)
+				{
+					$buttonClass = $action['class'];
+					if (is_array($buttonClass))
+					{
+						$buttonClass = implode(' ', $buttonClass);
+					}
+
+
+					$actionAttributes = [];
+					if (isset($action['events']) && is_array($action['events']))
+					{
+						$actionAttributes['data-events'] = $action['events'];
+					}
+
+					if (isset($action['attributes']) && is_array($action['attributes']))
+					{
+						$actionAttributes = array_merge(
+							$actionAttributes,
+							$action['attributes']
+						);
+					}
+
+					$cellActions[] = array_merge(
+						$action,
+						[
+							'class' => ' ' . $buttonClass,
+							'attributes' => static::stringifyAttrs($actionAttributes),
+						]
+					);
+				}
+			}
+
+			$counter = [
+				"enabled" => false,
+				"inner" => [
+					"enabled" => false,
+				],
+				"counter" => [
+					"class" => " " . Grid\Counter\Color::DANGER,
+					"attributes" => "",
+				],
+			];
+			if (
+				isset($row["counters"])
+				&& is_array($row["counters"])
+				&& isset($row["counters"][$column["id"]])
+				&& is_array($row["counters"][$column["id"]])
+				&& !empty($row["counters"][$column["id"]])
+			)
+			{
+				$counter["enabled"] = true;
+
+				$counterOptions = $row["counters"][$column["id"]];
+				if (isset($counterOptions["type"]) && is_string($counterOptions["type"]))
+				{
+					if ($counterOptions["type"] === Grid\Counter\Type::LEFT)
+					{
+						$counter["class"] = " main-grid-cell-counter-left";
+						$counter["align"] = "left";
+					}
+
+					if ($counterOptions["type"] === Grid\Counter\Type::LEFT_ALIGNED)
+					{
+						$counter["class"] = " main-grid-cell-counter-left-aligned";
+						$counter["align"] = "left";
+					}
+
+					if ($counterOptions["type"] === Grid\Counter\Type::RIGHT)
+					{
+						$counter["class"] = " main-grid-cell-counter-right";
+						$counter["align"] = "right";
+					}
+				}
+
+				if (
+					isset($counterOptions["value"])
+					&& !empty($counterOptions["value"])
+					&& (
+						is_string($counterOptions["value"])
+						|| is_numeric($counterOptions["value"])
+					)
+				)
+				{
+					$counter["inner"]["enabled"] = true;
+				}
+
+				if (
+					isset($counterOptions["color"])
+					&& !empty($counterOptions["color"])
+					&& is_string($counterOptions["color"])
+				)
+				{
+					$counter["counter"]["class"] = " " . $counterOptions["color"];
+				}
+
+				if (
+					isset($counterOptions["size"])
+					&& !empty($counterOptions["size"])
+					&& is_string($counterOptions["size"])
+				)
+				{
+					$counter["counter"]["class"] .= " " . $counterOptions["size"];
+				}
+				if (isset($counterOptions["events"]) && is_array($counterOptions["events"]))
+				{
+					$counter["counter"]["attributes"] = static::stringifyAttrs([
+						"data-events" => $counterOptions["events"],
+					]);
+				}
+				if (isset($counterOptions["class"]) && is_string($counterOptions["class"]))
+				{
+					$counter["counter"]["class"] .= " " . $counterOptions["class"];
+				}
+			}
+			else if ($column["layout"]["hasLeftAlignedCounter"])
+			{
+				$counter["enabled"] = true;
+				$counter["class"] = " main-grid-cell-counter-left-aligned";
+				$counter["align"] = "left";
+			}
+
+			$content = [];
+			if (
+				isset($column["type"])
+				&& $column["type"] === Grid\Column\Type::LABELS
+				&& isset($row["columns"][$column["id"]])
+				&& is_array($row["columns"][$column["id"]])
+			)
+			{
+				foreach ($row["columns"][$column["id"]] as $labelKey => $label)
+				{
+					$labelClass = "";
+					if (isset($label["color"]) && is_string($label["color"]))
+					{
+						$labelClass .= " " . $label["color"];
+					}
+
+					if (isset($label["size"]) && is_string($label["size"]))
+					{
+						$labelClass .= " " . $label["size"];
+					}
+
+					if (!isset($label["light"]) || (isset($label["light"]) && $label["light"] !== true))
+					{
+						$labelClass .= " ui-label-fill";
+					}
+
+					$labelEvents = [];
+					if (isset($label["events"]) && is_array($label["events"]))
+					{
+						$labelEvents = $label["events"];
+
+						if (isset($label["events"]["click"]))
+						{
+							$labelClass .= " ui-label-link";
+						}
+					}
+
+					$removeButton = [
+						"enabled" => false,
+					];
+					if (
+						isset($label["removeButton"])
+						&& is_array($label["removeButton"])
+					)
+					{
+						$removeButton["enabled"] = true;
+						if (
+							isset($label["removeButton"]["type"])
+							&& is_string($label["removeButton"]["type"])
+						)
+						{
+							$removeButton["class"] = " " . $label["removeButton"]["type"];
+							$removeButton["type"] = $label["removeButton"]["type"];
+						}
+						else
+						{
+							$removeButton["class"] = " " . Grid\Cell\Label\RemoveButtonType::INSIDE;
+							$removeButton["type"] = Grid\Cell\Label\RemoveButtonType::INSIDE;
+						}
+
+						if (
+							isset($label["removeButton"]["events"])
+							&& is_array($label["removeButton"]["events"])
+						)
+						{
+							$removeButton["attributes"] = static::stringifyAttrs([
+								"data-events" => $label["removeButton"]["events"],
+								"data-target" => ".ui-label",
+							]);
+						}
+					}
+
+					$content[$labelKey] = [
+						"class" => Text\HtmlFilter::encode($labelClass),
+						"attributes" => static::stringifyAttrs([
+							"data-events" => $labelEvents,
+						]),
+						"removeButton" => $removeButton,
+					];
+				}
+			}
+
+			if (
+				isset($column["type"])
+				&& $column["type"] === Grid\Column\Type::TAGS
+				&& isset($row["columns"][$column["id"]])
+				&& is_array($row["columns"][$column["id"]])
+			)
+			{
+				$addButtonEvents = [];
+				$addButtonEnabled = false;
+				if (
+					isset($row["columns"][$column["id"]]["addButton"])
+					&& is_array($row["columns"][$column["id"]]["addButton"])
+					&& isset($row["columns"][$column["id"]]["addButton"]["events"])
+					&& is_array($row["columns"][$column["id"]]["addButton"]["events"])
+				)
+				{
+					$addButtonEvents = $row["columns"][$column["id"]]["addButton"]["events"];
+					$addButtonEnabled = true;
+				}
+
+				$items = [];
+				foreach ($row["columns"][$column["id"]]["items"] as $tagKey => $tag)
+				{
+					$item = [];
+					$item["class"] = "";
+					$item["active"] = false;
+					if (isset($tag["active"]) && $tag["active"] === true)
+					{
+						$item["class"] = " main-grid-tag-active";
+						$item["active"] = true;
+					}
+
+					$tagEvents = [];
+					if (isset($tag["events"]) && is_array($tag["events"]))
+					{
+						$tagEvents = $tag["events"];
+					}
+
+					$item["attributes"] = static::stringifyAttrs([
+						"data-events" => $tagEvents,
+					]);
+
+					$removeButtonEvents = [];
+					if (
+						isset($tag["removeButton"])
+						&& is_array($tag["removeButton"])
+						&& isset($tag["removeButton"]["events"])
+						&& is_array($tag["removeButton"]["events"])
+					)
+					{
+						$removeButtonEvents = $tag["removeButton"]["events"];
+					}
+
+					$item["removeButton"] = [
+						"attributes" => static::stringifyAttrs([
+							"data-events" => $removeButtonEvents,
+						]),
+					];
+
+					$items[] = $item;
+				}
+
+				$content = [
+					"addButton" => [
+						"enabled" => $addButtonEnabled,
+						"attributes" => static::stringifyAttrs([
+							"data-events" => $addButtonEvents,
+						]),
+					],
+					"items" => $items,
+				];
+			}
+
+			$columns[$column["id"]] = [
+				"cell" => [
+					"class" => $cellClass,
+					"attributes" => static::stringifyAttrs($cellAttributes),
+				],
+				"container" => [
+					"attributes" => static::stringifyAttrs($containerAttributes),
+				],
+				"plusButton" => [
+					"enabled" => $isPlusButtonEnabled,
+				],
+				"cellActions" => [
+					"enabled" => $isCellActionsEnabled,
+					"items" => $cellActions,
+				],
+				"counter" => $counter,
+				"content" => $content,
+			];
+		}
+
+		return $columns;
+	}
+
+	protected static function stringifyAttrs($attrs): string
+	{
+		$attrsString = "";
+		if (is_array($attrs) && !empty($attrs))
+		{
+			$attrsString = " ";
+			foreach ($attrs as $key => $value)
+			{
+				if (is_array($value))
+				{
+					$escapedValue = "(" . Text\HtmlFilter::encode(CUtil::PhpToJSObject($value)) . ")";
+				}
+				else
+				{
+					if (is_bool($value))
+					{
+						$escapedValue = $value ? "true" : "false";
+					}
+					else
+					{
+						$escapedValue = Text\HtmlFilter::encode($value);
+					}
+				}
+
+				$escapedKey = Text\HtmlFilter::encode($key);
+				$attrsString .= $escapedKey."=\"".$escapedValue."\"";
+			}
+
+			$attrsString .= " ";
+		}
+
+		return $attrsString;
+	}
+
+	protected function prepareColumnHeaderStyle($column): string
+	{
+		$style = "";
+		if (isset($column["width"]))
+		{
+			$style .= "width: {$column["width"]}px; ";
+		}
+
+		if (
+			isset($column["color"])
+			&& is_string($column["color"])
+			&& (
+				strpos($column["color"], "#") === 0
+				|| strpos($column["color"], "rgb") === 0
+				|| strpos($column["color"], "hsl") === 0
+			)
+		)
+		{
+			$style .= "background-color: {$column["color"]};";
+		}
+
+		return $style;
+	}
+
+	protected function prepareColumnHeaderContainerStyle($column): string
+	{
+		$style = "";
+		if (isset($column["width"]))
+		{
+			$style .= "width: {$column["width"]}px; ";
+		}
+
+		return $style;
+	}
+
+	protected function prepareColumnHeaderClass($column): string
+	{
+		$result = "";
+		if (isset($column["class"]) && is_string($column["class"]))
+		{
+			$result .= " " . $column["class"];
+		}
+
+		if ($this->arParams["ALLOW_COLUMNS_SORT"])
+		{
+			$result .= " main-grid-draggable";
+		}
+
+		if ($this->arParams["ALLOW_STICKED_COLUMNS"] && $column["sticked"])
+		{
+			$result .= " main-grid-sticked-column";
+		}
+
+		if (
+			isset($column["color"])
+			&& is_string($column["color"])
+			&& (
+				strpos($column["color"], "#") === false
+				&& strpos($column["color"], "rgb") === false
+				&& strpos($column["color"], "hsl") === false
+			)
+		)
+		{
+			$result .= " " . $column["color"];
+		}
+
+		return $result;
 	}
 
 	/**
@@ -2191,20 +2844,77 @@ class CMainUIGrid extends CBitrixComponent
 		$this->arParams["ROWS"] = $result;
 	}
 
+	protected function prepareTemplateData()
+	{
+		foreach ($this->arResult["COLUMNS"] as $columnId => $column)
+		{
+			$column["layout"] = $this->prepareColumnHeaderLayout($column);
+			$this->arResult["COLUMNS"][$columnId] = $column;
+		}
+
+		$options = [
+			"lastCollapsedGroupId" => null,
+			"hasCellActions" => [],
+		];
+
+		foreach ($this->arParams["ROWS"] as $rowId => $row)
+		{
+			if (isset($row["cellActions"]) && is_array($row["cellActions"]))
+			{
+				foreach ($row["cellActions"] as $actions => $columnCellId)
+				{
+					if (is_array($actions) && !empty($actions))
+					{
+						$options["hasCellActions"][$columnCellId] = true;
+					}
+				}
+			}
+
+			if (isset($row["counters"]) && is_array($row["counters"]))
+			{
+				foreach ($row["counters"] as $columnId => $counter)
+				{
+					if (
+						is_array($counter)
+						&& isset($counter["type"])
+						&& $counter["type"] === Grid\Counter\Type::LEFT_ALIGNED
+					)
+					{
+						foreach ($this->arResult["COLUMNS"] as $colKey => $column)
+						{
+							$this->arResult["COLUMNS"][$colKey]["layout"]["hasLeftAlignedCounter"] = false;
+							if ($column["id"] === $columnId)
+							{
+								$this->arResult["COLUMNS"][$colKey]["layout"]["hasLeftAlignedCounter"] = true;
+							}
+						}
+					}
+				}
+			}
+		}
+
+		foreach ($this->arParams["ROWS"] as $rowId => $row)
+		{
+			if (!empty($row["custom"]))
+			{
+				$options["lastCollapsedGroupId"] = $row["expand"] === false ? $row["group_id"] : null;
+			}
+
+			$row["layout"] = $this->prepareRowLayout($row, $options);
+			$this->arParams["ROWS"][$rowId] = $row;
+		}
+	}
+
 	public function executeComponent()
 	{
 		if ($this->checkRequiredParams())
 		{
-			$templateRow = [
-				'id' => 'template_0',
-				'not_count' => true,
-				'attrs' => [
-					'hidden' => 'true',
-				],
-			];
+			if (!is_array($this->arParams['ROWS']))
+			{
+				$this->arParams['ROWS'] = [];
+			}
 
-			$this->arParams['ROWS'][] = $templateRow;
-
+			$this->prepareTemplateRow();
 			$this->prepareParams();
 			$this->prepareResult();
 			$this->prepareDefaultOptions();
@@ -2214,6 +2924,8 @@ class CMainUIGrid extends CBitrixComponent
 			{
 				$this->prepareMultilevelRows();
 			}
+
+			$this->prepareTemplateData();
 
 			$templateName = $this->getTemplateName();
 			if ( (empty($templateName) || $templateName === ".default") && $this->arParams['TILE_GRID_MODE'])

@@ -4,7 +4,6 @@ namespace Bitrix\Crm\Timeline;
 use Bitrix\Crm\Order\DeliveryStatus;
 use Bitrix\Crm\Order\Shipment;
 use Bitrix\Main;
-use Bitrix\Crm\Order\OrderShipmentStatus;
 use Bitrix\Main\Localization\Loc;
 
 Loc::loadMessages(__FILE__);
@@ -269,48 +268,46 @@ class OrderShipmentController extends EntityController
 	}
 	protected static function resolveCreatorID(array $fields)
 	{
-		$authorID = 0;
+		$authorId = 0;
 
 		if (isset($fields['RESPONSIBLE_ID']))
 		{
-			$authorID = (int)$fields['RESPONSIBLE_ID'];
+			$authorId = (int)$fields['RESPONSIBLE_ID'];
 		}
 
-		if ($authorID === 0 && isset($fields['ORDER_CREATED_BY']))
+		if ($authorId === 0 && isset($fields['ORDER_CREATED_BY']))
 		{
-			$authorID = (int)$fields['ORDER_CREATED_BY'];
+			$authorId = (int)$fields['ORDER_CREATED_BY'];
 		}
 
-		if ($authorID === 0)
+		if ($authorId <= 0)
 		{
-			//Set portal admin as default creator
-			$authorID = 1;
+			$authorId = self::getDefaultAuthorId();
 		}
 
-		return $authorID;
+		return $authorId;
 	}
 	protected static function resolveEditorID(array $fields)
 	{
-		$authorID = 0;
+		$authorId = 0;
 
 		if (isset($fields['RESPONSIBLE_ID']))
 		{
-			$authorID = (int)$fields['RESPONSIBLE_ID'];
+			$authorId = (int)$fields['RESPONSIBLE_ID'];
 		}
 
 		if (isset($fields['MODIFY_BY']))
 		{
-			$authorID = (int)$fields['MODIFY_BY'];
+			$authorId = (int)$fields['MODIFY_BY'];
 		}
 
 
-		if($authorID <= 0)
+		if($authorId <= 0)
 		{
-			//Set portal admin as default editor
-			$authorID = 1;
+			$authorId = self::getDefaultAuthorId();
 		}
 
-		return $authorID;
+		return $authorId;
 	}
 	public function prepareHistoryDataModel(array $data, array $options = null)
 	{
@@ -338,7 +335,7 @@ class OrderShipmentController extends EntityController
 			}
 
 			$fields = $settings['FIELDS'];
-			$title = $data['ASSOCIATED_ENTITY']['TITLE'];
+			$title = htmlspecialcharsbx(\CUtil::JSEscape($data['ASSOCIATED_ENTITY']['TITLE']));
 			if (!empty($fields['DATE_INSERT_TIMESTAMP']))
 			{
 				$dateInsert = \CCrmComponentHelper::TrimDateTimeString(ConvertTimeStamp($fields['DATE_INSERT_TIMESTAMP'],'SHORT'));
@@ -348,6 +345,10 @@ class OrderShipmentController extends EntityController
 				$dateInsert = \CCrmComponentHelper::TrimDateTimeString(ConvertTimeStamp(MakeTimeStamp($data['DATE_INSERT']),'SHORT'));
 			}
 
+			$data['ASSOCIATED_ENTITY']['TITLE'] = Loc::getMessage(
+				'CRM_SHIPMENT_DEDUCT_TITLE',
+				['#ACCOUNT_NUMBER#' => $data['ASSOCIATED_ENTITY']['TITLE']]
+			);
 			$data['ASSOCIATED_ENTITY']['HTML_TITLE'] = Loc::getMessage(
 				'CRM_SHIPMENT_CREATION_MESSAGE',
 				[

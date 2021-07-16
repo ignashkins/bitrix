@@ -2268,11 +2268,13 @@
 				fontSize: '11px',
 				padding: '10px 30px 10px 37px',
 				position: 'absolute',
-				zIndex:'10000',
 				textAlign:'center'
 			},
 			text: msg
 		}));
+
+		BX.ZIndexManager.register(obMsg);
+		BX.ZIndexManager.bringToFront(obMsg);
 
 		setTimeout(BX.delegate(_adjustWait, node), 10);
 
@@ -2302,6 +2304,7 @@
 				}
 			}
 
+			BX.ZIndexManager.unregister(obMsg);
 			obMsg.parentNode.removeChild(obMsg);
 			if (node) node.bxmsg = null;
 			BX.cleanNode(obMsg, true);
@@ -3338,6 +3341,12 @@
 
 	BX.CHint = function(params)
 	{
+		if (BX.CHint.cssLoaded === false)
+		{
+			BX.load(['/bitrix/js/main/core/css/core_hint.css']);
+			BX.CHint.cssLoaded = true;
+		}
+
 		this.PARENT = BX(params.parent);
 
 		this.HINT = params.hint;
@@ -3371,6 +3380,8 @@
 			BX.bind(this.PARENT, 'mouseout', BX.proxy(this.Hide, this));
 		}
 	};
+
+	BX.CHint.cssLoaded = false;
 
 	BX.CHint.openHints = new Set();
 
@@ -3471,6 +3482,8 @@
 		if (this.prepareAdjustPos())
 		{
 			this.DIV.style.display = 'block';
+			BX.ZIndexManager.bringToFront(this.DIV);
+
 			this.adjustPos();
 
 			BX.CHint.openHints.add(this);
@@ -3529,12 +3542,12 @@
 	{
 		this.DIV = document.body.appendChild(BX.create('DIV', {
 			props: {className: 'bx-panel-tooltip'},
-			style: {display: 'none'},
+			style: {
+				display: 'none',
+				position: 'absolute',
+				visibility: 'hidden'
+			},
 			children: [
-				BX.create('DIV', {
-					props: {className: 'bx-panel-tooltip-top-border'},
-					html: '<div class="bx-panel-tooltip-corner bx-panel-tooltip-left-corner"></div><div class="bx-panel-tooltip-border"></div><div class="bx-panel-tooltip-corner bx-panel-tooltip-right-corner"></div>'
-				}),
 				(this.CONTENT = BX.create('DIV', {
 					props: {className: 'bx-panel-tooltip-content'},
 					children: [
@@ -3545,14 +3558,11 @@
 							]
 						})
 					]
-				})),
-
-				BX.create('DIV', {
-					props: {className: 'bx-panel-tooltip-bottom-border'},
-					html: '<div class="bx-panel-tooltip-corner bx-panel-tooltip-left-corner"></div><div class="bx-panel-tooltip-border"></div><div class="bx-panel-tooltip-corner bx-panel-tooltip-right-corner"></div>'
-				})
+				}))
 			]
 		}));
+
+		BX.ZIndexManager.register(this.DIV);
 
 		if (this.ID)
 		{
@@ -3560,7 +3570,7 @@
 				attrs: {href: 'javascript:void(0)'},
 				props: {className: 'bx-panel-tooltip-close'},
 				events: {click: BX.delegate(this.Close, this)}
-			}), this.CONTENT.firstChild)
+			}), this.CONTENT.firstChild);
 		}
 
 		if (this.HINT_TITLE)
@@ -3570,7 +3580,7 @@
 					props: {className: 'bx-panel-tooltip-title'},
 					text: this.HINT_TITLE
 				})
-			)
+			);
 		}
 
 		if (this.HINT)
@@ -3714,6 +3724,8 @@
 		{
 			BX.unbind(this.DIV, 'mouseover', BX.proxy(this.Show, this));
 			BX.unbind(this.DIV, 'mouseout', BX.proxy(this.Hide, this));
+
+			BX.ZIndexManager.unregister(this.DIV);
 
 			BX.cleanNode(this.DIV, true);
 		}

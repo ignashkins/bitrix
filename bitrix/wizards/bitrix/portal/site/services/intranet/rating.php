@@ -18,10 +18,10 @@ if(!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED!==true)
 		}
 	}
 	
-	// РїРѕСЃР»Рµ Р°РІС‚РѕСЂРёС‚РµС‚Р°
+	// после авторитета
 	if ($bCreateRule)
 	{
-		$dbRes = CLanguage::GetList($by = 'sort', $order = 'asc');
+		$dbRes = CLanguage::GetList();
 		while ($arRes = $dbRes->Fetch())
 		{
 			if (file_exists(dirname(__FILE__).'/'.$arRes['LID'].'/rating.php'))

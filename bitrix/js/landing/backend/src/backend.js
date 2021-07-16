@@ -198,7 +198,10 @@ export class Backend
 		uploadParams = {},
 	): Promise<{[key: string]: any}, any>
 	{
-		queryParams.site_id = this.getSiteId();
+		if (!queryParams.site_id)
+		{
+			queryParams.site_id = this.getSiteId();
+		}
 
 		const requestBody = {
 			sessid: Loc.getMessage('bitrix_sessid'),
@@ -233,16 +236,27 @@ export class Backend
 				return response.result;
 			})
 			.catch((err) => {
-				if (requestBody.action !== 'Block::getById')
+				if (
+					requestBody.action !== 'Landing::downBlock'
+					&& requestBody.action !== 'Landing::upBlock'
+				)
 				{
-					const error = Type.isString(err) ? {type: 'error'} : err;
-					err.action = requestBody.action;
+					if (
+						requestBody.action !== 'Block::getById'
+						&& requestBody.action !== 'Landing::move'
+						&& requestBody.action !== 'Landing::copy'
+						&& requestBody.action !== 'Site::moveFolder'
+					)
+					{
+						const error = Type.isString(err) ? {type: 'error'} : err;
+						err.action = requestBody.action;
 
-					// eslint-disable-next-line
-					BX.Landing.ErrorManager.getInstance().add(error);
+						// eslint-disable-next-line
+						BX.Landing.ErrorManager.getInstance().add(error);
+					}
+
+					return Promise.reject(err);
 				}
-
-				return Promise.reject(err);
 			});
 	}
 
@@ -274,15 +288,21 @@ export class Backend
 				return response;
 			})
 			.catch((err) => {
-				if (requestBody.action !== 'Block::getById')
+				if (
+					requestBody.action !== 'Landing::downBlock'
+					&& requestBody.action !== 'Landing::upBlock'
+				)
 				{
-					const error = Type.isString(err) ? {type: 'error'} : err;
-					error.action = requestBody.action;
-					// eslint-disable-next-line
-					BX.Landing.ErrorManager.getInstance().add(error);
-				}
+					if (requestBody.action !== 'Block::getById')
+					{
+						const error = Type.isString(err) ? {type: 'error'} : err;
+						error.action = requestBody.action;
+						// eslint-disable-next-line
+						BX.Landing.ErrorManager.getInstance().add(error);
+					}
 
-				return Promise.reject(err);
+					return Promise.reject(err);
+				}
 			});
 	}
 

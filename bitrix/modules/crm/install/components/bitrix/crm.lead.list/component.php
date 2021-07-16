@@ -124,15 +124,17 @@ if ($isErrorOccured)
 
 use Bitrix\Main;
 use Bitrix\Crm;
-use Bitrix\Crm\Tracking;
-use Bitrix\Crm\EntityAddress;
-use Bitrix\Crm\Format\AddressSeparator;
-use Bitrix\Crm\Format\LeadAddressFormatter;
-use Bitrix\Crm\Settings\HistorySettings;
 use Bitrix\Crm\Context\GridContext;
-use Bitrix\Crm\WebForm\Manager as WebFormManager;
+use Bitrix\Crm\LeadAddress;
+use Bitrix\Crm\EntityAddress;
+use Bitrix\Crm\Format\AddressFormatter;
+use Bitrix\Crm\Settings\HistorySettings;
 use Bitrix\Crm\Settings\LayoutSettings;
+use Bitrix\Crm\Tracking;
+use Bitrix\Crm\WebForm\Manager as WebFormManager;
 use Bitrix\Crm\Conversion\LeadConversionDispatcher;
+
+$isInCalendarMode = isset($arParams['CALENDAR_MODE']) && ($arParams['CALENDAR_MODE'] === 'Y');
 
 $CCrmLead = new CCrmLead(false);
 $CCrmBizProc = new CCrmBizProc('LEAD');
@@ -326,16 +328,33 @@ if(!$bInternal && isset($_REQUEST['counter']))
 	}
 }
 
+$enableReportFilter = Main\Application::getInstance()->getContext()->getRequest()->getQuery('from_analytics') === 'Y';
 
-$enableReportFilter = Main\Application::getInstance()->getContext()->getRequest()->getQuery('from_analytics');
-
-if ($enableReportFilter === 'Y')
+if ($enableReportFilter)
 {
 	$boardId = Main\Application::getInstance()->getContext()->getRequest()->getQuery('board_id');
+	$boardId = preg_replace('/[^\w-_]/', '', $boardId);
 	$externalFilterId = 'report_board_' . $boardId . '_filter';
+
+	$reportId = Bitrix\Main\Context::getCurrent()->getRequest()['report_id'];
+
+	if($reportId != '')
+	{
+		$reportHandler = Crm\Integration\Report\ReportHandlerFactory::createWithReportId($reportId);
+		$reportFilter = $reportHandler ? $reportHandler->prepareEntityListFilter(Bitrix\Main\Context::getCurrent()->getRequest()) : null;
+
+		if(is_array($reportFilter) && !empty($reportFilter))
+		{
+			$arFilter = $reportFilter;
+		}
+		else
+		{
+			$enableReportFilter = false;
+		}
+	}
 }
 
-$arResult['IS_EXTERNAL_FILTER'] = ($enableWidgetFilter || $enableCounterFilter);
+$arResult['IS_EXTERNAL_FILTER'] = ($enableWidgetFilter || $enableCounterFilter || $enableReportFilter);
 
 $CCrmUserType = new CCrmUserType($USER_FIELD_MANAGER, CCrmLead::$sUFEntityID);
 
@@ -409,7 +428,7 @@ if(!$bInternal)
 			'name' => GetMessage('CRM_PRESET_ALL_CLOSED'),
 			'fields' => array_merge(
 				$defaultFilter,
-				array('STATUS_SEMANTIC_ID' => array(Bitrix\Crm\PhaseSemantics::SUCCESS))
+				array('STATUS_SEMANTIC_ID' => array(Bitrix\Crm\PhaseSemantics::SUCCESS, Bitrix\Crm\PhaseSemantics::FAILURE))
 			)
 		)
 	);
@@ -815,17 +834,9 @@ $USER_FIELD_MANAGER->AdminListAddFilter(CCrmLead::$sUFEntityID, $arFilter);
 $searchRestriction = \Bitrix\Crm\Restriction\RestrictionManager::getSearchLimitRestriction();
 if(!$searchRestriction->isExceeded(CCrmOwnerType::Lead))
 {
-	Bitrix\Crm\Search\SearchEnvironment::convertEntityFilterValues(CCrmOwnerType::Lead, $arFilter);
+	$searchRestriction->notifyIfLimitAlmostExceed(CCrmOwnerType::Lead);
 
-	if (
-		($limitWarningValue = $searchRestriction->getLimitWarningValue(CCrmOwnerType::Lead)) > 0
-	)
-	{
-		$searchRestriction->notifyLimitWarning(
-			CCrmOwnerType::Lead,
-			$limitWarningValue
-		);
-	}
+	Bitrix\Crm\Search\SearchEnvironment::convertEntityFilterValues(CCrmOwnerType::Lead, $arFilter);
 }
 else
 {
@@ -1807,6 +1818,12 @@ if ($isInGadgetMode)
 	$nTopCount = $arParams['LEAD_COUNT'];
 }
 
+
+if ($isInCalendarMode)
+{
+	$nTopCount = $arParams['DEAL_COUNT'];
+}
+
 if($nTopCount > 0)
 {
 	$arNavParams['nTopCount'] = $nTopCount;
@@ -1956,6 +1973,25 @@ if (!($isInExportMode && $isStExport))
 }
 //endregion
 
+if ($isInCalendarMode)
+{
+	$arSelect = [
+		'ID', 'TITLE', 'DATE_CREATE'
+	];
+	foreach ($arParams['CALENDAR_MODE_LIST'] as $calendarModeItem)
+	{
+		if ($calendarModeItem['selected'])
+		{
+			list($calendarModeItemUserFieldId, $calendarModeItemUserFieldType, $calendarModeItemUserFieldName) =
+				\Bitrix\Crm\Integration\Calendar::parseUserfieldKey($calendarModeItem['id']);
+			if ($calendarModeItemUserFieldName && !in_array($calendarModeItemUserFieldName, $arSelect, true))
+			{
+				$arSelect[] = $calendarModeItemUserFieldName;
+			}
+		}
+	}
+}
+
 if ($isInExportMode && $isStExport && $pageNum === 1)
 {
 	$total = \CCrmLead::GetListEx(array(), $arFilter, array());
@@ -2078,7 +2114,7 @@ else
 			);
 
 		$navDbResult = \Bitrix\Crm\LeadAddress::getEntityList(
-			\Bitrix\Crm\EntityAddress::Primary,
+			\Bitrix\Crm\EntityAddressType::Primary,
 			$addressSort,
 			$arFilter,
 			false,
@@ -2201,10 +2237,6 @@ $arResult['STEXPORT_IS_LAST_PAGE'] = $enableNextPage ? 'N' : 'Y';
 
 $arResult['PAGINATION']['URL'] = $APPLICATION->GetCurPageParam('', array('apply_filter', 'clear_filter', 'save', 'page', 'sessid', 'internal'));
 $enableExportEvent = $isInExportMode && HistorySettings::getCurrent()->isExportEventEnabled();
-
-$addressFormatOptions = $sExportType === 'csv'
-	? array('SEPARATOR' => AddressSeparator::Comma)
-	: array('SEPARATOR' => AddressSeparator::HtmlLineBreak, 'NL2BR' => true);
 
 $now = time() + CTimeZone::GetOffset();
 $activitylessItems = array();
@@ -2591,7 +2623,18 @@ foreach($arResult['LEAD'] as &$arLead)
 
 	if(isset($arSelectMap['FULL_ADDRESS']))
 	{
-		$arLead['FULL_ADDRESS'] = LeadAddressFormatter::format($arLead, $addressFormatOptions);
+		if ($sExportType === 'csv')
+		{
+			$arLead['FULL_ADDRESS'] = AddressFormatter::getSingleInstance()->formatTextComma(
+				LeadAddress::mapEntityFields($arLead)
+			);
+		}
+		else
+		{
+			$arLead['FULL_ADDRESS'] = AddressFormatter::getSingleInstance()->formatHtmlMultiline(
+				LeadAddress::mapEntityFields($arLead)
+			);
+		}
 	}
 
 	$userActivityID = isset($arLead['~ACTIVITY_ID']) ? intval($arLead['~ACTIVITY_ID']) : 0;

@@ -402,25 +402,39 @@
 		result.push({
 			tabName: BX.message('BIZPROC_JS_BP_SELECTOR_SYSTEM'),
 			tabId: 'system',
-			items: this.filterItems([{
-				text: BX.message('BIZPROC_JS_BP_SELECTOR_WORKFLOW_ID'),
-				value: '{=Workflow:ID}'
-			},{
-				text: BX.message('BIZPROC_JS_BP_SELECTOR_TARGET_USER'),
-				value: '{=Template:TargetUser}'
-			},{
-				text: BX.message('BIZPROC_JS_BP_SELECTOR_USER_ID'),
-				value: '{=User:ID}'
-			},{
-				text: BX.message('BIZPROC_JS_BP_SELECTOR_NOW'),
-				value: '{=System:Now}'
-			},{
-				text: BX.message('BIZPROC_JS_BP_SELECTOR_NOW_LOCAL'),
-				value: '{=System:NowLocal}'
-			},{
-				text: BX.message('BIZPROC_JS_BP_SELECTOR_DATE'),
-				value: '{=System:Date}'
-			}], query)
+			items: this.filterItems(
+				[
+					{
+						text: BX.message('BIZPROC_JS_BP_SELECTOR_WORKFLOW_ID'),
+						value: '{=Workflow:ID}'
+					},
+					{
+						text: BX.message('BIZPROC_JS_BP_SELECTOR_TARGET_USER'),
+						value: '{=Template:TargetUser}'
+					},
+					{
+						text: BX.message('BIZPROC_JS_BP_SELECTOR_USER_ID'),
+						value: '{=User:ID}'
+					},
+					{
+						text: BX.message('BIZPROC_JS_BP_SELECTOR_NOW'),
+						value: '{=System:Now}'
+					},
+					{
+						text: BX.message('BIZPROC_JS_BP_SELECTOR_NOW_LOCAL'),
+						value: '{=System:NowLocal}'
+					},
+					{
+						text: BX.message('BIZPROC_JS_BP_SELECTOR_DATE'),
+						value: '{=System:Date}'
+					},
+					{
+						text: BX.message('BIZPROC_JS_BP_SELECTOR_EOL'),
+						value: '{=System:Eol}'
+					}
+				],
+				query
+			)
 		});
 
 		result.push({
@@ -538,6 +552,22 @@
 				text: 'urlencode',
 				description: BX.message('BIZPROC_JS_BP_SELECTOR_FUNCTION_URLENCODE_DESCRIPTION'),
 				value: '{{=urlencode()}}'
+			},{
+				text: 'strtolower',
+				description: BX.message('BIZPROC_JS_BP_SELECTOR_FUNCTION_STRTOLOWER_DESCRIPTION'),
+				value: '{{=strtolower()}}'
+			},{
+				text: 'strtoupper',
+				description: BX.message('BIZPROC_JS_BP_SELECTOR_FUNCTION_STRTOUPPER_DESCRIPTION'),
+				value: '{{=strtoupper()}}'
+			},{
+				text: 'ucwords',
+				description: BX.message('BIZPROC_JS_BP_SELECTOR_FUNCTION_UCWORDS_DESCRIPTION'),
+				value: '{{=ucwords()}}'
+			},{
+				text: 'ucfirst',
+				description: BX.message('BIZPROC_JS_BP_SELECTOR_FUNCTION_UCFIRST_DESCRIPTION'),
+				value: '{{=ucfirst()}}'
 			}], query)
 		});
 

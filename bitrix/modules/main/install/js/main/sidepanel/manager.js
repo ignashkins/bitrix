@@ -23,6 +23,8 @@
  * @property {number} [customRightBoundary]
  * @property {number} [customTopBoundary]
  * @property {object} [label]
+ * @property {boolean} [newWindowLabel]
+ * @property {boolean} [copyLinkLabel]
  * @property {?object.<string, function>} [events]
  */
 
@@ -201,7 +203,6 @@ BX.SidePanel.Manager.prototype =
 			var sliderClass = BX.SidePanel.Manager.getSliderClass();
 			slider = new sliderClass(url, options);
 
-			var zIndex = Math.max(topSlider ? topSlider.getZindex() + 10 : slider.getZindex(), slider.getZindex());
 			var offset = null;
 			if (slider.getWidth() === null && slider.getCustomLeftBoundary() === null)
 			{
@@ -213,7 +214,6 @@ BX.SidePanel.Manager.prototype =
 				}
 			}
 
-			slider.setZindex(zIndex);
 			slider.setOffset(offset);
 
 			BX.addCustomEvent(slider, "SidePanel.Slider:onOpenStart", this.handleSliderOpenStart);
@@ -980,6 +980,7 @@ BX.SidePanel.Manager.prototype =
 
 			this.getTopSlider().hideOrDarkenCloseBtn();
 			this.getTopSlider().hidePrintBtn();
+			this.getTopSlider().hideExtraLabels();
 		}
 		else
 		{
@@ -1130,6 +1131,7 @@ BX.SidePanel.Manager.prototype =
 			this.getTopSlider().showOrLightenCloseBtn();
 			this.getTopSlider().unhideOverlay();
 			this.getTopSlider().hideShadow();
+			this.getTopSlider().showExtraLabels();
 
 			if (this.getTopSlider().isPrintable())
 			{

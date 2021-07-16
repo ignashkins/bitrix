@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["TASKS_COLUMN_ALL"] = "Всього";
 $MESS["TASKS_COLUMN_COMPLETE"] = "Виконано";
 $MESS["TASKS_COLUMN_EFFECTIVE"] = "ефективність";
@@ -20,7 +20,6 @@ $MESS["TASKS_FILTER_COLUMN_PROJECT_DATE"] = "Тривалість проєкту
 $MESS["TASKS_FILTER_COLUMN_TAG"] = "Теги";
 $MESS["TASKS_FILTER_COLUMN_TYPE"] = "Тип проєкту";
 $MESS["TASKS_PRESET_ACTIVE_PROJECT"] = "У роботі";
-$MESS["TASKS_PRESET_EXPIRED_PROJECT"] = "Прострочений";
+$MESS["TASKS_PRESET_EXPIRED_PROJECT"] = "Протермінований";
 $MESS["TASKS_PRESET_INACTIVE_PROJECT"] = "Архівний";
 $MESS["TASKS_PROJECT_OVERVIEW_COMPONENT_ACCESS_DENIED"] = "Доступ заборонений";
-?>

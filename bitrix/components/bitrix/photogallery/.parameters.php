@@ -17,10 +17,10 @@ while($arr=$rsIBlock->Fetch())
 	$arIBlock[$arr["ID"]] = "[".$arr["ID"]."] ".$arr["NAME"];
 
 $arUGroupsEx = Array();
-$dbUGroups = CGroup::GetList($by = "c_sort", $order = "asc");
+$dbUGroups = CGroup::GetList();
 while($arUGroups = $dbUGroups -> Fetch())
 	$arUGroupsEx[$arUGroups["ID"]] = $arUGroups["NAME"];
-$res = unserialize(COption::GetOptionString("photogallery", "pictures"));
+$res = unserialize(COption::GetOptionString("photogallery", "pictures"), ['allowed_classes' => false]);
 $arSights = array();
 if (is_array($res))
 {

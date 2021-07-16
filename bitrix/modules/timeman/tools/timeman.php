@@ -1,5 +1,7 @@
 <?
 use Bitrix\Timeman\Model\Schedule\ScheduleTable;
+use Bitrix\Timeman\Monitor\Config;
+use Bitrix\Timeman\Monitor\Report\Status;
 
 define('BX_SECURITY_SHOW_MESSAGE', 1);
 define("NO_KEEP_STATISTIC", true);
@@ -219,10 +221,6 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 					$report = $dbreport->fetch();
 				}
 			}
-			elseif (!is_array($_SESSION['report_files']))
-			{
-				$_SESSION['report_files'] = [];
-			}
 
 			if ($_POST["mode"] == "upload")
 			{
@@ -255,13 +253,13 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 				{
 					if ($report)
 					{
-						$arCurFiles = unserialize($report["FILES"]);
+						$arCurFiles = unserialize($report["FILES"], ['allowed_classes' => false]);
 						$arFiles = (is_array($arCurFiles) && count($arCurFiles) > 0) ? array_merge($arCurFiles, $arResult) : $arResult;
 						CTimeManReportFull::Update($report["ID"], ["FILES" => $arFiles]);
 					}
 					else
 					{
-						$_SESSION['report_files'] = array_merge($_SESSION['report_files'], $arResult);
+						CUserReportFull::setReportFiles(array_merge(CUserReportFull::getReportFiles(), $arResult));
 					}
 				}
 
@@ -269,19 +267,21 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 				Header('Content-Type: text/html; charset=' . LANG_CHARSET);
 				?>
 				<script type="text/javascript">
-					window.parent.window.<?echo (int)$_POST["form_id"]?>.RefreshUpload(<?php echo CUtil::PhpToJsObject($arResult);?>, <?php echo intval($_POST["uniqueID"])?>);
+					window.parent.window['<?=CUtil::JSescape($_POST["form_id"])?>'].RefreshUpload(<?php echo CUtil::PhpToJsObject($arResult);?>, <?php echo intval($_POST["uniqueID"])?>);
 				</script>
 				<?
 			}
 			elseif ($_POST["mode"] == "delete")
 			{
+				$reportFiles = CUserReportFull::getReportFiles();
+
 				if ($report)
 				{
-					$arFiles = unserialize($report["FILES"]);
+					$arFiles = unserialize($report["FILES"], ['allowed_classes' => false]);
 				}
 				else
 				{
-					$arFiles = $_SESSION['report_files'];
+					$arFiles = $reportFiles;
 				}
 
 				if (is_array($arFiles))
@@ -293,10 +293,10 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 							CFile::Delete(intval($_POST["fileID"]));
 							unset($arFiles[$key]);
 
-							if (isset($_SESSION['report_files']))
+							if (isset($reportFiles[$key]))
 							{
-								unset($_SESSION['report_files'][$key]);
-								$_SESSION['report_files'] = array_values($_SESSION['report_files']);
+								unset($reportFiles[$key]);
+								CUserReportFull::setReportFiles(array_values($reportFiles));
 							}
 
 							if ($report)
@@ -316,6 +316,8 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 			$report_id = intval($_REQUEST["report_id"]);
 
 			$arFiles = null;
+
+			$reportFiles = CUserReportFull::getReportFiles();
 
 			if ($report_id > 0)
 			{
@@ -345,12 +347,12 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 
 				if (is_array($report) && $report['FILES'] <> '')
 				{
-					$arFiles = unserialize($report['FILES']);
+					$arFiles = unserialize($report['FILES'], ['allowed_classes' => false]);
 				}
 			}
-			elseif (isset($_SESSION['report_files']))
+			elseif ($reportFiles)
 			{
-				$arFiles = $_SESSION['report_files'];
+				$arFiles = $reportFiles;
 			}
 
 			if (is_array($arFiles))
@@ -562,7 +564,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 						if ($bCanReadUser && !$_POST["mode"])
 						{
 							$dbRes = CUser::GetList(
-								$by = 'ID', $order = 'ASC',
+								'ID', 'ASC',
 								['ID' => $USER_ID],
 								['SELECT' => ['UF_*']]
 							);
@@ -580,7 +582,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 							}
 
 							$user_url = COption::GetOptionString('intranet', 'path_user', '/company/personal/user/#USER_ID#/', $_REQUEST['site_id']);
-							$dbManagers = CUser::GetList($by = 'ID', $order = 'ASC', ['ID' => implode('|', $arManagers)]);
+							$dbManagers = CUser::GetList('ID', 'ASC', ['ID' => implode('|', $arManagers)]);
 
 							$res["TO"] = [];
 							$res["FROM"] = [];
@@ -640,7 +642,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 
 								if ($res["INFO"]['TASKS_ENABLED'] = (CBXFeatures::IsFeatureEnabled('Tasks') && CModule::IncludeModule('tasks')))
 								{
-									$res["INFO"]['TASKS'] = unserialize($res["INFO"]['TASKS']);
+									$res["INFO"]['TASKS'] = unserialize($res["INFO"]['TASKS'], ['allowed_classes' => false]);
 								}
 								else
 								{
@@ -649,7 +651,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 
 								if ($res["INFO"]['CALENDAR_ENABLED'] = CBXFeatures::IsFeatureEnabled('Calendar'))
 								{
-									$res["INFO"]['EVENTS'] = unserialize($res["INFO"]['EVENTS']);
+									$res["INFO"]['EVENTS'] = unserialize($res["INFO"]['EVENTS'], ['allowed_classes' => false]);
 								}
 								else
 								{
@@ -658,7 +660,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 
 								if ($res["INFO"]['FILES'])
 								{
-									$res["INFO"]['FILES'] = unserialize($res["INFO"]['FILES']);
+									$res["INFO"]['FILES'] = unserialize($res["INFO"]['FILES'], ['allowed_classes' => false]);
 								}
 
 								$res["INFO"]['CAN_EDIT'] = ($arUser['ID'] != $USER->GetID()) && ($bCanEditAll || in_array($arUser['ID'], $arAccessUsers['WRITE']));
@@ -692,7 +694,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 
 									if (!$res["INFO"]["APPROVER_INFO"])
 									{
-										$dbaprrove = CUser::GetList($by = 'ID', $order = 'ASC', ['ID' => intval($res["INFO"]["APPROVER"])]);
+										$dbaprrove = CUser::GetList('ID', 'ASC', ['ID' => intval($res["INFO"]["APPROVER"])]);
 
 										if ($approver = $dbaprrove->Fetch())
 										{
@@ -847,9 +849,10 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 							}
 							else
 							{
-								if (is_array($_SESSION['report_files']))
+								$reportFiles = CUserReportFull::getReportFiles();
+								if ($reportFiles)
 								{
-									$arFields['FILES'] = $_SESSION['report_files'];
+									$arFields['FILES'] = $reportFiles;
 								}
 
 								$arManagers = CTimeMan::GetUserManagers($curUser);
@@ -861,7 +864,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 								}
 							}
 
-							$_SESSION['report_files'] = [];
+							CUserReportFull::setReportFiles([]);
 							$CACHE_MANAGER->Clean(CUserReportFull::getInfoCacheId($curUser), 'timeman_report_info');
 							$CACHE_MANAGER->Clean(CReportSettings::getSettingsCacheId($curUser), 'timeman_report_settings');
 						}
@@ -1013,7 +1016,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 						$TMUSER = CTimeManUser::instance();
 
 						$dbRes = CUser::GetList(
-							$by = 'ID', $order = 'ASC',
+							'ID', 'ASC',
 							['ID' => $USER->GetID()],
 							['SELECT' => ['UF_*']]
 						);
@@ -1057,7 +1060,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 
 						$arInfo = CTimeMan::GetRuntimeInfo(true);
 						$arInfo['DATE_TEXT'] = FormatDate('j F Y', $arInfo['INFO']['DATE_START']);
-						$arInfo['INFO']['TIME_OFFSET'] = CTimeManUser::getDayStartOffset($arInfo['INFO'], true);
+						$arInfo['INFO']['TIME_OFFSET'] = CTimeManUser::instance()->getDayStartOffset($arInfo['INFO'], true);
 
 
 						if ($arInfo['PLANNER'])
@@ -1183,7 +1186,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 						{
 							$arUserIDs = array_unique($arUserIDs);
 							$dbUsers = CUser::GetList(
-								$by = 'ID', $order = 'ASC',
+								'ID', 'ASC',
 								['ID' => implode('|', $arUserIDs), 'ACTIVE' => 'Y']
 							);
 							while ($arUser = $dbUsers->Fetch())
@@ -1265,17 +1268,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 
 							if ($arInfo['TASKS_ENABLED'])
 							{
-								$arFields['TASKS'] = $arInfo['TASKS'];
-
-								foreach ($arFields['TASKS'] as $key => $arTask)
-								{
-									if (!isset($arTask['TIME']) || $arTask['TIME'] <= 0)
-									{
-										unset($arFields['TASKS'][$key]);
-									}
-								}
-
-								$arFields['TASKS'] = array_values($arFields['TASKS']);
+								$arFields['TASKS'] = array_values($arInfo['TASKS']);
 							}
 						}
 
@@ -1354,6 +1347,21 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 								]);
 								break;
 							}
+						}
+
+						if (
+							$device === ScheduleTable::ALLOWED_DEVICES_MOBILE
+							&& Config::isMonitorEnabledForCurrentUser()
+							&& Status::getForCurrentUser() === Status::WAITING_DATA
+						)
+						{
+							$res = false;
+							$error = \Bitrix\Main\Web\Json::encode([
+								'error_id' => 'ALERT_WARNING',
+								'error' => \Bitrix\Main\Localization\Loc::getMessage('TM_DAY_OPEN_ERROR_MONITOR_ENABLED'),
+							]);
+
+							break;
 						}
 
 						if ($_REQUEST['timestamp'] > 0)
@@ -1652,7 +1660,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 							}
 							$arFilterUser = [];
 							$arFilterUser['USER_ID'] = $arUsers;
-							$dbRes = CUser::GetList($by = 'ID', $order = 'ASC', ['ID' => implode('|', $arUsers), 'ACTIVE' => 'Y'], ['SELECT' => ['*', 'UF_DEPARTMENT']]);
+							$dbRes = CUser::GetList('ID', 'ASC', ['ID' => implode('|', $arUsers), 'ACTIVE' => 'Y'], ['SELECT' => ['*', 'UF_DEPARTMENT']]);
 							while ($arRes = $dbRes->GetNext())
 							{
 								$res['USERS'][$arRes['ID']] = [
@@ -2152,7 +2160,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 									|| in_array($arRes['USER_ID'], $arAccessUsers['READ'])
 								)
 								{
-									$arRes['TIME_OFFSET'] = CTimeManUser::getDayStartOffset($arRes);
+									$arRes['TIME_OFFSET'] = CTimeManUser::instance()->getDayStartOffset($arRes);
 
 									$bCanEdit = ($bCanEditAll || in_array($arRes['USER_ID'], $arAccessUsers['WRITE']));
 
@@ -2164,7 +2172,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 									$bReturnRes = true;
 
 									$dbRes = CUser::GetList(
-										$by = 'ID', $order = 'ASC',
+										'ID', 'ASC',
 										['ID' => $arRes['USER_ID']],
 										['SELECT' => ['UF_*']]
 									);
@@ -2184,7 +2192,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 
 									$user_url = COption::GetOptionString('intranet', 'path_user', '/company/personal/user/#USER_ID#/', $_REQUEST['site_id']);
 
-									$dbManagers = CUser::GetList($by = 'ID', $order = 'ASC', ['ID' => implode('|', $arManagers)]);
+									$dbManagers = CUser::GetList('ID', 'ASC', ['ID' => implode('|', $arManagers)]);
 
 									$arCurrentUserManagers = [];
 
@@ -2327,7 +2335,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 									{
 										$arUserIDs = array_unique($arUserIDs);
 										$dbUsers = CUser::GetList(
-											$by = 'ID', $order = 'ASC',
+											'ID', 'ASC',
 											['ID' => implode('|', $arUserIDs), 'ACTIVE' => 'Y']
 										);
 										while ($arUser = $dbUsers->Fetch())
@@ -2354,7 +2362,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 
 										if ($res['INFO']['TASKS_ENABLED'])
 										{
-											$res['INFO']['TASKS'] = unserialize($arRes['TASKS']);
+											$res['INFO']['TASKS'] = unserialize($arRes['TASKS'], ['allowed_classes' => false]);
 										}
 										else
 										{
@@ -2363,7 +2371,7 @@ if (check_bitrix_sessid() && $USER->IsAuthorized())
 
 										if ($res['INFO']['CALENDAR_ENABLED'])
 										{
-											$res['INFO']['EVENTS'] = unserialize($arRes['EVENTS']);
+											$res['INFO']['EVENTS'] = unserialize($arRes['EVENTS'], ['allowed_classes' => false]);
 										}
 										else
 										{

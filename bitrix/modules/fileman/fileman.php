@@ -1,4 +1,5 @@
-<?
+<?php
+
 /*
 ##############################################
 # Bitrix: SiteManager                        #
@@ -183,17 +184,18 @@ class CFileMan
 		{
 			$useHotKeys = COption::GetOptionString('fileman', "stickers_use_hotkeys", "Y") == "Y";
 			$arMenu = array();
+
 			if (CSticker::CanDoOperation('sticker_new'))
 			{
-				$arMenu[] = array(
+				$arMenu[] = [
 					"TEXT" => GetMessage("FMST_PANEL_STICKER_ADD").($useHotKeys ? ' (Ctrl+Shift+S)' : ''),
 					"TITLE" => GetMessage("FMST_PANEL_STICKER_ADD_TITLE"),
 					"ICON" => "",
 					"ACTION" => CSticker::GetScriptStr('add'),
 					"DEFAULT" => true,
-					"HK_ID"=>"FMST_PANEL_STICKER_ADD",
-				);
-				$arMenu[] = array("SEPARATOR" => true);
+					"HK_ID" => "FMST_PANEL_STICKER_ADD",
+				];
+				$arMenu[] = ["SEPARATOR" => true];
 			}
 
 			$curPageCount = CSticker::GetCurPageCount();
@@ -1970,7 +1972,7 @@ class CFileMan
 					//Get taskbar settings
 					$taskbars = CUserOptions::GetOption("fileman", "taskbar_settings_".$edname, false);
 					if ($taskbars !== false && CheckSerializedData($taskbars, 10))
-						$taskbars = unserialize($taskbars);
+						$taskbars = unserialize($taskbars, ['allowed_classes' => false]);
 					else
 						$taskbars = false;
 
@@ -2007,7 +2009,7 @@ class CFileMan
 		$taskbarset = CUserOptions::GetOption("fileman", "taskbarset_settings_".$edname, false);
 
 		if ($taskbarset !== false && CheckSerializedData($taskbarset, 10))
-			$taskbarset = unserialize($taskbarset);
+			$taskbarset = unserialize($taskbarset, ['allowed_classes' => false]);
 		else
 			$taskbarset = false;
 
@@ -2053,7 +2055,7 @@ class CFileMan
 		);
 		$res = COption::GetOptionString('fileman', "propstypes", addslashes(serialize($defRes)), $site);
 		if (CheckSerializedData($res))
-			$res = unserialize(stripslashes($res));
+			$res = unserialize(stripslashes($res), ['allowed_classes' => false]);
 		else
 			$res = $defRes;
 		return $res;
@@ -2151,7 +2153,9 @@ class CFileMan
 	public static function GetLastPathes()
 	{
 		$arPathes = CUserOptions::GetOption("fileman", "last_pathes", false);
-		$arPathes = ($arPathes === false || !CheckSerializedData($arPathes)) ? CFileMan::GetLastPathesDefault() : unserialize($arPathes);
+		$arPathes = ($arPathes === false || !CheckSerializedData($arPathes))
+			? CFileMan::GetLastPathesDefault()
+			: unserialize($arPathes, ['allowed_classes' => false]);
 		$arPathes = array_slice($arPathes, 0, 10);
 
 		return $arPathes;
@@ -2175,7 +2179,7 @@ class CFileMan
 		$res = COption::GetOptionString('fileman', "toolbar_config_".$editorType, false);
 		if ($res && CheckSerializedData($res))
 		{
-			$arConfig = unserialize($res);
+			$arConfig = unserialize($res, ['allowed_classes' => false]);
 			if (is_array($arConfig))
 				return $arConfig;
 		}

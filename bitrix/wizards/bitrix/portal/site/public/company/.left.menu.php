@@ -16,13 +16,6 @@ $aMenuLinks = Array(
 		""
 	),
 	Array(
-		GetMessage("COMPANY_MENU_TELEPHONES"),
-		"#SITE_DIR#company/telephones.php",
-		Array(),
-		Array(),
-		""
-	),
-	Array(
 		GetMessage("COMPANY_MENU_EVENTS"),
 		"#SITE_DIR#company/events.php",
 		Array(),

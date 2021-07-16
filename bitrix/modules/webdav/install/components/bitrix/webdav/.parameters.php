@@ -7,7 +7,7 @@ $sIBlockType = "";
 $arIBlock = array();
 $iIblockDefault = 0;
 $arUGroupsEx = Array();
-$dbUGroups = CGroup::GetList($by = "c_sort", $order = "asc");
+$dbUGroups = CGroup::GetList();
 $iUploadMaxFilesize = intval(ini_get('upload_max_filesize'));
 $iPostMaxSize = intval(ini_get('post_max_size'));
 $iUploadMaxFilesize = min($iUploadMaxFilesize, $iPostMaxSize);

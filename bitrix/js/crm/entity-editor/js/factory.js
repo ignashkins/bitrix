@@ -99,6 +99,10 @@ if(typeof BX.Crm.EntityEditorControlFactory === "undefined")
 				{
 					return BX.Crm.EntityEditorMoney.create(controlId, settings);
 				}
+				else if(type === "calculated_delivery_price")
+				{
+					return BX.Crm.EntityEditorCalculatedDeliveryPrice.create(controlId, settings);
+				}
 				else if(type === "moneyPay")
 				{
 					return BX.Crm.EntityEditorMoneyPay.create(controlId, settings);
@@ -126,6 +130,10 @@ if(typeof BX.Crm.EntityEditorControlFactory === "undefined")
 				else if(type === "crm_entity")
 				{
 					return BX.Crm.EntityEditorEntity.create(controlId, settings);
+				}
+				else if(type === "crm_entity_tag")
+				{
+					return BX.Crm.EntityEditorEntityTag.create(controlId, settings);
 				}
 				else if(type === "file_storage")
 				{
@@ -227,6 +235,10 @@ if(typeof BX.Crm.EntityEditorControlFactory === "undefined")
 				{
 					return BX.Crm.EntityEditorOrderProductProperty.create(controlId, settings);
 				}
+				else if(type === "order_trading_platform")
+				{
+					return BX.Crm.EntityEditorOrderTradingPlatform.create(controlId, settings);
+				}
 				else if(type === "order_person_type")
 				{
 					return BX.Crm.EntityEditorOrderPersonType.create(controlId, settings);
@@ -288,6 +300,10 @@ if(typeof BX.Crm.EntityEditorControllerFactory === "undefined")
 				if(type === "product_row_proxy")
 				{
 					return BX.Crm.EntityEditorProductRowProxy.create(controllerId, settings);
+				}
+				else if(type === "product_list")
+				{
+					return BX.Crm.EntityProductListController.create(controllerId, settings);
 				}
 				else if(type === "order_controller")
 				{
@@ -352,6 +368,10 @@ if(typeof BX.Crm.EntityEditorModelFactory === "undefined")
 				else if(entityTypeId === BX.CrmEntityType.enumeration.ordershipment)
 				{
 					return BX.Crm.OrderShipmentModel.create(id, settings);
+				}
+				else if (BX.CrmEntityType.isDynamicTypeByTypeId(entityTypeId))
+				{
+					return BX.Crm.FactoryBasedModel.create(id, settings);
 				}
 				return BX.Crm.EntityModel.create(id, settings);
 			}

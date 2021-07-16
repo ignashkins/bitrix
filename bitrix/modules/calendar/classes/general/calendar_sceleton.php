@@ -14,10 +14,10 @@ class CCalendarSceleton
 		\Bitrix\Main\UI\Extension::load([
 			'calendar.util',
 			'calendar.entry',
-			'calendar.calendarsection',
+			'calendar.sectionmanager',
 			'calendar.controls',
 			'calendar.sliderloader',
-			'calendar.sync.interface'
+			'calendar.sync.manager',
 		]);
 
 		if(\Bitrix\Main\Loader::includeModule('rest'))
@@ -100,24 +100,32 @@ class CCalendarSceleton
 	public static function GetWeekDaysEx($weekStart = 'MO')
 	{
 		$days = self::GetWeekDays();
-		if ($weekStart == 'MO')
-			return $days;
-		$res = array();
-		$start = false;
-		while(list($k, $day) = each($days))
+		if ($weekStart === 'MO')
 		{
-			if ($day[2] == $weekStart)
-			{
-				$start = !$start;
-				if (!$start)
-					break;
-			}
-			if ($start)
-				$res[] = $day;
-
-			if ($start && $k == 6)
-				reset($days);
+			return $days;
 		}
+
+		$res = [];
+		$startIndex = false;
+
+		foreach ($days as $k => $day)
+		{
+			if ($day[2] === $weekStart)
+			{
+				$startIndex = $k;
+			}
+
+			if ($startIndex !== false)
+			{
+				$res[] = $day;
+			}
+		}
+
+		for ($i = 0; $i < $startIndex; $i++)
+		{
+			$res[] = $days[$i];
+		}
+
 		return $res;
 	}
 
@@ -245,6 +253,26 @@ class CCalendarSceleton
 			?></div><?
 		}
 		return $result;
+	}
+
+	/**
+	 * @param string $title
+	 * @param string $content
+	 * @return bool
+	 */
+	public static function showCalendarGridError(string $title, string $content = ''): bool
+	{
+		global $APPLICATION;
+		$APPLICATION->IncludeComponent(
+			"bitrix:calendar.grid.error",
+			"",
+			[
+				'TITLE' => $title,
+				'CONTENT' => $content,
+			]
+		);
+
+		return true;
 	}
 }
 ?>

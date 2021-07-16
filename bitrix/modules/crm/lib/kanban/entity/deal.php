@@ -7,13 +7,12 @@ use Bitrix\Crm\Category\DealCategoryChangeError;
 use Bitrix\Crm\Integration\Socialnetwork\Livefeed\CrmDeal;
 use Bitrix\Crm\Recurring;
 use Bitrix\Crm\Kanban\Entity;
-use Bitrix\Crm\UserField\Visibility\VisibilityManager;
 use Bitrix\Crm\Filter;
+use Bitrix\Crm\Service\Container;
+use Bitrix\Crm\Settings\DealSettings;
 use Bitrix\Main\Error;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Result;
-use Bitrix\Main\Text\HtmlFilter;
-use Bitrix\Main\Type\Date;
 
 class Deal extends Entity
 {
@@ -30,6 +29,28 @@ class Deal extends Entity
 	public function getItemsSelectPreset(): array
 	{
 		return ['ID', 'STAGE_ID', 'TITLE', 'DATE_CREATE', 'BEGINDATE', 'OPPORTUNITY', 'OPPORTUNITY_ACCOUNT', 'EXCH_RATE', 'CURRENCY_ID', 'ACCOUNT_CURRENCY_ID', 'IS_REPEATED_APPROACH', 'IS_RETURN_CUSTOMER', 'CONTACT_ID', 'COMPANY_ID', 'MODIFY_BY_ID', 'ASSIGNED_BY', 'ORDER_STAGE'];
+	}
+
+	public function isContactCenterSupported(): bool
+	{
+		return true;
+	}
+
+	public function getTypeInfo(): array
+	{
+		return array_merge(
+			parent::getTypeInfo(),
+			[
+				'canUseIgnoreItemInPanel' => true,
+				'hasPlusButtonTitle' => true,
+				'showPersonalSetStatusNotCompletedText' => true,
+				'isRecyclebinEnabled' => DealSettings::getCurrent()->isRecycleBinEnabled(),
+				'canUseCreateTaskInPanel' => true,
+				'canUseCallListInPanel' => true,
+				'canUseMergeInPanel' => true,
+				'doLayoutFieldsInItemRender' => true,
+			]
+		);
 	}
 
 	public function getGridId(): string
@@ -77,11 +98,11 @@ class Deal extends Entity
 					]
 				]
 			],
-			'filter_won' => [
+			'filter_closed' => [
 				'name' => Loc::getMessage('CRM_KANBAN_HELPER_DPR_WON'),
 				'fields' => [
 					'STAGE_SEMANTIC_ID' => [
-						\Bitrix\Crm\PhaseSemantics::SUCCESS,
+						[\Bitrix\Crm\PhaseSemantics::SUCCESS, \Bitrix\Crm\PhaseSemantics::FAILURE]
 					]
 				]
 			],
@@ -125,6 +146,7 @@ class Deal extends Entity
 			'OPPORTUNITY' => '',
 			'DATE_CREATE' => '',
 			'ORDER_STAGE' => '',
+			'DELIVERY_STAGE' => '',
 			'CLIENT' => '',
 			'PROBLEM_NOTIFICATION' => '',
 		];
@@ -132,7 +154,7 @@ class Deal extends Entity
 
 	public function getAdditionalEditFields(): array
 	{
-		return $this->getAdditionalEditFieldsFromOptions();
+		return (array)$this->getAdditionalEditFieldsFromOptions();
 	}
 
 	public function getStageFieldName(): string
@@ -177,15 +199,6 @@ class Deal extends Entity
 		$item['DATE'] = $item['DATE_CREATE'];
 
 		$item = parent::prepareItemCommonFields($item);
-
-//		if ($item['DATE_CREATE'] instanceof Date)
-//		{
-//			$item['DATE_UNIX'] = $item['DATE_CREATE']->getTimestamp();
-//		}
-//		else
-//		{
-//			$item['DATE_UNIX'] = \MakeTimeStamp($item['DATE_CREATE']);
-//		}
 
 		return $item;
 	}
@@ -252,6 +265,7 @@ class Deal extends Entity
 		{
 			if (isset($categoryPermissions[$category['ID']]))
 			{
+				$category['url'] = Container::getInstance()->getRouter()->getKanbanUrl($this->getTypeId(), $id);
 				$result[$id] = $category;
 			}
 		}
@@ -296,6 +310,6 @@ class Deal extends Entity
 	 */
 	protected function getColumnId(array $data): string
 	{
-		return $data['STAGE_ID'];
+		return ($data['STAGE_ID'] ?? '');
 	}
 }

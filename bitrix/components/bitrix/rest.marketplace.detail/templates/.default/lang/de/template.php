@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["MARKETPLACE_APP_BUY"] = "Kaufen";
 $MESS["MARKETPLACE_APP_BY_SUBSCRIPTION"] = "Abonnement";
 $MESS["MARKETPLACE_APP_DELETE"] = "Löschen";
@@ -32,22 +32,11 @@ $MESS["MARKETPLACE_APP_VERSION_MESS"] = "Version";
 $MESS["MARKETPLACE_CONFIGURATION_INSTALL_SETTING_BTN"] = "Konfigurieren";
 $MESS["MARKETPLACE_HIDDEN_BUY"] = "Enthält In-App-Käufe";
 $MESS["MARKETPLACE_LICENSE_ERROR"] = "Sie müssen die Datenschutzerklärung lesen und akzeptieren, um die Anwendung installieren zu können";
-$MESS["MARKETPLACE_LICENSE_TOS_ERROR"] = "Sie müssen den Bitrix24 Terms of Service zustimmen, um die Anwendung zu installieren.";
+$MESS["MARKETPLACE_LICENSE_TOS_ERROR_2"] = "Sie müssen die Nutzungsbedingungen von Bitrix24.Market akzeptieren";
 $MESS["MARKETPLACE_MORE_BUTTON"] = "Mehr...";
-$MESS["PAYMENT_MESSAGE_D_N_Y"] = "Einige Funktionen der Anwendung sind nicht verfügbar. Wenden Sie sich bitte an Ihren Administrator, um die volle Version zu installieren.";
-$MESS["PAYMENT_MESSAGE_D_N_Y_A"] = "Einige Funktionen der Anwendung sind nicht verfügbar. Kaufen Sie bitte die volle Version.";
-$MESS["PAYMENT_MESSAGE_D_Y_Y"] = "Ihr Abonnement für die Anwendung ist abgelaufen. Einige Funktionen der Anwendung sind nicht verfügbar. Wenden Sie sich bitte an Ihren Administrator, um die volle Version zu installieren.";
-$MESS["PAYMENT_MESSAGE_D_Y_Y_A"] = "Ihr Abonnement für die Anwendung ist abgelaufen. Einige Funktionen der Anwendung sind nicht verfügbar.";
-$MESS["PAYMENT_MESSAGE_P_N_Y"] = "Ihr Abonnement für die Anwendung läuft in <b>#DAYS#</b> Tagen ab. Wenden Sie sich bitte an Ihren Administrator, um das Abonnement zu verlängern.";
-$MESS["PAYMENT_MESSAGE_P_N_Y_A"] = "Ihr Abonnement für die Anwendung läuft in <b>#DAYS#</b> Tagen ab.";
-$MESS["PAYMENT_MESSAGE_P_Y_N"] = "Die Anwendung ist nicht mehr verfügbar, weil Ihr Abonnement abgelaufen ist. Wenden Sie sich bitte an Ihren Administrator, um das Abonnement zu verlängern.";
-$MESS["PAYMENT_MESSAGE_P_Y_N_A"] = "Die Anwendung ist nicht mehr verfügbar, weil Ihr Abonnement abgelaufen ist.";
-$MESS["PAYMENT_MESSAGE_P_Y_Y"] = "Ihr Abonnement für die Anwendung ist abgelaufen. Wenden Sie sich bitte an Ihren Administrator, um die volle Version zu installieren.";
-$MESS["PAYMENT_MESSAGE_P_Y_Y_A"] = "Ihr Abonnement für die Anwendung ist abgelaufen.";
-$MESS["PAYMENT_MESSAGE_T_N_Y"] = "Die Testzeit läuft in <b>#DAYS#</b> Tagen ab. Wenden Sie sich bitte an Ihren Administrator, um die volle Version zu installieren.";
-$MESS["PAYMENT_MESSAGE_T_N_Y_A"] = "Die Testzeit läuft in <b>#DAYS#</b> Tagen ab.";
-$MESS["PAYMENT_MESSAGE_T_Y_N"] = "Die Testzeit ist abgelaufen. Wenden Sie sich bitte an Ihren Administrator, um die volle Version zu installieren.";
-$MESS["PAYMENT_MESSAGE_T_Y_N_A"] = "Die Testzeit ist abgelaufen. Kaufen Sie bitte die volle Version.";
+$MESS["REST_MARKETPLACE_EXTERNAL_PAYMENT"] = "kostenpflichtige externe Services erforderlich";
+$MESS["REST_MARKETPLACE_HIDDEN_BUY"] = "Enthält In-App-Käufe";
+$MESS["REST_MARKETPLACE_SUBSCRIPTION_EXPANDS"] = "erweiterte Funktionen sind verfügbar, wenn Bitrix24.Market abonniert wird";
+$MESS["REST_MARKETPLACE_SUBSCRIPTION_REQUIRED"] = "Abonnement erforderlich";
 $MESS["REST_MP_APP_INSTALL_REQUEST"] = "Senden";
 $MESS["REST_MP_INSTALL_REQUEST_CONFIRM"] = "Sie haben nicht genügend Rechte, um diese App zu installieren.<br/>Möchten Sie eine Anfrage an Administratoren senden, damit sie sie installieren?";
-?>

@@ -178,6 +178,8 @@ class Provider
 			$result['errors'] = $errorList;
 		}
 
+		\Bitrix\Rest\Engine\Access::getActiveEntity(true);
+
 		return $result;
 	}
 
@@ -333,6 +335,21 @@ class Provider
 			$result['status'] = false;
 			$result['errors'][] = Loc::getMessage('INTEGRATION_PRESET_PROVIDER_ERROR_ACCESS_DENIED');
 			return $result;
+		}
+
+		if (!OAuthService::getEngine()->isRegistered())
+		{
+			try
+			{
+				OAuthService::register();
+				OAuthService::getEngine()->getClient()->getApplicationList();
+			}
+			catch (SystemException $e)
+			{
+				$result['status'] = false;
+				$result['errors'][] = $e->getCode() . ': ' . $e->getMessage();
+				return $result;
+			}
 		}
 
 		$presetData = $presetData['OPTIONS'];
@@ -794,6 +811,7 @@ class Provider
 			$result['status'] = false;
 			$result['errors'] = $errorList;
 		}
+		\Bitrix\Rest\Engine\Access::getActiveEntity(true);
 
 		return $result;
 	}
@@ -833,18 +851,6 @@ class Provider
 				{
 					$errorList[] = strip_tags($eventResult);
 				}
-			}
-		}
-
-		if (!OAuthService::getEngine()->isRegistered())
-		{
-			try
-			{
-				OAuthService::register();
-			}
-			catch (SystemException $e)
-			{
-				$errorList[] = $e->getCode() . ': ' . $e->getMessage();
 			}
 		}
 

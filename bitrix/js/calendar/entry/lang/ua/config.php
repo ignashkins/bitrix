@@ -1,5 +1,6 @@
 <?php
 $MESS["CALENDAR_DEFAULT_ENTRY_NAME"] = "Нова подія";
+$MESS["CALENDAR_DELETE_EVENT_NOTIFICATION"] = "Подія видалена";
 $MESS["CALENDAR_EVENT"] = "Подія";
 $MESS["CALENDAR_EVENT_DO_ADD"] = "Створити";
 $MESS["CALENDAR_EVENT_DO_CANCEL"] = "Скасувати";

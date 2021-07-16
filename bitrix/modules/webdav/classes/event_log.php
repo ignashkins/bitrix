@@ -125,19 +125,19 @@ class CWebDavEventLog
 
 class CEventWebDav
 {
-	function MakeWebDavObject()
+	public static function MakeWebDavObject()
 	{
 		$obj = new CEventWebDav;
 		return $obj;
 	}
 
-	function GetFilter()
+	public static function GetFilter()
 	{
 		$arFilter["DOCUMENTS"] = GetMessage("LOG_TYPE_DOCUMENTS");		
 		return	$arFilter;
 	}
 	
-	function GetAuditTypes()
+	public static function GetAuditTypes()
 	{
 		return array(
 			"WEBDAV_ELEMENT_DELETE" => "[WEBDAV_ELEMENT_DELETE] ".GetMessage("LOG_TYPE_ELEMENT_DELETE"),
@@ -156,9 +156,9 @@ class CEventWebDav
 		); 
 	}
 	
-	function GetEventInfo($row)
+	public static function GetEventInfo($row)
 	{
-		$DESCRIPTION = unserialize($row['DESCRIPTION'], false);
+		$DESCRIPTION = unserialize($row['DESCRIPTION'], ['allowed_classes' => false]);
 
 		$IblockURL = '';
 		if (isset($DESCRIPTION['URL']) && !empty($DESCRIPTION['URL']))
@@ -247,7 +247,7 @@ class CEventWebDav
 				);	   
 	}
 	
-	function GetFilterSQL($var)
+	public static function GetFilterSQL($var)
 	{
 		$ar[] = array("MODULE_ID" => "webdav");
 		return $ar;

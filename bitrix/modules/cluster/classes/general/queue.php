@@ -70,9 +70,9 @@ class CClusterQueue
 				$ids[] = intval($ar["ID"]);
 			}
 
-			$uid = CMain::GetServerUniqID()."_cluster_queue_".BX_CLUSTER_GROUP;
+			$uid = $DB->DBName."_cluster_queue_".BX_CLUSTER_GROUP;
 
-			if (!empty($ids))
+			if ($ids)
 			{
 				$lock = $DB->Query("SELECT GET_LOCK('".$uid."', 0) as L")->Fetch();
 				if ($lock["L"] == "0")

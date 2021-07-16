@@ -35,7 +35,7 @@ if($REQUEST_METHOD=="POST" && $Update.$Apply.$RestoreDefaults <> '' && $POST_RIG
 	if($RestoreDefaults <> '')
 	{
 		COption::RemoveOption("sender");
-		$z = CGroup::GetList($v1="id",$v2="asc", array("ACTIVE" => "Y", "ADMIN" => "N"));
+		$z = CGroup::GetList("id", "asc", array("ACTIVE" => "Y", "ADMIN" => "N"));
 		while($zr = $z->Fetch())
 			$APPLICATION->DelGroupRight($module_id, array($zr["ID"]));
 	}
@@ -115,7 +115,7 @@ $tabControl->BeginNextTab();
 			elseif($type[0]=="text-list" || $type[0]=="srlz-list"):
 				if ($type[0]=="srlz-list")
 				{
-					$aVal = !empty($val) ? unserialize($val) : '';
+					$aVal = !empty($val) ? unserialize($val, ['allowed_classes' => false]) : '';
 				}
 				else
 				{

@@ -33,6 +33,12 @@
 	overflow: hidden;
 }
 
+.mp-slider-view .ui-sidepanel-menu-link-text-icon {
+	margin-right: 5px;
+	width: 13px;
+	height: 13px;
+}
+
 .mp-slider-view .ui-sidepanel-menu-link-text-counter {
 	font: 12px 'OpenSans-Regular', "Helvetica Neue", Arial, Helvetica, sans-serif;
 	color: #525C69;
@@ -163,6 +169,10 @@
 	text-overflow: ellipsis;
 	line-height: 15px;
 	font: 10px/15px "OpenSans-SemiBold", sans-serif;
+}
+
+.mp-item-developer-full {
+	max-height: 45px;
 }
 
 .mp-item-controls {

@@ -81,15 +81,19 @@ if (in_array($action, array("get_user_list", "get_usergroup_list")))
 			|| CExtranet::IsIntranetUser()
 		)
 		{
+			$blockedTypes = \Bitrix\Main\UserTable::getExternalUserTypes();
+
 			$filter = array(
 				"ACTIVE" => "Y",
 				"!UF_DEPARTMENT" => false,
-				"!EXTERNAL_AUTH_ID" => array('bot', 'imconnector')
+				"!EXTERNAL_AUTH_ID" => $blockedTypes
 			);
 
 			if ($showBots)
 			{
-				$filter["!EXTERNAL_AUTH_ID"] = array('imconnector');
+				$filter["!EXTERNAL_AUTH_ID"] = array_filter($blockedTypes, function($authId) {
+					return $authId != 'bot';
+				});
 			}
 
 			if ($onlyBusiness == 'Y')
@@ -140,8 +144,8 @@ if (in_array($action, array("get_user_list", "get_usergroup_list")))
 			}
 
 			$dbUsers = CUser::GetList(
-				($by = array("last_name" => "asc", "name" => "asc")),
-				($order = false),
+				array("last_name" => "asc", "name" => "asc"),
+				'',
 				$filter,
 				$arParams
 			);

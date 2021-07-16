@@ -9,7 +9,7 @@ class socialservices extends CModule
 	var $MODULE_NAME;
 	var $MODULE_DESCRIPTION;
 
-	function socialservices()
+	public function __construct()
 	{
 		$arModuleVersion = array();
 
@@ -46,6 +46,7 @@ class socialservices extends CModule
 		RegisterModule("socialservices");
 
 		RegisterModuleDependences("main", "OnUserDelete", "socialservices", "CSocServAuthDB", "OnUserDelete");
+		RegisterModuleDependences("main", "OnAfterUserLogout", "socialservices", "CSocServEventHandlers", "OnUserLogout");
 		RegisterModuleDependences('timeman', 'OnAfterTMReportDailyAdd', 'socialservices', 'CSocServAuthDB', 'OnAfterTMReportDailyAdd');
 		RegisterModuleDependences('timeman', 'OnAfterTMDayStart', 'socialservices', 'CSocServAuthDB', 'OnAfterTMDayStart');
 		RegisterModuleDependences('timeman', 'OnTimeManShow', 'socialservices', 'CSocServEventHandlers', 'OnTimeManShow');
@@ -89,6 +90,7 @@ class socialservices extends CModule
 			}
 		}
 		UnRegisterModuleDependences("main", "OnUserDelete", "socialservices", "CSocServAuthDB", "OnUserDelete");
+		UnRegisterModuleDependences("main", "OnAfterUserLogout", "socialservices", "CSocServEventHandlers", "OnUserLogout");
 		UnRegisterModuleDependences('socialnetwork', 'OnFillSocNetLogEvents', 'socialservices', 'CSocServEventHandlers', 'OnFillSocNetLogEvents');
 		UnRegisterModuleDependences('timeman', 'OnAfterTMReportDailyAdd', 'socialservices', 'CSocServAuthDB', 'OnAfterTMReportDailyAdd');
 		UnRegisterModuleDependences('timeman', 'OnAfterTMDayStart', 'socialservices', 'CSocServAuthDB', 'OnAfterTMDayStart');
@@ -98,7 +100,7 @@ class socialservices extends CModule
 		UnRegisterModuleDependences('socialservices', 'OnFindSocialservicesUser', 'socialservices', "CSocServAuthManager", "checkOldUser");
 		UnRegisterModuleDependences('socialservices', 'OnFindSocialservicesUser', 'socialservices', "CSocServAuthManager", "checkAbandonedUser");
 
-		$dbSites = CSite::GetList($b="sort", $o="asc", array("ACTIVE" => "Y"));
+		$dbSites = CSite::GetList("sort", "asc", array("ACTIVE" => "Y"));
 		while ($arSite = $dbSites->Fetch())
 		{
 			$siteId = $arSite['ID'];
@@ -188,7 +190,7 @@ class socialservices extends CModule
 		COption::RemoveOption($this->MODULE_ID);
 	}
 
-	function OnGetTableSchema()
+	public static function OnGetTableSchema()
 	{
 		return array(
 			"socialservices" => array(

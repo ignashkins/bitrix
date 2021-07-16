@@ -1,2 +1,2 @@
 <?php
-$MESS["IM_CONFERENCE_MENU_LIST"] = "Видеоконференції";
+$MESS["IM_CONFERENCE_MENU_LIST"] = "Відеоконференції";

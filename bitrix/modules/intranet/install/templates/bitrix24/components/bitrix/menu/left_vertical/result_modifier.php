@@ -3,6 +3,7 @@
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Main\Config\Option;
+use Bitrix\Main\Type\Date;
 
 if (!defined("B_PROLOG_INCLUDED") || B_PROLOG_INCLUDED !== true)
 {
@@ -219,7 +220,7 @@ if (is_array($userItems) && !empty($userItems))
 $adminItems = COption::GetOptionString("intranet", "left_menu_items_to_all_".SITE_ID);
 if (!empty($adminItems))
 {
-	$adminItems = unserialize($adminItems);
+	$adminItems = unserialize($adminItems, ["allowed_classes" => false]);
 	foreach ($adminItems as $item)
 	{
 		$counterId = isset($item["COUNTER_ID"]) ? $item["COUNTER_ID"] : "";
@@ -258,6 +259,7 @@ $presets = array(
 			"menu_im_messenger",
 			"menu_all_groups",
 			"menu_files",
+			"menu_documents",
 			"menu_calendar",
 			"menu_timeman_sect",
 			"menu_rpa",
@@ -297,6 +299,7 @@ $presets = array(
 			"menu_shop",
 			"menu_sites",
 			"menu_contact_center",
+			"menu_documents"
 		),
 		"hide" => array(
 			"menu_company",
@@ -322,6 +325,7 @@ $presets = array(
 			"menu_tasks",
 			"menu_calendar",
 			"menu_files",
+			"menu_documents",
 			"menu_im_messenger",
 			"menu_external_mail",
 			"menu_crm_favorite",
@@ -363,6 +367,7 @@ $presets = array(
 			"menu_crm_tracking",
 			"menu_tasks",
 			"menu_rpa",
+			"menu_documents",
 		),
 		"hide" => array(
 			"menu_live_feed",
@@ -385,15 +390,16 @@ $presets = array(
 	),
 	"shop" => array(
 		"show" => array(
+			"menu_crm_favorite",
 			"menu_shop",
 			"menu-sale-center",
-			"menu_crm_favorite",
 			"menu_marketing",
 			"menu_contact_center",
 			"menu_external_mail",
 			"menu_sites",
 			"menu_tasks",
 			"menu_rpa",
+			"menu_documents",
 		),
 		"hide" => array(
 			"menu_live_feed",
@@ -446,7 +452,7 @@ if ($presetId == "custom")
 	$customItems = COption::GetOptionString("intranet", "left_menu_custom_preset_items", "");
 	if ($customItems)
 	{
-		$customItems= unserialize($customItems);
+		$customItems= unserialize($customItems, ["allowed_classes" => false]);
 		if (is_array($customItems))
 		{
 			foreach ($customItems as $item)
@@ -482,7 +488,7 @@ if (!is_array($sortedItemsId) || empty($sortedItemsId))
 		$sortedItemsId = COption::GetOptionString("intranet", "left_menu_custom_preset_sort", "");
 		if ($sortedItemsId)
 		{
-			$sortedItemsId = unserialize($sortedItemsId);
+			$sortedItemsId = unserialize($sortedItemsId, ["allowed_classes" => false]);
 		}
 	}
 	else
@@ -520,14 +526,7 @@ if (!empty($newItems))
 {
 	foreach ($newItems as $item)
 	{
-		if ($item["ITEM_TYPE"] == "default")
-		{
-			array_unshift($arResult["ITEMS"]["hide"], $item);
-		}
-		else
-		{
-			$arResult["ITEMS"]["show"][] = $item;
-		}
+		$arResult["ITEMS"]["show"][] = $item;
 	}
 }
 
@@ -580,12 +579,18 @@ if (
 		$arResult["SHOW_LICENSE_BUTTON"] = true;
 		$arResult["B24_LICENSE_PATH"] = CBitrix24::PATH_LICENSE_ALL;
 		$arResult["LICENSE_BUTTON_COUNTER_URL"] = CBitrix24::PATH_COUNTER;
-		$arResult["HOST_NAME"] = BX24_HOST_NAME;
+		$arResult["HOST_NAME"] = defined('BX24_HOST_NAME')? BX24_HOST_NAME: SITE_SERVER_NAME;
 		$arResult["IS_DEMO_LICENSE"] = \CBitrix24::getLicenseFamily() === "demo";
+		$arResult["DEMO_DAYS"] = "";
 		if ($arResult["IS_DEMO_LICENSE"])
 		{
-			$demoStart = COption::GetOptionInt("bitrix24", "DEMO_START");
-			$arResult["DEMO_DAYS"] = FormatDate("ddiff", time(), $demoStart + 30*24*60*60);
+			$demoEnd = COption::GetOptionInt('main', '~controller_group_till');
+			if ($demoEnd > 0)
+			{
+				$currentDate = new Date;
+				$currentDate = $currentDate->getTimestamp();
+				$arResult["DEMO_DAYS"] = FormatDate("ddiff", $currentDate, $demoEnd);
+			}
 		}
 	}
 }

@@ -21,6 +21,7 @@ $MESS["EC_TIMEZONE"] = "Часовой пояс";
 $MESS["EC_CALENDAR_SECTION_TITLE"] = "Календарь:";
 
 $MESS["EC_NOTIFY_OPTION"] = "Оповещать о решении";
+$MESS["EC_DONT_NOTIFY_OPTION"] = "Не оповещать о решении";
 $MESS["EC_NOTIFY_OPTION_OFF_TITLE"] = "Кликните, чтобы включать оповещения о решении пользователей";
 $MESS["EC_NOTIFY_OPTION_ON_TITLE"] = "Кликните, чтобы отключить оповещения о решении пользователей";
 
@@ -44,7 +45,7 @@ $MESS["EC_NO_VALUE"] = "не указан";
 $MESS["EC_ADD_NEW"] = "Добавить новый e-mail";
 
 $MESS["EC_CONFIRMED_EMAIL_TITLE"] = "Укажите адрес электронной почты";
-$MESS["EC_CONFIRMED_EMAIL_TEXT"] = "Укажите адрес электронной почты для отправки приглашения участникам по email";
+$MESS["EC_CONFIRMED_EMAIL_TEXT_1"] = "С этого адреса будут отправлены приглашения участникам по email";
 $MESS["EC_CONFIRMED_EMAIL_HELP_LINK"] = "Подробнее для чего нужен емейл";
 
 $MESS["EC_CONFIRMED_EMAIL_SEND"] = "Продолжить";
@@ -60,4 +61,7 @@ $MESS["EC_EMAIL_LIMIT_9"] = "На вашем тарифе вы можете бе
 $MESS["EC_EMAIL_LIMIT_DENY"] = "Вы создали максимальное количество встреч с приглашенными по e-mail гостями в вашем Битрикс24";
 $MESS["EC_EMAIL_LIMIT_EXPAND_PLAN"] = "Расширить тариф";
 $MESS["EC_EMAIL_LIMIT_SAVE_WITHOUT"] = "Сохранить без внешних гостей";
+$MESS["EC_HIDE_GUEST_NAMES"] = "Скрывать список участников от гостей";
+$MESS["EC_SHOW_GUEST_NAMES"] = "Показывать список участников гостям";
+$MESS["EC_HIDE_GUEST_NAMES_HINT"] = "Вы можете скрыть от гостей список участников события. Гостю придет персональное приглашение с информацией о встрече без указания участников.";
 ?>

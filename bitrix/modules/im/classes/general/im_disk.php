@@ -501,7 +501,7 @@ class CIMDisk
 					{
 						if ($userId)
 						{
-							\Bitrix\Disk\Driver::getInstance()->getRecentlyUsedManager()->push($userId, $newFile->getId());
+							\Bitrix\Disk\Driver::getInstance()->getRecentlyUsedManager()->push($userId, $newFile);
 						}
 					}
 					else if ($chat['ENTITY_TYPE'] != 'LIVECHAT')
@@ -514,7 +514,7 @@ class CIMDisk
 							if ($userId == $relation['USER_ID'])
 								continue;
 
-							\Bitrix\Disk\Driver::getInstance()->getRecentlyUsedManager()->push($relation['USER_ID'], $newFile->getId());
+							\Bitrix\Disk\Driver::getInstance()->getRecentlyUsedManager()->push($relation['USER_ID'], $newFile);
 						}
 					}
 				}
@@ -551,7 +551,8 @@ class CIMDisk
 				"CONTEXT" => "LIVECHAT",
 				"LINE_ID" => $lineId
 			];
-			$ar['SKIP_CONNECTOR'] = 'Y';
+			//TODO: fix 0135872
+			//$ar['SKIP_CONNECTOR'] = 'Y';
 		}
 
 		$text = trim($text);
@@ -604,14 +605,14 @@ class CIMDisk
 						\CIMMessageParam::SendPull($messageId, array_keys($messageParams));
 					}
 					$session->getData('CHAT_ID');
-
-					$uploadResult = self::UploadFileFromDisk(
+					//TODO: fix 0135872
+					/*$uploadResult = self::UploadFileFromDisk(
 						$session->getData('CHAT_ID'),
 						$fileIds,
 						$text,
 						['USER_ID' => $userId],
 						true
-					);
+					);*/
 				}
 			}
 			else if ($chat['ENTITY_TYPE'] == 'LINES')
@@ -629,7 +630,11 @@ class CIMDisk
 				}
 			}
 
-			if ($uploadResult && $uploadResult['MESSAGE_ID'] && $result['MESSAGE_ID'])
+			if (
+				!empty($uploadResult) &&
+				$uploadResult['MESSAGE_ID'] &&
+				$result['MESSAGE_ID']
+			)
 			{
 				\Bitrix\Im\Model\MessageParamTable::add([
 					"MESSAGE_ID" => $result['MESSAGE_ID'],
@@ -951,7 +956,7 @@ class CIMDisk
 				unset($chatRelation[$relation["USER_ID"]]);
 				continue;
 			}
-			if ($relation['USER_ID'] == self::GetUserId())
+			if ($relation['USER_ID'] == \Bitrix\Im\Common::getUserId($userId))
 			{
 				$relationError = false;
 			}
@@ -1278,7 +1283,8 @@ class CIMDisk
 
 		try
 		{
-			$viewerType = Bitrix\Main\UI\Viewer\ItemAttributes::buildByFileId($fileModel->getFileId(), $fileData['urlDownload'])
+			$viewerType = \Bitrix\Disk\Ui\FileAttributes::buildByFileId($fileModel->getFileId(), $fileData['urlDownload'])
+				->setObjectId($fileModel->getId())
 				->setGroupBy($chatId)
 				->setTitle($fileModel->getName())
 				->addAction([
@@ -1740,6 +1746,11 @@ class CIMDisk
 		$fileId = $fileModel->getId();
 
 		$signer = new \Bitrix\Main\Security\Sign\Signer;
+		$signKey = self::GetFileLinkSign();
+		if (is_string($signKey))
+		{
+			$signer->setKey($signKey);
+		}
 		$signedValue = $signer->sign($fileId);
 
 		$urlManager = \Bitrix\Main\Engine\UrlManager::getInstance();
@@ -1759,6 +1770,20 @@ class CIMDisk
 		}
 
 		return $shortLink;
+	}
+
+	public static function GetFileLinkSign()
+	{
+		$key = \Bitrix\Main\Config\Option::get('im', 'file_link_default_key', null);
+		if (!$key)
+		{
+			$key = \Bitrix\Main\Config\Option::get('main', 'signer_default_key', null);
+			if (is_string($key))
+			{
+				\Bitrix\Main\Config\Option::set('im', 'file_link_default_key', $key);
+			}
+		}
+		return $key;
 	}
 
 	public static function RemoveTmpFileAgent()

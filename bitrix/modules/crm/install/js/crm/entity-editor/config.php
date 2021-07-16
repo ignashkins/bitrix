@@ -38,7 +38,10 @@ return array(
 		"/bitrix/js/crm/entity-editor/js/field-attr.js",
 		"/bitrix/js/crm/entity-editor/js/multiple-user.js",
 		"/bitrix/js/crm/entity-editor/js/order.js",
+		"/bitrix/js/crm/entity-editor/js/product-list.js",
 		"/bitrix/js/crm/entity-editor/js/field-configurator.js",
+		"/bitrix/js/crm/entity-editor/js/product-list.js",
+		'/bitrix/js/crm/entity-editor/js/entity-selector.js',
 	],
 	'rel' => [
 		'main.polyfill.promise',
@@ -48,6 +51,7 @@ return array(
 		'uploader',
 		'avatar_editor',
 		'core_money_editor',
+		'currency',
 		'tooltip',
 		'phone_number',
 		'spotlight',
@@ -62,5 +66,8 @@ return array(
 		'crm_entity_editor_rel',
 		'ui.forms',
 		'ui.entity-editor',
+		'ui.entity-selector',
+		'ui.dialogs.messagebox',
+		'crm.entity-editor.field.payment-documents',
 	]
 );

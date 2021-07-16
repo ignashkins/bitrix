@@ -1,22 +1,27 @@
-<?
-IncludeModuleLangFile(__FILE__);
+<?php
+use Bitrix\Main;
+use Bitrix\Main\Localization\Loc;
 
-Class xmpp extends CModule
+if(class_exists('xmpp'))
 {
-	var $MODULE_ID = "xmpp";
-	var $MODULE_VERSION;
-	var $MODULE_VERSION_DATE;
-	var $MODULE_NAME;
-	var $MODULE_DESCRIPTION;
-	var $MODULE_CSS;
+	return;
+}
 
-	function xmpp()
+Loc::loadMessages(__FILE__);
+
+class xmpp extends \CModule
+{
+	public $MODULE_ID = "xmpp";
+	public $MODULE_VERSION;
+	public $MODULE_VERSION_DATE;
+	public $MODULE_NAME;
+	public $MODULE_DESCRIPTION;
+
+	public function __construct()
 	{
 		$arModuleVersion = array();
 
-		$path = str_replace("\\", "/", __FILE__);
-		$path = substr($path, 0, strlen($path) - strlen("/index.php"));
-		include($path."/version.php");
+		include(__DIR__.'/version.php');
 
 		if (is_array($arModuleVersion) && array_key_exists("VERSION", $arModuleVersion))
 		{
@@ -29,48 +34,43 @@ Class xmpp extends CModule
 			$this->MODULE_VERSION_DATE = XMPP_VERSION_DATE;
 		}
 
-		$this->MODULE_NAME = GetMessage("XMPP_MODULE_NAME");
-		$this->MODULE_DESCRIPTION = GetMessage("XMPP_MODULE_DESC");
+		$this->MODULE_NAME = Loc::getMessage("XMPP_MODULE_NAME");
+		$this->MODULE_DESCRIPTION = Loc::getMessage("XMPP_MODULE_DESC");
 	}
 
-	function InstallDB($arParams = array())
+	public function InstallDB($arParams = array())
 	{
-		RegisterModule("xmpp");
-		RegisterModuleDependences("socialnetwork", "OnSocNetMessagesAdd", "xmpp", "CXMPPFactory", "OnSocNetMessagesAdd");
-		RegisterModuleDependences("im", "OnAfterMessagesAdd", "xmpp", "CXMPPFactory", "OnSocNetMessagesAdd");
-		RegisterModuleDependences("im", "OnAfterMessagesUpdate", "xmpp", "CXMPPFactory", "OnImMessagesUpdate");
-		RegisterModuleDependences("im", "OnAfterMessagesDelete", "xmpp", "CXMPPFactory", "OnImMessagesUpdate");
-		RegisterModuleDependences("im", "OnAfterFileUpload", "xmpp", "CXMPPFactory", "OnImFileUpload");
-		RegisterModuleDependences("im", "OnAfterNotifyAdd", "xmpp", "CXMPPFactory", "OnSocNetMessagesAdd");
-		RegisterModuleDependences("main", "OnApplicationsBuildList", "main", '\Bitrix\Xmpp\XmppApplication', "onApplicationsBuildList", 100, "modules/xmpp/lib/xmppapplication.php"); // main here is not a mistake
+		Main\ModuleManager::registerModule($this->MODULE_ID);
+		$eventManager = Main\EventManager::getInstance();
+		$eventManager->registerEventHandlerCompatible("socialnetwork", "OnSocNetMessagesAdd", $this->MODULE_ID, "CXMPPFactory", "OnSocNetMessagesAdd");
+		$eventManager->registerEventHandlerCompatible("im", "OnAfterMessagesAdd", $this->MODULE_ID, "CXMPPFactory", "OnSocNetMessagesAdd");
+		$eventManager->registerEventHandlerCompatible("im", "OnAfterMessagesUpdate", $this->MODULE_ID, "CXMPPFactory", "OnImMessagesUpdate");
+		$eventManager->registerEventHandlerCompatible("im", "OnAfterMessagesDelete", $this->MODULE_ID, "CXMPPFactory", "OnImMessagesUpdate");
+		$eventManager->registerEventHandlerCompatible("im", "OnAfterFileUpload", $this->MODULE_ID, "CXMPPFactory", "OnImFileUpload");
+		$eventManager->registerEventHandlerCompatible("im", "OnAfterNotifyAdd", $this->MODULE_ID, "CXMPPFactory", "OnSocNetMessagesAdd");
+		$eventManager->registerEventHandlerCompatible("main", "OnApplicationsBuildList", "main", '\Bitrix\Xmpp\XmppApplication', "onApplicationsBuildList", 100, "modules/xmpp/lib/xmppapplication.php"); // main here is not a mistake
 
 		return true;
 	}
 
-	function UnInstallDB($arParams = array())
+	public function UnInstallDB($arParams = array())
 	{
-		UnRegisterModuleDependences("socialnetwork", "OnSocNetMessagesAdd", "xmpp", "CXMPPFactory", "OnSocNetMessagesAdd");
-		UnRegisterModuleDependences("im", "OnAfterMessagesAdd", "xmpp", "CXMPPFactory", "OnSocNetMessagesAdd");
-		UnRegisterModuleDependences("im", "OnAfterMessagesUpdate", "xmpp", "CXMPPFactory", "OnImMessagesUpdate");
-		UnRegisterModuleDependences("im", "OnAfterMessagesDelete", "xmpp", "CXMPPFactory", "OnImMessagesUpdate");
-		UnRegisterModuleDependences("im", "OnAfterFileUpload", "xmpp", "CXMPPFactory", "OnImFileUpload");
-		UnRegisterModuleDependences("im", "OnAfterNotifyAdd", "xmpp", "CXMPPFactory", "OnSocNetMessagesAdd");
-		UnRegisterModuleDependences("main", "OnApplicationsBuildList", "main", '\Bitrix\Xmpp\XmppApplication', "onApplicationsBuildList", "modules/xmpp/lib/xmppapplication.php"); // main here is not a mistake
-		UnRegisterModule("xmpp");
+		$eventManager = Main\EventManager::getInstance();
+		$eventManager->unRegisterEventHandler("socialnetwork", "OnSocNetMessagesAdd", $this->MODULE_ID, "CXMPPFactory", "OnSocNetMessagesAdd");
+		$eventManager->unRegisterEventHandler("im", "OnAfterMessagesAdd", $this->MODULE_ID, "CXMPPFactory", "OnSocNetMessagesAdd");
+		$eventManager->unRegisterEventHandler("im", "OnAfterMessagesUpdate", $this->MODULE_ID, "CXMPPFactory", "OnImMessagesUpdate");
+		$eventManager->unRegisterEventHandler("im", "OnAfterMessagesDelete", $this->MODULE_ID, "CXMPPFactory", "OnImMessagesUpdate");
+		$eventManager->unRegisterEventHandler("im", "OnAfterFileUpload", $this->MODULE_ID, "CXMPPFactory", "OnImFileUpload");
+		$eventManager->unRegisterEventHandler("im", "OnAfterNotifyAdd", $this->MODULE_ID, "CXMPPFactory", "OnSocNetMessagesAdd");
+		$eventManager->unRegisterEventHandler("main", "OnApplicationsBuildList", "main", '\Bitrix\Xmpp\XmppApplication', "onApplicationsBuildList", "modules/xmpp/lib/xmppapplication.php"); // main here is not a mistake
+		Main\ModuleManager::unRegisterModule($this->MODULE_ID);
 		return true;
 	}
 
-	function InstallEvents()
-	{
-		return true;
-	}
-
-	function UnInstallEvents()
-	{
-		return true;
-	}
-
-	function InstallFiles()
+	/**
+	 * @return bool
+	 */
+	public function InstallFiles()
 	{
 		if($_ENV["COMPUTERNAME"]!='BX')
 		{
@@ -80,7 +80,10 @@ Class xmpp extends CModule
 		return true;
 	}
 
-	function UnInstallFiles()
+	/**
+	 * @return bool
+	 */
+	public function UnInstallFiles()
 	{
 		DeleteDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/xmpp/install/admin", $_SERVER["DOCUMENT_ROOT"]."/bitrix/admin");
 		DeleteDirFiles($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/xmpp/install/themes", $_SERVER["DOCUMENT_ROOT"]."/bitrix/themes");
@@ -88,34 +91,43 @@ Class xmpp extends CModule
 		return true;
 	}
 
-	function DoInstall()
+	/**
+	 * @return void
+	 */
+	public function DoInstall()
 	{
-		global $DOCUMENT_ROOT, $APPLICATION;
+		global $APPLICATION;
 
-		if (IsModuleInstalled("xmpp"))
-			return false;
+		if (Main\ModuleManager::isModuleInstalled($this->MODULE_ID))
+		{
+			return;
+		}
 		if (!check_bitrix_sessid())
-			return false;
+		{
+			return;
+		}
 
 		$this->InstallDB();
-		$this->InstallEvents();
 		$this->InstallFiles();
 
-		$APPLICATION->IncludeAdminFile(GetMessage("XMPP_INSTALL_TITLE"), $DOCUMENT_ROOT."/bitrix/modules/xmpp/install/step.php");
+		$APPLICATION->IncludeAdminFile(Loc::getMessage("XMPP_INSTALL_TITLE"), $_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/xmpp/install/step.php");
 	}
 
-	function DoUninstall()
+	/**
+	 * @return void
+	 */
+	public function DoUninstall()
 	{
-		global $DOCUMENT_ROOT, $APPLICATION;
+		global $APPLICATION;
 
 		if (!check_bitrix_sessid())
-			return false;
+		{
+			return;
+		}
 
 		$this->UnInstallDB();
-		$this->UnInstallEvents();
 		$this->UnInstallFiles();
 
-		$APPLICATION->IncludeAdminFile(GetMessage("XMPP_UNINSTALL_TITLE"), $DOCUMENT_ROOT."/bitrix/modules/xmpp/install/unstep.php");
+		$APPLICATION->IncludeAdminFile(Loc::getMessage("XMPP_UNINSTALL_TITLE"), $_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/xmpp/install/unstep.php");
 	}
 }
-?>

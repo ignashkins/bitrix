@@ -1,12 +1,14 @@
-<?
+<?php
+
 IncludeModuleLangFile(__FILE__);
+
 $GLOBALS["BLOG_COMMENT"] = Array();
 
 class CAllBlogComment
 {
 	const UF_NAME = 'UF_BLOG_COMMENT_DOC';
 	/*************** ADD, UPDATE, DELETE *****************/
-	function CheckFields($ACTION, &$arFields, $ID = 0)
+	public static function CheckFields($ACTION, &$arFields, $ID = 0)
 	{
 		global $DB, $APPLICATION;
 
@@ -130,11 +132,14 @@ class CAllBlogComment
 				true
 			);
 
-			if($arResult["PUBLISH_STATUS"] == BLOG_PUBLISH_STATUS_PUBLISH)
-				CBlogPost::Update($arResult["POST_ID"], array(
-					"=NUM_COMMENTS" => "NUM_COMMENTS - 1",
-					"=NUM_COMMENTS_ALL" => "NUM_COMMENTS_ALL - 1"
-				));
+			$updateFields = [
+				"=NUM_COMMENTS_ALL" => "NUM_COMMENTS_ALL - 1"
+			];
+			if($arResult["PUBLISH_STATUS"] === BLOG_PUBLISH_STATUS_PUBLISH)
+			{
+				$updateFields["=NUM_COMMENTS"] = "NUM_COMMENTS - 1";
+			}
+			CBlogPost::Update($arResult["POST_ID"], $updateFields);
 
 			$res = CBlogImage::GetList(array(), array("BLOG_ID" => $arResult["BLOG_ID"], "POST_ID"=>$arResult["POST_ID"], "IS_COMMENT" => "Y", "COMMENT_ID" => $ID));
 			while($aImg = $res->Fetch())
@@ -192,7 +197,7 @@ class CAllBlogComment
 		return False;
 	}
 
-	function BuildRSS($postID, $blogID, $type = "RSS2.0", $numPosts = 10, $arPathTemplate = Array())
+	public static function BuildRSS($postID, $blogID, $type = "RSS2.0", $numPosts = 10, $arPathTemplate = Array())
 	{
 		global $USER;
 
@@ -224,7 +229,7 @@ class CAllBlogComment
 					$serverName = "";
 					$charset = "";
 					$language = "";
-					$dbSite = CSite::GetList(($b = "sort"), ($o = "asc"), array("LID" => SITE_ID));
+					$dbSite = CSite::GetList("sort", "asc", array("LID" => SITE_ID));
 					if ($arSite = $dbSite->Fetch())
 					{
 						$serverName = $arSite["SERVER_NAME"];
@@ -1199,4 +1204,3 @@ HTML
 		return $arResult;
 	}
 }
-?>

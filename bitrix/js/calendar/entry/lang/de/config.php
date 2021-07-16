@@ -1,5 +1,6 @@
 <?php
 $MESS["CALENDAR_DEFAULT_ENTRY_NAME"] = "Neuer Termin";
+$MESS["CALENDAR_DELETE_EVENT_NOTIFICATION"] = "Termin gelöscht";
 $MESS["CALENDAR_EVENT"] = "Termin";
 $MESS["CALENDAR_EVENT_DO_ADD"] = "Erstellen";
 $MESS["CALENDAR_EVENT_DO_CANCEL"] = "Abbrechen";

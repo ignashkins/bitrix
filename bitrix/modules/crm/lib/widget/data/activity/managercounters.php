@@ -138,6 +138,8 @@ class ManagerCounters extends DataSource
 					$name = \CCrmOwnerType::ResolveName($res["OWNER_TYPE_ID"]);
 					$result[$res["AUTHOR_ID"]]["VALUE"][$name][0] -= $res["CNT"];
 					$result[$res["AUTHOR_ID"]]["TOTAL"][0] -= $res["CNT"];
+					$result[$res["AUTHOR_ID"]]["VALUE"][$name][0] = max(0, $result[$res["AUTHOR_ID"]]["VALUE"][$name][0]);
+					$result[$res["AUTHOR_ID"]]["TOTAL"][0] = max(0, $result[$res["AUTHOR_ID"]]["TOTAL"][0]);
 				}
 			}
 		}
@@ -705,7 +707,7 @@ HTML;
 					} while ($res = self::$personalCounterData['dbRes']->fetch());
 					if (!empty($userList))
 					{
-						$dbRes = \CUser::getList(($by = "ID"), ($order = "ASC"),
+						$dbRes = \CUser::getList("ID", "ASC",
 							array("ID" => implode("|", array_unique($userList))),
 							array("FIELDS" => array("ID", "NAME", "LAST_NAME", "SECOND_NAME", "LOGIN", "TITLE", "PERSONAL_PHOTO", "WORK_POSITION")));
 						while($u = $dbRes->fetch())

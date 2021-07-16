@@ -7,6 +7,7 @@ use Bitrix\Main\NotImplementedException;
 use Bitrix\Tasks\Integration\Bizproc\Automation\Factory;
 use Bitrix\Tasks\Internals\Task\MemberTable;
 use Bitrix\Main\Type\DateTime;
+use Bitrix\Tasks\Util\Restriction\Bitrix24Restriction\Limit\TaskLimit;
 
 if (!Main\Loader::includeModule('bizproc'))
 {
@@ -103,6 +104,21 @@ class Task implements \IBPWorkflowDocument
 			if (static::isProjectTask($documentType))
 			{
 				$projectId = static::resolveProjectId($documentType);
+
+				if ($projectId > 0 && Main\Loader::includeModule('socialnetwork'))
+				{
+					$activeFeatures = \CSocNetFeatures::GetActiveFeaturesNames(\SONET_ENTITY_GROUP, $projectId);
+					if (!is_array($activeFeatures) || !array_key_exists('tasks', $activeFeatures))
+					{
+						return false;
+					}
+
+					return (\CSocNetUserToGroup::GetUserRole($userId, $projectId) === \SONET_ROLES_OWNER);
+				}
+			}
+			elseif (static::isScrumProjectTask($documentType))
+			{
+				$projectId = static::resolveScrumProjectId($documentType);
 
 				if ($projectId > 0 && Main\Loader::includeModule('socialnetwork'))
 				{
@@ -643,14 +659,29 @@ class Task implements \IBPWorkflowDocument
 		return 'TASK_PROJECT_'.(int)$projectId;
 	}
 
+	public static function resolveScrumProjectTaskType($projectId)
+	{
+		return 'TASK_SCRUM_PROJECT_'.(int) $projectId;
+	}
+
 	public static function resolveProjectId($documentType)
 	{
 		return (int)mb_substr($documentType, mb_strlen('TASK_PROJECT_'));
 	}
 
+	public static function resolveScrumProjectId($documentType)
+	{
+		return (int)mb_substr($documentType, mb_strlen('TASK_SCRUM_PROJECT_'));
+	}
+
 	public static function isProjectTask($documentType)
 	{
 		return (mb_strpos($documentType, 'TASK_PROJECT_') === 0);
+	}
+
+	public static function isScrumProjectTask($documentType)
+	{
+		return (mb_strpos($documentType, 'TASK_SCRUM_PROJECT_') === 0);
 	}
 
 	public static function getDocumentName($documentId)
@@ -782,6 +813,25 @@ class Task implements \IBPWorkflowDocument
 	public static function isFeatureEnabled($documentType, $feature)
 	{
 		return in_array($feature, [\CBPDocumentService::FEATURE_SET_MODIFIED_BY]);
+	}
+
+	/**
+	 * @param string $documentId
+	 * @param string $workflowId
+	 * @param int $status
+	 * @param null|\CBPActivity $rootActivity
+	 */
+	public static function onWorkflowStatusChange($documentId, $workflowId, $status, $rootActivity)
+	{
+		if (
+			$rootActivity
+			&& $status === \CBPWorkflowStatus::Running
+			&& !$rootActivity->workflow->isNew()
+			&& TaskLimit::isLimitExceeded()
+		)
+		{
+			throw new \Exception(Loc::getMessage('TASKS_BP_DOCUMENT_RESUME_RESTRICTED'));
+		}
 	}
 
 	// Old & deprecated below

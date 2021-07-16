@@ -24,7 +24,7 @@ class CBPCrmEventAddActivity
 
 		$rootActivity = $this->GetRootActivity();
 		$documentId = $rootActivity->GetDocumentId();
-		$arDocumentInfo = explode('_', $documentId[2]);
+		$arDocumentInfo = mb_split('_(?=[^_]*$)', $documentId[2]);
 
 		$userId = CBPHelper::ExtractUsers($this->EventUser, $documentId, true);
 
@@ -94,6 +94,7 @@ class CBPCrmEventAddActivity
 			),
 			'EventText' => array(
 				'Name' => GetMessage('BPEAA_EVENT_TEXT'),
+				'Description' => GetMessage('BPEAA_EVENT_TEXT'),
 				'FieldName' => 'event_text',
 				'Type' => 'text',
 				'Required' => true,

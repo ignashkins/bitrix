@@ -93,6 +93,10 @@
 			{
 				code = "DEAL_CHANGECATEGORY_LINK";
 			}
+			if (code === "DYNAMIC_CHANGECATEGORY")
+			{
+				code = "DYNAMIC_CHANGECATEGORY_LINK";
+			}
 			code = "CRM_KANBAN_NOTIFY_" + code;
 			if (typeof BX.message[code] !== "undefined")
 			{
@@ -142,6 +146,10 @@
 							}
 							grid.stopActionPanel();
 							var code = gridData.entityType;
+							if (code.indexOf('DYNAMIC') === 0)
+							{
+								code = 'DYNAMIC';
+							}
 							if (
 								params.action === "delete" &&
 								params.ignore === "Y"
@@ -166,15 +174,14 @@
 							{
 								grid.stopActionPanel();
 								grid.onApplyFilter();
-								if (
-									gridData.entityType === "LEAD" ||
-									gridData.entityType === "DEAL"
-								)
+								if (grid.getTypeInfoParam('showPersonalSetStatusNotCompletedText'))
 								{
-									BX.Kanban.Utils.showErrorDialog(
-										BX.message("CRM_KANBAN_SET_STATUS_NOT_COMPLETED_TEXT_" + gridData.entityType)
-									);
-									reject(new Error(BX.message("CRM_KANBAN_SET_STATUS_NOT_COMPLETED_TEXT_" + gridData.entityType)));
+									var messageCode = gridData.isDynamicEntity
+										? "CRM_KANBAN_SET_STATUS_NOT_COMPLETED_TEXT_DYNAMIC"
+										: "CRM_KANBAN_SET_STATUS_NOT_COMPLETED_TEXT_" + gridData.entityType;
+
+									BX.Kanban.Utils.showErrorDialog(BX.message(messageCode));
+									reject(new Error(BX.message(messageCode)));
 								}
 								else
 								{
@@ -215,24 +222,35 @@
 		},
 
 		/**
+		 * Merge selected items.
+		 * @param {BX.CRM.Kanban.Grid} grid
+		 * @returns {void}
+		 */
+		merge: function(grid)
+		{
+			var selectedIds = grid.getCheckedId();
+			var mergeManager = BX.Crm.BatchMergeManager.getItem(grid.getData().gridId);
+			if(mergeManager && !mergeManager.isRunning() && selectedIds.length > 1)
+			{
+				mergeManager.setEntityIds(selectedIds);
+				mergeManager.execute();
+			}
+		},
+
+		/**
 		 * Change category id for deals.
 		 * @param {BX.CRM.Kanban.Grid} grid
+		 * @param category
 		 * @package {int} category
 		 * @returns {void}
 		 */
 		changeCategory: function(grid, category)
 		{
-			var gridData = grid.getData();
 			var categoryLink = "";
 
-			if (
-				gridData.linksPath &&
-				gridData.linksPath.dealCategory &&
-				gridData.linksPath.dealCategory.url
-			)
+			if (category.url)
 			{
-				categoryLink = gridData.linksPath.dealCategory.url;
-				categoryLink = categoryLink.replace("#category_id#", category.ID);
+				categoryLink = category.url;
 			}
 
 			this.simpleAction(grid, {
@@ -298,9 +316,13 @@
 							grid.resetActionPanel();
 							grid.resetDragMode();
 
-							var balloon = BX.UI.Notification.Center.notify({
-								content: deleteTitle,
-								actions: [
+							var ballonOptions = {
+								content: deleteTitle
+							};
+
+							if (grid.getTypeInfoParam('isRecyclebinEnabled'))
+							{
+								ballonOptions.actions = [
 									{
 										title: BX.message('CRM_KANBAN_DELETE_CANCEL'),
 										events: {
@@ -310,7 +332,7 @@
 												BX.ajax.runComponentAction('bitrix:crm.kanban', 'restore', {
 													mode: 'ajax',
 													data: {
-														entityIds: ids,
+														entityIds: (ids.length ? ids : [ids]),
 														entityTypeId: grid.data.entityTypeInt
 													}
 												}).then(function(response) {
@@ -331,9 +353,10 @@
 											}
 										}
 									}
-								]
-							});
+								];
+							}
 
+							var balloon = BX.UI.Notification.Center.notify(ballonOptions);
 						}
 					}, function(response) {
 						BX.UI.Notification.Center.notify({
@@ -393,11 +416,20 @@
 				BX.message("CRM_KANBAN_PANEL_ACTION_CONFIRM"),
 				function()
 				{
-					this.simpleAction(grid, {
-						action: "delete",
-						ignore: "Y",
-						id: grid.getCheckedId()
-					}, false);
+					grid.fadeOut();
+					BX.ajax.runComponentAction('bitrix:crm.kanban', 'excludeEntity', {
+						mode: 'ajax',
+						data: {
+							entityType: grid.getData().entityType,
+							ids: grid.getCheckedId(),
+						}
+					}).then(function(response) {
+						this.simpleAction(grid, {
+							action: "delete",
+							ignore: "Y",
+							id: grid.getCheckedId()
+						}, false);
+					}.bind(this));
 				}.bind(this)
 			);
 		},

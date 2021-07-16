@@ -212,7 +212,7 @@ $APPLICATION->IncludeComponent(
 		</div>
 		<?}?>
 		<?php
-        if(isset($arResult['publicUrlView']))
+        if(isset($arResult['publicUrlView']['time']))
 		{
 			?><div class="docs-preview-sidebar docs-preview-sidebar-details">
 			    <div class="docs-preview-public-view-info">
@@ -231,5 +231,5 @@ $APPLICATION->IncludeComponent(
 </body>
 	</html>
 <?
-	\Bitrix\Main\Application::getInstance()->terminate();
+	\CMain::FinalActions();
 }

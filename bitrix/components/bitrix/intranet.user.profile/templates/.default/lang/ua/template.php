@@ -104,4 +104,3 @@ $MESS["INTRANET_USER_PROFILE_integrator"] = "Інтегратор";
 $MESS["INTRANET_USER_PROFILE_invited"] = "Запрошений";
 $MESS["INTRANET_USER_PROFILE_shop"] = "Користувач магазину";
 $MESS["INTRANET_USER_PROFILE_visitor"] = "Відвідувач";
-$MESS["NTRANET_USER_PROFILE_MOBILE_GOOGLE_PLAY_URL"] = "https://play.google.com/store/apps/details?id=com.bitrix24.android";

@@ -2,6 +2,10 @@
 
 .tasks-scrum-wrapper .pagetitle-below { margin-right: 15px; }
 
+.tasks-scrum-side-panel-padding {
+	padding: 0 35px 0 20px !important;
+}
+
 .tasks-scrum-container {
 	display: -webkit-box;
 	display: -ms-flexbox;
@@ -32,6 +36,10 @@
 
 .tasks-scrum-group-actions-active {
 	position: relative;
+}
+
+.tasks-scrum-sprint-completed-loader {
+	overflow: hidden;
 }
 
 .tasks-scrum-sprints {
@@ -108,13 +116,13 @@
 	display: -webkit-box;
 	display: -ms-flexbox;
 	display: flex;
+	flex-grow: 0;
 	-ms-flex-align: center;
 	height: 53px;
 	color: #545c6a;
 	font: 13px 'OpenSans-Regular', "Helvetica Neue", Helvetica, Arial, sans-serif;
 	-webkit-box-align: center;
 	align-items: center;
-	width: 100%;
 }
 
 .tasks-scrum-switcher-views {
@@ -163,44 +171,30 @@
 	color: #fff;
 }
 
-.tasks-scrum-active-sprint-stats {
-	display: -webkit-box;
-	display: -ms-flexbox;
-	display: flex;
-	white-space: nowrap;
-	margin-left: auto;
-}
-
-.tasks-scrum-actions-complete-sprint {
-	padding-left: 10px;
-	display: -webkit-box;
-	display: -ms-flexbox;
-	display: flex;
-	white-space: nowrap;
-	margin-left: auto;
-}
-
-.tasks-scrum-team-speed-button-container {
-	padding-left: 10px;
-	display: -webkit-box;
-	display: -ms-flexbox;
-	display: flex;
-	white-space: nowrap;
-	margin-left: auto;
-}
-
-.tasks-scrum-entity-items-faded {
-	opacity: 0.5;
-	pointer-events: none;
-}
-
-.tasks-scrum-completed-sprint-title {
+.tasks-scrum-sprint-stats {
 	width: 100%;
 	text-align: center;
 	color: #fff;
 	text-decoration: none;
 	font-size: 13px;
 	font-weight: bold;
+}
+
+.tasks-scrum-buttons {
+	display: -webkit-box;
+	display: -ms-flexbox;
+	display: flex;
+	white-space: nowrap;
+	margin-left: auto;
+}
+
+.tasks-scrum-button-container {
+	padding-left: 10px;
+}
+
+.tasks-scrum-entity-items-faded {
+	opacity: 0.5;
+	pointer-events: none;
 }
 
 .tasks-scrum-project-side-panel {

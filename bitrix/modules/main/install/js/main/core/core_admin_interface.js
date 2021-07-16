@@ -2527,7 +2527,10 @@ BX.adminUiList.prototype.onShowTotalCount = function(event)
 
 BX.adminUiList.prototype.onMessage = function(SidePanelEvent)
 {
-	if (!(SidePanelEvent instanceof BX.SidePanel.MessageEvent))
+	if (
+		!(SidePanelEvent instanceof BX.SidePanel.MessageEvent)
+		&& !(SidePanelEvent instanceof top.BX.SidePanel.MessageEvent)
+	)
 	{
 		return;
 	}
@@ -2567,7 +2570,17 @@ BX.adminUiList.prototype.onMessage = function(SidePanelEvent)
 BX.adminUiList.prototype.onReloadGrid = function()
 {
 	var reloadParams = { apply_filter: 'Y'};
-	var gridObject = top.BX.Main.gridManager.getById(this.gridId);
+	var gridObject;
+
+	if (BX.Reflection.getClass('top.BX.Main.gridManager.getById'))
+	{
+		gridObject = top.BX.Main.gridManager.getById(this.gridId);
+	}
+	else if (BX.Reflection.getClass('BX.Main.gridManager.getById'))
+	{
+		gridObject = BX.Main.gridManager.getById(this.gridId);
+	}
+
 	if (gridObject && gridObject.hasOwnProperty('instance'))
 	{
 		gridObject.instance.reloadTable('POST', reloadParams, false, this.gridUrl);
@@ -2826,7 +2839,7 @@ BX.adminSidePanel.prototype.onMessage = function(SidePanelEvent)
 	}
 };
 
-BX.adminSidePanel.onOpenPage = BX.adminSidePanel.prototype.onOpenPage = function(url)
+BX.adminSidePanel.onOpenPage = BX.adminSidePanel.prototype.onOpenPage = function(url, skipModification)
 {
 	if (top.BX.admin && top.BX.admin.dynamic_mode_show_borders)
 	{
@@ -2835,13 +2848,21 @@ BX.adminSidePanel.onOpenPage = BX.adminSidePanel.prototype.onOpenPage = function
 
 	if (top.BX.SidePanel.Instance)
 	{
-		var adminSidePanel = top.window["adminSidePanel"], optionsOpen = {};
-		if (adminSidePanel.publicMode)
+		if (skipModification)
 		{
-			url = BX.util.add_url_param(url, {"publicSidePanel": "Y"});
-			optionsOpen.allowChangeHistory = false;
+			top.BX.SidePanel.Instance.open(url);
 		}
-		top.BX.SidePanel.Instance.open(url, optionsOpen);
+		else
+		{
+			var adminSidePanel = top.window["adminSidePanel"], optionsOpen = {};
+			if (adminSidePanel.publicMode)
+			{
+				url = BX.util.add_url_param(url, {"publicSidePanel": "Y"});
+				optionsOpen.allowChangeHistory = false;
+			}
+
+			top.BX.SidePanel.Instance.open(url, optionsOpen);
+		}
 	}
 };
 

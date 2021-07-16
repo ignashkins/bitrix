@@ -37,7 +37,16 @@ if ($isCompositeMode && !$isIndexPage)
 							<span id="copyright">
 								<?if ($isBitrix24Cloud):?>
 									<a id="bitrix24-logo" target="_blank" class="bitrix24-logo-<?=(LANGUAGE_ID == "ua") ? LANGUAGE_ID : Loc::getDefaultLang(LANGUAGE_ID)?>" href="<?=GetMessage("BITRIX24_URL")?>"></a>
-									<?include($_SERVER["DOCUMENT_ROOT"].SITE_TEMPLATE_PATH."/languages.php");?>
+									<?
+									$b24Languages = [];
+									include($_SERVER["DOCUMENT_ROOT"].SITE_TEMPLATE_PATH."/languages.php");
+									if (!\Bitrix\Main\Application::getInstance()->isUtfMode())
+									{
+										array_walk($b24Languages, function(&$lang) {
+											$lang["NAME"] = mb_convert_encoding($lang["NAME"], "HTML-ENTITIES", "UTF-8");
+										});
+									}
+									?>
 									<span class="bx-lang-btn <?=LANGUAGE_ID?>" id="bx-lang-btn" onclick="B24.openLanguagePopup(this)">
 										<span class="bx-lang-btn-icon"><?=$b24Languages[LANGUAGE_ID]["NAME"]?></span>
 									</span>
@@ -130,23 +139,6 @@ if ($isCompositeMode && !$isIndexPage)
 <?
 $APPLICATION->ShowBodyScripts();
 
-if (defined("BX24_HOST_NAME")):?>
-<script>
-var _baLoaded = BX.type.isArray(_ba);
-var _ba = _ba || []; _ba.push(["aid", "1682f9867b9ef36eacf05e345db46f3c"]);
-(function(alreadyLoaded) {
-	if (alreadyLoaded)
-	{
-		return;
-	}
-	var ba = document.createElement("script"); ba.type = "text/javascript"; ba.async = true;
-	ba.src = document.location.protocol + "//bitrix.info/ba.js";
-	var s = document.getElementsByTagName("script")[0];
-	s.parentNode.insertBefore(ba, s);
-})(_baLoaded);
-</script>
-<?endif;
-
 //$APPLICATION->IncludeComponent("bitrix:pull.request", "", Array(), false, Array("HIDE_ICONS" => "Y"));
 $APPLICATION->IncludeComponent("bitrix:intranet.mail.check", "", array(), false, array("HIDE_ICONS" => "Y"));
 
@@ -160,13 +152,12 @@ if ($isBitrix24Cloud)
 	$APPLICATION->IncludeComponent("bitrix:bitrix24.notify.panel", "", array());
 	//$APPLICATION->IncludeComponent("bitrix:bitrix24.broadcast", "", array());
 }
-$APPLICATION->IncludeComponent("bitrix:ui.info.helper", "", array());
 ?>
 
 <?
 if (
 	preg_match("/(MSIE|Trident)/i", $_SERVER["HTTP_USER_AGENT"]) &&
-	CUserOptions::getOption("intranet", "ie11_warning", "N") === "N"
+	CUserOptions::getOption("intranet", "ie11_warning_2", "N") === "N"
 ):
 ?>
 <script type="text/javascript">
@@ -187,7 +178,7 @@ if (
 					}],
 					events: {
 						onClose: function() {
-							BX.userOptions.save("intranet", "ie11_warning", null, "Y");
+							BX.userOptions.save("intranet", "ie11_warning_2", null, "Y");
 							BX.userOptions.send(null);
 						}
 					}

@@ -1,5 +1,6 @@
-<?
+<?php
 $MESS["INTRANET_USER_PROFILE_AUTH_TITLE_2"] = "Authentifizierung";
+$MESS["INTRANET_USER_PROFILE_MAILING_TITLE"] = "Bitrix24 Newsletter-Abonnement";
 $MESS["INTRANET_USER_PROFILE_PASSWORD_TITLE"] = "Passwort ändern";
 $MESS["INTRANET_USER_PROFILE_RECOVERY_CODES_TITLE"] = "Codes zur Wiederherstellung";
 $MESS["INTRANET_USER_PROFILE_SECURITY_OTP_TITLE"] = "Zusätzliche Sicherheitsoptionen";
@@ -7,4 +8,3 @@ $MESS["INTRANET_USER_PROFILE_SECURITY_PASSWORDS_TITLE"] = "Passwörter der Anwen
 $MESS["INTRANET_USER_PROFILE_SOCNET_EMAIL_TITLE"] = "E-Mails an Bitrix24 leiten";
 $MESS["INTRANET_USER_PROFILE_SOCSERV_TITLE"] = "Soziale Services";
 $MESS["INTRANET_USER_PROFILE_SYNCHRONIZE_TITLE"] = "Synchronisierung";
-?>

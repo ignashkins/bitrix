@@ -16,6 +16,7 @@ use Bitrix\Main\Result;
 use Bitrix\Main\Error;
 use Bitrix\Main\SystemException;
 use Bitrix\Crm\EntityAddress;
+use Bitrix\Crm\EntityAddressType;
 use Bitrix\Crm\Restriction\RestrictionManager;
 use Bitrix\Crm\EntityPreset;
 use Bitrix\Crm\EntityRequisite;
@@ -623,7 +624,7 @@ global $USER_FIELD_MANAGER;
 $CCrmFieldMulti = new CCrmFieldMulti();
 $CCrmUserType = new CCrmUserType($USER_FIELD_MANAGER, CCrmCompany::$sUFEntityID);
 $addressLabels = EntityAddress::getShortLabels();
-$regAddressLabels = EntityAddress::getShortLabels(EntityAddress::Registered);
+$regAddressLabels = EntityAddress::getShortLabels(EntityAddressType::Registered);
 $arResult['HEADERS'] = array(
 	array('id' => 'ID', 'name' => GetMessage('CRM_COLUMN_ID')),
 	array('id' => 'TITLE', 'name' => GetMessage('CRM_COLUMN_TITLE')),
@@ -652,7 +653,7 @@ if ($enableOutmodedFields)
 			array('id' => 'ADDRESS_POSTAL_CODE', 'name' => $addressLabels['POSTAL_CODE']),
 			array('id' => 'ADDRESS_COUNTRY', 'name' => $addressLabels['COUNTRY'])/*,
 			array('id' => 'ADDRESS_LOC_ADDR_ID', 'name' => $addressLabels['LOC_ADDR_ID'])*/,
-			array('id' => 'FULL_REG_ADDRESS', 'name' => EntityAddress::getFullAddressLabel(EntityAddress::Registered)),
+			array('id' => 'FULL_REG_ADDRESS', 'name' => EntityAddress::getFullAddressLabel(EntityAddressType::Registered)),
 			array('id' => 'REG_ADDRESS', 'name' => $regAddressLabels['ADDRESS']),
 			array('id' => 'REG_ADDRESS_2', 'name' => $regAddressLabels['ADDRESS_2']),
 			array('id' => 'REG_ADDRESS_CITY', 'name' => $regAddressLabels['CITY']),
@@ -1140,7 +1141,7 @@ else if (isset($_REQUEST['import']) && isset($_SESSION['CRM_IMPORT_FILE']))
 						$userID = is_int($data) ? $data : intval($data);
 						if($userID > 0 && !isset($usersByID[$userID]))
 						{
-							$dbUsers = CUser::GetList($by = 'ID', $order = 'ASC', array('ID_EQUAL_EXACT'=> $userID), array('FIELDS' => array('ID')));
+							$dbUsers = CUser::GetList('ID', 'ASC', array('ID_EQUAL_EXACT'=> $userID), array('FIELDS' => array('ID')));
 							$user = is_object($dbUsers) ? $dbUsers->Fetch() : null;
 							if(is_array($user))
 							{
@@ -1161,7 +1162,7 @@ else if (isset($_REQUEST['import']) && isset($_SESSION['CRM_IMPORT_FILE']))
 							$userID = intval($m[1]);
 							if($userID > 0 && !isset($usersByID[$userID]))
 							{
-								$dbUsers = CUser::GetList($by = 'ID', $order = 'ASC', array('ID_EQUAL_EXACT'=> $userID), array('FIELDS' => array('ID')));
+								$dbUsers = CUser::GetList('ID', 'ASC', array('ID_EQUAL_EXACT'=> $userID), array('FIELDS' => array('ID')));
 								$user = is_object($dbUsers) ? $dbUsers->Fetch() : null;
 								if(is_array($user))
 								{
@@ -1852,7 +1853,7 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && check_bitrix_sessid())
 			}
 			else
 			{
-				$error = CFile::CheckFile($_FILES['IMPORT_FILE'], 0, 0, 'csv,txt');
+				$error = CFile::CheckFile($_FILES['IMPORT_FILE'], 0, false, 'csv,txt');
 
 				if($error !== '')
 				{

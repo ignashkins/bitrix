@@ -24,7 +24,6 @@ BX.SidePanel.Slider = function(url, options)
 
 	this.url = this.contentCallback ? url : this.refineUrl(url);
 
-	this.zIndex = BX.prop.getInteger(options, 'zIndex', 3000);
 	this.offset = null;
 	this.width = BX.type.isNumber(options.width) ? options.width : null;
 	this.cacheable = options.cacheable !== false;
@@ -60,6 +59,7 @@ BX.SidePanel.Slider = function(url, options)
 
 	this.handleFrameKeyDown = this.handleFrameKeyDown.bind(this);
 	this.handleFrameFocus = this.handleFrameFocus.bind(this);
+	this.handlePopupInit = this.handlePopupInit.bind(this);
 
 	/**
 	 *
@@ -74,6 +74,8 @@ BX.SidePanel.Slider = function(url, options)
 		printBtn: null
 	};
 
+	this.cache = new BX.Cache.MemoryCache();
+
 	this.loader =
 		BX.type.isNotEmptyString(options.loader)
 			? options.loader
@@ -87,12 +89,58 @@ BX.SidePanel.Slider = function(url, options)
 	this.currentParams = null;
 	this.overlayAnimation = false;
 
-	this.label = new BX.SidePanel.Label(this);
+	this.label = new BX.SidePanel.Label(this, {
+		iconClass: 'side-panel-label-icon-close',
+		iconTitle: BX.Loc.getMessage('MAIN_SIDEPANEL_CLOSE'),
+		onclick: function(label, slider) {
+			slider.close();
+		}
+	});
 
 	var labelOptions = BX.type.isPlainObject(options.label) ? options.label : {};
 	this.label.setText(labelOptions.text);
 	this.label.setColor(labelOptions.color);
 	this.label.setBgColor(labelOptions.bgColor, labelOptions.opacity);
+
+	this.newWindowLabel = null;
+	this.copyLinkLabel = null;
+	if (!this.isSelfContained())
+	{
+		if (options.newWindowLabel === true)
+		{
+			this.newWindowLabel = new BX.SidePanel.Label(this, {
+				iconClass: 'side-panel-label-icon-new-window',
+				iconTitle: BX.Loc.getMessage('MAIN_SIDEPANEL_NEW_WINDOW'),
+				bgColor: ['#d9dcdf', 100],
+				onclick: function(label, slider) {
+					Object.assign(document.createElement('a'), {
+						target: '_blank',
+						href: slider.getUrl(),
+					}).click();
+				}
+			});
+		}
+
+		if (options.copyLinkLabel === true)
+		{
+			this.copyLinkLabel = new BX.SidePanel.Label(this, {
+				iconClass: 'side-panel-label-icon-copy-link',
+				iconTitle: BX.Loc.getMessage('MAIN_SIDEPANEL_COPY_LINK'),
+				bgColor: ['#d9dcdf', 100],
+			});
+
+			BX.clipboard.bindCopyClick(
+				this.copyLinkLabel.getIconBox(),
+				{
+					text: function() {
+						var link = document.createElement('a');
+						link.href = this.getUrl();
+						return link.href;
+					}.bind(this)
+				}
+			);
+		}
+	}
 
 	//Compatibility
 	if (
@@ -162,6 +210,8 @@ BX.SidePanel.Slider.prototype =
 		this.createLayout();
 		BX.addClass(this.getOverlay(), "side-panel-overlay-open side-panel-overlay-opening");
 		this.adjustLayout();
+
+		BX.ZIndexManager.bringToFront(this.getOverlay());
 
 		this.opened = true;
 
@@ -262,14 +312,12 @@ BX.SidePanel.Slider.prototype =
 
 	/**
 	 * @public
+	 * @deprecated
 	 * @param {number} zIndex
 	 */
 	setZindex: function(zIndex)
 	{
-		if (BX.type.isNumber(zIndex))
-		{
-			this.zIndex = zIndex;
-		}
+
 	},
 
 	/**
@@ -278,7 +326,9 @@ BX.SidePanel.Slider.prototype =
 	 */
 	getZindex: function()
 	{
-		return this.zIndex;
+		var component = BX.ZIndexManager.getComponent(this.getOverlay());
+
+		return component.getZIndex();
 	},
 
 	/**
@@ -556,7 +606,7 @@ BX.SidePanel.Slider.prototype =
 	 */
 	showCloseBtn: function()
 	{
-		this.getLabel().showCloseBtn();
+		this.getLabel().showIcon();
 	},
 
 	/**
@@ -564,7 +614,7 @@ BX.SidePanel.Slider.prototype =
 	 */
 	hideCloseBtn: function()
 	{
-		this.getLabel().hideCloseBtn();
+		this.getLabel().hideIcon();
 	},
 
 	/**
@@ -574,11 +624,11 @@ BX.SidePanel.Slider.prototype =
 	{
 		if (BX.Type.isStringFilled(this.getLabel().getText()))
 		{
-			this.getLabel().showCloseBtn();
+			this.getLabel().showIcon();
 		}
 		else
 		{
-			this.getLabel().lightenCloseBtn();
+			this.getLabel().lightenIcon();
 		}
 	},
 
@@ -589,11 +639,11 @@ BX.SidePanel.Slider.prototype =
 	{
 		if (BX.Type.isStringFilled(this.getLabel().getText()))
 		{
-			this.getLabel().hideCloseBtn();
+			this.getLabel().hideIcon();
 		}
 		else
 		{
-			this.getLabel().darkenCloseBtn();
+			this.getLabel().darkenIcon();
 		}
 	},
 
@@ -611,6 +661,16 @@ BX.SidePanel.Slider.prototype =
 	hidePrintBtn: function()
 	{
 		this.getPrintBtn().classList.remove("side-panel-print-visible");
+	},
+
+	showExtraLabels: function()
+	{
+		this.getExtraLabelsContainer().style.removeProperty('display');
+	},
+
+	hideExtraLabels: function()
+	{
+		this.getExtraLabelsContainer().style.display = 'none';
 	},
 
 	/**
@@ -765,6 +825,11 @@ BX.SidePanel.Slider.prototype =
 	 */
 	destroy: function()
 	{
+		if (this.isDestroyed())
+		{
+			return;
+		}
+
 		this.firePageEvent("onDestroy");
 		this.fireFrameEvent("onDestroy");
 
@@ -774,6 +839,9 @@ BX.SidePanel.Slider.prototype =
 			frameWindow.removeEventListener("keydown", this.handleFrameKeyDown);
 			frameWindow.removeEventListener("focus", this.handleFrameFocus);
 		}
+
+		BX.Event.EventEmitter.unsubscribe('BX.Main.Popup:onInit', this.handlePopupInit);
+		BX.ZIndexManager.unregister(this.layout.overlay);
 
 		BX.remove(this.layout.overlay);
 
@@ -826,6 +894,7 @@ BX.SidePanel.Slider.prototype =
 		if (this.isSelfContained())
 		{
 			this.contentCallbackInvoved = false;
+			this.showLoader();
 			this.setContent();
 		}
 		else
@@ -881,6 +950,8 @@ BX.SidePanel.Slider.prototype =
 			this.getContentContainer().style.overflow = "auto";
 			document.body.appendChild(this.getOverlay());
 			this.setContent();
+
+			BX.Event.EventEmitter.subscribe('BX.Main.Popup:onInit', this.handlePopupInit);
 		}
 		else
 		{
@@ -888,6 +959,8 @@ BX.SidePanel.Slider.prototype =
 			document.body.appendChild(this.getOverlay());
 			this.setFrameSrc(); //setFrameSrc must be below than appendChild, otherwise POST method fails.
 		}
+
+		BX.ZIndexManager.register(this.getOverlay());
 	},
 
 	/**
@@ -936,9 +1009,6 @@ BX.SidePanel.Slider.prototype =
 			},
 			events: {
 				mousedown: this.handleOverlayClick.bind(this)
-			},
-			style: {
-				zIndex: this.getZindex()
 			},
 			children: [
 				this.getContainer()
@@ -996,12 +1066,9 @@ BX.SidePanel.Slider.prototype =
 			props: {
 				className: "side-panel side-panel-container"
 			},
-			style: {
-				zIndex: this.getZindex() + 1
-			},
 			children: [
 				this.getContentContainer(),
-				this.getLabel().getContainer(),
+				this.getLabelsContainer(),
 				this.getPrintBtn()
 			]
 		});
@@ -1032,12 +1099,50 @@ BX.SidePanel.Slider.prototype =
 	},
 
 	/**
+	 *
+	 * @returns {Element}
+	 */
+	getLabelsContainer: function()
+	{
+		return this.cache.remember('labels-container', function() {
+			return BX.create('div', {
+					props: {
+						className: 'side-panel-labels'
+					},
+					children: [
+						this.getLabel().getContainer(),
+						this.getExtraLabelsContainer()
+					]
+				})
+			;
+		}.bind(this));
+	},
+
+	/**
+	 * @returns {Element}
+	 */
+	getExtraLabelsContainer: function()
+	{
+		return this.cache.remember('icon-labels', function() {
+			return BX.create('div', {
+				props: {
+					className: 'side-panel-extra-labels'
+				},
+				children: [
+					this.newWindowLabel ? this.newWindowLabel.getContainer() : null,
+					this.copyLinkLabel ? this.copyLinkLabel.getContainer() : null
+				]
+			});
+		}.bind(this));
+	},
+
+	/**
 	 * @public
 	 * @returns {Element}
 	 */
 	getCloseBtn: function()
 	{
-		return this.getLabel().getCloseBtn();
+		return this.getLabel().getIconBox();
 	},
 
 	/**
@@ -1047,6 +1152,24 @@ BX.SidePanel.Slider.prototype =
 	getLabel: function()
 	{
 		return this.label;
+	},
+
+	/**
+	 * @public
+	 * @returns {BX.SidePanel.Label | null}
+	 */
+	getNewWindowLabel: function()
+	{
+		return this.newWindowLabel;
+	},
+
+	/**
+	 * @public
+	 * @returns {BX.SidePanel.Label | null}
+	 */
+	getCopyLinkLabel: function()
+	{
+		return this.copyLinkLabel;
 	},
 
 	/**
@@ -1086,7 +1209,6 @@ BX.SidePanel.Slider.prototype =
 		this.contentCallbackInvoved = true;
 
 		BX.cleanNode(this.getContentContainer());
-		this.showLoader();
 
 		var promise = this.contentCallback(this);
 		var isPromiseReturned =
@@ -1182,8 +1304,6 @@ BX.SidePanel.Slider.prototype =
 			this.iframeSrc = this.getUrl();
 			this.iframe.src = url;
 		}
-
-		this.showLoader();
 	},
 
 	/**
@@ -1383,7 +1503,23 @@ BX.SidePanel.Slider.prototype =
 				continue;
 			}
 
-			var rules = style.rules || style.cssRules;
+			var rules;
+			try
+			{
+				rules = style.rules || style.cssRules;
+			}
+			catch (e)
+			{
+				try
+				{
+					rules = style.cssRules;
+				}
+				catch (e)
+				{
+					rules = [];
+				}
+			}
+
 			for (var j = 0; j < rules.length; j++)
 			{
 				var rule = rules[j];
@@ -1483,6 +1619,11 @@ BX.SidePanel.Slider.prototype =
 
 			this.firePageEvent("onOpenComplete");
 			this.fireFrameEvent("onOpenComplete");
+
+			if (!this.isLoaded())
+			{
+				this.showLoader();
+			}
 
 			if (this.isFocusable())
 			{
@@ -1739,6 +1880,25 @@ BX.SidePanel.Slider.prototype =
 
 		this.firePageEvent("onEscapePress");
 		this.fireFrameEvent("onEscapePress");
+	},
+
+	/**
+	 * @private
+	 * @param {BaseEvent} event
+	 */
+	handlePopupInit: function(event)
+	{
+		var data = event.getCompatData();
+		var bindElement = data[1];
+		var params = data[2];
+
+		if (!BX.Type.isElementNode(params.targetContainer) && BX.Type.isElementNode(bindElement))
+		{
+			if (this.getContentContainer().contains(bindElement))
+			{
+				params.targetContainer = this.getContentContainer();
+			}
+		}
 	},
 
 	/**
@@ -2122,22 +2282,28 @@ BX.SidePanel.Dictionary.prototype =
 /**
  * @internal
  * @param {BX.SidePanel.Slider} slider
+ * @param labelOptions
  * @constructor
  */
-BX.SidePanel.Label = function(slider)
+BX.SidePanel.Label = function(slider, labelOptions)
 {
 	/** @type {BX.SidePanel.Slider} */
 	this.slider = slider;
-
-	this.layout = {
-		label: null,
-		closeBtn: null,
-		text: null
-	};
-
 	this.color = null;
 	this.bgColor = null;
+	this.iconClass = '';
+	this.iconTitle = '';
+	this.onclick = null;
 	this.text = null;
+	this.cache = new BX.Cache.MemoryCache();
+
+	var options = BX.Type.isPlainObject(labelOptions) ? labelOptions : {};
+	this.setBgColor(options.bgColor);
+	this.setColor(options.color);
+	this.setText(options.text);
+	this.setIconClass(options.iconClass);
+	this.setIconTitle(options.iconTitle);
+	this.setOnclick(options.onclick);
 };
 
 BX.SidePanel.Label.MIN_LEFT_OFFSET = 25;
@@ -2152,25 +2318,20 @@ BX.SidePanel.Label.prototype =
 	 */
 	getContainer: function()
 	{
-		if (this.layout.label !== null)
-		{
-			return this.layout.label;
-		}
-
-		this.layout.label = BX.create("div", {
-			props: {
-				className: "side-panel-label",
-			},
-			children : [
-				this.getCloseBtn(),
-				this.getTextContainer(),
-			],
-			events: {
-				click: this.handleClick.bind(this)
-			}
-		});
-
-		return this.layout.label;
+		return this.cache.remember('container', function() {
+			return BX.create("div", {
+				props: {
+					className: "side-panel-label",
+				},
+				children : [
+					this.getIconBox(),
+					this.getTextContainer(),
+				],
+				events: {
+					click: this.handleClick.bind(this)
+				}
+			});
+		}.bind(this));
 	},
 
 	adjustLayout: function()
@@ -2192,28 +2353,33 @@ BX.SidePanel.Label.prototype =
 	 * @public
 	 * @returns {Element}
 	 */
-	getCloseBtn: function()
+	getIconBox: function()
 	{
-		if (this.layout.closeBtn !== null)
-		{
-			return this.layout.closeBtn;
-		}
+		return this.cache.remember('icon-box', function() {
+			return BX.create('div', {
+				props: {
+					className: 'side-panel-label-icon-box'
+				},
+				children : [
+					this.getIconContainer()
+				]
+			});
+		}.bind(this));
+	},
 
-		this.layout.closeBtn = BX.create("div", {
-			props: {
-				className: "side-panel-close-btn",
-				title: BX.message("MAIN_SIDEPANEL_CLOSE")
-			},
-			children : [
-				BX.create("div", {
-					props: {
-						className: "side-panel-close-btn-inner"
-					}
-				})
-			]
-		});
-
-		return this.layout.closeBtn;
+	/**
+	 * @public
+	 * @returns {Element}
+	 */
+	getIconContainer: function()
+	{
+		return this.cache.remember('icon-container', function() {
+			return BX.create('div', {
+				props: {
+					className: 'side-panel-label-icon ' + this.getIconClass()
+				}
+			});
+		}.bind(this));
 	},
 
 	/**
@@ -2222,40 +2388,46 @@ BX.SidePanel.Label.prototype =
 	 */
 	handleClick: function(event)
 	{
-		this.getSlider().close();
 		event.stopPropagation();
+
+		var fn = this.getOnclick();
+		if (fn)
+		{
+
+			fn(this, this.getSlider());
+		}
 	},
 
 	/**
 	 * @public
 	 */
-	showCloseBtn: function()
+	showIcon: function()
 	{
-		this.getContainer().classList.remove("side-panel-hide-close-btn");
+		this.getContainer().classList.remove("side-panel-label-icon--hide");
 	},
 
 	/**
 	 * @public
 	 */
-	hideCloseBtn: function()
+	hideIcon: function()
 	{
-		this.getContainer().classList.add("side-panel-hide-close-btn");
+		this.getContainer().classList.add("side-panel-label-icon--hide");
 	},
 
 	/**
 	 * @public
 	 */
-	darkenCloseBtn: function()
+	darkenIcon: function()
 	{
-		this.getContainer().classList.add("side-panel-darken-close-btn");
+		this.getContainer().classList.add("side-panel-label-icon--darken");
 	},
 
 	/**
 	 * @public
 	 */
-	lightenCloseBtn: function()
+	lightenIcon: function()
 	{
-		this.getContainer().classList.remove("side-panel-darken-close-btn");
+		this.getContainer().classList.remove("side-panel-label-icon--darken");
 	},
 
 	hideText: function()
@@ -2275,16 +2447,13 @@ BX.SidePanel.Label.prototype =
 
 	getTextContainer: function()
 	{
-		if (this.layout.text === null)
-		{
-			this.layout.text = BX.create("span", {
+		return this.cache.remember('text-container', function() {
+			return BX.create("span", {
 				props: {
 					className: "side-panel-label-text"
 				}
-			})
-		}
-
-		return this.layout.text;
+			});
+		}.bind(this));
 	},
 
 	setColor: function(color)
@@ -2303,6 +2472,12 @@ BX.SidePanel.Label.prototype =
 
 	setBgColor: function(bgColor, opacity)
 	{
+		if (BX.Type.isArray(bgColor))
+		{
+			opacity = bgColor[1];
+			bgColor = bgColor[0];
+		}
+
 		if (BX.type.isNotEmptyString(bgColor))
 		{
 			var matches = bgColor.match(/^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/);
@@ -2353,6 +2528,53 @@ BX.SidePanel.Label.prototype =
 		return this.text;
 	},
 
+	setIconClass: function(iconClass)
+	{
+		if (BX.Type.isStringFilled(iconClass))
+		{
+			BX.Dom.removeClass(this.getIconContainer(), this.iconClass);
+			this.iconClass = iconClass;
+			BX.Dom.addClass(this.getIconContainer(), this.iconClass);
+		}
+		else if (iconClass === null)
+		{
+			BX.Dom.removeClass(this.getIconContainer(), this.iconClass);
+			this.iconClass = iconClass;
+		}
+	},
+
+	getIconClass: function()
+	{
+		return this.iconClass;
+	},
+
+	setIconTitle: function(iconTitle)
+	{
+		if (BX.Type.isStringFilled(iconTitle) || iconTitle === null)
+		{
+			BX.Dom.attr(this.getIconBox(), 'title', iconTitle);
+			this.iconTitle = iconTitle;
+		}
+	},
+
+	getIconTitle: function()
+	{
+		return this.iconTitle;
+	},
+
+	setOnclick: function(fn)
+	{
+		if (BX.Type.isFunction(fn) || fn === null)
+		{
+			this.onclick = fn;
+		}
+	},
+
+	getOnclick: function()
+	{
+		return this.onclick;
+	},
+
 	/**
 	 *
 	 * @returns {BX.SidePanel.Slider}
@@ -2366,11 +2588,10 @@ BX.SidePanel.Label.prototype =
 	{
 		if (BX.type.isNumber(position) && position >= 0)
 		{
-			this.getContainer().style.top =
+			this.getSlider().getLabelsContainer().style.top =
 				BX.SidePanel.Label.MIN_TOP_OFFSET + (position * BX.SidePanel.Label.INTERVAL_TOP_OFFSET) + "px";
 		}
 	},
 };
-
 
 })();

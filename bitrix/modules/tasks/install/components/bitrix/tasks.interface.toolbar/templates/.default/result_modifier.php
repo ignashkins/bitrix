@@ -39,11 +39,15 @@ $arResult['JS_DATA'] = [
 	'ownerId' => $arResult['OWNER_ID'],
 	'groupId' => $arParams['GROUP_ID'],
 	'filterId' => $arParams['FILTER_ID'],
+	'roleId' => $arResult['ROLE'],
 	'showCounters' => $arResult['SHOW_COUNTERS'],
 	'counters' => $arResult['COUNTERS'],
+	'foreign_counters' => $arResult['FOREIGN_COUNTERS'],
+	'project_mode'	=> ($arParams['GROUP_ID'] > 0),
 	'templates' => [
 		'empty' => '<span id="tasksSimpleCounters" class="tasks-page-name">#TEXT#</span>',
 		'total' => '<span id="tasksSimpleCounters" class="tasks-counter-page-name">#TEXT#</span>',
+		'foreign' => '<span id="tasksForeignCounters" class="tasks-counter-page-name">#TEXT#</span>',
 		'counter' =>
 			'<a href="javascript:;" class="tasks-counter-container" data-counter-id="#COUNTER_ID#" data-counter-value="#COUNTER#" data-counter-code="#COUNTER_CODE#">'
 				.'<span class="tasks-counter ui-counter ui-counter-#CLASS#"><span class="ui-counter-inner">#COUNTER#</span></span>'
@@ -58,10 +62,13 @@ $arResult['JS_DATA'] = [
 		'total' => '',
 		'expired' => 'danger',
 		'new_comments' => 'success',
+		'foreign_expired' => 'gray',
+		'foreign_comments' => 'gray'
 	],
 	'messages' => [
 		'empty' => $emptyMessage,
 		'total' => ($arResult['USER_ID'] === $arResult['OWNER_ID']) ? GetMessageJS('TASKS_COUNTER_TOTAL') : GetMessageJS('TASKS_COUNTER_TOTAL_EMPL'),
+		'foreign' => GetMessageJS('TASKS_COUNTER_FOREIGN'),
 		'not_viewed_0' => GetMessageJS('TASKS_COUNTER_NEW_PLURAL_0'),
 		'not_viewed_1' => GetMessageJS('TASKS_COUNTER_NEW_PLURAL_1'),
 		'not_viewed_2' => GetMessageJS('TASKS_COUNTER_NEW_PLURAL_2'),
@@ -80,5 +87,11 @@ $arResult['JS_DATA'] = [
 		'expired_soon_0' => GetMessageJS('TASKS_COUNTER_EXPIRED_CANDIDATES_PLURAL_0'),
 		'expired_soon_1' => GetMessageJS('TASKS_COUNTER_EXPIRED_CANDIDATES_PLURAL_1'),
 		'expired_soon_2' => GetMessageJS('TASKS_COUNTER_EXPIRED_CANDIDATES_PLURAL_2'),
+		'foreign_expired_0' => GetMessageJS('TASKS_COUNTER_EXPIRED_PLURAL_0'),
+		'foreign_expired_1' => GetMessageJS('TASKS_COUNTER_EXPIRED_PLURAL_1'),
+		'foreign_expired_2' => GetMessageJS('TASKS_COUNTER_EXPIRED_PLURAL_2'),
+		'foreign_comments_0' => GetMessageJS('TASKS_COUNTER_NEW_COMMENTS_PLURAL_0'),
+		'foreign_comments_1' => GetMessageJS('TASKS_COUNTER_NEW_COMMENTS_PLURAL_1'),
+		'foreign_comments_2' => GetMessageJS('TASKS_COUNTER_NEW_COMMENTS_PLURAL_2'),
 	],
 ];

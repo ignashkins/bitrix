@@ -1,8 +1,10 @@
-<?
+<?php
+
 IncludeModuleLangFile(__FILE__);
 
 use Bitrix\Main;
 use Bitrix\Main\Loader;
+use Bitrix\Main\Localization\Loc;
 
 class CCrmLiveFeedEntity
 {
@@ -2183,7 +2185,7 @@ class CCrmLiveFeed
 			$genderSuffix = "";
 			$dbUser = CUser::GetByID(CCrmSecurityHelper::GetCurrentUserID());
 			if(
-				$arUser = $dbUser->Fetch()
+				($arUser = $dbUser->fetch())
 				&& !empty($arUser["PERSONAL_GENDER"])
 			)
 			{
@@ -2347,59 +2349,178 @@ class CCrmLiveFeed
 		}
 		return "";
 	}
-	static public function OnAddRatingVote($rating_vote_id, $arRatingFields)
+
+	public static function OnAddRatingVote($ratingVoteId, $ratingFields)
 	{
 		if (
-			CModule::IncludeModule("socialnetwork")
-			&& CModule::IncludeModule("im")
+			!Loader::includeModule('socialnetwork')
+			|| !Loader::includeModule('im')
 		)
 		{
-			$arData = CSocNetLogTools::GetDataFromRatingEntity($arRatingFields["ENTITY_TYPE_ID"], $arRatingFields["ENTITY_ID"], false);
+			return;
+		}
+
+		$livefeedData = \CSocNetLogTools::getDataFromRatingEntity($ratingFields['ENTITY_TYPE_ID'], $ratingFields['ENTITY_ID'], false);
+		if (
+			!is_array($livefeedData)
+			|| !isset($livefeedData['LOG_ID'])
+			|| (int)$livefeedData['LOG_ID'] <= 0
+			|| isset($livefeedData['LOG_COMMENT_ID'])
+			|| (int)$livefeedData['LOG_COMMENT_ID'] > 0
+			|| $ratingFields['ENTITY_TYPE_ID'] === 'LOG_COMMENT'
+		)
+		{
+			return;
+		}
+
+		$logFields = \CSocNetLog::getById($livefeedData['LOG_ID']);
+
+		if (
+			(int)$logFields['USER_ID'] === (int)$ratingFields['USER_ID']
+			|| !isset($logFields['ENTITY_TYPE'])
+			|| !in_array((string)$logFields['ENTITY_TYPE'], \CCrmLiveFeedEntity::getAll(), true)
+		)
+		{
+			return;
+		}
+
+		$title = (string)self::getNotifyEntryTitle($logFields, 'LIKE');
+
+
+		if ($title === '')
+		{
+			return;
+		}
+
+		if (
+			!isset($ratingFields['PATH_TO_LOG_ENTRY'])
+			|| (string)$ratingFields['PATH_TO_LOG_ENTRY'] === ''
+		)
+		{
+			$ratingFields['PATH_TO_LOG_ENTRY'] = '/crm/stream/?log_id=#log_id#';
+		}
+
+		$url = str_replace('#log_id#', $logFields['ID'], $ratingFields['PATH_TO_LOG_ENTRY']);
+		$serverName = (\Bitrix\Main\Context::getCurrent()->getRequest()->isHttps() ? 'https' : 'http') . '://'
+			. ((defined('SITE_SERVER_NAME') && SITE_SERVER_NAME <> '') ? SITE_SERVER_NAME : Main\Config\Option::get('main', 'server_name', ''));
+
+		\CIMNotify::add([
+			'MESSAGE_TYPE' => IM_MESSAGE_SYSTEM,
+			'TO_USER_ID' => (int)$logFields['USER_ID'],
+			'FROM_USER_ID' => (int)$ratingFields['USER_ID'],
+			'NOTIFY_TYPE' => IM_NOTIFY_FROM,
+			'NOTIFY_MODULE' => 'main',
+			'NOTIFY_EVENT' => 'rating_vote',
+			'NOTIFY_TAG' => 'RATING|'. ($ratingFields['VALUE'] >= 0 ? '' : 'DL|') . $ratingFields['ENTITY_TYPE_ID'] . '|' . $ratingFields['ENTITY_ID'],
+			'NOTIFY_MESSAGE' => Loc::getMessage('CRM_LF_LIKE_IM_NOTIFY', [
+				'#title#' => '<a href="' . $url . '" class="bx-notifier-item-action">' . htmlspecialcharsbx($title) . '</a>'
+			]),
+			'NOTIFY_MESSAGE_OUT' => Loc::getMessage('CRM_LF_LIKE_IM_NOTIFY', [
+				'#title#' => htmlspecialcharsbx($title)
+			]) . ' (' . $serverName . $url . ')'
+		]);
+	}
+
+	static public function OnGetRatingContentOwner($params)
+	{
+		if (!Loader::includeModule('socialnetwork'))
+		{
+			return false;
+		}
+
+		$livefeedCommentProvider = new \Bitrix\Crm\Integration\Socialnetwork\Livefeed\CrmEntityComment();
+		if ($params['ENTITY_TYPE_ID'] === $livefeedCommentProvider->getContentTypeId())
+		{
+			$res = \Bitrix\Socialnetwork\LogCommentTable::getList([
+				'filter' => [
+					'ID' => $params['ENTITY_ID'],
+				],
+				'select' => [ 'USER_ID' ],
+			]);
 			if (
-				is_array($arData)
-				&& isset($arData["LOG_ID"])
-				&& intval($arData["LOG_ID"]) > 0
+				($logCommentFields = $res->fetch())
+				&& (int)$logCommentFields['USER_ID'] > 0
 			)
 			{
-				if (
-					$arRatingFields["ENTITY_TYPE_ID"] != "LOG_COMMENT"
-					&& ($arLog = CSocNetLog::GetByID($arData["LOG_ID"]))
-					&& intval($arLog['USER_ID']) != intval($arRatingFields['USER_ID'])
-					&& isset($arLog["ENTITY_TYPE"])
-					&& in_array($arLog["ENTITY_TYPE"], CCrmLiveFeedEntity::GetAll())
-				)
+				return (int)$logCommentFields['USER_ID'];
+			}
+		}
+
+		return false;
+	}
+
+	static public function OnGetMessageRatingVote(&$params, &$forEmail)
+	{
+		if (!Loader::includeModule('socialnetwork'))
+		{
+			return;
+		}
+
+		$livefeedCommentProvider = new \Bitrix\Crm\Integration\Socialnetwork\Livefeed\CrmEntityComment();
+		if (!$forEmail && $params['ENTITY_TYPE_ID'] === $livefeedCommentProvider->getContentTypeId())
+		{
+			$type = ($params['VALUE'] >= 0 ? 'REACT' : 'DISLIKE');
+
+			$genderSuffix = '';
+
+			if (
+				$type === 'REACT'
+				&& !empty($params['USER_ID'])
+				&& (int)$params['USER_ID'] > 0
+			)
+			{
+				$res = \Bitrix\Main\UserTable::getList([
+					'filter' => [
+						'ID' => (int)$params['USER_ID']
+					],
+					'select' => [ 'PERSONAL_GENDER' ]
+				]);
+				if ($userFields = $res->fetch())
 				{
-					$title = self::GetNotifyEntryTitle($arLog, "LIKE");
-					if ($title <> '')
+					switch ($userFields['PERSONAL_GENDER'])
 					{
-						if (
-							!isset($arRatingFields["PATH_TO_LOG_ENTRY"])
-							|| $arRatingFields["PATH_TO_LOG_ENTRY"] == ''
-						)
-						{
-							$arRatingFields["PATH_TO_LOG_ENTRY"] = '/crm/stream/?log_id=#log_id#';
-						}
-
-						$url = str_replace(array("#log_id#"), array($arLog["ID"]), $arRatingFields["PATH_TO_LOG_ENTRY"]);
-						$serverName = (CMain::IsHTTPS() ? "https" : "http")."://".((defined("SITE_SERVER_NAME") && SITE_SERVER_NAME <> '') ? SITE_SERVER_NAME : COption::GetOptionString("main", "server_name", ""));
-
-						$arMessageFields = array(
-							"MESSAGE_TYPE" => IM_MESSAGE_SYSTEM,
-							"TO_USER_ID" => intval($arLog['USER_ID']),
-							"FROM_USER_ID" => intval($arRatingFields['USER_ID']),
-							"NOTIFY_TYPE" => IM_NOTIFY_FROM,
-							"NOTIFY_MODULE" => "main",
-							"NOTIFY_EVENT" => "rating_vote",
-							"NOTIFY_TAG" => "RATING|".($arRatingFields['VALUE'] >= 0?"":"DL|").$arRatingFields['ENTITY_TYPE_ID']."|".$arRatingFields['ENTITY_ID'],
-							"NOTIFY_MESSAGE" => GetMessage("CRM_LF_LIKE_IM_NOTIFY", Array("#title#" => "<a href=\"".$url."\" class=\"bx-notifier-item-action\">".htmlspecialcharsbx($title)."</a>")),
-							"NOTIFY_MESSAGE_OUT" => GetMessage("CRM_LF_LIKE_IM_NOTIFY", Array("#title#" => htmlspecialcharsbx($title)))." (".$serverName.$url.")"
-						);
-						CIMNotify::Add($arMessageFields);
+						case 'M':
+						case 'F':
+							$genderSuffix = '_' . $userFields['PERSONAL_GENDER'];
+							break;
+						default:
+							$genderSuffix = '';
 					}
 				}
 			}
+
+			$message = Loc::getMessage('CRM_LF_NOTIFICATIONS_' . $type . '_COMMENT' . $genderSuffix, [
+				'#LINK#' => (
+					(string) $params['ENTITY_LINK'] !== ''
+						? '<a href="' . $params['ENTITY_LINK'] . '" class="bx-notifier-item-action">' . $params['ENTITY_TITLE'] . '</a>'
+						: $params['ENTITY_TITLE']
+				),
+				'#REACTION#' => \CRatingsComponentsMain::getRatingLikeMessage(!empty($params['REACTION']) ? $params['REACTION'] : '')
+			]);
+
+			if ((string)$message !== '')
+			{
+				$params['MESSAGE'] = $message;
+			}
 		}
 	}
+
+	static public function OnAfterSocNetLogCommentAdd($commentId, array $fields = [])
+	{
+		$livefeedCommentProvider = new \Bitrix\Crm\Integration\Socialnetwork\Livefeed\CrmEntityComment();
+		if (
+			(int)$commentId > 0
+			&& isset($fields['EVENT_ID'])
+			&& in_array($fields['EVENT_ID'], $livefeedCommentProvider->getEventId())
+			&& Loader::includeModule('socialnetwork')
+		)
+		{
+			\Bitrix\Socialnetwork\LogCommentTable::update((int)$commentId, [
+				'RATING_TYPE_ID' => $livefeedCommentProvider->getContentTypeId()
+			]);
+		}
+	}
+
 	static public function OnSocNetLogRightsDelete($logID)
 	{
 		CCrmSonetRelation::UnRegisterRelationsByLogEntityID($logID, CCrmSonetRelationType::Correspondence);
@@ -5162,12 +5283,14 @@ class CCrmLiveFeedComponent
 
 						$strUser = "";
 
-						$strUser .= '<span class="feed-com-avatar crm-feed-company-avatar">';
+						$strUser .= '<span class="crm-feed-company-avatar">';
 						if(is_array($arFileTmp) && isset($arFileTmp['src']))
 						{
 							if ($this->params["PATH_TO_USER"] <> '')
 							{
-								$strUser .= '<a target="_blank" href="'.str_replace(array("#user_id#", "#USER_ID#"), intval($arField["VALUE"]), $this->params["PATH_TO_USER"]).'"><img src="'.$arFileTmp['src'].'" alt=""/></a>';
+								$strUser .= '<a target="_blank" href="'.str_replace(array("#user_id#", "#USER_ID#"), (int)$arField["VALUE"], $this->params["PATH_TO_USER"]).'" class="ui-icon ui-icon-common-user" style="border: none;">'.
+									"<i style=\"background: url('".\CHTTP::urnEncode($arFileTmp['src'])."'); background-size: cover;\"></i>".
+									'</a>';
 							}
 							else
 							{
@@ -5476,8 +5599,10 @@ class CCrmLiveFeedComponent
 					if(is_array($arFileTmp) && isset($arFileTmp['src']))
 					{
 						$strResult .= '<span class="crm-feed-user-block" href="'.$url.'">';
-							$strResult .= '<span class="feed-com-avatar crm-feed-company-avatar">';
-								$strResult .= '<a href="'.$url.'"><img width="39" height="39" alt="" src="'.$arFileTmp['src'].'"></a>';
+							$strResult .= '<span class="crm-feed-company-avatar">';
+								$strResult .= '<a href="'.$url.'" class="ui-icon ui-icon-common-user" style="border: none;">'.
+									"<i style=\"background: url('".\CHTTP::urnEncode($arFileTmp['src'])."'); background-size: cover;\"></i>".
+									'</a>';
 							$strResult .= '</span>';
 							$strResult .= '<span class="crm-feed-client-right"><a href="'.$url.'" class="crm-feed-user-name">'.$arField["VALUE"]["TITLE"].'</a></span>';
 						$strResult .= '</span>';
@@ -6336,90 +6461,9 @@ class CCrmLiveFeedComponent
 		$bMailModuleInstalled = IsModuleInstalled('mail');
 		$arCrmEmailEntities = array();
 
-		if (isset($arPOST['DEST_CODES']))
-		{
-			if (empty($arPOST['SPERM']))
-			{
-				$arPOST['SPERM'] = array();
-			}
-
-			foreach($arPOST['DEST_CODES'] as $destCode)
-			{
-				if ($destCode == 'UA')
-				{
-					if (empty($arPOST['SPERM']['UA']))
-					{
-						$arPOST['SPERM']['UA'] = array();
-					}
-					$arPOST['SPERM']['UA'][] = 'UA';
-				}
-				elseif (preg_match('/^UE(.+)$/i', $destCode, $matches))
-				{
-					if (empty($arPOST['SPERM']['UE']))
-					{
-						$arPOST['SPERM']['UE'] = array();
-					}
-					$arPOST['SPERM']['UE'][] = $matches[1];
-				}
-				elseif (preg_match('/^U(\d+)$/i', $destCode, $matches))
-				{
-					if (empty($arPOST['SPERM']['U']))
-					{
-						$arPOST['SPERM']['U'] = array();
-					}
-					$arPOST['SPERM']['U'][] = 'U'.$matches[1];
-				}
-				elseif (preg_match('/^SG(\d+)$/i', $destCode, $matches))
-				{
-					if (empty($arPOST['SPERM']['SG']))
-					{
-						$arPOST['SPERM']['SG'] = array();
-					}
-					$arPOST['SPERM']['SG'][] = 'SG'.$matches[1];
-				}
-				elseif (preg_match('/^DR(\d+)$/i', $destCode, $matches))
-				{
-					if (empty($arPOST['SPERM']['DR']))
-					{
-						$arPOST['SPERM']['DR'] = array();
-					}
-					$arPOST['SPERM']['DR'][] = 'DR'.$matches[1];
-				}
-				elseif (preg_match('/^CRMCONTACT(\d+)$/i', $destCode, $matches))
-				{
-					if (empty($arPOST['SPERM']['CRMCONTACT']))
-					{
-						$arPOST['SPERM']['CRMCONTACT'] = array();
-					}
-					$arPOST['SPERM']['CRMCONTACT'][] = 'CRMCONTACT'.$matches[1];
-				}
-				elseif (preg_match('/^CRMCOMPANY(\d+)$/i', $destCode, $matches))
-				{
-					if (empty($arPOST['SPERM']['CRMCOMPANY']))
-					{
-						$arPOST['SPERM']['CRMCOMPANY'] = array();
-					}
-					$arPOST['SPERM']['CRMCOMPANY'][] = 'CRMCOMPANY'.$matches[1];
-				}
-				elseif (preg_match('/^CRMLEAD(\d+)$/i', $destCode, $matches))
-				{
-					if (empty($arPOST['SPERM']['CRMLEAD']))
-					{
-						$arPOST['SPERM']['CRMLEAD'] = array();
-					}
-					$arPOST['SPERM']['CRMLEAD'][] = 'CRMLEAD'.$matches[1];
-				}
-				elseif (preg_match('/^CRMDEAL(\d+)$/i', $destCode, $matches))
-				{
-					if (empty($arPOST['SPERM']['CRMDEAL']))
-					{
-						$arPOST['SPERM']['CRMDEAL'] = array();
-					}
-					$arPOST['SPERM']['CRMDEAL'][] = 'CRMDEAL'.$matches[1];
-				}
-			}
-			unset($arPOST['DEST_CODES']);
-		}
+		\Bitrix\Socialnetwork\ComponentHelper::convertSelectorRequestData($arPOST, [
+			'crm' => true,
+		]);
 
 		self::ProcessLogEventEditPOSTCrmEmailUsers($arPOST, $arCrmEmailEntities);
 

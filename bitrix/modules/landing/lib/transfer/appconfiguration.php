@@ -2,6 +2,7 @@
 namespace Bitrix\Landing\Transfer;
 
 use \Bitrix\Landing\File;
+use \Bitrix\Landing\Rights;
 use \Bitrix\Landing\Site;
 use \Bitrix\Landing\Restriction;
 use \Bitrix\Landing\Site\Type;
@@ -92,7 +93,10 @@ class AppConfiguration
 				'VERSION' => 1,
 				'ACTIVE' => 'Y',
 				'PLACEMENT' => [$code],
-				'USES' => [$code],
+				'USES' => [
+					$code,
+					'app',
+				],
 				'DISABLE_CLEAR_FULL' => 'Y',
 				'DISABLE_NEED_START_BTN' => 'Y',
 				'COLOR' => '#ff799c',
@@ -105,11 +109,40 @@ class AppConfiguration
 				'IMPORT_TITLE_PAGE' => Loc::getMessage('LANDING_TRANSFER_IMPORT_ACTION_TITLE_BLOCK_' . $langCode),
 				'IMPORT_TITLE_BLOCK' => Loc::getMessage('LANDING_TRANSFER_IMPORT_ACTION_TITLE_BLOCK_' . $langCode),
 				'IMPORT_DESCRIPTION_UPLOAD' => Loc::getMessage('LANDING_TRANSFER_IMPORT_DESCRIPTION_UPLOAD_' . $langCode),
-				'IMPORT_DESCRIPTION_START' => ' '
+				'IMPORT_DESCRIPTION_START' => ' ',
+				'ACCESS' => [
+					'MODULE_ID' => 'landing',
+					'CALLBACK' => [
+						'\Bitrix\Landing\Transfer\AppConfiguration',
+						'onCheckAccess'
+					]
+				]
 			];
 		}
 
 		return $manifestList;
+	}
+
+	/**
+	 * Checks access to export and import.
+	 * @param string $type Export or import.
+	 * @param array $manifest Manifest data.
+	 * @return array
+	 */
+	public static function onCheckAccess(string $type, array $manifest): array
+	{
+		if ($type === 'export')
+		{
+			$access = in_array(Rights::ACCESS_TYPES['read'], Rights::getOperationsForSite(0));
+		}
+		else
+		{
+			$access = Rights::hasAdditionalRight(Rights::ADDITIONAL_RIGHTS['create'])
+					&& in_array(Rights::ACCESS_TYPES['edit'], Rights::getOperationsForSite(0));
+		}
+		return [
+			'result' => $access
+		];
 	}
 
 	/**
@@ -216,7 +249,7 @@ class AppConfiguration
 						$structure = new Configuration\Structure($context);
 						$structure->setArchiveName(\CUtil::translit(
 							trim($row['TITLE']),
-							LANGUAGE_ID,
+							'ru',
 							[
 								'replace_space' => '_',
 								'replace_other' => '_'

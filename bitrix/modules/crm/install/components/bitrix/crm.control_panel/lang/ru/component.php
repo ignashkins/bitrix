@@ -32,7 +32,7 @@ $MESS["CRM_CTRL_PANEL_ITEM_MORE_TITLE"] = "Дополнительно";
 $MESS["CRM_CTRL_PANEL_ITEM_STREAM"] = "Лента";
 $MESS["CRM_CTRL_PANEL_ITEM_STREAM_TITLE"] = "Живая лента CRM";
 $MESS["CRM_CTRL_PANEL_ITEM_FUNNEL_BRIEF"] = "Воронка";
-$MESS["CRM_CTRL_PANEL_ITEM_MARKETPLACE"] = "Приложения";
+$MESS["CRM_CTRL_PANEL_ITEM_MARKETPLACE_2"] = "Маркет";
 $MESS["CRM_CTRL_PANEL_ITEM_WEBFORM"] = "CRM-формы";
 $MESS["CRM_CTRL_PANEL_ITEM_BUTTON"] = "Виджет на сайт";
 $MESS["CRM_CTRL_PANEL_ITEM_START"] = "Старт";
@@ -40,4 +40,5 @@ $MESS["CRM_CTRL_PANEL_ITEM_START_TITLE"] = "Стартовая страница 
 $MESS["CRM_CTRL_PANEL_ITEM_CRMPLUS"] = "CRM+";
 $MESS["CRM_CTRL_PANEL_ITEM_RECYCLE_BIN"] = "Корзина";
 $MESS["CRM_CTRL_PANEL_ITEM_RECYCLE_BIN_TITLE"] = "Просмотр и восстановление удалённых лидов, контактов, компаний и сделок.";
+$MESS["CRM_CTRL_PANEL_ITEM_DYNAMIC_LIST"] = "Смарт-процессы";
 ?>

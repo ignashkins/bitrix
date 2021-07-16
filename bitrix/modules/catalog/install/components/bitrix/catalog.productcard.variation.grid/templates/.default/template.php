@@ -1,7 +1,15 @@
 <?php
+if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true)
+{
+	die();
+}
+
 /**
  * @var $component \CatalogProductVariationGridComponent
  * @var $this \CBitrixComponentTemplate
+ * @var \CMain $APPLICATION
+ * @var array $arParams
+ * @var array $arResult
  */
 
 use Bitrix\Main\Localization\Loc;
@@ -15,11 +23,6 @@ Extension::load([
 	'ui.dialogs.messagebox',
 	'ui.hint',
 ]);
-
-if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true)
-{
-	die();
-}
 
 $containerId = 'catalog_variation_grid';
 $createPropertyId = $containerId.'_create_property';
@@ -89,7 +92,7 @@ $isProduct = $arParams['VARIATION_ID_LIST'] === null;
 		<div class="catalog-variation-grid-link">
 			<a class="ui-link ui-link-secondary ui-link-dashed" id="<?=$createPropertyId?>"
 			><?=Loc::getMessage('C_PVG_CREATE_VARIATION_PROPERTY')?></a>
-			<a href="<?=Util::getArticleUrlByCode('11657102')?>"
+			<a href="<?=Util::getArticleUrlByCode('13274510')?>"
 					class="ui-hint-icon"
 					id="<?=$createPropertyHintId?>"></a>
 		</div>
@@ -110,6 +113,7 @@ $isProduct = $arParams['VARIATION_ID_LIST'] === null;
 			'modifyPropertyLink' => $arResult['PROPERTY_MODIFY_LINK'],
 			'gridEditData' => $arResult['GRID']['EDIT_DATA'],
 			'canHaveSku' => $arResult['CAN_HAVE_SKU'],
+			'copyItemsMap' => $arResult['COPY_ITEM_MAP'] ?? null,
 		])?>);
 	});
 </script>

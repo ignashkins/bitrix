@@ -5,7 +5,9 @@ use Bitrix\Main\Application;
 use Bitrix\Main\Config\Option;
 use Bitrix\Main\Loader;
 use Bitrix\Main\Localization\Loc;
+use Bitrix\Main\ModuleManager;
 use Bitrix\Rest\AppTable;
+use Bitrix\Rest\Engine\Access;
 
 if(!defined('REST_MP_CATEGORIES_CACHE_TTL'))
 {
@@ -15,6 +17,13 @@ if(!defined('REST_MP_CATEGORIES_CACHE_TTL'))
 class Client
 {
 	const CATEGORIES_CACHE_TTL = REST_MP_CATEGORIES_CACHE_TTL;
+	private const SUBSCRIPTION_REGION = [
+		'ru',
+		'ua',
+	];
+	private const SUBSCRIPTION_DEFAULT_START_TIME = [
+		'ua' => 1625090400,
+	];
 
 	protected static $buyLinkList = array(
 		'bitrix24' => '/settings/order/make.php?limit=#NUM#&module=#CODE#',
@@ -25,6 +34,7 @@ class Client
 	);
 
 	private static $appTop = null;
+	private static $isPayApplicationAvailable;
 
 	public static function getTop($action, $fields = array())
 	{
@@ -66,6 +76,13 @@ class Client
 		);
 	}
 
+	public static function getImmuneApp()
+	{
+		return Transport::instance()->call(
+			Transport::METHOD_GET_IMMUNE
+		);
+	}
+
 	public static function getUpdates($codeList)
 	{
 		$updatesList = Transport::instance()->call(
@@ -74,11 +91,6 @@ class Client
 				"code" => serialize($codeList)
 			)
 		);
-
-		if(is_array($updatesList) && is_array($updatesList["ITEMS"]))
-		{
-			static::setAvailableUpdate($updatesList["ITEMS"]);
-		}
 
 		return $updatesList;
 	}
@@ -113,7 +125,7 @@ class Client
 	public static function getAvailableUpdate($code = false)
 	{
 		$updates = Option::get("rest", "mp_updates", "");
-		$updates = $updates == "" ? array() : unserialize($updates);
+		$updates = $updates == "" ? array() : unserialize($updates, ['allowed_classes' => false]);
 
 		if($code !== false)
 		{
@@ -412,7 +424,7 @@ class Client
 		{
 			$updateList = static::getUpdates($appCodes);
 
-			if($updateList)
+			if (is_array($updateList))
 			{
 				self::setAvailableUpdate($updateList['ITEMS']);
 			}
@@ -467,8 +479,45 @@ class Client
 	 */
 	public static function isSubscriptionAvailable()
 	{
-		$status = \Bitrix\Main\Config\Option::get('bitrix24', '~mp24_paid', 'N');
-		return ($status === 'Y' || $status === 'T');
+		if (ModuleManager::isModuleInstalled('bitrix24'))
+		{
+			$status = Option::get('bitrix24', '~mp24_paid', 'N');
+		}
+		else
+		{
+			$status = Option::get('main', '~mp24_paid', 'N');
+			if ($status === 'T' && Option::get('main', '~mp24_used_trial', 'N') !== 'Y')
+			{
+				Option::set('main', '~mp24_used_trial', 'Y');
+			}
+		}
+
+		$result = ($status === 'Y' || $status === 'T');
+
+		if (
+			$status === 'Y'
+			&& ModuleManager::isModuleInstalled('bitrix24')
+			&& Loader::includeModule('bitrix24')
+			&& \CBitrix24::getLicenseFamily() === 'project'
+			&& Option::get('rest', 'can_use_subscription_project', 'N') === 'N'
+		)
+		{
+			$result = false;
+		}
+		elseif($result)
+		{
+			$date = static::getSubscriptionFinalDate();
+			if ($date)
+			{
+				$now = new \Bitrix\Main\Type\Date();
+				if ($date < $now)
+				{
+					$result = false;
+				}
+			}
+		}
+
+		return $result;
 	}
 
 	/**
@@ -477,7 +526,15 @@ class Client
 	public static function getSubscriptionFinalDate()
 	{
 		$result = false;
-		$timestamp = \Bitrix\Main\Config\Option::get("bitrix24", "~mp24_paid_date");
+		if (ModuleManager::isModuleInstalled('bitrix24'))
+		{
+			$timestamp = Option::get('bitrix24', '~mp24_paid_date');
+		}
+		else
+		{
+			$timestamp = Option::get('main', '~mp24_paid_date');
+		}
+
 		if ($timestamp > 0)
 		{
 			$result = \Bitrix\Main\Type\Date::createFromTimestamp($timestamp);
@@ -486,4 +543,97 @@ class Client
 		return $result;
 	}
 
+	private static function checkSubscriptionAccessStart($region): bool
+	{
+		$canStart = true;
+		if (!empty(static::SUBSCRIPTION_DEFAULT_START_TIME[$region]))
+		{
+			$time = Option::get(
+				'rest',
+				'subscription_region_start_time_' . $region,
+				static::SUBSCRIPTION_DEFAULT_START_TIME[$region]
+			);
+			$canStart =  $time < time();
+		}
+
+		return $canStart && in_array($region, static::SUBSCRIPTION_REGION, true);
+	}
+
+	public static function isSubscriptionAccess()
+	{
+		if (ModuleManager::isModuleInstalled('bitrix24') && Loader::includeModule('bitrix24'))
+		{
+			$result = static::checkSubscriptionAccessStart(\CBitrix24::getLicensePrefix());
+		}
+		else
+		{
+			$result = Option::get(Access::MODULE_ID, Access::OPTION_SUBSCRIPTION_AVAILABLE, 'N') === 'Y';
+		}
+
+		return $result;
+	}
+
+	public static function canBuySubscription()
+	{
+		$result = false;
+		if (
+			static::isSubscriptionAccess()
+			&& Access::isFeatureEnabled()
+			&& !(
+				ModuleManager::isModuleInstalled('bitrix24')
+				&& Loader::includeModule('bitrix24')
+				&& \CBitrix24::getLicenseFamily() === "demo"
+			)
+		)
+		{
+			$result = true;
+		}
+
+		return $result;
+	}
+
+	public static function isSubscriptionDemoAvailable()
+	{
+		if (ModuleManager::isModuleInstalled('bitrix24'))
+		{
+			$used = Option::get('bitrix24', '~mp24_used_trial', 'N') === 'Y';
+		}
+		else
+		{
+			$used = Option::get('main', '~mp24_used_trial', 'N') === 'Y';
+		}
+
+		return !$used;
+	}
+
+	/**
+	 * Returns available pay application
+	 * @return bool
+	 */
+	public static function isPayApplicationAvailable() : bool
+	{
+		if (is_null(static::$isPayApplicationAvailable))
+		{
+			static::$isPayApplicationAvailable = true;
+			$time = (int) Option::get('rest', 'time_pay_application_off', 1621029600);
+			if (time() > $time)
+			{
+				if (Loader::includeModule('bitrix24'))
+				{
+					$region = \CBitrix24::getLicensePrefix();
+				}
+				else
+				{
+					$region = Option::get('main', '~PARAM_CLIENT_LANG', '');
+				}
+
+				if ($region === 'ru')
+				{
+					static::$isPayApplicationAvailable = false;
+				}
+			}
+		}
+
+		return static::$isPayApplicationAvailable;
+	}
 }

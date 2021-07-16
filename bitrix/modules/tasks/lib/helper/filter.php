@@ -3,16 +3,22 @@
 namespace Bitrix\Tasks\Helper;
 
 use Bitrix\Main;
+use Bitrix\Main\Config\Option;
 use Bitrix\Main\Context;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Tasks\Internals\Counter;
 use Bitrix\Tasks\Internals\SearchIndex;
+use Bitrix\Tasks\Scrum\Internal\EntityTable;
+use Bitrix\Tasks\Scrum\Service\BacklogService;
+use Bitrix\Tasks\Scrum\Service\ItemService;
 use Bitrix\Tasks\Util\Restriction\Bitrix24Restriction\Limit\FilterLimit;
 use Bitrix\Tasks\Util\User;
 
 class Filter extends Common
 {
 	protected static $instance = null;
+
+	protected static $options = [];
 
 	public function getDefaultRoleId()
 	{
@@ -85,75 +91,131 @@ class Filter extends Common
 	 */
 	public function getOptions()
 	{
-		static $instance = null;
-
-		if (!$instance)
+		if (empty(static::$options[$this->getId()]))
 		{
-			$instance = new \Bitrix\Main\UI\Filter\Options($this->getId(), static::getPresets());
+			static::$options[$this->getId()] = new \Bitrix\Main\UI\Filter\Options(
+				$this->getId(),
+				static::getPresets($this)
+			);
 		}
 
-		return $instance;
+		return static::$options[$this->getId()];
 	}
 
 	/**
-	 * @return array
+	 * @param Common|null $filterInstance
+	 * @return array[]
 	 */
-	public static function getPresets()
+	public static function getPresets(Common $filterInstance = null)
 	{
-		$presets = array(
-			'filter_tasks_in_progress' => array(
-				'name' => Loc::getMessage('TASKS_PRESET_IN_PROGRESS'),
+		$presets = [];
+
+		$isScrumProject = false;
+		$userId = 0;
+
+		if ($filterInstance)
+		{
+			$isScrumProject = $filterInstance->isScrumProject();
+			$userId = $filterInstance->getUserId();
+		}
+
+		if ($isScrumProject)
+		{
+			$presets['filter_tasks_scrum'] = [
+				'name' => 'SCRUM',
 				'default' => true,
-				'fields' => array(
-					'STATUS' => array(
+				'fields' => [
+					'STATUS' => [
 						\CTasks::STATE_PENDING,
 						\CTasks::STATE_IN_PROGRESS,
 						\CTasks::STATE_SUPPOSEDLY_COMPLETED,
 						\CTasks::STATE_DEFERRED,
-					)
-				)
-			),
-			'filter_tasks_completed' => array(
-				'name' => Loc::getMessage('TASKS_PRESET_COMPLETED'),
+						EntityTable::STATE_COMPLETED_IN_ACTIVE_SPRINT
+					],
+				],
+				'sort' => 1,
+			];
+		}
+
+		$presets['filter_tasks_in_progress'] = [
+			'name' => Loc::getMessage('TASKS_PRESET_IN_PROGRESS'),
+			'default' => !$isScrumProject,
+			'fields' => [
+				'STATUS' => [
+					\CTasks::STATE_PENDING,
+					\CTasks::STATE_IN_PROGRESS,
+					\CTasks::STATE_SUPPOSEDLY_COMPLETED,
+					\CTasks::STATE_DEFERRED,
+				]
+			],
+		];
+
+		if ($isScrumProject)
+		{
+			$presets['filter_tasks_in_progress']['sort'] = 2;
+		}
+
+		$presets['filter_tasks_completed'] = [
+			'name' => Loc::getMessage('TASKS_PRESET_COMPLETED'),
+			'default' => false,
+			'fields' => [
+				'STATUS' => [
+					\CTasks::STATE_COMPLETED
+				]
+			]
+		];
+
+		if ($isScrumProject)
+		{
+			$presets['filter_tasks_completed']['sort'] = 3;
+		}
+
+		if ($isScrumProject)
+		{
+			$presets['filter_tasks_my'] = [
+				'name' => Loc::getMessage('TASKS_PRESET_MY'),
 				'default' => false,
-				'fields' => array(
-					'STATUS' => array(
-						\CTasks::STATE_COMPLETED
-					)
-				)
-			),
-			'filter_tasks_deferred' => array(
+				'fields' => [
+					'RESPONSIBLE_ID' => $userId
+				],
+				'sort' => 4
+			];
+		}
+
+		if (!$isScrumProject)
+		{
+			$presets['filter_tasks_deferred'] = [
 				'name' => Loc::getMessage('TASKS_PRESET_DEFERRED'),
 				'default' => false,
-				'fields' => array(
-					'STATUS' => array(
+				'fields' => [
+					'STATUS' => [
 						\CTasks::STATE_DEFERRED
-					)
-				)
-			),
-			'filter_tasks_expire' => array(
+					]
+				]
+			];
+			$presets['filter_tasks_expire'] = [
 				'name' => Loc::getMessage('TASKS_PRESET_EXPIRED'),
 				'default' => false,
-				'fields' => array(
-					'STATUS' => array(
+				'fields' => [
+					'STATUS' => [
 						\CTasks::STATE_PENDING,
 						\CTasks::STATE_IN_PROGRESS
-					),
+					],
 					'PROBLEM' => \CTaskListState::VIEW_TASK_CATEGORY_EXPIRED
-				)
-			),
-			'filter_tasks_expire_candidate' => array(
+				]
+			];
+			$presets['filter_tasks_expire_candidate'] = [
 				'name' => Loc::getMessage('TASKS_PRESET_EXPIRED_CAND'),
 				'default' => false,
-				'fields' => array(
-					'STATUS' => array(
+				'fields' => [
+					'STATUS' => [
 						\CTasks::STATE_PENDING,
 						\CTasks::STATE_IN_PROGRESS
-					),
+					],
 					'PROBLEM' => \CTaskListState::VIEW_TASK_CATEGORY_EXPIRED_CANDIDATES
-				)
-			)
-		);
+				]
+			];
+		}
 
 		return $presets;
 	}
@@ -181,6 +243,16 @@ class Filter extends Common
 		$filter['ZOMBIE'] = 'N';
 		$filter['CHECK_PERMISSIONS'] = 'Y';
 		$filter['ONLY_ROOT_TASKS'] = 'Y';
+
+		if ($this->isScrumProject())
+		{
+			$epicKey = '::SUBFILTER-EPIC';
+			if (isset($filter[$epicKey]))
+			{
+				$filter['EPIC'] = $filter[$epicKey]['EPIC'];
+				unset($filter[$epicKey]);
+			}
+		}
 
 		return $filter;
 	}
@@ -433,6 +505,8 @@ class Filter extends Common
 		$fields = $this->getAvailableFields();
 		$filter = array();
 
+		$isScrumProject = $this->isScrumProject();
+
 		if (in_array('CREATED_BY', $fields))
 		{
 			$filter['CREATED_BY'] = array(
@@ -473,12 +547,24 @@ class Filter extends Common
 					'departmentSelectDisable' => 'Y',
 					'isNumeric' => 'Y',
 					'prefix' => 'U',
-				)
+				),
+				'default' => $isScrumProject
 			);
 		}
 
 		if (in_array('STATUS', $fields))
 		{
+			$statusItems = [
+				\CTasks::STATE_PENDING => Loc::getMessage('TASKS_STATUS_2'),
+				\CTasks::STATE_IN_PROGRESS => Loc::getMessage('TASKS_STATUS_3'),
+				\CTasks::STATE_SUPPOSEDLY_COMPLETED => Loc::getMessage('TASKS_STATUS_4'),
+				\CTasks::STATE_COMPLETED => Loc::getMessage('TASKS_STATUS_5'),
+				\CTasks::STATE_DEFERRED => Loc::getMessage('TASKS_STATUS_6'),
+			];
+			if ($this->isTaskScrumEnabled())
+			{
+				$statusItems[EntityTable::STATE_COMPLETED_IN_ACTIVE_SPRINT] = Loc::getMessage('TASKS_STATUS_8');
+			}
 			$filter['STATUS'] = array(
 				'id' => 'STATUS',
 				'name' => Loc::getMessage('TASKS_FILTER_STATUS'),
@@ -486,13 +572,8 @@ class Filter extends Common
 				'params' => array(
 					'multiple' => 'Y'
 				),
-				'items' => array(
-					\CTasks::STATE_PENDING => Loc::getMessage('TASKS_STATUS_2'),
-					\CTasks::STATE_IN_PROGRESS => Loc::getMessage('TASKS_STATUS_3'),
-					\CTasks::STATE_SUPPOSEDLY_COMPLETED => Loc::getMessage('TASKS_STATUS_4'),
-					\CTasks::STATE_COMPLETED => Loc::getMessage('TASKS_STATUS_5'),
-					\CTasks::STATE_DEFERRED => Loc::getMessage('TASKS_STATUS_6')
-				)
+				'items' => $statusItems,
+				'default' => $isScrumProject
 			);
 		}
 
@@ -706,7 +787,19 @@ class Filter extends Common
 			$filter['TAG'] = array(
 				'id' => 'TAG',
 				'name' => Loc::getMessage('TASKS_FILTER_TAG'),
-				'type' => 'string'
+				'type' => 'string',
+				'default' => $isScrumProject
+			);
+		}
+
+		if ($isScrumProject)
+		{
+			$filter['EPIC'] = array(
+				'id' => 'EPIC',
+				'name' => Loc::getMessage('TASKS_FILTER_EPIC'),
+				'type' => 'list',
+				'items' => $this->getEpics(),
+				'default' => true
 			);
 		}
 
@@ -721,7 +814,7 @@ class Filter extends Common
 				'id' => 'ROLEID',
 				'name' => Loc::getMessage('TASKS_FILTER_ROLEID'),
 				'type' => 'list',
-				'default' => true,
+				'default' => !$isScrumProject,
 				'items' => $items
 			);
 		}
@@ -826,6 +919,16 @@ class Filter extends Common
 	}
 
 	/**
+	 * @return bool
+	 * @throws Main\ArgumentNullException
+	 * @throws Main\ArgumentOutOfRangeException
+	 */
+	private function isTaskScrumEnabled(): bool
+	{
+		return (Option::get('tasks', 'tasks_scrum_enabled', 'N') === 'Y');
+	}
+
+	/**
 	 * Get available fields in filter.
 	 * @return array
 	 */
@@ -868,11 +971,11 @@ class Filter extends Common
 	/**
 	 * @return array
 	 */
-	private function getAllowedTaskCategories()
+	private function getAllowedTaskCategories(): array
 	{
-		$list = array();
+		$list = [];
 
-		$taskCategories = array(
+		$taskCategories = [
 			\CTaskListState::VIEW_TASK_CATEGORY_WO_DEADLINE,
 			\CTaskListState::VIEW_TASK_CATEGORY_NEW,
 			\CTaskListState::VIEW_TASK_CATEGORY_EXPIRED_CANDIDATES,
@@ -880,14 +983,23 @@ class Filter extends Common
 			\CTaskListState::VIEW_TASK_CATEGORY_WAIT_CTRL,
 			\CTaskListState::VIEW_TASK_CATEGORY_DEFERRED,
 			\CTaskListState::VIEW_TASK_CATEGORY_NEW_COMMENTS,
-		);
-
+		];
+		if ($this->getGroupId() > 0)
+		{
+			$taskCategories[] = \CTaskListState::VIEW_TASK_CATEGORY_PROJECT_EXPIRED;
+			$taskCategories[] = \CTaskListState::VIEW_TASK_CATEGORY_PROJECT_NEW_COMMENTS;
+		}
 		foreach ($taskCategories as $categoryId)
 		{
 			$list[$categoryId] = \CTaskListState::getTaskCategoryName($categoryId);
 		}
 
 		return $list;
+	}
+
+	public function isSearchFieldApplied(): bool
+	{
+		return (!$this->isFilterEmpty() && $this->getFilterFieldData('FIND', ''));
 	}
 
 	private function isFilterEmpty()
@@ -1054,6 +1166,14 @@ class Filter extends Common
 						$arrFilter['IS_MUTED'] = 'N';
 						break;
 
+					case Counter\Type::TYPE_PROJECT_EXPIRED:
+						$arrFilter['PROJECT_EXPIRED'] = 'Y';
+						break;
+
+					case Counter\Type::TYPE_PROJECT_NEW_COMMENTS:
+						$arrFilter['PROJECT_NEW_COMMENTS'] = 'Y';
+						break;
+
 					default:
 						break;
 				}
@@ -1165,5 +1285,25 @@ class Filter extends Common
 		unset($scheme['UF_TASK_WEBDAV_FILES'], $scheme['UF_MAIL_MESSAGE']);
 
 		return $scheme;
+	}
+
+	private function getEpics(): array
+	{
+		$backlogService = new BacklogService();
+		$itemService = new ItemService();
+
+		$backlog = $backlogService->getBacklogByGroupId($this->getGroupId());
+		if ($backlogService->getErrors() || $backlog->isEmpty())
+		{
+			return [];
+		}
+
+		$epics = [];
+		foreach ($itemService->getAllEpicTags($backlog->getId()) as $epic)
+		{
+			$epics[$epic['id']] = $epic['name'];
+		}
+
+		return $epics;
 	}
 }

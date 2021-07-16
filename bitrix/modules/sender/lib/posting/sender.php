@@ -42,6 +42,8 @@ class Sender
 	const RESULT_SENT     = 1;
 	const RESULT_CONTINUE = 2;
 	const RESULT_ERROR    = 3;
+	const RESULT_WAIT     = 4;
+	const RESULT_WAITING_RECIPIENT = 5;
 
 	/** @var  Letter $letter Letter. */
 	protected $letter;
@@ -158,6 +160,7 @@ class Sender
 
 			return;
 		}
+
 		$this->startTime();
 
 		$this->threadStrategy->setPostingId($this->postingId);
@@ -175,6 +178,7 @@ class Sender
 
 		if (static::lock($this->postingId, $threadId) === false)
 		{
+			$this->threadStrategy->updateStatus(PostingThreadTable::STATUS_NEW);
 			throw new DB\Exception(Loc::getMessage('SENDER_POSTING_MANAGER_ERR_LOCK'));
 		}
 
@@ -182,23 +186,34 @@ class Sender
 		{
 			$this->resultCode = static::RESULT_CONTINUE;
 			$this->threadStrategy->updateStatus(PostingThreadTable::STATUS_NEW);
+			static::unlock($this->postingId, $threadId);
 			return;
 		}
 
-		$this->initRecipients();
+		// posting not in right status
+		if (!$this->initRecipients())
+		{
+			$this->resultCode = static::RESULT_WAITING_RECIPIENT;
+			$this->threadStrategy->updateStatus(PostingThreadTable::STATUS_NEW);
+			static::unlock($this->postingId, $threadId);
+			return;
+		}
+
 		$this->changeStatusToPart();
 
 		// posting not in right status
 		if ($this->status != PostingTable::STATUS_PART)
 		{
 			$this->resultCode = static::RESULT_ERROR;
-
+			$this->threadStrategy->updateStatus(PostingThreadTable::STATUS_NEW);
+			static::unlock($this->postingId, $threadId);
 			return;
 		}
 
 		if ($this->isTransportLimitsExceeded())
 		{
 			$this->resultCode = static::RESULT_CONTINUE;
+			static::unlock($this->postingId, $threadId);
 
 			return;
 		}
@@ -215,10 +230,11 @@ class Sender
 
 		$this->sendToRecipients($recipients);
 
+
 		$this->message->getTransport()->end();
 
 		// unlock posting for exclude double parallel sending
-		self::unlock($this->postingId, $threadId);
+		static::unlock($this->postingId, $threadId);
 		if ($recipients->getSelectedRowsCount() === 0)
 		{
 			$this->threadStrategy->updateStatus(PostingThreadTable::STATUS_DONE);
@@ -229,12 +245,15 @@ class Sender
 		}
 
 		// update status of posting
-		$status = self::updateActualStatus($this->postingId, $this->isPrevented());
+		$status = self::updateActualStatus(
+			$this->postingId,
+			$this->isPrevented(),
+			$this->threadStrategy->hasUnprocessedThreads()
+		);
 
 		if ($threadId < $this->threadStrategy->lastThreadId())
 		{
 			$this->resultCode = static::RESULT_CONTINUE;
-
 			return;
 		}
 
@@ -297,7 +316,7 @@ class Sender
 					'=MAILING.ACTIVE'       => 'Y',
 					'=MAILING_CHAIN.STATUS' => [
 						Model\LetterTable::STATUS_SEND,
-						Model\LetterTable::STATUS_PLAN
+						Model\LetterTable::STATUS_PLAN,
 					],
 				]
 			]
@@ -332,27 +351,27 @@ class Sender
 		@set_time_limit(0);
 	}
 
-	protected function initRecipients()
+	protected function initRecipients(): bool
 	{
 		// if posting in new status, then import recipients from groups
 		// and set right status for sending
 
 		if (!$this->postingId)
 		{
-			return;
+			return true;
 		}
 
 		if ($this->isTrigger)
 		{
-			return;
+			return true;
 		}
 
 		if ($this->status != PostingTable::STATUS_NEW)
 		{
-			return;
+			return true;
 		}
 
-		Builder::create()->run($this->postingId);
+		return Builder::create()->run($this->postingId);
 	}
 
 	protected function changeStatusToPart()
@@ -397,7 +416,7 @@ class Sender
 	 *
 	 * @return string
 	 */
-	public static function updateActualStatus($postingId, $isPrevented = false)
+	public static function updateActualStatus($postingId, $isPrevented = false, $awaitThread = false)
 	{
 		//set status and delivered and error emails
 		$statusList     = PostingTable::getRecipientCountByStatus($postingId);
@@ -407,7 +426,7 @@ class Sender
 		{
 			$status = PostingTable::STATUS_ABORT;
 		}
-		elseif (!$hasStatusNone)
+		elseif (!$hasStatusNone && !$awaitThread)
 		{
 			$status = $hasStatusError ? PostingTable::STATUS_SENT_WITH_ERRORS : PostingTable::STATUS_SENT;
 		}
@@ -601,7 +620,6 @@ class Sender
 			}
 		} catch(\Exception $e)
 		{
-
 		}
 
 		try
@@ -733,7 +751,8 @@ class Sender
 			)->setSiteId($siteId);
 		$message->getUnsubTracker()->setModuleId('sender')->setFields(
 			[
-				'RECIPIENT_ID' => $recipient["ID"],
+				'RECIPIENT_ID' => $recipient['ID'],
+				'CONTACT_ID' => $recipient['CONTACT_ID'],
 				'MAILING_ID'   => isset($recipient['CAMPAIGN_ID']) ? $recipient['CAMPAIGN_ID'] : 0,
 				'EMAIL'        => $message->getRecipientCode(),
 				'CODE'         => $message->getRecipientCode(),
@@ -870,5 +889,14 @@ class Sender
 	{
 		$this->threadStrategy = $threadStrategy;
 		return $this;
+	}
+
+	/**
+	 * @return Adapter
+	 */
+	public function getMessage()
+	: Adapter
+	{
+		return $this->message;
 	}
 }

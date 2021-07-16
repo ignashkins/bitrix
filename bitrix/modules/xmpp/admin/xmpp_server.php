@@ -9,7 +9,7 @@ $POST_RIGHT = $APPLICATION->GetGroupRight("xmpp");
 if ($POST_RIGHT == "D")
 	$APPLICATION->AuthForm(GetMessage("ACCESS_DENIED"));
 
-if (strlen($_REQUEST["server_action"]) > 0 && in_array($_REQUEST["server_action"], array("start", "stop", "query", "clearcache", "dump")))
+if ($_REQUEST["server_action"] <> '' && in_array($_REQUEST["server_action"], array("start", "stop", "query", "clearcache", "dump")))
 {
 	if (check_bitrix_sessid())
 	{
@@ -62,7 +62,7 @@ if (strlen($_REQUEST["server_action"]) > 0 && in_array($_REQUEST["server_action"
 		{
 			$bWindowsHosting = false;
 			$strCurrentOS = PHP_OS;
-			if (StrToUpper(substr($strCurrentOS, 0, 3)) === "WIN")
+			if (mb_strtoupper(mb_substr($strCurrentOS, 0, 3)) === "WIN")
 			   $bWindowsHosting = true;
 
 			$phpPath = COption::GetOptionString("xmpp", "php_path", $bWindowsHosting ? "../apache/php.exe -c ../apache/php.ini" : "php -c /etc/php.ini");
@@ -89,13 +89,13 @@ if (strlen($_REQUEST["server_action"]) > 0 && in_array($_REQUEST["server_action"
 			else
 				$p = str_replace("/", "\\", $p);
 			exec($p, $execOutput, $execReturnVar);
-			$s = strtolower(implode("\n", $execOutput));
+			$s = mb_strtolower(implode("\n", $execOutput));
 
 			if ($execReturnVar == 0)
 			{
-				if (strlen($s) <= 0)
+				if ($s == '')
 					$startErrorMessage .= "Unknown error";
-				elseif (strpos($s, "server started") === false || strpos($s, "error") !== false)
+				elseif (mb_strpos($s, "server started") === false || mb_strpos($s, "error") !== false)
 					$startErrorMessage .= $s;
 			}
 			else
@@ -103,7 +103,7 @@ if (strlen($_REQUEST["server_action"]) > 0 && in_array($_REQUEST["server_action"
 				$startErrorMessage .= "[".$execReturnVar."] ".$s;
 			}
 
-			if (strlen($startErrorMessage) <= 0)
+			if ($startErrorMessage == '')
 			{
 				if ($bWindowsHosting)
 				{
@@ -116,7 +116,7 @@ if (strlen($_REQUEST["server_action"]) > 0 && in_array($_REQUEST["server_action"
 				}
 			}
 
-			if (strlen($startErrorMessage) <= 0)
+			if ($startErrorMessage == '')
 				echo "success";
 			else
 				echo $startErrorMessage;
@@ -178,7 +178,7 @@ function StartServer()
 	}
 
 	ShowWaitWindow();
-	CHttpRequest.Send('xmpp_server.php?lang=<?echo htmlspecialchars(LANG)?>&server_action=start&<?echo bitrix_sessid_get()?>');
+	CHttpRequest.Send('xmpp_server.php?lang=<?echo htmlspecialcharsbx(LANG)?>&server_action=start&<?echo bitrix_sessid_get()?>');
 }
 
 function StopServer()
@@ -198,7 +198,7 @@ function StopServer()
 	}
 
 	ShowWaitWindow();
-	CHttpRequest.Send('xmpp_server.php?lang=<?echo htmlspecialchars(LANG)?>&server_action=stop&<?echo bitrix_sessid_get()?>');
+	CHttpRequest.Send('xmpp_server.php?lang=<?echo htmlspecialcharsbx(LANG)?>&server_action=stop&<?echo bitrix_sessid_get()?>');
 }
 
 function ClearCacheServer()
@@ -218,7 +218,7 @@ function ClearCacheServer()
 	}
 
 	ShowWaitWindow();
-	CHttpRequest.Send('xmpp_server.php?lang=<?echo htmlspecialchars(LANG)?>&server_action=clearcache&<?echo bitrix_sessid_get()?>');
+	CHttpRequest.Send('xmpp_server.php?lang=<?echo htmlspecialcharsbx(LANG)?>&server_action=clearcache&<?echo bitrix_sessid_get()?>');
 }
 
 function DumpServer()
@@ -238,7 +238,7 @@ function DumpServer()
 	}
 
 	ShowWaitWindow();
-	CHttpRequest.Send('xmpp_server.php?lang=<?echo htmlspecialchars(LANG)?>&server_action=dump&<?echo bitrix_sessid_get()?>');
+	CHttpRequest.Send('xmpp_server.php?lang=<?echo htmlspecialcharsbx(LANG)?>&server_action=dump&<?echo bitrix_sessid_get()?>');
 }
 
 function XPPrepareString(str)
@@ -282,7 +282,7 @@ function QueryServer()
 	}
 
 	ShowWaitWindow();
-	CHttpRequest.Send('xmpp_server.php?lang=<?echo htmlspecialchars(LANG)?>&server_action=query&<?echo bitrix_sessid_get()?>');
+	CHttpRequest.Send('xmpp_server.php?lang=<?echo htmlspecialcharsbx(LANG)?>&server_action=query&<?echo bitrix_sessid_get()?>');
 }
 
 function ShowData(run, online, connected)
@@ -300,7 +300,7 @@ function ShowData(run, online, connected)
 
 <div id="reindex_result_div" style="margin:0px; font-size:100%; color:#FF0000"></div>
 
-<form method="POST" action="<?echo $APPLICATION->GetCurPage()?>?lang=<?echo htmlspecialchars(LANG)?>" name="fs1">
+<form method="POST" action="<?echo $APPLICATION->GetCurPage()?>?lang=<?echo htmlspecialcharsbx(LANG)?>" name="fs1">
 <?
 $tabControl->Begin();
 $tabControl->BeginNextTab();

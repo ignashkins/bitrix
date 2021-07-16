@@ -137,7 +137,7 @@
 
 		BX.addCustomEvent('BX.Main.Filter:beforeApply', BX.delegate(this.filterBeforeApply, this));
 
-		BX.addCustomEvent('onAjaxFailure', BX.delegate(function(errType, status){
+		BX.addCustomEvent('onAjaxFailure', BX.delegate(function(errType, status, config){
 			if (errType == 'auth')
 			{
 				if (typeof(this) == "object" && typeof(this.filterId) != "undefined")
@@ -148,11 +148,38 @@
 					top.location = top.location.href;
 				}
 			}
+			else if (errType == 'status')
+			{
+				if (typeof(config) == "object" && typeof(config.xhr) == "object" && config.xhr instanceof XMLHttpRequest)
+				{
+					try
+					{
+						var data = JSON.parse(config.xhr.responseText);
+						if (BX.type.isPlainObject(data))
+						{
+							if (data.status === 'error')
+							{
+								if (data.errors[0])
+								{
+									BX.UI.Notification.Center.notify({
+										content: data.errors[0].message
+									});
+								}
+							}
+						}
+					}
+					catch (err){}
+				}
+			}
 		}, this));
 
-		BX.addCustomEvent('BX.Translate.Process.BeforeRequestStart', BX.delegate(function(process, params){
-			/** @type {BX.Translate.Process} process */
-			if (process instanceof BX.Translate.Process)
+		BX.Event.EventEmitter.subscribe(BX.UI.StepProcessing.ProcessEvent.BeforeRequest, BX.delegate(function(event){
+			/** @type {BX.Main.Event.BaseEvent} event */
+			var process = event.data.process ? event.data.process : {};
+			var params = event.data.actionData ? event.data.actionData : {};
+
+			/** @type {BX.UI.StepProcessing.Process} process */
+			if (process instanceof BX.UI.StepProcessing.Process)
 			{
 				process.setParam('path', this.getCurrentPath());
 				process.method = 'POST';
@@ -544,7 +571,7 @@
 			for (i = 0; i < gridLinks.length; i++)
 			{
 				BX.bind(gridLinks[i], 'click', function () {
-					BX.Translate.ProcessManager.getInstance('index').showDialog()
+					BX.UI.StepProcessing.ProcessManager.get('index').showDialog()
 				});
 			}
 		}

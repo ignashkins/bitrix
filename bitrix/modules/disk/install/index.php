@@ -22,7 +22,7 @@ Class disk extends CModule
 	var $MODULE_CSS;
 	var $MODULE_GROUP_RIGHTS = "Y";
 
-	function disk()
+	public function __construct()
 	{
 		$arModuleVersion = array();
 
@@ -108,12 +108,12 @@ Class disk extends CModule
 
 		RegisterModule("disk");
 
-		$this->InstallUserFields();
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+		static::InstallUserFields();
+
 		CAgent::addAgent('Bitrix\\Disk\\ExternalLink::removeExpiredWithTypeAuto();', 'disk', 'N');
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		CAgent::addAgent('Bitrix\\Disk\\Bitrix24Disk\\UploadFileManager::removeIrrelevant();', 'disk', 'N', 1800);
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		CAgent::addAgent('Bitrix\\Disk\\Internals\\Cleaner::deleteShowSession(3, 2);', 'disk', 'N', 3600);
 		CAgent::addAgent('Bitrix\\Disk\\Internals\\Cleaner::deleteRightSetupSession();', 'disk', 'N');
 		CAgent::addAgent('Bitrix\\Disk\\Internals\\Cleaner::emptyOldDeletedLogEntries();', 'disk', 'N', 2592000);
@@ -126,6 +126,8 @@ Class disk extends CModule
 		CAgent::addAgent('Bitrix\\Disk\\Internals\\Cleaner::deleteTrashCanFilesByTtlAgent(3);', 'disk', 'N', 8000);
 		/** @see \Bitrix\Disk\Internals\Cleaner::deleteTrashCanEmptyFolderByTtlAgent */
 		CAgent::addAgent('Bitrix\\Disk\\Internals\\Cleaner::deleteTrashCanEmptyFolderByTtlAgent(3);', 'disk', 'N', 8000);
+		/** @see \Bitrix\Disk\Internals\Cleaner::releaseObjectLocksAgent() */
+		CAgent::addAgent('Bitrix\\Disk\\Internals\\Cleaner::releaseObjectLocksAgent();', 'disk', 'N', 7200);
 
 		if(!$isWebdavInstalled)
 		{
@@ -240,7 +242,7 @@ Class disk extends CModule
 
 		if(CModule::IncludeModule("search"))
 		{
-			/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 			CSearch::deleteIndex("disk");
 		}
 
@@ -248,7 +250,7 @@ Class disk extends CModule
 		$errors = null;
 		if(array_key_exists("savedata", $arParams) && $arParams["savedata"] != "Y")
 		{
-			$this->UnInstallUserFields();
+			static::UnInstallUserFields();
 			$errors = $DB->RunSQLBatch($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/disk/install/db/".$DBType."/uninstall.sql");
 
 			if (!empty($errors))
@@ -257,7 +259,7 @@ Class disk extends CModule
 				return false;
 			}
 		}
-		/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 		CAgent::removeModuleAgents("disk");
 		COption::removeOption('disk');
 
@@ -401,10 +403,10 @@ Class disk extends CModule
 		return true;
 	}
 
-	function InstallUserFields($moduleId = "all")
+	public static function InstallUserFields($moduleId = "all")
 	{}
 
-	function UnInstallUserFields()
+	public static function UnInstallUserFields()
 	{
 		$ent = new CUserTypeEntity;
 		foreach(array("disk_file", "disk_version") as $type)
@@ -461,7 +463,7 @@ Class disk extends CModule
 		}
 	}
 
-	function OnGetTableSchema()
+	public static function OnGetTableSchema()
 	{
 		return array(
 			"disk" => array(
@@ -484,11 +486,20 @@ Class disk extends CModule
 						'b_disk_external_link' => 'OBJECT_ID',
 						'b_disk_cloud_import' => 'OBJECT_ID',
 						'b_disk_object_lock' => 'OBJECT_ID',
+						'b_disk_onlyoffice_document_session' => 'OBJECT_ID',
+						'b_disk_tracked_object' => 'OBJECT_ID',
+						'b_disk_tracked_object^' => 'REAL_OBJECT_ID',
+						'b_disk_recently_used' => 'OBJECT_ID',
 					),
 				),
 				'b_disk_sharing' => array(
 					'ID' => array(
 						'b_disk_sharing' => 'PARENT_ID',
+					)
+				),
+				'b_disk_attached_object' => array(
+					'ID' => array(
+						'b_disk_tracked_object' => 'ATTACHED_OBJECT_ID',
 					)
 				),
 				'b_disk_storage' => array(
@@ -506,6 +517,7 @@ Class disk extends CModule
 						'b_disk_external_link' => 'VERSION_ID',
 						'b_disk_edit_session' => 'VERSION_ID',
 						'b_disk_cloud_import' => 'VERSION_ID',
+						'b_disk_onlyoffice_document_session' => 'VERSION_ID',
 					)
 				),
 				'b_disk_tmp_file' => array(
@@ -537,7 +549,11 @@ Class disk extends CModule
 						'b_disk_deleted_log' => 'USER_ID',
 						'b_disk_deleted_log_v2' => 'USER_ID',
 						'b_disk_cloud_import' => 'USER_ID',
+						'b_disk_tracked_object' => 'USER_ID',
 						'b_disk_object_lock' => 'CREATED_BY',
+						'b_disk_onlyoffice_document_session' => 'USER_ID',
+						'b_disk_onlyoffice_document_session^' => 'OWNER_ID',
+						'b_disk_recently_used' => 'USER_ID',
 					)
 				),
 				"b_task" => array(

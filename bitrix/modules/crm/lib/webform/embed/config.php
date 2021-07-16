@@ -9,7 +9,6 @@
 namespace Bitrix\Crm\WebForm\Embed;
 
 use Bitrix\Main;
-use Bitrix\Crm;
 use Bitrix\Crm\WebForm;
 
 /**
@@ -182,6 +181,11 @@ class Config
 			switch ($options['type'])
 			{
 				case 'product':
+					$options += [
+						'bigPic' => true,
+						'multiple' => true,
+						'items' => [],
+					];
 					break;
 				default:
 					$options += [
@@ -294,7 +298,7 @@ class Config
 	{
 		$result = [];
 
-		if ($this->isDisabled())
+		if (!$this->editMode && $this->isDisabled())
 		{
 			return $result;
 		}
@@ -349,7 +353,7 @@ class Config
 			];
 			if ($agreement->isAgreementTextHtml())
 			{
-				$content['html'] = $agreement->getHtml(true);
+				$content['html'] = $agreement->getHtml();
 			}
 			else
 			{

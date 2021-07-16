@@ -16,6 +16,7 @@ import {EventEmitter} from "main.core.events";
 	{
 		this.parent = null;
 		this.types = null;
+		this.isDropdownChangeEventSubscribed = false;
 		this.init(parent, types);
 	};
 
@@ -142,19 +143,24 @@ import {EventEmitter} from "main.core.events";
 			const fieldChildren = [];
 
 			const priceObject = value.PRICE || {};
+			priceObject.PLACEHOLDER = editObject.PLACEHOLDER || '';
 			fieldChildren.push(this.createMoneyPrice(priceObject));
 
-			const currencyObject = value.CURRENCY || {};
-			currencyObject.DATA = {
-				ITEMS: editObject.CURRENCY_LIST
-			};
-			fieldChildren.push(this.createMoneyCurrency(currencyObject));
+			if ((BX.type.isArray(editObject.CURRENCY_LIST) && editObject.CURRENCY_LIST.length > 0))
+			{
+				const currencyObject = value.CURRENCY || {};
+				currencyObject.DATA = {
+					ITEMS: editObject.CURRENCY_LIST
+				};
+				currencyObject.HTML_ENTITY = editObject.HTML_ENTITY || false;
+				fieldChildren.push(this.createMoneyCurrency(currencyObject));
+			}
 
 			if (BX.type.isNotEmptyObject(value.HIDDEN))
 			{
 				for (let fieldName in value.HIDDEN)
 				{
-					if (BX.type.isNotEmptyString(fieldName))
+					if (value.HIDDEN.hasOwnProperty(fieldName) && BX.type.isNotEmptyString(fieldName))
 					{
 						const hidden = this.createInput({
 							NAME: fieldName,
@@ -184,7 +190,7 @@ import {EventEmitter} from "main.core.events";
 		createMoneyPrice: function(priceObject)
 		{
 			priceObject.TYPE = this.types.NUMBER;
-			priceObject.PLACEHOLDER = "0";
+
 			const priceInput = this.createInput(priceObject);
 			priceInput.classList.add('main-grid-editor-money-price');
 			Event.bind(priceInput, 'change', (event) => {
@@ -200,6 +206,7 @@ import {EventEmitter} from "main.core.events";
 
 				EventEmitter.emit('Grid.MoneyField::change', eventData);
 			});
+
 			return priceInput;
 		},
 
@@ -215,29 +222,33 @@ import {EventEmitter} from "main.core.events";
 				currencyBlock.dataset.disabled = true;
 			}
 
-			EventEmitter.subscribe('Dropdown::change', (event) => {
-				const [controlId] = event.getData();
-				if (!BX.type.isNotEmptyString(controlId))
-				{
-					return;
-				}
+			if (!this.isDropdownChangeEventSubscribed)
+			{
+				this.isDropdownChangeEventSubscribed = true;
+				EventEmitter.subscribe('Dropdown::change', (event) => {
+					const [controlId] = event.getData();
+					if (!BX.type.isNotEmptyString(controlId))
+					{
+						return;
+					}
 
-				const dropdownObject = BX.Main.dropdownManager.getById(controlId);
-				if (dropdownObject.dropdown && dropdownObject.dropdown.classList.contains('main-grid-editor-money-currency'))
-				{
-					const fieldNode = dropdownObject.dropdown.parentNode;
-					const priceField = fieldNode.querySelector('.main-grid-editor-money-price')
-					const eventData = {
-						field: fieldNode,
-						values: {
-							price: priceField.value || '',
-							currency: dropdownObject.dropdown.dataset.value || '',
-						}
-					};
+					const dropdownObject = BX.Main.dropdownManager.getById(controlId);
+					if (dropdownObject.dropdown && dropdownObject.dropdown.classList.contains('main-grid-editor-money-currency'))
+					{
+						const fieldNode = dropdownObject.dropdown.parentNode;
+						const priceField = fieldNode.querySelector('.main-grid-editor-money-price')
+						const eventData = {
+							field: fieldNode,
+							values: {
+								price: priceField.value || '',
+								currency: dropdownObject.dropdown.dataset.value || '',
+							}
+						};
 
-					EventEmitter.emit('Grid.MoneyField::change', eventData);
-				}
-			});
+						EventEmitter.emit('Grid.MoneyField::change', eventData);
+					}
+				});
+			}
 
 			return currencyBlock;
 		},
@@ -270,6 +281,7 @@ import {EventEmitter} from "main.core.events";
 				editObject.DATA.ITEMS,
 				editObject.VALUE
 			);
+			var isHtmlEntity = 'HTML_ENTITY' in editObject && editObject.HTML_ENTITY === true;
 
 			return BX.create('div', {
 				props: {
@@ -283,14 +295,69 @@ import {EventEmitter} from "main.core.events";
 					name: editObject.NAME,
 					tabindex: '0',
 					'data-items': JSON.stringify(editObject.DATA.ITEMS),
-					'data-value': valueItem.VALUE
+					'data-value': valueItem.VALUE,
+					'data-html-entity': editObject.HTML_ENTITY
 				},
 				children: [BX.create('span', {
 					props: {className: 'main-dropdown-inner'},
-					text: valueItem.NAME
+					html: isHtmlEntity ? valueItem.NAME : null,
+					text: isHtmlEntity ? null : valueItem.NAME,
 				})]
 			});
 
+		},
+
+		createMultiselect: function(editObject)
+		{
+			const selectedValues = [];
+			const squares = (() => {
+				if (BX.Type.isArrayFilled(editObject.VALUE))
+				{
+					return editObject.VALUE.map((value) => {
+						const item = this.getDropdownValueItemByValue(editObject.DATA.ITEMS, value);
+						selectedValues.push(item);
+						const itemName = item.HTML ?? BX.util.htmlspecialchars(item.NAME);
+						const renderedItem = BX.Tag.render`
+							<span class="main-ui-square">
+								<span class="main-ui-square-item">${itemName}</span>
+								<span class="main-ui-item-icon main-ui-square-delete"></span>
+							</span>
+						`;
+
+						BX.Dom.attr(renderedItem, 'data-item', item);
+
+						return renderedItem;
+					});
+				}
+
+				return [];
+			})();
+			const layout = BX.Tag.render`
+				<div 
+					class="main-grid-editor main-ui-control main-ui-multi-select"
+					name="${BX.Text.encode(editObject.NAME)}"
+					id="${`${BX.Text.encode(editObject.NAME)}_control`}"
+				>
+					<span class="main-ui-square-container">${squares}</span>
+					<span class="main-ui-hide main-ui-control-value-delete">
+						<span class="main-ui-control-value-delete-item"></span>
+					</span>
+					<span class="main-ui-square-search">
+						<input type="text" class="main-ui-square-search-item">
+					</span>	
+				</div>
+			`;
+
+			BX.Dom.attr(
+				layout,
+				{
+					'data-params': {isMulti: true},
+					'data-items': editObject.DATA.ITEMS,
+					'data-value': selectedValues,
+				},
+			);
+
+			return layout;
 		},
 
 		validateEditObject: function(editObject)
@@ -401,6 +468,11 @@ import {EventEmitter} from "main.core.events";
 						break;
 					}
 
+					case this.types.MULTISELECT : {
+						control = this.createMultiselect(editObject);
+						break;
+					}
+
 					case this.types.IMAGE : {
 						control = this.createImageEditor(editObject);
 						break;
@@ -459,7 +531,6 @@ import {EventEmitter} from "main.core.events";
 		{
 			if (event.code === 'Enter')
 			{
-				event.stopPropagation();
 				event.preventDefault();
 
 				var saveButton = BX.Grid.Utils.getBySelector(this.parent.getContainer(), '#grid_save_button > button', true);

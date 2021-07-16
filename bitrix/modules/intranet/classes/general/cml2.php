@@ -366,7 +366,7 @@ class CUserCMLImport
 		$company_name = COption::GetOptionString("main", "site_name", "");
 		if($company_name == '')
 		{
-			$dbrs = CSite::GetList($o, $b, Array("DEFAULT"=>"Y"));
+			$dbrs = CSite::GetList('', '', Array("DEFAULT"=>"Y"));
 			if($ars = $dbrs->Fetch())
 				$company_name = $ars["NAME"];
 		}
@@ -405,7 +405,7 @@ class CUserCMLImport
 		{
 			if($ar["ATTRIBUTES"] <> '')
 			{
-				$attrs = unserialize($ar["ATTRIBUTES"]);
+				$attrs = unserialize($ar["ATTRIBUTES"], ["allowed_classes" => false]);
 				if(is_array($attrs))
 				{
 					if(array_key_exists(GetMessage('IBLOCK_XML2_USER_ATTR_UPDATE_ONLY'), $attrs))
@@ -487,7 +487,7 @@ class CUserCMLImport
 			{
 				if($ar["ATTRIBUTES"] <> '')
 				{
-					$attrs = unserialize($ar["ATTRIBUTES"]);
+					$attrs = unserialize($ar["ATTRIBUTES"], ["allowed_classes" => false]);
 					if(is_array($attrs))
 					{
 						if(array_key_exists(GetMessage('IBLOCK_XML2_USER_ATTR_UPDATE_ONLY'), $attrs))
@@ -534,7 +534,7 @@ class CUserCMLImport
 
 	function GetUserByXML_ID($XML_ID)
 	{
-		$dbRes = CUser::GetList($by="ID", $order="ASC", array("XML_ID" => $XML_ID));
+		$dbRes = CUser::GetList("ID", "ASC", array("XML_ID" => $XML_ID));
 		return $dbRes->Fetch();
 	}
 
@@ -980,7 +980,7 @@ class CUserCMLImport
 			{
 				if($ar["ATTRIBUTES"] <> '')
 				{
-					$attrs = unserialize($ar["ATTRIBUTES"]);
+					$attrs = unserialize($ar["ATTRIBUTES"], ["allowed_classes" => false]);
 					if(is_array($attrs))
 					{
 						if(array_key_exists(GetMessage('IBLOCK_XML2_USER_ATTR_UPDATE_ONLY'), $attrs))

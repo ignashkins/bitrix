@@ -29,7 +29,7 @@ class CIntranetInviteDialog
 			'mode' => Router::COMPONENT_MODE_AJAX,
 		]);
 
-		return "BX.SidePanel.Instance.open('".$invitationLink."', {cacheable: false, allowChangeHistory: false})";
+		return "BX.SidePanel.Instance.open('".$invitationLink."', {cacheable: false, allowChangeHistory: false, width: 1100})";
 	}
 
 	public static function setSendPassword($value)
@@ -81,7 +81,7 @@ class CIntranetInviteDialog
 
 			if (Loader::includeModule('socialnetwork'))
 			{
-				$externalAuthIdList = Socialnetwork\ComponentHelper::checkPredefinedAuthIdList(array('bot', 'imconnector', 'replica', 'sale', 'saleanonymous'));
+				$externalAuthIdList = Socialnetwork\ComponentHelper::checkPredefinedAuthIdList(array_diff(\Bitrix\Main\UserTable::getExternalUserTypes(), [ 'email', 'shop' ]));
 				if (!empty($externalAuthIdList))
 				{
 					$filter['!@EXTERNAL_AUTH_ID'] = $externalAuthIdList;
@@ -309,13 +309,17 @@ class CIntranetInviteDialog
 					{
 						$url = (CMain::IsHTTPS() ? "https" : "http") . "://" . $serverName . $arSite["DIR"];
 					}
-					$event->SendImmediate("INTRANET_USER_ADD", $siteIdByDepartmentId, array(
-						"EMAIL_TO" => $arUser["EMAIL"],
-						"LINK" => $url,
-						"USER_ID_FROM" => $USER->GetID(),
-						"PASSWORD" => $strPassword,
-						"USER_TEXT" => $messageText
-					));
+					$event->SendImmediate(
+						$bitrix24Installed ? "BITRIX24_USER_ADD" : "INTRANET_USER_ADD",
+						$siteIdByDepartmentId,
+						array(
+							"EMAIL_TO" => $arUser["EMAIL"],
+							"LINK" => $url,
+							"USER_ID_FROM" => $USER->GetID(),
+							"PASSWORD" => $strPassword,
+							"USER_TEXT" => $messageText
+						)
+					);
 				}
 				else
 				{
@@ -432,21 +436,23 @@ class CIntranetInviteDialog
 				return false;
 			}
 
+			$externalAuthIdList = [];
+			if (Loader::includeModule('socialnetwork'))
+			{
+				$externalAuthIdList = Socialnetwork\ComponentHelper::checkPredefinedAuthIdList(array_diff(\Bitrix\Main\UserTable::getExternalUserTypes(), [ 'email', 'shop' ]));
+			}
+
 			foreach($arEmail as $email)
 			{
-				if($isPhone)
+				if ($isPhone)
 				{
 					$filter = array(
 						"=PHONE_NUMBER" => $email
 					);
 
-					if (Loader::includeModule('socialnetwork'))
+					if (!empty($externalAuthIdList))
 					{
-						$externalAuthIdList = Socialnetwork\ComponentHelper::checkPredefinedAuthIdList(array('bot', 'imconnector', 'replica', 'sale', 'saleanonymous'));
-						if (!empty($externalAuthIdList))
-						{
-							$filter['!@USER.EXTERNAL_AUTH_ID'] = $externalAuthIdList;
-						}
+						$filter['!@USER.EXTERNAL_AUTH_ID'] = $externalAuthIdList;
 					}
 
 					$rsUser = \Bitrix\Main\UserPhoneAuthTable::getList(array(
@@ -460,13 +466,9 @@ class CIntranetInviteDialog
 						"=EMAIL" => $email
 					);
 
-					if (Loader::includeModule('socialnetwork'))
+					if (!empty($externalAuthIdList))
 					{
-						$externalAuthIdList = Socialnetwork\ComponentHelper::checkPredefinedAuthIdList(array('bot', 'imconnector', 'replica', 'sale', 'saleanonymous'));
-						if (!empty($externalAuthIdList))
-						{
-							$filter['!@EXTERNAL_AUTH_ID'] = $externalAuthIdList;
-						}
+						$filter['!@EXTERNAL_AUTH_ID'] = $externalAuthIdList;
 					}
 
 					$rsUser = UserTable::getList(array(
@@ -941,8 +943,8 @@ class CIntranetInviteDialog
 		else
 		{
 			$rsGroups = CGroup::GetList(
-				$o="",
-				$b="",
+				'',
+				'',
 				array(
 					"STRING_ID" => "EMPLOYEES_".$SITE_ID
 				)
@@ -960,8 +962,8 @@ class CIntranetInviteDialog
 	{
 		$arGroups = array(1);
 		$rsGroups = CGroup::GetList(
-			$o="",
-			$b="",
+			'',
+			'',
 			array(
 				"STRING_ID" => "PORTAL_ADMINISTRATION_".$SITE_ID
 			)
@@ -1120,8 +1122,8 @@ class CIntranetInviteDialog
 		$USER_ID = intval($USER_ID);
 
 		$rsUser = CUser::GetList(
-			($o = "ID"),
-			($b = "DESC"),
+			"ID",
+			"DESC",
 			array("ID_EQUAL_EXACT" => $USER_ID),
 			array("SELECT" => array("UF_DEPARTMENT"))
 		);
@@ -1140,8 +1142,8 @@ class CIntranetInviteDialog
 		$USER_ID = intval($USER_ID);
 
 		$rsUser = CUser::GetList(
-			($o = "ID"),
-			($b = "DESC"),
+			"ID",
+			"DESC",
 			array("ID_EQUAL_EXACT" => $USER_ID)
 		);
 
@@ -1325,31 +1327,9 @@ class CIntranetInviteDialog
 
 	private static function GeneratePassword($SITE_ID, $bExtranetUser)
 	{
-		global $USER;
-
 		$arGroupID = self::getUserGroups($SITE_ID, $bExtranetUser);
-		$arPolicy = $USER->GetGroupPolicy($arGroupID);
 
-		$password_min_length = intval($arPolicy["PASSWORD_LENGTH"]);
-		if($password_min_length <= 0)
-		{
-			$password_min_length = 6;
-		}
-
-		$password_chars = array(
-			"abcdefghijklnmopqrstuvwxyz",
-			"ABCDEFGHIJKLNMOPQRSTUVWXYZ",
-			"0123456789",
-		);
-
-		if($arPolicy["PASSWORD_PUNCTUATION"] === "Y")
-		{
-			$password_chars[] = ",.<>/?;:'\"[]{}\\|`~!@#\$%^&*()-_+=";
-		}
-
-		$password = randString($password_min_length, $password_chars);
-
-		return $password;
+		return \CUser::GeneratePasswordByPolicy($arGroupID);
 	}
 
 	public static function TransferEmailUser($userId, $arParams = array())
@@ -1365,8 +1345,8 @@ class CIntranetInviteDialog
 		}
 
 		$dbUser = CUser::GetList(
-			$o = "ID",
-			$b = "ASC",
+			"ID",
+			"ASC",
 			array(
 				"=EMAIL" => $arUser["EMAIL"],
 				"EXTERNAL_AUTH_ID" => "",
@@ -1447,6 +1427,14 @@ class CIntranetInviteDialog
 			$arFields["POSITION"] = $arParams["POSITION"];
 		}
 
+		if (
+			isset($arParams["CONFIRM_CODE"])
+			&& $arParams["CONFIRM_CODE"] <> ''
+		)
+		{
+			$arFields["CONFIRM_CODE"] = $arParams["CONFIRM_CODE"];
+		}
+
 		foreach(GetModuleEvents("intranet", "OnTransferEMailUser", true) as $arEvent)
 		{
 			if(!ExecuteModuleEventEx($arEvent, array(&$arFields)))
@@ -1496,8 +1484,8 @@ class CIntranetInviteDialog
 		}
 
 		$dbUser = CUser::GetList(
-			$o = "ID",
-			$b = "ASC",
+			"ID",
+			"ASC",
 			array(
 				"=EMAIL" => $arUser["EMAIL"],
 				"=EXTERNAL_AUTH_ID" => 'socservices',
@@ -1677,6 +1665,42 @@ class CIntranetInviteDialog
 		}
 	}
 
+	public static function GetSiteByDepartmentId($arDepartmentId)
+	{
+		if (!is_array($arDepartmentId))
+		{
+			$arDepartmentId = array($arDepartmentId);
+		}
+
+		$dbSitesList = CSite::GetList("SORT", "asc", array("ACTIVE" => "Y")); // cache used
+		while ($arSite = $dbSitesList->GetNext())
+		{
+			$siteRootDepartmentId = COption::GetOptionString("main", "wizard_departament", false, $arSite["LID"], true);
+			if ($siteRootDepartmentId)
+			{
+				if (in_array($siteRootDepartmentId, $arDepartmentId))
+				{
+					return $arSite["LID"];
+				}
+				else
+				{
+					$arSubStructure = CIntranetUtils::getSubStructure($siteRootDepartmentId);
+					$arSiteDepartmentId = array_keys($arSubStructure["DATA"]);
+
+					foreach($arDepartmentId as $userDepartmentId)
+					{
+						if(in_array($userDepartmentId, $arSiteDepartmentId))
+						{
+							return $arSite["LID"];
+						}
+					}
+				}
+			}
+		}
+
+		return SITE_ID;
+	}
+
 	public static function getUserSiteId($arParams = array())
 	{
 		$bExtranet = (
@@ -1702,9 +1726,7 @@ class CIntranetInviteDialog
 		}
 		else
 		{
-			CModule::IncludeModule('socialnetwork');
-			$arSite = CSocNetLogComponent::GetSiteByDepartmentId(intval($arParams["UF_DEPARTMENT"]));
-			$siteId = $arSite["LID"];
+			$siteId = self::GetSiteByDepartmentId($arParams["UF_DEPARTMENT"]);
 		}
 
 		return $siteId;
@@ -1744,7 +1766,7 @@ class CIntranetInviteDialog
 		);
 	}
 
-	public static function logAction($arUserId, $module, $action, $label)
+	public static function logAction($arUserId, $module, $action, $label, $context = 'web')
 	{
 		if (function_exists('AddEventToStatFile'))
 		{
@@ -1757,7 +1779,7 @@ class CIntranetInviteDialog
 			{
 				if ($userId > 0)
 				{
-					AddEventToStatFile($module, $action, $label, $userId);
+					AddEventToStatFile($module, $action, $label, $userId, $context);
 				}
 			}
 		}

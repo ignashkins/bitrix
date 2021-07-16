@@ -218,7 +218,8 @@ class CClusterWebnode
 	{
 		self::$errno = 0;
 		self::$errstr = '';
-		$FP = @fsockopen($host, $port, self::$errno, self::$errstr, 2);
+		$protocol = ($port === "443") ? "ssl://" : "";
+		$FP = @fsockopen($protocol.$host, $port, self::$errno, self::$errstr, 2);
 		if($FP)
 		{
 			$strVars = $url;

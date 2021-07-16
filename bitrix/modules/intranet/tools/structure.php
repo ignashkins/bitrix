@@ -86,7 +86,7 @@ function DeleteDepartment($arFields)
 		if ($arSection['IBLOCK_SECTION_ID'] > 0)
 		{
 			$dbRes = CUser::GetList(
-				$by,$order,
+				'', '',
 				array('UF_DEPARTMENT' => $dpt),
 				array('SELECT' => array('ID'))
 			);
@@ -172,6 +172,7 @@ else
 	}
 	else
 	{
+		$arSection = [];
 		if (isset($arParams["UF_DEPARTMENT_ID"]))  //data for department's editing
 		{
 			$rsSection = CIBlockSection::GetList(array(), array("ID" => intval($arParams["UF_DEPARTMENT_ID"]), "IBLOCK_ID" => $iblockID),false, array('UF_HEAD'));
@@ -221,13 +222,13 @@ else
 					$UF_HeadName = "";
 					if (isset($_POST['UF_HEAD']))
 					{
-						$dbUser = CUser::GetList($b="", $o="", array("ID" => intval($_POST['UF_HEAD'])));
+						$dbUser = CUser::GetList("", "", array("ID" => intval($_POST['UF_HEAD'])));
 						if ($arUser = $dbUser->GetNext())
 							$UF_HeadName = CUser::FormatName(CSite::GetNameFormat(false), $arUser, true, false);
 					}
 					elseif (isset($arSection["UF_HEAD"]))
 					{
-						$dbUser = CUser::GetList($b="", $o="", array("ID" => intval($arSection["UF_HEAD"])));
+						$dbUser = CUser::GetList("", "", array("ID" => intval($arSection["UF_HEAD"])));
 						if ($arUser = $dbUser->GetNext())
 							$UF_HeadName = CUser::FormatName(CSite::GetNameFormat(false), $arUser, true, false);
 					}

@@ -12,6 +12,8 @@ final class TasksTask extends Provider
 	const PROVIDER_ID = 'TASK';
 	const CONTENT_TYPE_ID = 'TASK';
 
+	protected static $tasksTaskClass = \CTasks::class;
+
 	public static function getId(): string
 	{
 		return static::PROVIDER_ID;
@@ -46,15 +48,18 @@ final class TasksTask extends Provider
 			return;
 		}
 
-		if (isset($cache[$taskId]))
+		$checkAccess = ($this->getOption('checkAccess') !== false);
+		$cacheKey = $taskId . '_' . ($checkAccess ? 'Y' : 'N');
+
+		if (isset($cache[$cacheKey]))
 		{
-			$task = $cache[$taskId];
+			$task = $cache[$cacheKey];
 		}
 		elseif (Loader::includeModule('tasks'))
 		{
-			$res = \CTasks::getByID($taskId, true);
+			$res = self::$tasksTaskClass::getByID($taskId, $checkAccess);
 			$task = $res->fetch();
-			$cache[$taskId] = $task;
+			$cache[$cacheKey] = $task;
 		}
 
 		if (empty($task))

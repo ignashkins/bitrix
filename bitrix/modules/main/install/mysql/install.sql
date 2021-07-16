@@ -228,6 +228,7 @@ CREATE TABLE b_user
 	BX_USER_ID varchar(32) null,
 	LANGUAGE_ID char(2) null,
 	BLOCKED char(1) not null default 'N',
+	PASSWORD_EXPIRED char(1) not null default 'N',
 	PRIMARY KEY (ID),
 	UNIQUE ix_login (LOGIN, EXTERNAL_AUTH_ID),
 	INDEX ix_b_user_email (EMAIL),
@@ -867,10 +868,12 @@ CREATE TABLE b_log_notification_action
 
 CREATE TABLE b_cache_tag
 (
+	ID bigint not null auto_increment,
 	SITE_ID char(2),
 	CACHE_SALT char(4),
 	RELATIVE_PATH varchar(255),
 	TAG varchar(100),
+	PRIMARY KEY pk_b_cache_tag(ID),
 	INDEX ix_b_cache_tag_0 (SITE_ID, CACHE_SALT, RELATIVE_PATH(50)),
 	INDEX ix_b_cache_tag_1 (TAG)
 );

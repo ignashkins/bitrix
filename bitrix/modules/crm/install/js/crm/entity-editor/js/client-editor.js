@@ -329,7 +329,8 @@ if(typeof BX.Crm.EntityEditorClientSearchBox === "undefined")
 							{
 								onSelect: this.onEntitySelect.bind(this),
 								onAdd: this.onEntityAdd.bind(this),
-								onReset: this.onEntityReset.bind(this)
+								onReset: this.onEntityReset.bind(this),
+								onGetNewAlertContainer: this.onEntitySearch.bind(this)
 							}
 					}
 				);
@@ -1042,7 +1043,8 @@ if(typeof BX.Crm.EntityEditorClientSearchBox === "undefined")
 								'type': 'requisite_controller',
 								'config': {
 									'requisiteFieldId': 'REQUISITES',
-									'addressFieldId': 'ADDRESS'
+									'addressFieldId': 'ADDRESS',
+									'requisiteBinding': BX.prop.getObject(this._settings, "requisiteBinding", null)
 								}
 							}],
 							initialMode: BX.UI.EntityEditorMode.names.edit,
@@ -1397,6 +1399,13 @@ if(typeof BX.Crm.EntityEditorClientSearchBox === "undefined")
 			{
 				this.reset();
 				this._searchControl.destroyPopupWindow();
+			},
+			onEntitySearch: function(searchControl, container)
+			{
+				(new DetailSearchPlacement({
+					parentControl: this,
+					searchControl: searchControl
+				})).show(container);
 			},
 			onEntitySelect: function(sender, item)
 			{
@@ -2788,6 +2797,8 @@ if(typeof BX.Crm.ClientEditorEntityPanel === "undefined")
 
 		this._container = null;
 		this._wrapper = null;
+		this._titleIcon = null;
+		this._titleLink = null;
 
 		this._clientRequisites = null;
 
@@ -2808,7 +2819,7 @@ if(typeof BX.Crm.ClientEditorEntityPanel === "undefined")
 				this._entityInfo = BX.prop.get(this._settings, "entityInfo", null);
 				this._mode = BX.prop.getInteger(this._settings, "mode", 0);
 				this._enableCommunications = BX.prop.getBoolean(this._settings, "enableCommunications", true);
-				this._enableAddress = BX.prop.getBoolean(this._settings, "enableAddress", true);;
+				this._enableAddress = BX.prop.getBoolean(this._settings, "enableAddress", true);
 				this._enableRequisitesTooltip = BX.prop.getBoolean(this._settings, "enableTooltip", true);
 				this._isRequisiteEnabled = (this._entityInfo.hasRequisites()
 					&& BX.prop.getBoolean(this._settings, "enableRequisite", false)
@@ -2851,6 +2862,10 @@ if(typeof BX.Crm.ClientEditorEntityPanel === "undefined")
 			{
 				this._container = container;
 			},
+			getTitleLink: function()
+			{
+				return this._titleLink;
+			},
 			getEntity: function()
 			{
 				return this._entityInfo;
@@ -2883,6 +2898,31 @@ if(typeof BX.Crm.ClientEditorEntityPanel === "undefined")
 			{
 				this._requisiteListChangeNotifier.removeListener(listener);
 			},
+			getTitleIcon: function()
+			{
+				if (!this._titleIcon && this._entityInfo)
+				{
+					var iconClass = null;
+					if (this._entityInfo.getTypeId() === BX.CrmEntityType.enumeration.lead)
+					{
+						iconClass = 'crm-entity-widget-client-box-icon--lead';
+					}
+					else if (this._entityInfo.getTypeId() === BX.CrmEntityType.enumeration.deal)
+					{
+						iconClass = 'crm-entity-widget-client-box-icon--deal';
+					}
+					if (iconClass)
+					{
+						this._titleIcon = BX.create("span", {
+							props: {
+								className: 'crm-entity-widget-client-box-icon ' + iconClass
+							}}
+						);
+					}
+				}
+
+				return this._titleIcon;
+			},
 			layout: function()
 			{
 				var isViewMode = this._mode === BX.UI.EntityEditorMode.view;
@@ -2890,7 +2930,7 @@ if(typeof BX.Crm.ClientEditorEntityPanel === "undefined")
 				this._wrapper = BX.create("div", { props: { className: "crm-entity-widget-client-block" } });
 				this._container.appendChild(this._wrapper);
 
-				var innerWrapper = BX.create("div", { props: { className: "crm-entity-widget-client-box" } });
+				var innerWrapper = BX.create("div", { props: { className: "crm-entity-widget-client-box crm-entity-widget-participants-block" } });
 				this._wrapper.appendChild(innerWrapper);
 
 				if(BX.prop.getBoolean(this._settings, "enableEntityTypeCaption", false))
@@ -2934,7 +2974,7 @@ if(typeof BX.Crm.ClientEditorEntityPanel === "undefined")
 				var showUrl = this._entityInfo.getShowUrl();
 				if(showUrl !== "")
 				{
-					var titleLink = BX.create("a",
+					this._titleLink = BX.create("a",
 						{
 							props:
 								{
@@ -2945,14 +2985,14 @@ if(typeof BX.Crm.ClientEditorEntityPanel === "undefined")
 						}
 					);
 
-					BX.Event.bind(titleLink, 'mouseenter', this.onTitleMouseEnter.bind(this));
-					BX.Event.bind(titleLink, 'mouseleave', this.onTitleMouseLeave.bind(this));
+					BX.Event.bind(this._titleLink, 'mouseenter', this.onTitleMouseEnter.bind(this));
+					BX.Event.bind(this._titleLink, 'mouseleave', this.onTitleMouseLeave.bind(this));
 
 					titleWrapper.appendChild(
 						BX.create("div",
 							{
 								props: { className: "crm-entity-widget-client-box-name-row" },
-								children: [ titleLink, buttonWrapper ]
+								children: [ this.getTitleIcon(), this._titleLink, buttonWrapper ]
 							}
 						)
 					);
@@ -3070,6 +3110,7 @@ if(typeof BX.Crm.ClientEditorEntityPanel === "undefined")
 				}
 
 				this._communicationButtons = null;
+				this._titleIcon = null;
 				this._wrapper = BX.remove(this._wrapper);
 				this._hasLayout = false;
 			},
@@ -3412,8 +3453,12 @@ if(typeof BX.Crm.ClientEditorCommunicationButton === "undefined")
 			},
 			addEmail: function(email)
 			{
+				var ownerTypeId = BX.prop.getInteger(this._settings, "ownerTypeId", 0);
+				var ownerId = BX.prop.getInteger(this._settings, "ownerId", 0);
 				BX.CrmActivityEditor.addEmail(
 					{
+						ownerID: ownerId,
+						ownerType: BX.CrmEntityType.resolveName(ownerTypeId),
 						communicationsLoaded: true,
 						communications:
 							[
@@ -3568,5 +3613,557 @@ if(typeof BX.Crm.ClientEditorMenu === "undefined")
 		var self = new BX.Crm.ClientEditorMenu();
 		self.initialize(id, settings);
 		return self;
+	};
+
+	var DetailSearchPlacementLoader = function() {
+		this.placementCode = 'CRM_DETAIL_SEARCH';
+		this.queue = [];
+		this.isActive = false;
+		this.isInited = false;
+		var placement = (BX['rest'] ? BX.rest.AppLayout.getPlacement(this.placementCode) : null);
+		if (placement)
+		{
+			this.init();
+		}
+		else
+		{
+			//setTimeout(function() {
+			BX.ajax.runComponentAction(
+				'bitrix:app.placement',
+				'getComponent',
+				{
+					data: {
+						placementId: this.placementCode,
+						placementOptions: {}
+					}
+				}
+			).then(function(result) {
+				var hiddenDiv = BX.create('DIV', {
+					style: {display: 'none', overflow: 'hidden'}
+				});
+				document.body.appendChild(hiddenDiv);
+				BX.html(hiddenDiv, result.data.html, {
+					callback: function() {
+						setTimeout(this.init.bind(this), 10);
+					}.bind(this)
+				});
+			}.bind(this), this.init.bind(this));
+			//}.bind(this), 1000);
+		}
+	};
+	DetailSearchPlacementLoader.prototype = {
+		init: function() {
+			this.isInited = true;
+			this.placement = (BX['rest'] ? BX.rest.AppLayout.getPlacement(this.placementCode) : null);
+			if (this.placement)
+			{
+				var MessageInterface = BX.rest.AppLayout.initializePlacement(this.placementCode);
+				var __this = this;
+				MessageInterface.prototype.crmShowFoundEntities = function(data) {
+					__this.restCrmShowFoundEntities(this, data.data);
+				};
+				MessageInterface.prototype.crmShowCreatedEntity = function(data) {
+					__this.restCrmShowCreatedEntity(this, data);
+				};
+				MessageInterface.prototype.events.push('onCrmEntityIsNeedToCreate');
+				this.isActive = true;
+			}
+			this.executeCallbacks();
+		},
+		addCallback: function(callback) {
+			this.queue.push(callback);
+			this.executeCallbacks();
+		},
+		executeCallbacks: function() {
+			if (!this.isInited)
+			{
+				return;
+			}
+			var callback;
+			while (callback = this.queue.shift())
+			{
+				callback({success: this.isActive, placement: this.placement, placementEventObject: this});
+			}
+		},
+		restCrmShowFoundEntities: function(applayout, placementSearchResults) {
+			BX.onCustomEvent(this, 'restCrmShowFoundEntities', [applayout, placementSearchResults]);
+		},
+		restCrmShowCreatedEntity: function(applayout, createdContact) {
+			BX.onCustomEvent(this, 'restCrmShowCreatedEntity', [applayout, createdContact]);
+		}
+	};
+	DetailSearchPlacementLoader.execute = function(callback) {
+		DetailSearchPlacementLoader.singleton = DetailSearchPlacementLoader.singleton || new DetailSearchPlacementLoader();
+		DetailSearchPlacementLoader.singleton.addCallback(callback);
+	};
+
+	var PlacementItem = function(data, eventObject) {
+		this.data = data;
+		this.eventObject = eventObject;
+
+		this.activate = this.activate.bind(this);
+		this.checkResponse = this.checkResponse.bind(this);
+		this.checkActive = this.checkActive.bind(this);
+		this.destroy = this.destroy.bind(this);
+
+		this.menuItem = null;
+		this.appSid = null;
+		this.searchResults = null;
+		this.isActive = false;
+		this.chaperonTimeoutId = 0;
+
+		this.expectedResponseTime = 200000;
+
+		BX.addCustomEvent(this.eventObject, 'Placements:destroy', this.destroy);
+		BX.addCustomEvent(this.eventObject, 'Placement:click', this.checkActive);
+	};
+	PlacementItem.prototype = {
+		activate: function(event) {
+			BX.PreventDefault(event);
+
+			if (!this.isActive)
+			{
+				BX.onCustomEvent(this.eventObject, 'Placement:click', [this]);
+
+				this.isActive = true;
+				if (this.menuItem)
+				{
+					this.menuItem.layout.item.classList.add('menu-popup-item-open');
+				}
+
+				if (this.searchResults !== null)
+				{
+					BX.onCustomEvent(this.eventObject, 'Placement:found', [this, this.searchResults]);
+				}
+				else
+				{
+					this.find();
+				}
+			}
+
+			return false;
+		},
+		checkActive: function(placement) {
+			if (placement !== this)
+			{
+				this.isActive = false;
+				if (this.menuItem)
+				{
+					this.menuItem.layout.item.classList.remove('menu-popup-item-open');
+				}
+			}
+		},
+		getMenuItemContainer: function(someMenu) {
+			if (!this.menuItem)
+			{
+				this.menuItem = someMenu.addMenuItemInternal({
+					id: 'placement-' + this.data.id,
+					text: BX.util.htmlspecialchars(this.data.title),
+					subMenuOffsetX: 27,
+					onclick: this.activate,
+					allowHtml: true,
+					cacheable: true,
+					className: this.data.icon ? 'menu-popup-item-accept' : ''
+				});
+				if (this.data.icon)
+				{
+					var icon = this.menuItem.getContainer().querySelector('.menu-popup-item-icon');
+					icon.style.backgroundImage = 'url(\'' + BX.util.htmlspecialchars(this.data.icon.src) + '\')';
+					icon.style.backgroundSize = 'contain';
+				}
+			}
+			return this.menuItem.getContainer();
+		},
+		find: function() {
+			this.showLoader();
+
+			var data = {
+				placementId: this.data.id,
+				placementOptions: null
+			};
+			BX.onCustomEvent(this.eventObject, 'Placement:send', [this, data]);
+
+			BX.ajax.runComponentAction(
+				'bitrix:app.layout',
+				'getComponent',
+				{data: data}
+			).then(function(response) {
+				if (!this.menuItem)
+				{
+					return;
+				}
+
+				if (!(response && response.data && response.data.componentResult))
+				{
+					return this.makeError(new Error('Empty response'));
+				}
+
+				var componentResult = response.data.componentResult;
+
+				this.appSid = componentResult.APP_SID;
+
+				BX.addCustomEvent(this.eventObject, 'Placements:found', this.checkResponse);
+
+				var iframeNode = BX.create('DIV', {
+					attrs: {'data-app-sid' : componentResult.APP_SID},
+					style: {display: 'none', overflow: 'hidden'}
+				});
+				this.menuItem.getContainer().appendChild(iframeNode);
+				BX.html(iframeNode, response.data.html);
+
+				this.chaperonTimeoutId = setTimeout(this.chaperon.bind(this), this.expectedResponseTime, this.appSid);
+			}.bind(this), this.makeError.bind(this));
+		},
+		checkResponse: function(applayout, placementSearchResults) {
+			if (this.appSid === null || this.appSid !== applayout.params.appSid)
+			{
+				return;
+			}
+			BX.removeCustomEvent(this.eventObject, 'Placements:found', this.checkResponse);
+
+			if (this.chaperonTimeoutId > 0)
+			{
+				clearTimeout(this.chaperonTimeoutId);
+				this.chaperonTimeoutId = 0;
+			}
+
+			this.searchResults = (BX.type.isArray(placementSearchResults) ? BX.clone(placementSearchResults, true) : []);
+
+			this.hideLoader();
+
+			if (this.menuItem)
+			{
+				if (this.searchResults.length <= 0)
+				{
+					this.menuItem.disable();
+				}
+				else if (this.menuItem.isDisabled())
+				{
+					this.menuItem.enable();
+				}
+			}
+			BX.onCustomEvent(this.eventObject, 'Placement:found', [this, this.searchResults]);
+		},
+		chaperon: function() {
+			this.chaperonTimeoutId = 0;
+			this.makeError(new Error('The placement is responding too long.'));
+		},
+		makeError: function(error) {
+			this.hideLoader(true);
+			BX.removeCustomEvent(this.eventObject, 'Placements:found', this.checkResponse);
+			BX.onCustomEvent(this.eventObject, 'Placement:errored', [this, error]);
+		},
+		showLoader: function() {
+			if (!this.menuItem)
+			{
+				return;
+			}
+			this.menuItem._loader = (this.menuItem._loader || new BX.Loader({
+				target: this.menuItem.getContainer(),
+				size: 15,
+				mode: 'inline'
+			}));
+			this.menuItem._loader.show();
+			this.menuItem.disable();
+		},
+		hideLoader: function(errored) {
+			errored = (errored === true);
+			if (!this.menuItem)
+			{
+				return;
+			}
+			if (this.menuItem._loader)
+			{
+				this.menuItem._loader.hide();
+			}
+			if (errored)
+			{
+				this.menuItem.disable();
+			}
+		},
+		destroy: function() {
+			if (this.appSid !== null && BX.rest.AppLayout.get(this.appSid))
+			{
+				BX.rest.AppLayout.get(this.appSid).destroy();
+			}
+			if (this.menuItem._loader)
+			{
+				this.menuItem._loader.destroy();
+				delete this.menuItem._loader;
+			}
+			if (this.chaperonTimeoutId > 0)
+			{
+				clearTimeout(this.chaperonTimeoutId);
+				this.chaperonTimeoutId = 0;
+			}
+			delete this.menuItem;
+			delete this.searchResults;
+			delete this.eventObject;
+		}
+	};
+
+	var DetailSearchPlacement = function(data) {
+		this._parentControl = data.parentControl;
+		this._searchControl = data.searchControl;
+		this.container = BX.create('div');
+		this.placementList = new Map();
+		this.placementEventObject = null;
+		this.isInited = false;
+		this.isShown = false;
+		this.active = null;
+		this.activeProcesses = 0;
+
+		this.restCrmShowFoundEntities = this.restCrmShowFoundEntities.bind(this);
+		this.restCrmShowCreatedEntity = this.restCrmShowCreatedEntity.bind(this);
+		this.restCrmEntityCreate = this.restCrmEntityCreate.bind(this);
+
+		DetailSearchPlacementLoader.execute(this.init.bind(this));
+	};
+	DetailSearchPlacement.prototype = {
+		init: function(data) {
+			if (this.isInited === true)
+			{
+				return;
+			}
+
+			if (data.success === true
+				&& data.placement
+				&& data.placement.param
+				&& data.placement.param.extendedList instanceof Map)
+			{
+				this.placementList = data.placement.param.extendedList;
+				this.placementEventObject = data.placementEventObject;
+			}
+			this.isInited = true;
+			if (this.isShown)
+			{
+				this.showMenu();
+			}
+		},
+		show: function(container) {
+			var node = container.querySelector('div.ui-dropdown-alert-text');
+			if (node)
+			{
+				node.parentNode.insertBefore(this.container, node);
+				this.isShown = true;
+				if (this.isInited !== true)
+				{
+					this.showLoader();
+				}
+				else
+				{
+					this.showMenu();
+				}
+			}
+		},
+		showLoader: function() {
+			this.container.__loader = (this.container.__loader || new BX.Loader({
+				target: this.container,
+				size: 50
+			}));
+			this.container.__loader.show();
+		},
+		hideLoader: function() {
+			if (this.container.__loader)
+			{
+				this.container.__loader.hide();
+			}
+		},
+		showMenu: function() {
+			this.hideLoader();
+			if (this.placementList.size <= 0)
+			{
+				return BX.adjust(this.container, {
+					style: {
+						display: 'none'
+					}
+				});
+			}
+
+			BX.adjust(this.container, {
+				props: {className: 'menu-popup'}
+			});
+
+			this.replaceEvents();
+
+			var someMenu = new BX.PopupMenuWindow({id: 'someId'});
+			BX.addCustomEvent(this._searchControl.getPopupWindow(), 'onPopupClose', function () {
+				someMenu.destroy();
+				this.destroy();
+			}.bind(this));
+
+			BX.addClass(this._searchControl.getPopupWindow().popupContainer, 'client-editor-popup');
+
+			var itemsNode = BX.create('div', {props: {className: 'menu-popup-items'}});
+			this.container.appendChild(itemsNode);
+			this.placementList.forEach(function(placementData) {
+				var placement = new PlacementItem(placementData, this);
+				itemsNode.appendChild(placement.getMenuItemContainer(someMenu));
+			}.bind(this));
+		},
+		restCrmShowFoundEntities: function(applayout, placementSearchResults) {
+			// applayout is an instance Of BX.rest.AppLayout
+			BX.onCustomEvent(this, 'Placements:found', [applayout, placementSearchResults]);
+		},
+		restCrmEntityCreate: function(searchControl, item) {
+			if (!searchControl.crmCreatingItem)
+			{
+				searchControl.crmCreatingItem = item;
+				item._loader = new BX.Loader({
+					target: item.node,
+					size: 50,
+				});
+				item.node.classList.add('client-editor-active');
+				item.node.parentNode.classList.add('client-editor-inactive');
+				item._loader.show();
+				this.activeProcesses++;
+				BX.onCustomEvent('onCrmEntityIsNeedToCreate', {appSid: item.appSid, data: item});
+			}
+		},
+		restCrmShowCreatedEntity: function(applayout, createdContact) {
+			this.activeProcesses--;
+			this._parentControl.onEntitySelect({}, {
+				type: createdContact.entityType,
+				id: createdContact.id,
+				title: createdContact.title
+			});
+		},
+		onPlacementHasBeenClicked: function(placement) {
+			if (this.active === placement)
+			{
+				return;
+			}
+
+			this.active = placement;
+			this.activeProcesses++;
+
+			if (!this._searchControl.__rebound)
+			{
+				BX.addCustomEvent(this._searchControl, 'BX.UI.Dropdown:onSelect', this.restCrmEntityCreate);
+				BX.removeCustomEvent(this._searchControl, 'BX.UI.Dropdown:onSelect', this._searchControl.events.onSelect);
+				this._searchControl.__rebound = true;
+			}
+		},
+		onPlacementIsReadyToSend: function(placement, data) {
+			data['placementOptions'] = {
+				entityTypeName: this._parentControl._entityTypeName,
+				searchQuery: this._parentControl._searchInput.value
+			};
+		},
+		onPlacementHasBeenFound: function(placement, searchResults)
+		{
+			if (this.active !== placement)
+			{
+				return;
+			}
+
+			var submenu = [];
+			searchResults.forEach(function(result) {
+				submenu.push({
+					id: result.id,
+					title: result.name,
+					type: this._parentControl._entityTypeName,
+					appSid: placement.appSid,
+					module: 'crm',
+					subModule: 'rest',
+					subTitle: placement.title,
+					attributes: {
+						phone: result.phone ? [{value: result.phone}] : '',
+						email: result.email ? [{value: result.email}] : '',
+						web: result.web ? [{value: result.web}] : ''
+					}
+				});
+			}.bind(this));
+			this._searchControl.setItems(submenu);
+			this.activeProcesses--;
+		},
+		onPlacementIsErrored: function(placement, error) {
+			this.activeProcesses--;
+		},
+		clickHandler: function(trueHandler, event) {
+			if (this.onDocumentClickConfirm)
+			{
+				return BX.eventReturnFalse(event);
+			}
+			if (this.activeProcesses > 0)
+			{
+				BX.unbind(document, 'click', this._searchControl.documentClickHandler);
+				var f = function(messageBox, e) {
+					BX.bind(document, 'click', this._searchControl.documentClickHandler);
+					messageBox.close();
+					delete this.onDocumentClickConfirm;
+					BX.eventCancelBubble(e);
+				}.bind(this);
+				this.onDocumentClickConfirm = BX.UI.Dialogs.MessageBox.create({
+					message: BX.message('CRM_EDITOR_PLACEMENT_CAUTION') || 'Dow you want to terminate process?',
+					buttons: BX.UI.Dialogs.MessageBoxButtons.OK_CANCEL,
+					modal: true,
+					onOk: function(messageBox, button, e) {
+						f(messageBox, e);
+						this._searchControl.documentClickHandler(e);
+						trueHandler(e);
+					}.bind(this),
+					onCancel: function(messageBox, button, e) {
+						f(messageBox, e);
+					}
+				});
+				BX.eventCancelBubble(event);
+				this.onDocumentClickConfirm.show();
+				return BX.eventReturnFalse(event);
+			}
+			trueHandler(event);
+		},
+		replaceEvents: function() {
+			BX.addCustomEvent(this.placementEventObject, 'restCrmShowFoundEntities', this.restCrmShowFoundEntities);
+			BX.addCustomEvent(this.placementEventObject, 'restCrmShowCreatedEntity', this.restCrmShowCreatedEntity);
+
+			this._searchControl.getPopupWindow()._tryCloseByEvent =
+				this.clickHandler.bind(this, this._searchControl.getPopupWindow()._tryCloseByEvent.bind(this._searchControl.getPopupWindow()));
+
+			BX.addCustomEvent(this, 'Placement:click', this.onPlacementHasBeenClicked.bind(this));
+			BX.addCustomEvent(this, 'Placement:send', this.onPlacementIsReadyToSend.bind(this));
+			BX.addCustomEvent(this, 'Placement:found', this.onPlacementHasBeenFound.bind(this));
+			BX.addCustomEvent(this, 'Placement:errored', this.onPlacementIsErrored.bind(this));
+		},
+		restoreEvents: function()
+		{
+			BX.removeCustomEvent(this._searchControl, 'BX.UI.Dropdown:onSelect', this.restCrmEntityCreate);
+			if (this._searchControl.__rebound === true)
+			{
+				delete this._searchControl.__rebound;
+				BX.addCustomEvent(this._searchControl, 'BX.UI.Dropdown:onSelect', this._searchControl.events.onSelect);
+			}
+
+			BX.removeAllCustomEvents(this, 'Placement:click');
+			BX.removeAllCustomEvents(this, 'Placement:send');
+			BX.removeAllCustomEvents(this, 'Placement:found');
+			BX.removeAllCustomEvents(this, 'Placement:errored');
+
+			BX.removeAllCustomEvents(this, 'Placements:found');
+			BX.removeAllCustomEvents(this, 'Placements:destroy');
+
+			BX.removeCustomEvent(this.placementEventObject, 'restCrmShowFoundEntities', this.restCrmShowFoundEntities);
+			BX.removeCustomEvent(this.placementEventObject, 'restCrmShowCreatedEntity', this.restCrmShowCreatedEntity);
+		},
+		destroy: function() {
+			this.restoreEvents();
+			if (this.onDocumentClickConfirm)
+			{
+				this.onDocumentClickConfirm.close();
+				delete this.onDocumentClickConfirm;
+			}
+			delete this.placementEventObject;
+			if (this.container.__loader)
+			{
+				this.container.__loader.destroy();
+			}
+			for (var i in this)
+			{
+				if (this.hasOwnProperty(i))
+				{
+					delete this[i];
+				}
+			}
+		}
 	};
 }

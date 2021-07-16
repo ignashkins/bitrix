@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["COMPANY_ADD"] = "Додати компанію";
 $MESS["COMPANY_ADD_ACTIVITY"] = "Додати";
 $MESS["COMPANY_ADD_ACTIVITY_TITLE"] = "Додати";
@@ -26,6 +26,8 @@ $MESS["COMPANY_BUILD_REQUISITES_TITLE"] = "Створення реквізиті
 $MESS["COMPANY_COPY"] = "Копіювати";
 $MESS["COMPANY_COPY_TITLE"] = "Копіювати компанію";
 $MESS["COMPANY_DEDUPE"] = "Контроль дублікатів";
+$MESS["COMPANY_DEDUPE_AUTOSEARCH"] = "Автоматичний пошук дублікатів";
+$MESS["COMPANY_DEDUPE_HELP"] = "Як працювати з дублікатами";
 $MESS["COMPANY_DEDUPE_TITLE"] = "Контроль дублікатів";
 $MESS["COMPANY_DELETE"] = "Видалити компанію";
 $MESS["COMPANY_DELETE_DLG_BTNTITLE"] = "Видалити";
@@ -70,4 +72,3 @@ $MESS["CRM_TASK_TAG"] = "CRM";
 $MESS["CRM_TASK_TITLE_PREFIX"] = "CRM:";
 $MESS["DOCUMENT_BUTTON_TEXT"] = "Документ";
 $MESS["DOCUMENT_BUTTON_TITLE"] = "Створити документ на підставі компанії";
-?>

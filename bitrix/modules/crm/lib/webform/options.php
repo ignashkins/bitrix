@@ -97,6 +97,7 @@ class Options
 	{
 		$formData = $this->form->get();
 		$config = $this->config->toArray();
+		$dynamicCategory = $formData['FORM_SETTINGS']['DYNAMIC_CATEGORY'] ?? null;
 		return [
 			'data' => $config['data'],
 
@@ -121,6 +122,9 @@ class Options
 				'deal' => [
 					'category' => $formData['FORM_SETTINGS']['DEAL_CATEGORY'],
 					'duplicatesEnabled' => $formData['FORM_SETTINGS']['DEAL_DC_ENABLED'] === 'Y',
+				],
+				'dynamic' => [
+					'category' => $dynamicCategory === null ? null : (int)$dynamicCategory,
 				],
 			],
 
@@ -191,43 +195,48 @@ class Options
 	{
 		$list = [];
 		$providers = [];
-		$adTypes = Crm\Ads\AdsForm::getServiceTypes();
-		$providerList = Crm\Ads\AdsForm::getProviders();
-		$providerIcons = Crm\Ads\AdsForm::getAdsIconMap();
-		foreach ($adTypes as $adType)
+
+		if (Crm\Ads\AdsForm::canUse())
 		{
-			if (empty($providerList[$adType]))
+			$adTypes = Crm\Ads\AdsForm::getServiceTypes();
+			$providerList = Crm\Ads\AdsForm::getProviders();
+			$providerIcons = Crm\Ads\AdsForm::getAdsIconMap();
+			foreach ($adTypes as $adType)
 			{
-				continue;
-			}
+				if (empty($providerList[$adType]))
+				{
+					continue;
+				}
 
-			$provider = [
-				'code' => $adType,
-				'title' => Crm\Ads\AdsForm::getServiceTypeName($adType),
-				'icon' => $providerIcons[$adType] ?? null,
-				'hasAuth' => $providerList[$adType]['HAS_AUTH'] ?? false,
-			];
-
-			$providers[] = $provider;
-
-			$links = Crm\Ads\AdsForm::getFormLinks($this->form->getId(), $adType);
-			foreach ($links as $link)
-			{
-				$list[] = [
-					'active' => $provider['hasAuth'],
-					'providerCode' => $adType,
-					'date' => $link['DATE_INSERT'],
-					'form' => [
-						'id' => $link['ADS_FORM_ID'],
-						'title' => $link['ADS_FORM_NAME'],
-					],
-					'account' => [
-						'id' => $link['ADS_ACCOUNT_ID'],
-						'name' => $link['ADS_ACCOUNT_NAME'],
-					],
+				$provider = [
+					'code' => $adType,
+					'title' => Crm\Ads\AdsForm::getServiceTypeName($adType),
+					'icon' => $providerIcons[$adType] ?? null,
+					'hasAuth' => $providerList[$adType]['HAS_AUTH'] ?? false,
 				];
+
+				$providers[] = $provider;
+
+				$links = Crm\Ads\AdsForm::getFormLinks($this->form->getId(), $adType);
+				foreach ($links as $link)
+				{
+					$list[] = [
+						'active' => $provider['hasAuth'],
+						'providerCode' => $adType,
+						'date' => $link['DATE_INSERT'],
+						'form' => [
+							'id' => $link['ADS_FORM_ID'],
+							'title' => $link['ADS_FORM_NAME'],
+						],
+						'account' => [
+							'id' => $link['ADS_ACCOUNT_ID'],
+							'name' => $link['ADS_ACCOUNT_NAME'],
+						],
+					];
+				}
 			}
 		}
+		
 		return [
 			'canUse' => Crm\Ads\AdsForm::canUse(),
 			'cases' => $list,
@@ -324,6 +333,7 @@ class Options
 			'DUPLICATE_MODE' => $options['document']['duplicateMode'],
 
 			'FORM_SETTINGS' => [
+				'DYNAMIC_CATEGORY' => $options['document']['dynamic']['category'] ?? null,
 				'DEAL_CATEGORY' => $options['document']['deal']['category'],
 				'DEAL_DC_ENABLED' => $options['document']['deal']['duplicatesEnabled'] ? 'Y' : 'N',
 				'REDIRECT_DELAY' => $options['result']['redirectDelay'],

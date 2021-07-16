@@ -90,7 +90,7 @@
 						if (v)
 						{
 							node.innerHTML = v;
-							this.initControl(node);
+							this.initControl(node, property);
 						}
 					}.bind(this)
 				);
@@ -98,7 +98,7 @@
 
 			if (needInit && node)
 			{
-				this.initControl(node);
+				this.initControl(node, property);
 			}
 
 			return node;
@@ -144,7 +144,7 @@
 					break;
 				case 'user':
 					result = [];
-					var i, name, pair, matches, pairs = value.split(',');
+					var i, name, pair, matches, pairs = BX.Type.isArray(value) ? value : value.split(',');
 
 					for (i = 0; i < pairs.length; ++i)
 					{
@@ -261,7 +261,7 @@
 				if (controlNode && node.parentNode)
 				{
 					var wrapper = BX.create('div', {children: [controlNode]});
-					this.initControl(wrapper);
+					this.initControl(wrapper, property);
 					node.parentNode.insertBefore(wrapper, node);
 				}
 			}
@@ -521,19 +521,27 @@
 				props: {
 					name: fieldName + (isMultiple(property) ? '[]' : '')
 				},
-				children: [
-					BX.create('option', {
-						props: {value: ''},
-						text: BX.message('BIZPROC_JS_BP_FIELD_TYPE_NOT_SELECTED')
-					})
-				]
 			});
+
+			var getDefaultOption = function()
+			{
+				return BX.create('option', {
+					props: { value: '' },
+					text: BX.message('BIZPROC_JS_BP_FIELD_TYPE_NOT_SELECTED')
+				});
+			}
 
 			if (isMultiple(property))
 			{
 				node.setAttribute('multiple', 'multiple');
 				node.setAttribute('size', '5');
 			}
+			option = getDefaultOption();
+			if (BX.Type.isNil(value) || value.length === 0)
+			{
+				option.setAttribute('selected', 'selected');
+			}
+			node.appendChild(option);
 
 			if (BX.type.isPlainObject(property['Options']))
 			{
@@ -546,7 +554,7 @@
 
 					option = BX.create('option', {
 						props: {value: key},
-						text: property['Options'][key]
+						text: BX.Text.decode(property['Options'][key])
 					});
 
 					if (isEqual(key, value))
@@ -563,7 +571,7 @@
 				{
 					option = BX.create('option', {
 						props: {value: i},
-						text: property['Options'][i]
+						text: BX.Text.decode(property['Options'][i])
 					});
 
 					if (isEqual(i, value))
@@ -577,7 +585,7 @@
 
 			return node;
 		},
-		initControl: function(controlNode)
+		initControl: function(controlNode, property)
 		{
 			var dlg;
 			if (dlg = BX.Bizproc.Automation && BX.Bizproc.Automation.Designer.getRobotSettingsDialog())
@@ -587,6 +595,10 @@
 			else if (dlg = BX.Bizproc.Automation && BX.Bizproc.Automation.Designer.getTriggerSettingsDialog())
 			{
 				dlg.component.triggerManager.initSettingsDialogControls(controlNode);
+			}
+			else if (property && property['Type'] === 'user' && BX.Bizproc.UserSelector)
+			{
+				BX.Bizproc.UserSelector.decorateNode(controlNode.querySelector('[data-role="user-selector"]'));
 			}
 		},
 		getDocumentFields: function()

@@ -1,6 +1,7 @@
 <?
 $MESS["CRM_ST_ROBOT_SETTINGS_LINK_LABEL"] = "Настроить роботов";
 $MESS["CRM_ST_GENERATOR_SETTINGS_LINK_LABEL"] = "Генератор продаж";
+$MESS["CRM_ST_STAGES_DISABLED"] = "Стадии отключены";
 $MESS["CRM_ST_STAGES_GROUP_IN_PROGRESS"] = "В работе";
 $MESS["CRM_ST_STAGES_GROUP_SUCCESS"] = "Успешные";
 $MESS["CRM_ST_STAGES_GROUP_FAIL"] = "Неуспешные";
@@ -15,6 +16,10 @@ $MESS["CRM_ST_REMOVE_CATEGORY_CONFIRM_POPUP_TITLE"] = "Удалить ворон
 $MESS["CRM_ST_REMOVE_CATEGORY_CONFIRM_POPUP_DESCRIPTION"] = "Удаление воронки приведет к удалению всех настроеных туннелей";
 $MESS["CRM_ST_REMOVE"] = "Удалить";
 $MESS["CRM_ST_SETTINGS"] = "Настроить";
+$MESS['CRM_ST_ROBOT_ACTION_COPY'] = 'Робот копирования';
+$MESS['CRM_ST_ROBOT_ACTION_MOVE'] = 'Робот перемещения';
+$MESS['CRM_ST_ACTION_COPY'] = 'копировать';
+$MESS['CRM_ST_ACTION_MOVE'] = 'переместить';
 $MESS["CRM_ST_HELP_BUTTON"] = "Помощь";
 $MESS["CRM_ST_ADD_FUNNEL_BUTTON"] = "Добавить воронку";
 $MESS["CRM_ST_DOT_TITLE"] = "Потяните, чтобы создать туннель";

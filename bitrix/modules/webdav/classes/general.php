@@ -79,7 +79,7 @@ class CWebDavBase
 
 	protected static $foldersMetaData = null;
 
-	function OnBeforeProlog()
+	public static function OnBeforeProlog()
 	{
 		global $USER, $APPLICATION;
 
@@ -253,7 +253,7 @@ echo '<?xml version="1.0" encoding="utf-8" ?>
 		return $page_encoded;
 	}
 
-	function CWebDavBase($base_url = "")
+	public function __construct($base_url = "")
 	{
 		$this->http_method = $_SERVER['REQUEST_METHOD'];
 		$this->http_user_agent = "undefined";
@@ -299,7 +299,7 @@ echo '<?xml version="1.0" encoding="utf-8" ?>
 
 		if ($savedValues === null)
 		{
-			$savedValues = @unserialize(COption::GetOptionString($MODULE,$PARAM,''), false);
+			$savedValues = @unserialize(COption::GetOptionString($MODULE,$PARAM,''), ['allowed_classes' => false]);
 			if (!is_array($savedValues))
 				$savedValues = array();
 		}
@@ -329,7 +329,7 @@ echo '<?xml version="1.0" encoding="utf-8" ?>
 		return $result;
 	}
 
-	public function SetAuthHeader()
+	public static function SetAuthHeader()
 	{
 		$digest = true;
 		if (mb_strpos($_SERVER['HTTP_USER_AGENT'], "Microsoft-WebDAV-MiniRedir") !== false)
@@ -496,7 +496,7 @@ echo '<?xml version="1.0" encoding="utf-8" ?>
 		}
 	}
 
-	static function base_OPTIONS()
+	public static function base_OPTIONS()
 	{
 		CWebDavBase::SetStatus('200 OK');
 
@@ -1253,7 +1253,7 @@ echo '<?xml version="1.0" encoding="utf-8" ?>
 		}
 	}
 
-	function SetStatus($status)
+	public static function SetStatus($status)
 	{
 		$bCgi = (mb_stristr(php_sapi_name(), "cgi") !== false);
 		$bFastCgi = ($bCgi && (array_key_exists('FCGI_ROLE', $_SERVER) || array_key_exists('FCGI_ROLE', $_ENV)));
@@ -1742,10 +1742,10 @@ echo '<?xml version="1.0" encoding="utf-8" ?>
 
 		$uuid = md5(microtime().getmypid());
 
-		$uuid{12} = '4';
-		$n = 8 + (ord($uuid{16}) & 3);
+		$uuid[12] = '4';
+		$n = 8 + (ord($uuid[16]) & 3);
 		$hex = '0123456789abcdef';
-		$uuid{16} = mb_substr($hex, $n, 1);
+		$uuid[16] = mb_substr($hex, $n, 1);
 
 		return mb_substr($uuid, 0, 8).'-'.
 			mb_substr($uuid, 8, 4).'-'.
@@ -1793,7 +1793,7 @@ echo '<?xml version="1.0" encoding="utf-8" ?>
 					</D:lockentry>");
 	}
 
-	function _udecode($t)
+	public static function _udecode($t)
 	{
 		global $APPLICATION;
 		$t = rawurldecode($t); //urldecode($t);
@@ -1807,7 +1807,7 @@ echo '<?xml version="1.0" encoding="utf-8" ?>
 		return $t;
 	}
 
-	function _uencode($t, $params = array("utf8" => "Y", "convert" => "allowed"))
+	public static function _uencode($t, $params = array("utf8" => "Y", "convert" => "allowed"))
 	{
 		global $APPLICATION, $WEBDAV;
 
@@ -1961,7 +1961,7 @@ echo '<?xml version="1.0" encoding="utf-8" ?>
 		return true;
 	}
 
-	function CorrectName($name = "", $replace = "_")
+	public static function CorrectName($name = "", $replace = "_")
 	{
 		$name = trim($name);
 		if(empty($name))
@@ -1991,7 +1991,7 @@ echo '<?xml version="1.0" encoding="utf-8" ?>
 		return $res;
 	}
 
-	function IsDavHeaders($params = "empty")
+	public static function IsDavHeaders($params = "empty")
 	{
 		static $result = array();
 
@@ -2001,7 +2001,7 @@ echo '<?xml version="1.0" encoding="utf-8" ?>
 		return $result[$params];
 	}
 
-	function _isDavHeaders($params = "empty")
+	public static function _isDavHeaders($params = "empty")
 	{
 		$aDavHeaders = array(
 			"DAV",
@@ -2450,7 +2450,7 @@ class __CWebdavRequestParser
 	var $_array;
 	var $namespaces = array();
 
-	function __CWebdavRequestParser()
+	public function __construct()
 	{
 	}
 
@@ -2510,7 +2510,7 @@ class __CWebdavRequestParser
 class __CParsePropfind extends __CWebdavRequestParser
 {
 
-	function __CParsePropfind()
+	public function __construct()
 	{
 	}
 
@@ -2610,7 +2610,7 @@ class __CParseProppatch extends __CWebdavRequestParser
 	var $mode;
 	var $current;
 
-	function __CParseProppatch()
+	public function __construct()
 	{
 	}
 
@@ -2684,7 +2684,7 @@ class __CParseLockinfo extends __CWebdavRequestParser
 	var $owner = '';
 	var $collect_owner = false;
 
-	function __CParseLockinfo()
+	public function __construct()
 	{
 	}
 

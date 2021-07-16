@@ -35,11 +35,11 @@ class CDavAccount
 			return self::$accountsCache["users"][self::$accountsCacheMap[$name]];
 
 
-		$dbUsers = \Bitrix\Main\UserTable::getList(array(
-			'filter' => array("=LOGIN" => $name, "=ACTIVE" => "Y"),
-			'select' => array("ID", "NAME", "EMAIL", "LAST_NAME", "LOGIN")
+		$dbUsers = \Bitrix\Main\UserTable::getList([
+			'filter' => ["=LOGIN" => $name, "=ACTIVE" => "Y", "!=EXTERNAL_AUTH_ID" => "email"],
+			'select' => ["ID", "NAME", "EMAIL", "LAST_NAME", "LOGIN"]
 
-		));
+		]);
 		if ($arUser = $dbUsers->fetch())
 		{
 			$arResult = self::ExtractAccountFromUser($arUser);
@@ -308,7 +308,7 @@ class CDavAccount
 			$extranetSite = isModuleInstalled('extranet') ? COption::getOptionString('extranet', 'extranet_site') : (isModuleInstalled('bitrix24') ? 'ex' : false);
 			$extranetUser = (CModule::IncludeModule("extranet") && !CExtranet::IsIntranetUser());
 
-			$rsSite = CSite::getList(($b=''), ($o=''), array('LID' => $siteId));
+			$rsSite = CSite::getList('', '', array('LID' => $siteId));
 			while ($arSite = $rsSite->fetch())
 			{
 				if (

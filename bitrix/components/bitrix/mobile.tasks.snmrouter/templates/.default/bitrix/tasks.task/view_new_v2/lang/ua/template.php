@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["MB_TASKS_BASE_SETTINGS"] = "Базові налаштування завдання";
 $MESS["MB_TASKS_BASE_SETTINGS_DESCRIPTION"] = "що потрібно зробити";
 $MESS["MB_TASKS_BASE_SETTINGS_DESCRIPTION_PLACEHOLDER"] = "Опис завдання";
@@ -26,9 +26,9 @@ $MESS["MB_TASKS_TASK_DETAIL_BTN_REMOVE"] = "Видалити";
 $MESS["MB_TASKS_TASK_DETAIL_BTN_RENEW_TASK"] = "Відновити";
 $MESS["MB_TASKS_TASK_DETAIL_BTN_START_TASK"] = "Почати виконання";
 $MESS["MB_TASKS_TASK_DETAIL_CONFIRM_REMOVE"] = "Дійсно видалити завдання?";
-$MESS["MB_TASKS_TASK_DETAIL_NOTIFICATION_EXPIRED"] = "Завдання прострочено!";
-$MESS["MB_TASKS_TASK_DETAIL_NOTIFICATION_EXPIRED_BRIEF"] = "Прострочено";
-$MESS["MB_TASKS_TASK_DETAIL_NOTIFICATION_EXPIRED_SOON_BRIEF"] = "Майже прострочено";
+$MESS["MB_TASKS_TASK_DETAIL_NOTIFICATION_EXPIRED"] = "Завдання протерміноване!";
+$MESS["MB_TASKS_TASK_DETAIL_NOTIFICATION_EXPIRED_BRIEF"] = "Протерміновано";
+$MESS["MB_TASKS_TASK_DETAIL_NOTIFICATION_EXPIRED_SOON_BRIEF"] = "Майже протерміноване";
 $MESS["MB_TASKS_TASK_DETAIL_NOTIFICATION_NEW_BRIEF"] = "Нове";
 $MESS["MB_TASKS_TASK_DETAIL_NOTIFICATION_STATE_SUPPOSEDLY_COMPLETED"] = "Завдання чекає контролю";
 $MESS["MB_TASKS_TASK_DETAIL_NOTIFICATION_WO_DEADLINE_BRIEF"] = "Без крайнього терміну";
@@ -86,4 +86,3 @@ $MESS["TASKS_TT_ERROR1_DESC"] = "Вами вже ведеться облік ч�
 $MESS["TASKS_TT_ERROR1_TITLE"] = "З іншого завдання вже ведеться облік часу";
 $MESS["TASKS_TT_PAUSE"] = "Зупинити";
 $MESS["TASKS_TT_START"] = "Почати облік часу";
-?>

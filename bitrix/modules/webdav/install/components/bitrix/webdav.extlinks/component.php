@@ -7,7 +7,7 @@ if(\Bitrix\Main\Config\Option::get('disk', 'successfully_converted', false) && C
 		$resF = null;
 		if(CModule::IncludeModule('webdav'))
 		{
-			/** @noinspection PhpDynamicAsStaticMethodCallInspection */
+
 			$resF = CWebDavExtLinks::GetList(array(
 				'HASH' => $m[0],
 				'ACTUAL' => true,

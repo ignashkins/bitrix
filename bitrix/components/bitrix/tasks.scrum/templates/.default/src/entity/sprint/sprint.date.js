@@ -16,19 +16,14 @@ export class SprintDate extends EventEmitter
 		this.defaultSprintDuration = sprint.getDefaultSprintDuration();
 	}
 
-	createDate(startTimestamp, endTimestamp)
+	createDate()
 	{
 		if (this.sprint.isActive() || this.sprint.isCompleted())
 		{
 			return '';
 		}
 
-		/* eslint-disable */
-		const dateStart = BX.date.format('j F', startTimestamp);
-		const dateEnd = BX.date.format('j F', endTimestamp);
-		/* eslint-enable */
-
-		return this.renderNode(this.nodeId, dateStart, dateEnd);
+		return this.renderNode(this.nodeId, this.getFormattedDateStart(), this.getFormattedDateEnd());
 	}
 
 	renderNode(nodeId: string, dateStart: string, dateEnd: string): HTMLElement
@@ -46,14 +41,20 @@ export class SprintDate extends EventEmitter
 
 	updateDateStartNode(timestamp)
 	{
-		const dateStartNode = this.node.querySelector('.tasks-scrum-sprint-date-start');
-		dateStartNode.textContent = BX.date.format('j F', timestamp);
+		if (this.node)
+		{
+			const dateStartNode = this.node.querySelector('.tasks-scrum-sprint-date-start');
+			dateStartNode.textContent = BX.date.format('j F', timestamp);
+		}
 	}
 
 	updateDateEndNode(timestamp)
 	{
-		const dateEndNode = this.node.querySelector('.tasks-scrum-sprint-date-end');
-		dateEndNode.textContent = BX.date.format('j F', timestamp);
+		if (this.node)
+		{
+			const dateEndNode = this.node.querySelector('.tasks-scrum-sprint-date-end');
+			dateEndNode.textContent = BX.date.format('j F', timestamp);
+		}
 	}
 
 	onAfterAppend()
@@ -153,5 +154,24 @@ export class SprintDate extends EventEmitter
 		{
 			return weekCount + ' ' + Loc.getMessage('TASKS_SCRUM_DATE_WEEK_NAME_2');
 		}
+	}
+
+	getFormattedTitleDatePeriod(): string
+	{
+		return this.getFormattedDateStart() + ' - ' + this.getFormattedDateEnd();
+	}
+
+	getFormattedDateStart(): string
+	{
+		/* eslint-disable */
+		return BX.date.format('j F', this.sprint.getDateStart());
+		/* eslint-enable */
+	}
+
+	getFormattedDateEnd(): string
+	{
+		/* eslint-disable */
+		return BX.date.format('j F', this.sprint.getDateEnd());
+		/* eslint-enable */
 	}
 }

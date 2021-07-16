@@ -72,7 +72,17 @@ class CSocServDropboxAuth extends CSocServAuth
 			$redirect_uri = static::CONTROLLER_URL."/redirect.php";
 			$state = CDropboxOAuthInterface::GetRedirectURI()."?check_key=".$_SESSION["UNIQUE_KEY"]."&state=";
 			$backurl = $APPLICATION->GetCurPageParam('', array("logout", "auth_service_error", "auth_service_id", "backurl"));
-			$state .= urlencode("state=".urlencode("backurl=".urlencode($backurl).'&mode='.$location.(isset($arParams['BACKURL']) ? '&redirect_url='.urlencode($arParams['BACKURL']) : '')));
+
+			$stateIntoState = 'mode=' . $location;
+			if (isset($arParams['BACKURL']))
+			{
+				$stateIntoState .= '&redirect_url=' . urlencode($arParams['BACKURL']);
+			}
+			else
+			{
+				$stateIntoState .= "&backurl=" . urlencode($backurl);
+			}
+			$state .= urlencode("state=" . urlencode($stateIntoState));
 		}
 		else
 		{
@@ -287,7 +297,7 @@ class CDropboxOAuthInterface extends CSocServOAuthTransport
 		parent::__construct($appID, $appSecret, $code);
 	}
 
-	public function GetRedirectURI()
+	public static function GetRedirectURI()
 	{
 		return \CHTTP::URN2URI("/bitrix/tools/oauth/dropbox.php");
 	}

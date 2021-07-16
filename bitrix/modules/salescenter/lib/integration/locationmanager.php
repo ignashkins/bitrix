@@ -24,33 +24,23 @@ class LocationManager extends Base
 	/**
 	 * @param int $addressId
 	 * @return array|null
-	 * @throws Main\ArgumentException
-	 * @throws Main\ObjectPropertyException
-	 * @throws Main\SystemException
 	 */
-	public function getFormattedLocationArray(int $addressId)
+	private function getFormattedLocation(int $addressId)
 	{
-		$address = Address::load((int)$addressId);
+		$address = Address::load($addressId);
 
-		if (!$address
-			|| (
-				!(float)$address->getLatitude()
-				&& !(float)$address->getLongitude()
-			)
-		)
+		if (!$address)
 		{
 			return null;
 		}
 
+		$result = [];
 		$location = $address->getLocation();
-		if (!$location)
+		if ($location)
 		{
-			return null;
+			$result = $location->toArray();
+			unset($result['id']);
 		}
-
-		$result = $location->toArray();
-
-		unset($result['id']);
 
 		$result['name'] = $address->toString(
 			FormatService::getInstance()->findDefault(LANGUAGE_ID),
@@ -66,13 +56,10 @@ class LocationManager extends Base
 	/**
 	 * @param int $addressId
 	 * @return array|null
-	 * @throws Main\ArgumentException
-	 * @throws Main\ObjectPropertyException
-	 * @throws Main\SystemException
 	 */
 	public function getFormattedAddressArray(int $addressId)
 	{
-		$address = Address::load((int)$addressId);
+		$address = Address::load($addressId);
 
 		if (!$address)
 		{
@@ -88,14 +75,11 @@ class LocationManager extends Base
 
 	/**
 	 * @param int $addressId
-	 * @throws Main\ArgumentException
-	 * @throws Main\ArgumentOutOfRangeException
-	 * @throws Main\ObjectPropertyException
-	 * @throws Main\SystemException
 	 */
 	public function setDefaultLocationFrom(int $addressId)
 	{
-		$locationArray = $this->getFormattedLocationArray($addressId);
+		$locationArray = $this->getFormattedLocation($addressId);
+		//$locationArray = $this->getFormattedAddressArray($addressId);
 		if (!$locationArray)
 		{
 			return;
@@ -110,8 +94,6 @@ class LocationManager extends Base
 
 	/**
 	 * @return mixed|null
-	 * @throws Main\ArgumentNullException
-	 * @throws Main\ArgumentOutOfRangeException
 	 */
 	public function getDefaultLocationFrom()
 	{
@@ -127,7 +109,7 @@ class LocationManager extends Base
 			return null;
 		}
 
-		$locationArray = unserialize($defaultLocationFrom);
+		$locationArray = unserialize($defaultLocationFrom, ['allowed_classes' => false]);
 
 		if (!$locationArray)
 		{
@@ -135,5 +117,27 @@ class LocationManager extends Base
 		}
 
 		return $locationArray;
+	}
+
+	/**
+	 * @param int[] $ids
+	 * @return array
+	 */
+	public function getFormattedLocations(array $ids): array
+	{
+		$result = [];
+
+		foreach ($ids as $id)
+		{
+			$formattedAddress = $this->getFormattedLocation($id);
+			if (!$formattedAddress)
+			{
+				continue;
+			}
+
+			$result[] = $formattedAddress;
+		}
+
+		return $result;
 	}
 }

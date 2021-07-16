@@ -736,7 +736,7 @@ class CTimeManUser
 
 		if (!is_array($arIDs) && $arIDs <> '')
 		{
-			$arIDs = unserialize($arIDs);
+			$arIDs = unserialize($arIDs, ['allowed_classes' => false]);
 		}
 
 		$arIDs = array_values($arIDs);
@@ -1286,7 +1286,7 @@ class CTimeManUser
 		}
 		else
 		{
-			if (!CTimeManUser::$LAST_ENTRY[$this->USER_ID])
+			if (!isset(CTimeManUser::$LAST_ENTRY[$this->USER_ID]))
 			{
 				if ($CACHE_MANAGER->Read(86400, $this->_cacheId(), 'b_timeman_entries'))
 				{

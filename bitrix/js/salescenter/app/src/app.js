@@ -4,14 +4,14 @@ import {rest as Rest} from 'rest.client';
 import {Manager} from 'salescenter.manager';
 import {Loader} from 'main.loader';
 import {Type, Loc, ajax as Ajax, Event} from 'main.core';
+import {EventEmitter} from 'main.core.events';
+import {MenuManager} from 'main.popup';
 import 'ui.notification';
-
 import {ApplicationModel} from './models/application';
 import {OrderCreationModel} from './models/ordercreation';
-import {config} from "./config";
-import './component';
-import './component.css';
-import './bx-salescenter-app-add-payment';
+import Chat from './chat';
+import Deal from './deal';
+import './css/component.css';
 
 export class App
 {
@@ -26,6 +26,7 @@ export class App
 		isOrderPublicUrlAvailable: false,
 		isCatalogAvailable: false,
 		isOrderPublicUrlExists: false,
+		isWithOrdersMode: true,
 	})
 	{
 		this.slider = BX.SidePanel.Instance.getTopSlider();
@@ -45,16 +46,22 @@ export class App
 		this.fillPagesQueue = [];
 		this.ownerTypeId = '';
 		this.ownerId = '';
+		this.orderId = parseInt(options.orderId);
 		this.stageOnOrderPaid = null;
+		this.stageOnDeliveryFinished = null;
 		this.sendingMethod = '';
 		this.sendingMethodDesc = {};
-		this.urlSettingsSmsSenders = options.urlSettingsSmsSenders;
 		this.orderPublicUrl = '';
 		this.fileControl = options.fileControl;
 
 		if(Type.isString(options.stageOnOrderPaid))
 		{
 			this.stageOnOrderPaid = options.stageOnOrderPaid;
+		}
+
+		if(Type.isString(options.stageOnDeliveryFinished))
+		{
+			this.stageOnDeliveryFinished = options.stageOnDeliveryFinished;
 		}
 
 		if(Type.isBoolean(options.isFrame))
@@ -96,6 +103,15 @@ export class App
 		else
 		{
 			this.isCatalogAvailable = false;
+		}
+
+		if(Type.isBoolean(options.isWithOrdersMode))
+		{
+			this.isWithOrdersMode = options.isWithOrdersMode;
+		}
+		else
+		{
+			this.isWithOrdersMode = false;
 		}
 
 		if(Type.isBoolean(options.disableSendButton))
@@ -172,7 +188,7 @@ export class App
 			if(Type.isString(this.orderAddPullTag))
 			{
 				this.pull.subscribe({
-					moduleId: config.moduleId,
+					moduleId: 'salescenter',
 					command: this.orderAddPullTag,
 					callback: (params) =>
 					{
@@ -187,7 +203,7 @@ export class App
 			if(Type.isString(this.landingPublicationPullTag))
 			{
 				this.pull.subscribe({
-					moduleId: config.moduleId,
+					moduleId: 'salescenter',
 					command: this.landingPublicationPullTag,
 					callback: (params) =>
 					{
@@ -207,7 +223,7 @@ export class App
 			if(Type.isString(this.landingUnPublicationPullTag))
 			{
 				this.pull.subscribe({
-					moduleId: config.moduleId,
+					moduleId: 'salescenter',
 					command: this.landingUnPublicationPullTag,
 					callback: (params) =>
 					{
@@ -235,7 +251,15 @@ export class App
 
 			this.templateEngine = Vue.create({
 				el: document.getElementById('salescenter-app-root'),
-				template: `<${config.templateName}/>`,
+				components: {
+					'chat': Chat,
+					'deal': Deal,
+				},
+				template:
+					this.context === 'deal'
+						? `<deal :key="componentKey" @on-reload="reload"/>`
+						: `<chat :key="componentKey" @on-reload="reload"/>`
+					,
 				store: this.store,
 				created()
 				{
@@ -245,11 +269,110 @@ export class App
 						leftPanel: document.getElementById('left-panel'),
 						title: document.getElementById('pagetitle'),
 						paymentsLimit: document.getElementById('salescenter-payment-limit-container'),
+						orderSelector: document.getElementById('salescenter-app-order-selector'),
 					};
+					this.initOrderSelector();
 				},
 				mounted()
 				{
 					resolve();
+				},
+				methods: {
+					reload(arParams)
+					{
+						this.$root.$app.getLoader().show(document.body);
+
+						BX.ajax.runComponentAction(
+							'bitrix:salescenter.app',
+							'getComponentResult',
+							{
+								mode: 'class',
+								data: {
+									arParams
+								}
+							}
+						).then(function(response) {
+							if (response.data)
+							{
+								this.$root.$app.options = response.data;
+								this.$root.$app.orderId = this.$root.$app.options.orderId;
+								this.componentKey += 1;
+
+								this.$root.$app.getLoader().hide();
+							}
+						}.bind(this));
+					},
+					initOrderSelector()
+					{
+						try
+						{
+							if
+							(
+								this.$app.options.orderList.length < 2
+								|| this.$app.options.templateMode !== 'create'
+								|| !this.$app.options.orderId
+							)
+							{
+								return;
+							}
+
+							const orderSelectorBtn = this.$nodes.orderSelector.querySelector('.salescenter-app-order-selector-text');
+							if (!orderSelectorBtn)
+							{
+								return;
+							}
+
+							orderSelectorBtn.innerText = Loc.getMessage('SALESCENTER_ORDER_SELECTOR_ORDER_NUM')
+								.replace('#ORDER_ID#', this.$app.options.orderId);
+
+							orderSelectorBtn.setAttribute('data-hint', Loc.getMessage('SALESCENTER_ORDER_SELECTOR_TOOLTIP'));
+
+							let popupMenu;
+							let menuItems = [];
+							this.$app.options.orderList.map(orderId => {
+								const orderCaption = Loc.getMessage('SALESCENTER_ORDER_SELECTOR_ORDER_NUM').replace('#ORDER_ID#', orderId);
+								menuItems.push({
+									text: orderCaption,
+									onclick: event => {
+										popupMenu.close();
+										orderSelectorBtn.innerText = orderCaption;
+										this.reload({
+											context: this.$app.options.context,
+											orderId: orderId,
+											ownerTypeId: this.$app.options.ownerTypeId,
+											ownerId: this.$app.options.ownerId,
+											templateMode: this.$app.options.templateMode,
+											mode: this.$app.options.mode,
+											initialMode: this.$app.options.initialMode,
+										});
+									}
+								});
+							});
+							popupMenu = MenuManager.create({
+								id: 'deal-order-selector',
+								bindElement: orderSelectorBtn,
+								items: menuItems
+							});
+
+							this.$nodes.orderSelector.classList.remove('is-hidden');
+							this.$nodes.orderSelector.addEventListener('click', e => {
+								e.preventDefault();
+								popupMenu.show();
+								BX.UI.Hint.hide();
+							});
+
+							BX.UI.Hint.init(this.$nodes.orderSelector);
+						}
+						catch (err)
+						{
+							//
+						}
+					},
+				},
+				data() {
+					return {
+						componentKey: 0,
+					};
 				},
 			});
 		});
@@ -297,14 +420,14 @@ export class App
 
 	static showError(error)
 	{
-		console.error(error);
+		// console.error(error);
 	}
 
 	getLoader()
 	{
 		if(!this.loader)
 		{
-			this.loader = new Loader({size: 200});
+			this.loader = new Loader({size: 200, mode: 'custom'});
 		}
 
 		return this.loader;
@@ -326,6 +449,7 @@ export class App
 	startProgress(buttonEvent = null)
 	{
 		this.isProgress = true;
+		this.templateEngine.$emit('on-start-progress');
 		this.showLoader();
 		if (Type.isDomNode(buttonEvent))
 		{
@@ -336,6 +460,7 @@ export class App
 	stopProgress(buttonEvent = null)
 	{
 		this.isProgress = false;
+		this.templateEngine.$emit('on-stop-progress');
 		this.hideLoader();
 		if (Type.isDomNode(buttonEvent))
 		{
@@ -454,23 +579,13 @@ export class App
 			this.stopProgress();
 		});
 	}
-
-	sendPayment(buttonEvent, skipPublicMessage = 'n')
+	sendShipment(buttonEvent)
 	{
-		if(!this.isPaymentCreationAvailable)
+		if (!this.isPaymentCreationAvailable)
 		{
 			this.closeApplication();
 			return null;
 		}
-		const basket = this.store.getters['orderCreation/getBasket']();
-		const deliveryId = this.store.getters['orderCreation/getDeliveryId'];
-		const delivery = this.store.getters['orderCreation/getDelivery'];
-		const total = this.store.getters['orderCreation/getTotal'];
-		const propertyValues = this.store.getters['orderCreation/getPropertyValues'];
-		const deliveryExtraServicesValues = this.store.getters['orderCreation/getDeliveryExtraServicesValues'];
-		const expectedDelivery = this.store.getters['orderCreation/getExpectedDelivery'];
-		const deliveryResponsibleId = this.store.getters['orderCreation/getDeliveryResponsibleId'];
-		const personTypeId = this.store.getters['orderCreation/getPersonTypeId'];
 
 		if (!this.store.getters['orderCreation/isAllowedSubmit'] || this.isProgress)
 		{
@@ -479,91 +594,159 @@ export class App
 
 		this.startProgress(buttonEvent);
 
-		this.store.dispatch('orderCreation/refreshBasket', {
-			onsuccess: () => {
-				let data = {
-					dialogId: this.dialogId,
-					sendingMethod: this.sendingMethod,
-					sendingMethodDesc: this.sendingMethodDesc,
-					sessionId: this.sessionId,
-					lineId: this.lineId,
-					ownerTypeId: this.ownerTypeId,
-					ownerId: this.ownerId,
-					skipPublicMessage,
-					deliveryId: deliveryId,
-					deliveryPrice: delivery,
-					expectedDeliveryPrice: expectedDelivery,
-					deliveryResponsibleId: deliveryResponsibleId,
-					personTypeId: personTypeId,
-					propertyValues: propertyValues,
-					deliveryExtraServicesValues: deliveryExtraServicesValues,
-					connector: this.connector,
-				};
-				
-				if (this.stageOnOrderPaid !== null)
-				{
-					data.stageOnOrderPaid = this.stageOnOrderPaid;
-				}
-				
-				BX.ajax.runAction('salescenter.order.createPayment', {
-					data: {
-						basketItems: basket,
-						options: data,
-					},
-					analyticsLabel: (this.context === 'deal') ? 'salescenterCreatePaymentSms' : 'salescenterCreatePayment',
-					getParameters: {
-						dialogId: this.dialogId,
-						context: this.context,
-						connector: this.connector,
-						skipPublicMessage: skipPublicMessage,
-					}
-				}).then((result) =>
-				{
-					this.store.dispatch('orderCreation/resetBasket');
-					this.stopProgress(buttonEvent);
-					if(skipPublicMessage === 'y')
-					{
-						let notify = {
-							content: Loc.getMessage('SALESCENTER_ORDER_CREATE_NOTIFICATION').replace('#ORDER_ID#', result.data.order.number),
-						};
-						notify.actions = [{
-							title: Loc.getMessage('SALESCENTER_VIEW'),
-							events: {
-								click() {
-									Manager.showOrderAdd(result.data.order.id);
-								},
-							},
-						}];
-						BX.UI.Notification.Center.notify(notify);
-						Manager.showOrdersList({
-							orderId: result.data.order.id,
-							ownerId: this.ownerId,
-							ownerTypeId: this.ownerTypeId,
-						});
-					}
-					else
-					{
-						this.slider.data.set('action', 'sendPayment');
-						this.slider.data.set('order', result.data.order);
+		let data = {
+			ownerTypeId: this.ownerTypeId,
+			ownerId: this.ownerId,
+			orderId: this.orderId,
+			deliveryId: this.store.getters['orderCreation/getDeliveryId'],
+			deliveryPrice: this.store.getters['orderCreation/getDelivery'],
+			expectedDeliveryPrice: this.store.getters['orderCreation/getExpectedDelivery'],
+			deliveryResponsibleId: this.store.getters['orderCreation/getDeliveryResponsibleId'],
+			personTypeId: this.store.getters['orderCreation/getPersonTypeId'],
+			shipmentPropValues: this.store.getters['orderCreation/getPropertyValues'],
+			deliveryExtraServicesValues: this.store.getters['orderCreation/getDeliveryExtraServicesValues'],
+		};
 
-						if (result.data.deal)
-						{
-							this.slider.data.set('deal', result.data.deal);
-						}
-						this.closeApplication();
-					}
-				}).catch((data) =>
-				{
-					data.errors.forEach((error) => {
-						alert(error.message);
-					});
-					this.stopProgress(buttonEvent);
-					App.showError(data);
-				});
+		if (this.stageOnDeliveryFinished !== null)
+		{
+			data.stageOnDeliveryFinished = this.stageOnDeliveryFinished;
+		}
+
+		BX.ajax.runAction('salescenter.order.createShipment', {
+			data: {
+				basketItems: this.store.getters['orderCreation/getBasket'](),
+				options: data,
 			},
-			onfailure: () => {
-				this.stopProgress(buttonEvent);
+			analyticsLabel: 'salescenterCreateShipment',
+		}).then((result) =>
+		{
+			this.store.dispatch('orderCreation/resetBasket');
+			this.stopProgress(buttonEvent);
+
+			if (result.data)
+			{
+				if (result.data.order)
+				{
+					this.slider.data.set('order', result.data.order);
+				}
+				if (result.data.deal)
+				{
+					this.slider.data.set('deal', result.data.deal);
+				}
 			}
+
+			this.closeApplication();
+			this.emitGlobalEvent('salescenter.app:onshipmentcreated');
+		}).catch((data) =>
+		{
+			data.errors.forEach((error) => {
+				alert(error.message);
+			});
+			this.stopProgress(buttonEvent);
+			App.showError(data);
+		});
+	}
+
+	sendPayment(buttonEvent, skipPublicMessage = 'n')
+	{
+		if (!this.isPaymentCreationAvailable)
+		{
+			this.closeApplication();
+			return null;
+		}
+
+		if (!this.store.getters['orderCreation/isAllowedSubmit'] || this.isProgress)
+		{
+			return null;
+		}
+
+		this.startProgress(buttonEvent);
+
+		let data = {
+			dialogId: this.dialogId,
+			sendingMethod: this.sendingMethod,
+			sendingMethodDesc: this.sendingMethodDesc,
+			sessionId: this.sessionId,
+			lineId: this.lineId,
+			ownerTypeId: this.ownerTypeId,
+			orderId: this.orderId,
+			ownerId: this.ownerId,
+			skipPublicMessage,
+			deliveryId: this.store.getters['orderCreation/getDeliveryId'],
+			deliveryPrice: this.store.getters['orderCreation/getDelivery'],
+			expectedDeliveryPrice: this.store.getters['orderCreation/getExpectedDelivery'],
+			deliveryResponsibleId: this.store.getters['orderCreation/getDeliveryResponsibleId'],
+			personTypeId: this.store.getters['orderCreation/getPersonTypeId'],
+			shipmentPropValues: this.store.getters['orderCreation/getPropertyValues'],
+			deliveryExtraServicesValues: this.store.getters['orderCreation/getDeliveryExtraServicesValues'],
+			connector: this.connector,
+			context: this.context,
+		};
+
+		if (this.stageOnOrderPaid !== null)
+		{
+			data.stageOnOrderPaid = this.stageOnOrderPaid;
+		}
+		if (this.stageOnDeliveryFinished !== null)
+		{
+			data.stageOnDeliveryFinished = this.stageOnDeliveryFinished;
+		}
+
+		BX.ajax.runAction('salescenter.order.createPayment', {
+			data: {
+				basketItems: this.store.getters['orderCreation/getBasket'](),
+				options: data,
+			},
+			analyticsLabel: (this.context === 'deal') ? 'salescenterCreatePaymentSms' : 'salescenterCreatePayment',
+			getParameters: {
+				dialogId: this.dialogId,
+				context: this.context,
+				connector: this.connector,
+				skipPublicMessage: skipPublicMessage,
+			}
+		}).then((result) =>
+		{
+			this.store.dispatch('orderCreation/resetBasket');
+			this.stopProgress(buttonEvent);
+			if (skipPublicMessage === 'y')
+			{
+				let notify = {
+					content: Loc.getMessage('SALESCENTER_ORDER_CREATE_NOTIFICATION').replace('#ORDER_ID#', result.data.order.number),
+				};
+				notify.actions = [{
+					title: Loc.getMessage('SALESCENTER_VIEW'),
+					events: {
+						click() {
+							Manager.showOrderAdd(result.data.order.id);
+						},
+					},
+				}];
+				BX.UI.Notification.Center.notify(notify);
+				Manager.showOrdersList({
+					orderId: result.data.order.id,
+					ownerId: this.ownerId,
+					ownerTypeId: this.ownerTypeId,
+				});
+			}
+			else
+			{
+				this.slider.data.set('action', 'sendPayment');
+				this.slider.data.set('order', result.data.order);
+
+				if (result.data.deal)
+				{
+					this.slider.data.set('deal', result.data.deal);
+				}
+				this.closeApplication();
+			}
+			this.emitGlobalEvent('salescenter.app:onpaymentcreated');
+		}).catch((data) =>
+		{
+			data.errors.forEach((error) => {
+				alert(error.message);
+			});
+			this.stopProgress(buttonEvent);
+			App.showError(data);
 		});
 	}
 
@@ -584,7 +767,9 @@ export class App
 
 		BX.ajax.runAction('salescenter.order.resendPayment', {
 			data: {
-				orderId: this.options.associatedEntityId,
+				orderId: this.orderId,
+				paymentId: this.options.paymentId,
+				shipmentId: this.options.shipmentId,
 				options: {
 					sendingMethod: this.sendingMethod,
 					sendingMethodDesc: this.sendingMethodDesc,
@@ -598,6 +783,7 @@ export class App
 		{
 			this.stopProgress(buttonEvent);
 			this.closeApplication();
+			this.emitGlobalEvent('salescenter.app:onpaymentresend');
 		}).catch((data) =>
 		{
 			data.errors.forEach((error) => {
@@ -607,7 +793,15 @@ export class App
 			App.showError(data);
 		});
 	}
-
+	hideNoPaymentSystemsBanner()
+	{
+		const userOptionName = this.options.orderCreationOption || false;
+		const userOptionKeyName = this.options.paySystemBannerOptionName || false;
+		if (userOptionName && userOptionKeyName)
+		{
+			BX.userOptions.save('salescenter', userOptionName, userOptionKeyName, 'Y');
+		}
+	}
 	getOrdersCount()
 	{
 		if(this.sessionId > 0)
@@ -620,5 +814,25 @@ export class App
 		{
 			return new Promise((resolve, reject) => {});
 		}
+	}
+
+	getPaymentsCount()
+	{
+		if (this.sessionId > 0)
+		{
+			return Rest.callMethod('salescenter.order.getActivePaymentsCount', {
+				sessionId: this.sessionId
+			});
+		}
+		else
+		{
+			return new Promise((resolve, reject) => {});
+		}
+	}
+
+	emitGlobalEvent(eventName, data)
+	{
+		EventEmitter.emit(eventName, data);
+		BX.SidePanel.Instance.postMessage(this.slider, eventName, data);
 	}
 }

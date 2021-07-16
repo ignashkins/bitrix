@@ -1,4 +1,7 @@
 <?
+
+use Bitrix\Main\Loader;
+
 IncludeModuleLangFile(__FILE__);
 
 $GLOBALS['YANDEX_MAP_PROPERTY'] = array();
@@ -64,7 +67,7 @@ abstract class CIBlockPropertyMapInterface
 
 		if ($strMapKeys)
 		{
-			$arMapKeys = unserialize($strMapKeys);
+			$arMapKeys = unserialize($strMapKeys, ['allowed_classes' => false]);
 
 			if (array_key_exists($strDomain, $arMapKeys))
 				$MAP_KEY = $arMapKeys[$strDomain];
@@ -2614,7 +2617,9 @@ function ChangeOrLeaveFile<?= $id?>(bChange)
 	public static function BaseConvertFromDB($val = "")
 	{
 		if (!is_array($val) && $val <> '')
-			$val = unserialize($val);
+		{
+			$val = unserialize($val, ['allowed_classes' => false]);
+		}
 		return $val ? $val : array();
 	}
 
@@ -2733,7 +2738,7 @@ function ChangeOrLeaveFile<?= $id?>(bChange)
 	{
 		if(!is_array($val) && is_string($val))
 		{
-			$val = unserialize($val);
+			$val = unserialize($val, ['allowed_classes' => false]);
 		}
 
 		if(!is_array($val))
@@ -2851,6 +2856,11 @@ class CIBlockPropertyVideo extends CVideoProperty
 {
 	public static function GetUserTypeDescription()
 	{
+		if (Loader::includeModule("bitrix24"))
+		{
+			return [];
+		}
+
 		return array(
 			"PROPERTY_TYPE" => "S",
 			"USER_TYPE" => "video",
@@ -2982,26 +2992,34 @@ class CIBlockPropertyVideo extends CVideoProperty
 	public static function GetUIEntityEditorPropertyEditHtml(array $params = []) : string
 	{
 		$settings = $params['SETTINGS'] ?? [];
+
+		if ($settings['MULTIPLE'] === 'Y')
+		{
+			if (is_array($params['VALUE']))
+			{
+				$editor = '';
+
+				for($index = 0; $index < $params['SETTINGS']['MULTIPLE_CNT']; $index++)
+				{
+					$value = [
+						'VALUE' => $params['VALUE'][$index] ?? []
+					];
+					$paramsHTMLControl = [
+						'VALUE' => $params['FIELD_NAME'] . '[' . $index . ']' ?? '[' . $index . ']',
+					];
+					$editor .= static::GetPropertyFieldHtml($settings, $value, $paramsHTMLControl);
+				}
+
+				return $editor;
+			}
+		}
+
+		$value = [
+			'VALUE' => $params['VALUE'] ?? []
+		];
 		$paramsHTMLControl = [
 			'VALUE' => $params['FIELD_NAME'] ?? '',
 		];
-		if ($settings['MULTIPLE'] === 'Y')
-		{
-			$value = [];
-			if (is_array($params['VALUE']))
-			{
-				foreach ($params['VALUE'] as $element)
-				{
-					$value[] = ['VALUE' => $element];
-				}
-			}
-		}
-		else
-		{
-			$value = [
-				'VALUE' => $params['VALUE'] ?? ''
-			];
-		}
 
 		return static::GetPropertyFieldHtml($settings, $value, $paramsHTMLControl);
 	}
@@ -3020,7 +3038,9 @@ class CIBlockPropertyVideo extends CVideoProperty
 			{
 				foreach ($params['VALUE'] as $element)
 				{
-					$value = ['VALUE' => $element];
+					$value = [
+						'VALUE' => empty($element) ? [] : $element
+					];
 					$multipleResult .=  static::GetPublicViewHTML($settings, $value, $paramsHTMLControl) . '<br>';
 				}
 			}
@@ -3029,7 +3049,7 @@ class CIBlockPropertyVideo extends CVideoProperty
 		else
 		{
 			$value = [
-				'VALUE' => $params['VALUE'] ?? ''
+				'VALUE' => empty($params['VALUE']) ? [] : $params['VALUE']
 			];
 		}
 

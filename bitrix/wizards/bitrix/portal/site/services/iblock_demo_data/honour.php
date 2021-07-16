@@ -17,7 +17,7 @@ elseif (LANGUAGE_ID == "de")
 else
 	$login = "i.zinin";
 
-$dbrUsers = CUser::GetList($o, $b, Array("LOGIN"=>$login));
+$dbrUsers = CUser::GetList('', '', Array("LOGIN"=>$login));
 if($arUser = $dbrUsers->Fetch())
 {
 	$from = time() - (30 * 24 * 3600);
@@ -48,7 +48,7 @@ elseif (LANGUAGE_ID == "de")
 else
 	$login = "a.rusakov";
 
-$dbrUsers = CUser::GetList($o, $b, Array("LOGIN"=>$login));
+$dbrUsers = CUser::GetList('', '', Array("LOGIN"=>$login));
 if($arUser = $dbrUsers->Fetch())
 {
 	$from = time() - (25 * 24 * 3600);
@@ -78,7 +78,7 @@ elseif (LANGUAGE_ID == "de")
 else
 	$login = "e.astafev";
 
-$dbrUsers = CUser::GetList($o, $b, Array("LOGIN"=>$login));
+$dbrUsers = CUser::GetList('', '', Array("LOGIN"=>$login));
 if($arUser = $dbrUsers->Fetch())
 {
 	$from = time() - (28 * 24 * 3600);

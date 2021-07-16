@@ -1046,7 +1046,7 @@ class OrderBasket
 					if ($bUseHLIblock)
 					{
 						if(!is_array($arProp["USER_TYPE_SETTINGS"]))
-							$arProp["USER_TYPE_SETTINGS"] = unserialize($arProp["USER_TYPE_SETTINGS"]);
+							$arProp["USER_TYPE_SETTINGS"] = unserialize($arProp["USER_TYPE_SETTINGS"], ['allowed_classes' => false]);
 
 						$hlblock = HL\HighloadBlockTable::getList(array("filter" => array("TABLE_NAME" => $arProp["USER_TYPE_SETTINGS"]["TABLE_NAME"])))->fetch();
 						if ($hlblock)
@@ -1198,7 +1198,7 @@ class OrderBasket
 		return $flagAll? static::$arSkuProps[$iblockId] : static::filterProps(static::$arSkuProps[$iblockId]);
 	}
 
-	protected function getOffersCatalog($iblockId)
+	protected static function getOffersCatalog($iblockId)
 	{
 		if (self::$catalogIncluded === null)
 			self::$catalogIncluded = Main\Loader::includeModule('catalog');
@@ -1211,7 +1211,7 @@ class OrderBasket
 		return static::$offersCatalog[$iblockId];
 	}
 
-	protected function getPropsList($iblockId, $skuPropertyId = 0)
+	protected static function getPropsList($iblockId, $skuPropertyId = 0)
 	{
 		if (self::$catalogIncluded === null)
 			self::$catalogIncluded = Main\Loader::includeModule('catalog');
@@ -1249,7 +1249,7 @@ class OrderBasket
 		return $arResult;
 	}
 
-	protected function filterProps(&$props)
+	protected static function filterProps(&$props)
 	{
 		$result = array();
 		if ($props)
@@ -1818,7 +1818,7 @@ class OrderBasket
 			elseif ($arElementInfo["DETAIL_PICTURE"] > 0)
 				$imgCode = $arElementInfo["DETAIL_PICTURE"];
 
-			if ($imgCode == "" && count($arParent) > 0)
+			if ($imgCode == "" && !empty($arParent) && is_array($arParent))
 			{
 				if ($arParent["PREVIEW_PICTURE"] > 0)
 					$imgCode = $arParent["PREVIEW_PICTURE"];

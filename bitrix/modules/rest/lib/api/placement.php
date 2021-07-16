@@ -87,6 +87,19 @@ class Placement extends \IRestService
 		return $result;
 	}
 
+	/**
+	 * Clears placement's cache in other modules.
+	 * @return void
+	 */
+	protected static function clearPlacementCache(): void
+	{
+		if (defined('BX_COMP_MANAGED_CACHE'))
+		{
+			global $CACHE_MANAGER;
+			$CACHE_MANAGER->clearByTag('intranet_menu_binding');
+		}
+	}
+
 
 	public static function bind($params, $n, \CRestServer $server)
 	{
@@ -113,7 +126,6 @@ class Placement extends \IRestService
 		}
 
 		$appInfo = static::getApplicationInfo($server);
-
 		HandlerHelper::checkCallback($placementHandler, $appInfo);
 
 		$scopeList = static::getScope($server);
@@ -172,6 +184,16 @@ class Placement extends \IRestService
 				}
 			}
 
+			if (
+				array_key_exists('ICON', $params)
+				&& is_array($params['ICON'])
+				&& $params['ICON']['fileData']
+				&& ($file = \CRestUtil::saveFile($params['ICON']['fileData']))
+			)
+			{
+				$placementBind['ICON'] = $file;
+			}
+
 			$result = PlacementTable::add($placementBind);
 			if(!$result->isSuccess())
 			{
@@ -181,6 +203,8 @@ class Placement extends \IRestService
 					RestException::ERROR_CORE
 				);
 			}
+
+			self::clearPlacementCache();
 
 			return true;
 		}
@@ -237,6 +261,11 @@ class Placement extends \IRestService
 					$cnt++;
 				}
 			}
+		}
+
+		if ($cnt > 0)
+		{
+			self::clearPlacementCache();
 		}
 
 		return array('count' => $cnt);

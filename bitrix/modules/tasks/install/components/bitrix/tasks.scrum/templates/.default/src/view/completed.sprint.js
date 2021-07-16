@@ -1,46 +1,58 @@
-import {Event, Text} from 'main.core';
+import {Dom, Text} from 'main.core';
+import {BaseEvent, EventEmitter} from 'main.core.events';
+
+import {SidePanel} from '../service/side.panel';
+
 import {Sprint} from '../entity/sprint/sprint';
 import {SprintSidePanel} from '../entity/sprint/sprint.side.panel';
-import {SidePanel} from '../service/side.panel';
-import {RequestSender} from '../utility/request.sender';
 
-type CurrentSprint = {
-	sprintId: number,
-	name: string
-}
+import {View} from './view';
+import {BurnDownButton} from './header/burn.down.button';
+
+import type {Views} from './view';
+import type {SprintParams} from '../entity/sprint/sprint';
 
 type Params = {
-	completedSprint: Sprint,
-	signedParameters: string,
-	views: {
-		plan: {
-			name: string,
-			url: string,
-			active: boolean
-		},
-		activeSprint: {
-			name: string,
-			url: string,
-			active: boolean
-		},
-		completedSprint: {
-			name: string,
-			url: string,
-			active: boolean
-		}
-	},
-	sprints: Array
+	views: Views,
+	completedSprint: SprintParams,
+	sprints: Array<SprintParams>
 }
 
-export class CompletedSprint
+export class CompletedSprint extends View
 {
 	constructor(params: Params)
 	{
-		this.completedSprint = params.completedSprint;
+		super(params);
 
-		this.requestSender = new RequestSender({
-			signedParameters: params.signedParameters,
-		});
+		this.setEventNamespace('BX.Tasks.Scrum.CompletedSprint');
+
+		this.setParams(params);
+
+		this.bindHandlers();
+	}
+
+	renderSprintStatsTo(container: HTMLElement)
+	{
+		super.renderSprintStatsTo(container);
+
+		this.titleContainer = container;
+		this.titleContainer.textContent = Text.encode(this.completedSprint.getName());
+	}
+
+	renderButtonsTo(container: HTMLElement)
+	{
+		super.renderButtonsTo(container);
+
+		const burnDownButton = new BurnDownButton();
+		burnDownButton.subscribe('click', this.onShowSprintBurnDownChart.bind(this));
+
+		Dom.append(burnDownButton.render(), container);
+	}
+
+	setParams(params: Params)
+	{
+		this.completedSprint = new Sprint(params.completedSprint);
+
 		this.sidePanel = new SidePanel();
 
 		this.sprints = new Map();
@@ -49,40 +61,23 @@ export class CompletedSprint
 			this.sprints.set(sprint.getId(), sprint);
 		});
 		this.views = params.views;
-
-		this.initDomNodes();
-		this.bindHandlers();
-		this.createTitle();
-	}
-
-	initDomNodes()
-	{
-		this.chartSprintButtonNode = document.getElementById('tasks-scrum-completed-sprint-chart');
 	}
 
 	bindHandlers()
 	{
-		/* eslint-disable */
-		BX.addCustomEvent('onTasksGroupSelectorChange', this.onSprintSelectorChange.bind(this));
-		/* eslint-enable */
-
-		Event.bind(this.chartSprintButtonNode, 'click', this.onShowSprintBurnDownChart.bind(this));
+		EventEmitter.subscribe('onTasksGroupSelectorChange', this.onSprintSelectorChange.bind(this));
 	}
 
-	createTitle()
+	onSprintSelectorChange(event: BaseEvent)
 	{
-		this.titleContainer = document.getElementById('tasks-scrum-completed-sprint-title');
-		this.titleContainer.textContent = Text.encode(this.completedSprint.getName());
-	}
+		const [currentSprint] = event.getCompatData()
 
-	onSprintSelectorChange(currentSprint: CurrentSprint)
-	{
 		this.completedSprint = this.findSprintBySprintId(currentSprint.sprintId);
 
 		this.titleContainer.textContent = Text.encode(currentSprint.name);
 	}
 
-	onShowSprintBurnDownChart()
+	onShowSprintBurnDownChart(baseEvent: BaseEvent)
 	{
 		const sprintSidePanel = new SprintSidePanel({
 			sidePanel: this.sidePanel,

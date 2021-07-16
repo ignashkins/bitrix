@@ -8003,6 +8003,10 @@ a.crm-client-contacts-block-text-mail:hover{
 	text-decoration: none;
 }
 
+.crm-tooltip-info .bx-ui-tooltip-field-value {
+	position: relative;
+}
+
 .crm-client-contacts-block-text-tel-icon,
 .crm-client-contacts-block-text-mail-icon,
 .crm-client-contacts-block-text-list-icon {
@@ -8402,12 +8406,16 @@ a.crm-client-contacts-block-text-mail:hover{
 	color: #1097c2;
 }
 
-.crm-list-item-status-send {
+.crm-list-item-status-send,
+.crm-list-item-status-no-shipped,
+.crm-list-item-status-cancel,
+.crm-list-item-status-refund {
 	background: #e6e7e9;
 	color: #757c86;
 }
 
-.crm-list-item-status-paid {
+.crm-list-item-status-paid,
+.crm-list-item-status-shipped {
 	background: #e5f1bf;
 	color: #668d13;
 }

@@ -1,4 +1,4 @@
-<?
+<?php
 
 use Bitrix\Mail\Helper\MailContact;
 use Bitrix\Main\Application;
@@ -1108,6 +1108,7 @@ class CMailHeader
 		else
 			$str = quoted_printable_decode(str_replace("_", " ", $str));
 
+		$str = \Bitrix\Main\Text\Emoji::encode($str);
 		$str = CMailUtil::ConvertCharset($str, $encoding, $charset);
 
 		return $str;
@@ -1451,7 +1452,7 @@ class CAllMailMessage
 		return $dbr;
 	}
 
-	function GetByID($ID)
+	public static function GetByID($ID)
 	{
 		return CMailMessage::GetList(Array(), Array("=ID"=>$ID));
 	}
@@ -1506,6 +1507,7 @@ class CAllMailMessage
 		{
 			if (preg_match('/plain|html|text/', $content_type) && !preg_match('/x-vcard|csv/', $content_type))
 			{
+				$body = \Bitrix\Main\Text\Emoji::encode($body);
 				$body = CMailUtil::convertCharset($body, $header->charset, $charset);
 			}
 		}
@@ -1654,6 +1656,53 @@ class CAllMailMessage
 		list($header, $html, $text, $attachments) = CMailMessage::parseMessage($message, $charset);
 
 		return static::saveMessage($mailboxId, $message, $header, $html, $text, $attachments, $params);
+	}
+
+	public static function isolateSelector($matches)
+	{
+		$head = $matches['head'];
+		$body = $matches['body'];
+		$prefix = 'mail-message-';
+		$wrapper = '#mail-message-wrapper ';
+		if(substr($head,0,1)==='@') $wrapper ='';
+		$closure = $matches['closure'];
+		$head = preg_replace('%([\.#])([a-z][-_a-z0-9]+)%msi', '$1'.$prefix.'$2', $head);
+		return $wrapper.$head.$body.$closure;
+	}
+
+	public static function isolateStylesInTheTag($matches)
+	{
+		$wrapper = '#mail-message-wrapper ';
+		$openingTag = $matches['openingTag'];
+		$closingTag = $matches['closingTag'];
+		$styles = $matches['styles'];
+		$bodySelectorPattern = '#(.*?)(^|\s)(body)\s*((?:\{)(?:.*?)(?:\}))(.*)#msi';
+		$bodySelector = preg_replace($bodySelectorPattern, '$2'.$wrapper.'$4', $styles);
+		//cut off body selector
+		$styles = preg_replace($bodySelectorPattern, '$1$5', $styles);
+		$styles = preg_replace('#(^|\s)(body)\s*({)#isU', '$1mail-msg-view-body$3', $styles);
+		$styles = preg_replace_callback('%(?:^|\s)(?<head>[@#\.]?[a-z].*?\{)(?<body>.*?)(?<closure>\})%msi', 'static::isolateSelector', $styles);
+		return  $openingTag.$bodySelector.$styles.$closingTag;
+	}
+
+	public static function isolateStylesInTheBody($html)
+	{
+		$prefix = 'mail-message-';
+		$html = preg_replace('%((?:^|\s)(?:class|id)(?:^|\s*)(?:=)(?:^|\s*)(\"|\'))((?:.*?)(?:\2))%', '$1'.$prefix.'$3', $html);
+		return $html;
+	}
+
+	public static function isolateMessageStyles($messageHtml)
+	{
+		//isolates the positioning of the element
+		$messageHtml = preg_replace('%((?:^|\s)position(?:^|\s)?:(?:^|\s)?)(absolute|fixed|inherit)%', '$1relative', $messageHtml);
+		//remove media queries
+		$messageHtml = preg_replace('%@media\b[^{]*({((?:[^{}]+|(?1))*)})%msi', '', $messageHtml);
+		//remove loading fonts
+		$messageHtml = preg_replace('%@font-face\b[^{]*({(?>[^{}]++|(?1))*})%msi', '', $messageHtml);
+		$messageHtml = static::isolateStylesInTheBody($messageHtml);
+		$messageHtml = preg_replace_callback('|(?<openingTag><style[^>]*>)(?<styles>.*)(?<closingTag><\/style>)|isU', 'static::isolateStylesInTheTag',$messageHtml);
+		return $messageHtml;
 	}
 
 	public static function saveMessage($mailboxId, &$message, &$header, &$bodyHtml, &$bodyText, &$attachments, $params = array())
@@ -1855,11 +1904,39 @@ class CAllMailMessage
 				$sanitizer = new \CBXSanitizer();
 				$sanitizer->setLevel(\CBXSanitizer::SECURE_LEVEL_LOW);
 				$sanitizer->applyDoubleEncode(false);
+
+				$validTagAttributes = [
+					'colspan',
+					'border',
+					'bgcolor',
+					'width',
+					'background',
+					'style',
+					'align',
+					'height',
+					'background-color',
+					'border',
+					'ltr',
+					'rtl',
+					'class',
+				];
+				$tableAttributes = array_merge(
+					$validTagAttributes,
+					[
+						'cellpadding',
+						'cellspacing',
+					]
+				);
 				$sanitizer->addTags(array(
 					'style' => array(),
 					'colgroup' => array(),
 					'col' => array('width'),
+					'table' => $tableAttributes,
+					'center' => $validTagAttributes,
+					'div' => $validTagAttributes,
+					'td' =>$validTagAttributes,
 				));
+				
 				$arFields['BODY_HTML'] = $sanitizer->sanitizeHtml($msg);
 
 				foreach ($arMessageParts as $part)
@@ -1875,6 +1952,7 @@ class CAllMailMessage
 						$arFields['BODY_HTML']
 					);
 				}
+				$arFields['BODY_HTML'] = static::isolateMessageStyles($arFields['BODY_HTML']);
 
 				\CMailMessage::update($message_id, array('BODY_HTML' => $arFields['BODY_HTML']));
 			}
@@ -1905,7 +1983,17 @@ class CAllMailMessage
 					}
 				);
 
-				\CMailFilter::filter($arFields, 'R');
+				$arFieldsForFilter = $arFields;
+
+				foreach (['BODY','BODY_BB','BODY_HTML','SUBJECT'] as $key)
+				{
+					if(!empty($arFieldsForFilter[$key]))
+					{
+						$arFieldsForFilter[$key] = \Bitrix\Main\Text\Emoji::decode($arFieldsForFilter[$key]);
+					}
+				}
+				
+				\CMailFilter::filter($arFieldsForFilter, 'R');
 
 				\Bitrix\Main\EventManager::getInstance()->removeEventHandler('mail', 'onBeforeUserFieldSave', $eventKey);
 
@@ -3742,7 +3830,7 @@ class CMailFilterCondition
 		return CMailFilterCondition::GetList(Array(), Array("ID"=>$ID));
 	}
 
-	function Delete($ID)
+	public static function Delete($ID)
 	{
 		global $DB;
 		$ID = intval($ID);
@@ -3851,7 +3939,7 @@ class CMailLog
 		return $DB->Query($strSql, true);
 	}
 
-	function GetList($arOrder=Array(), $arFilter=Array())
+	public static function GetList($arOrder=Array(), $arFilter=Array())
 	{
 		global $DB;
 		$strSql =
@@ -4020,4 +4108,3 @@ class _CMailLogDBRes  extends CDBResult
 		return false;
 	}
 }
-?>

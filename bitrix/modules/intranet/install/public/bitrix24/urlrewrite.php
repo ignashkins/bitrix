@@ -24,6 +24,12 @@ $arUrlRewrite = array(
 		"PATH" => "/pub/payment.php",
 	),
 	array(
+		"CONDITION" => "#^/pub/calendar-event/([0-9]+)/([0-9a-zA-Z]+)/?([^/]*)#",
+		"RULE" => "event_id=\$1&hash=\$2",
+		"ID" => "bitrix:calendar.pub.event",
+		"PATH" => "/pub/calendar_event.php",
+	),
+	array(
 		"CONDITION" => "#^/pub/document/([0-9a-zA-Z_-]+)/([0-9a-zA-Z]+)/([^/]*)#",
 		"RULE" => "id=\$1&hash=\$2",
 		"ID" => "bitrix:documentgenerator.view",
@@ -270,6 +276,11 @@ $arUrlRewrite = array(
 		"RULE" => "",
 		"ID" => "bitrix:app.layout",
 		"PATH" => "/marketplace/app/index.php",
+	),
+	array(
+		"CONDITION" => "#^/marketplace/view/quick/#",
+		"RULE" => "",
+		"PATH" => "/marketplace/view/quick/index.php",
 	),
 	array(
 		"CONDITION" => "#^/marketplace/view/([a-zA-Z0-9\\.\\_]+)/.*#",
@@ -697,6 +708,12 @@ $arUrlRewrite = array(
 		"PATH" => "/mobile/knowledge/index.php",
 	),
 	array(
+		"CONDITION" => "#^/extranet/mobile/knowledge/group/#",
+		"RULE" => "",
+		"ID" => "bitrix:landing.pub",
+		"PATH" => "/extranet/mobile/knowledge/group/index.php",
+	),
+	array(
 		"CONDITION" => "#^/kb/group/#",
 		"RULE" => "",
 		"ID" => "bitrix:landing.start",
@@ -727,6 +744,12 @@ $arUrlRewrite = array(
 		"PATH" => "/extranet/marketplace/index.php",
 	),
 	array(
+		"CONDITION" => "#^/crm/type/#",
+		"RULE" => "",
+		"ID" => "bitrix:crm.router",
+		"PATH" => "/crm/type/index.php",
+	),
+	array(
 		"CONDITION" => "#^/shop/catalog/#",
 		"RULE" => "",
 		"ID" => "bitrix:catalog.productcard.controller",
@@ -748,6 +771,12 @@ $arUrlRewrite = array(
 		'RULE' => '',
 		'ID' => 'bitrix:im.conference.center',
 		'PATH' => '/conference/index.php',
+	),
+	array (
+		'CONDITION' => '#^/page/#',
+		'RULE' => '',
+		'ID' => 'bitrix:intranet.customsection',
+		'PATH' => '/page/index.php',
 	),
 );
 ?>

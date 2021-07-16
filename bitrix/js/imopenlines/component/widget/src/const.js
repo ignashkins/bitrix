@@ -86,7 +86,7 @@ export const RestMethod = Object.freeze({
 	widgetUserConsentApply: 'imopenlines.widget.user.consent.apply',
 	widgetVoteSend: 'imopenlines.widget.vote.send',
 	widgetFormSend: 'imopenlines.widget.form.send',
-
+	widgetActionSend: 'imopenlines.widget.action.send',
 	pullServerTime: 'server.time',
 	pullConfigGet: 'pull.config.get',
 });
@@ -108,4 +108,8 @@ export const SessionStatus = Object.freeze({
 	spam: 65,
 	duplicate: 69,
 	silentlyClose: 75,
+});
+
+export const EventType = Object.freeze({
+	requestShowForm: 'IMOL.Widget:requestShowForm',
 });

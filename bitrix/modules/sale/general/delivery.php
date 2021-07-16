@@ -1,8 +1,7 @@
-<?
+<?php
+
 IncludeModuleLangFile(__FILE__);
 
-use Bitrix\Main\DB;
-use Bitrix\Sale\Location;
 use Bitrix\Sale\Shipment;
 use Bitrix\Sale\Internals\DeliveryPaySystemTable;
 use Bitrix\Sale\Location\Admin\LocationHelper as Helper;
@@ -50,7 +49,7 @@ class CAllSaleDelivery
 	 * @internal
 	 * @deprecated
 	 */
-	static function DoProcessOrder(&$arOrder, $deliveryCode, &$arErrors)
+	public static function DoProcessOrder(&$arOrder, $deliveryCode, &$arErrors)
 	{
 		if($deliveryCode == '' || $deliveryCode == '0')
 			return false;
@@ -126,7 +125,7 @@ class CAllSaleDelivery
 		{
 			if (!is_array($arBasketItem["DIMENSIONS"]))
 			{
-				$arDim = unserialize($arBasketItem["~DIMENSIONS"]);
+				$arDim = unserialize($arBasketItem["~DIMENSIONS"], ['allowed_classes' => false]);
 				$arBasketItem["DIMENSIONS"] = $arDim;
 				unset($arBasketItem["~DIMENSIONS"]);
 			}
@@ -253,13 +252,12 @@ class CAllSaleDelivery
 		return $res->Fetch();
 	}
 
-
 	/**
 	 * @param array $arFilter
 	 * @return bool|CDBResult
 	 * @deprecated
 	 */
-	function GetLocationList($arFilter = Array())
+	public static function GetLocationList($arFilter = Array())
 	{
 		if(!empty($arFilter['DELIVERY_ID']))
 			$arFilter['DELIVERY_ID'] = self::getIdByCode($arFilter['DELIVERY_ID']);
@@ -592,7 +590,7 @@ class CAllSaleDelivery
 
 		if(isset($arFields["STORE"]))
 		{
-			$stores = unserialize($arFields["STORE"]);
+			$stores = unserialize($arFields["STORE"], ['allowed_classes' => false]);
 
 			if($stores)
 				\Bitrix\Sale\Delivery\ExtraServices\Manager::saveStores($newId, $stores);
@@ -622,7 +620,6 @@ class CAllSaleDelivery
 		return new CDBResult($res);
 	}
 
-
 	/**
 	 * The function select delivery and paysystem
 	 *
@@ -650,7 +647,7 @@ class CAllSaleDelivery
 	 * @return int $ID - code delivery
 	 * @deprecated
 	 */
-	static function UpdateDeliveryPay($ID, $arFields)
+	public static function UpdateDeliveryPay($ID, $arFields)
 	{
 		$ID = trim($ID);
 
@@ -1109,7 +1106,7 @@ class CAllSaleDelivery
 	 * @throws Exception
 	 * @deprecated
 	 */
-	static function Add($arFields, $arOptions = array())
+	public static function Add($arFields, $arOptions = array())
 	{
 		$fields = array_intersect_key($arFields, Bitrix\Sale\Delivery\Services\Table::getMap());
 
@@ -1198,7 +1195,7 @@ class CAllSaleDelivery
 
 		if(isset($arFields["STORE"]))
 		{
-			$stores = unserialize($arFields["STORE"]);
+			$stores = unserialize($arFields["STORE"], ['allowed_classes' => false]);
 
 			if($stores)
 				\Bitrix\Sale\Delivery\ExtraServices\Manager::saveStores($newId, $stores);
@@ -1480,7 +1477,7 @@ class CAllSaleDelivery
 			$itemFieldValues["QUANTITY"] = $shipmentItem->getField("QUANTITY");
 
 			if(!empty($itemFieldValues["DIMENSIONS"]) && is_string($itemFieldValues["DIMENSIONS"]))
-				$itemFieldValues["DIMENSIONS"] = unserialize($itemFieldValues["DIMENSIONS"]);
+				$itemFieldValues["DIMENSIONS"] = unserialize($itemFieldValues["DIMENSIONS"], ['allowed_classes' => false]);
 
 			unset($itemFieldValues['DATE_INSERT'], $itemFieldValues['DATE_UPDATE']);
 			$oldOrder["ITEMS"][] = $itemFieldValues;
@@ -1581,7 +1578,7 @@ class CAllSaleDelivery
 
 			if($shipmentItem->getField("DIMENSIONS") <> '')
 			{
-				$shipmentItem->setField("DIMENSIONS", unserialize($shipmentItem->getField("DIMENSIONS")));
+				$shipmentItem->setField("DIMENSIONS", unserialize($shipmentItem->getField("DIMENSIONS"), ['allowed_classes' => false]));
 			}
 		}
 
@@ -1668,4 +1665,3 @@ class CAllSaleDelivery
 		return $code;
 	}
 }
-?>

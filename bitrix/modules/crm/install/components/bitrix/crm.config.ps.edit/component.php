@@ -271,12 +271,26 @@ if (check_bitrix_sessid())
 
 				if ($psID === 0)
 				{
-					$image = '/bitrix/images/sale/sale_payments/'.$handler.'.png';
-					if (\Bitrix\Main\IO\File::isFileExists($documentRoot.$image))
+					if (preg_match('/[a-z1-9_]+/i', $_POST['PS_MODE'], $psMode))
 					{
-						$arActFields['LOGOTIP'] = CFile::MakeFileArray($image);
-						$arActFields['LOGOTIP']['MODULE_ID'] = "sale";
-						CFile::SaveForDB($arActFields, 'LOGOTIP', 'sale/paysystem/logotip');
+						$image = '/bitrix/images/sale/sale_payments/'.$handler.'/'.$psMode[0].'.png';
+						if (\Bitrix\Main\IO\File::isFileExists($documentRoot.$image))
+						{
+							$arActFields['LOGOTIP'] = CFile::MakeFileArray($image);
+							$arActFields['LOGOTIP']['MODULE_ID'] = "sale";
+							CFile::SaveForDB($arActFields, 'LOGOTIP', 'sale/paysystem/logotip');
+						}
+					}
+
+					if (!isset($arActFields['LOGOTIP']))
+					{
+						$image = '/bitrix/images/sale/sale_payments/'.$handler.'.png';
+						if (\Bitrix\Main\IO\File::isFileExists($documentRoot.$image))
+						{
+							$arActFields['LOGOTIP'] = CFile::MakeFileArray($image);
+							$arActFields['LOGOTIP']['MODULE_ID'] = "sale";
+							CFile::SaveForDB($arActFields, 'LOGOTIP', 'sale/paysystem/logotip');
+						}
 					}
 				}
 
@@ -284,15 +298,15 @@ if (check_bitrix_sessid())
 				{
 					if ($psID > 0)
 					{
-						$result = \Bitrix\Sale\Internals\PaySystemActionTable::update($psID, $arActFields);
+						$result = PaySystem\Manager::update($psID, $arActFields);
 					}
 					else
 					{
-						$result = \Bitrix\Sale\Internals\PaySystemActionTable::add($arActFields);
+						$result = PaySystem\Manager::add($arActFields);
 						if ($result->isSuccess())
 						{
 							$psID = $result->getId();
-							\Bitrix\Sale\Internals\PaySystemActionTable::update($psID, array('PAY_SYSTEM_ID' => $psID));
+							PaySystem\Manager::update($psID, array('PAY_SYSTEM_ID' => $psID));
 						}
 					}
 
@@ -365,12 +379,6 @@ if (check_bitrix_sessid())
 					}
 				}
 			}
-
-			if ($arActFields['ACTION_FILE'] === 'alfabankb2b')
-			{
-				global $CACHE_MANAGER;
-				$CACHE_MANAGER->ClearByTag("bitrix24_left_menu");
-			}
 		}
 
 		if ($errorMessage == '')
@@ -386,7 +394,7 @@ if (check_bitrix_sessid())
 		}
 		else
 		{
-			$arActFields['PARAMS'] = unserialize($arActFields['PARAMS']);
+			$arActFields['PARAMS'] = unserialize($arActFields['PARAMS'], ['allowed_classes' => false]);
 			$arResult['PAY_SYSTEM'] = $arActFields;
 			if ($isSidePanel)
 			{
@@ -623,7 +631,7 @@ if (\Bitrix\Main\Loader::includeModule('iblock'))
 	$usedProps = array();
 	if (isset($arPaySys['PARAMS']['USER_COLUMNS']))
 	{
-		$userProps = unserialize($arPaySys['PARAMS']['USER_COLUMNS']['VALUE']);
+		$userProps = unserialize($arPaySys['PARAMS']['USER_COLUMNS']['VALUE'], ['allowed_classes' => false]);
 		if ($userProps)
 		{
 			foreach ($userProps as $propId => $fields)
@@ -691,7 +699,7 @@ foreach ($fieldsByGroups as $group => $fields)
 			{
 				if ($arPaySys['PARAMS'][$idCorr]['VALUE'])
 				{
-					$userColumns = unserialize($arPaySys['PARAMS'][$idCorr]['VALUE']);
+					$userColumns = unserialize($arPaySys['PARAMS'][$idCorr]['VALUE'], ['allowed_classes' => false]);
 					if ($userColumns)
 					{
 						foreach ($userColumns as $id => $columns)

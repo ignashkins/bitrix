@@ -34,7 +34,8 @@ class UserFieldVisibility extends Main\Engine\Controller
 			$accessCodes,
 			$fieldName,
 			$entityTypeId,
-			PermissionDictionary::USER_FIELD_VIEW
+			PermissionDictionary::USER_FIELD_VIEW,
+			\CCrmOwnerType::ResolveUserFieldEntityID($entityTypeId)
 		);
 	}
 

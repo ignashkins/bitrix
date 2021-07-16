@@ -209,13 +209,30 @@
 						}
 						else
 						{
+							var fileType = null;
+							var substitution = null;
+
 							for (ii = 0; ii < files.length; ii++)
 							{
 								file = files[ii];
-								if (file.propertyName == this.propertyName)
+								if (file.propertyName === this.propertyName)
 								{
-									text += "[DISK FILE ID=" + (file.fieldValue ? file.fieldValue : "n" + file.fileId) + "]";
+									substitution = '&nbsp;';
+
+									if (BX.type.isNotEmptyString(file.type))
+									{
+										fileType = BX.MobileUtils.getType(BX.MobileUtils.getFileMimeType(file.type));
+										if (
+											fileType === 'image'
+											|| fileType === 'video'
+										)
+										{
+											substitution = '[DISK FILE ID=' + (file.fieldValue ? file.fieldValue : 'n' + file.fileId) + ']';
+										}
+									}
 								}
+
+								text += substitution;
 							}
 						}
 						data.text = text;
@@ -558,7 +575,7 @@
 							cancelname: BX.message("MPFButtonCancel"),
 							multiple: "NO",
 							alphabet_index: "YES",
-							url: BX.message('MobileSiteDir') + 'mobile/index.php?mobile_action=get_user_list'
+							url: BX.message('MobileSiteDir') + 'mobile/index.php?mobile_action=get_user_list&use_name_format=Y'
 						}
 					},
 					smileButton: {},
@@ -651,9 +668,14 @@
 					this.stopCheckWriting();
 				},
 				show : function(text, attachments) {
+
+					var textArea = document.createElement('textarea');
+					textArea.innerHTML = text;
 					this.formSettings.message = {
-						text: text
+						text: textArea.value
 					};
+					textArea.remove();
+
 					this.formSettings.attachedFiles = [];
 					this.formSettings.extraData = {};
 					if (attachments)
@@ -870,6 +892,7 @@
 					this.comment.attachments = attachments;
 					this.comment.extraData = extraData;
 					BXMobileApp.onCustomEvent('Comments.UploadQueue::setItem', {
+						commentNodeId: this.comment.node.id,
 						commentVirtualId: attachmentsData.commentVirtualId,
 						formId: this.form.id,
 						formUniqueId: this.uniqueId,
@@ -1048,6 +1071,7 @@
 				if (formInstance.comment.id[0] == params.entityId)
 				{
 					formInstance.addError(params.commentData, params.errorText);
+					BX.onCustomEvent(window, 'OnUploadQueueError', [ params ]);
 					break;
 				}
 			}

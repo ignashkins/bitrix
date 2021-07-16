@@ -39,7 +39,7 @@ class Engine
 		{
 			if($this->engine['SETTINGS'] <> '')
 			{
-				$this->engineSettings = unserialize($this->engine['SETTINGS']);
+				$this->engineSettings = unserialize($this->engine['SETTINGS'], ['allowed_classes' => false]);
 			}
 		}
 	}
@@ -71,7 +71,7 @@ class Engine
 
 	public function getAuthSettings()
 	{
-		return $this->engineSettings['AUTH'];
+		return ($this->engineSettings['AUTH'] ?? false);
 	}
 
 	public function clearAuthSettings()

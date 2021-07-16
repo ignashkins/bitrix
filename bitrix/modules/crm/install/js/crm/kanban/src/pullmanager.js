@@ -95,9 +95,14 @@ export default class PullManager
 					item.data[key] = paramsItem.data[key];
 				}
 			}
-			item.setActivityExistInnerHtml();
 
+			item.rawData = paramsItem.rawData;
+			item.setActivityExistInnerHtml();
 			item.useAnimation = true;
+			item.setChangedInPullRequest();
+			this.grid.resetMultiSelectMode();
+
+			item.preventNextFieldsRendering();
 			this.grid.insertItem(item);
 
 			const newColumn = this.grid.getColumn(paramsItem.data.columnId);

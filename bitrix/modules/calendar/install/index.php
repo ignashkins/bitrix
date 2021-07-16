@@ -135,7 +135,7 @@ class calendar extends CModule
 		if (intval($arCurPhpVer[0]) < 5)
 			return true;
 
-		$errors = $this->InstallUserFields();
+		$errors = static::InstallUserFields();
 		if (!empty($errors))
 		{
 			$APPLICATION->ThrowException(implode("", $errors));
@@ -180,7 +180,7 @@ class calendar extends CModule
 
 		$eventManager->registerEventHandlerCompatible("main", "OnUserTypeBuildList", "calendar", "\\Bitrix\\Calendar\\UserField\\ResourceBooking", "getUserTypeDescription", 154);
 
-		$eventManager->registerEventHandler('mail', 'onReplyReceivedICAL_INVENT', 'calendar', '\Bitrix\Calendar\ICal\IncomingEventManager', 'handleReplyReceivedICalInvent');
+		$eventManager->registerEventHandler('mail', 'onReplyReceivedICAL_INVENT', 'calendar', '\Bitrix\Calendar\ICal\MailInvitation\IncomingInvitationReplyHandler', 'handleFromRequest');
 
 		if($DB->type === "MYSQL"
 			&& $DB->Query("CREATE fulltext index IXF_B_CALENDAR_EVENT_SEARCHABLE_CONTENT on b_calendar_event (SEARCHABLE_CONTENT)", true))
@@ -245,6 +245,7 @@ class calendar extends CModule
 		$eventManager->unRegisterEventHandler("dav", "OnExchandeCalendarDataSync", "calendar", "CCalendar", "OnExchangeCalendarSync");
 		$eventManager->unRegisterEventHandler('socialnetwork', 'onLogIndexGetContent', 'calendar', '\Bitrix\Calendar\Integration\Socialnetwork\Log', 'onIndexGetContent');
 		$eventManager->unRegisterEventHandler('main', 'OnBeforeUserTypeAdd', 'calendar', '\Bitrix\Calendar\UserField\ResourceBooking', 'onBeforeUserTypeAdd');
+		$eventManager->unRegisterEventHandler('mail', 'onReplyReceivedICAL_INVENT', 'calendar', '\Bitrix\Calendar\ICal\MailInvitation\IncomingInvitationReplyHandler', 'handleFromRequest');
 
 		UnRegisterModule("calendar");
 
@@ -342,7 +343,7 @@ class calendar extends CModule
 		return true;
 	}
 
-	function InstallUserFields($id = "all")
+	public static function InstallUserFields($id = "all")
 	{
 		global $APPLICATION;
 		$errors = null;

@@ -5,6 +5,7 @@
 /** @var string $componentPath */
 /** @var string $componentName */
 /** @var string $componentTemplate */
+/** @var string $templateFolder */
 /** @global CDatabase $DB */
 /** @global CUser $USER */
 /** @global CMain $APPLICATION */
@@ -22,14 +23,14 @@ if (!$arResult["bFromList"])
 $ajax_page = $APPLICATION->GetCurPageParam("", array("logajax", "bxajaxid", "logout"));
 $voteId = false;
 
-$extensions = array('ajax', 'viewer', 'popup', 'clipboard');
+$extensions = [ 'ajax', 'viewer', 'popup', 'clipboard' ];
 if ($arResult["bTasksAvailable"])
 {
 	$extensions[] = 'tasks_util_base';
 	$extensions[] = 'tasks_util_query';
 }
-
 CJSCore::Init($extensions);
+
 UI\Extension::load([
 	'ui.buttons',
 	'ui.animations',
@@ -38,12 +39,15 @@ UI\Extension::load([
 	'main.rating',
 	'socialnetwork.commentaux',
 	'socialnetwork.livefeed',
-	'landing_note'
+	'landing_note',
+	'ui.livefeed.background'
 ]);
 
 $bodyClass = $APPLICATION->GetPageProperty("BodyClass");
 $bodyClass = $bodyClass ? $bodyClass." no-all-paddings" : "no-all-paddings";
 $APPLICATION->SetPageProperty("BodyClass", $bodyClass);
+
+?><div class="feed-item-wrap" data-livefeed-id="<?=(int)$arParams['LOG_ID']?>"><?
 
 ?><script>
 	BX.message({
@@ -81,13 +85,14 @@ $APPLICATION->SetPageProperty("BodyClass", $bodyClass);
 				tagLinkPattern: '<?=(!empty($arParams["PATH_TO_LOG_TAG"]) ? CUtil::JSEscape($arParams["PATH_TO_LOG_TAG"]) : '')?>',
 				readOnly: '<?=($arResult['ReadOnly'] ? 'Y' : 'N')?>',
 				pathToUser: '<?=(!empty($arParams["PATH_TO_USER"]) ? CUtil::JSEscape($arParams["PATH_TO_USER"]) : '')?>',
-				pathToPost: '<?=(!empty($arParams["PATH_TO_POST"]) ? CUtil::JSEscape($arParams["PATH_TO_POST"]) : '')?>'
+				pathToPost: '<?=(!empty($arParams["PATH_TO_POST"]) ? CUtil::JSEscape($arParams["PATH_TO_POST"]) : '')?>',
+				allowToAll: <?=(empty($arResult["FEED_DESTINATION"]) || !isset($arResult["FEED_DESTINATION"]["DENY_TOALL"]) || !$arResult["FEED_DESTINATION"]["DENY_TOALL"] ? 'true' : 'false')?>,
+				allowSearchEmailUsers: <?=($arResult["ALLOW_EMAIL_INVITATION"] ? 'true' : 'false')?>
 			});
 		}
 	});
 </script><?
 
-?><div class="feed-item-wrap"><?
 if($arResult["MESSAGE"] <> '')
 {
 	?><div class="feed-add-successfully">
@@ -172,9 +177,15 @@ else
 			$classNameList[] = 'feed-post-block-vote';
 		}
 
-		if (!empty($arResult["GRATITUDE"]))
+		if (
+			!empty($arResult['GRATITUDE'])
+			&& !empty($arResult['GRATITUDE']['TYPE'])
+			&& !empty($arResult['GRATITUDE']['TYPE']['XML_ID'])
+		)
 		{
+			$classNameList[] = 'feed-post-block-background';
 			$classNameList[] = 'feed-post-block-grat';
+			$classNameList[] = 'feed-post-block-grat-'.htmlspecialcharsbx($arResult['GRATITUDE']['TYPE']['XML_ID']);
 		}
 
 		if (!$arResult["bFromList"])
@@ -204,10 +215,19 @@ else
 		}
 
 		if (
+			!empty($arParams['FOLLOW'])
+			&& $arParams['FOLLOW'] === 'N'
+		)
+		{
+			$classNameList[] = 'feed-post-block-unfollowed';
+		}
+
+		if (
 			(
 				!isset($arParams['IS_CRM'])
 				|| $arParams['IS_CRM'] !== 'Y'
 			)
+			&& !in_array($arParams['TYPE'], [ 'DRAFT', 'MODERATION' ])
 			&& $USER->isAuthorized()
 		)
 		{
@@ -216,7 +236,11 @@ else
 				|| (isset($arParams['PINNED']) && $arParams['PINNED'] === 'Y')
 			);
 
-			$classNameList[] = ($pinned ? 'feed-post-block-pin-active' : 'feed-post-block-pin-inactive');
+			$classNameList[] = 'feed-post-block-pin';
+			if ($pinned)
+			{
+				$classNameList[] = 'feed-post-block-pin-active';
+			}
 		}
 
 		if (
@@ -243,44 +267,7 @@ else
 				}
 			);
 
-			<?
-			$postDest = array();
-
-			if (
-				!$arResult["bPublicPage"]
-				&& is_set($arResult["Post"]["SPERM"])
-				&& is_array($arResult["Post"]["SPERM"])
-			)
-			{
-				foreach($arResult["Post"]["SPERM"] as $type => $ar)
-				{
-					if (!in_array($type, array('U', 'SG', 'DR', 'G')))
-					{
-						continue;
-					}
-
-					$typeText = "users";
-					if($type == "SG")
-						$typeText = "sonetgroups";
-					elseif($type == "G")
-						$typeText = "groups";
-					elseif($type == "DR")
-						$typeText = "department";
-
-					foreach($ar as $id => $val)
-					{
-						$postDest[] = (
-							$type == "U"
-							&& intval($val["ID"]) <= 0
-								? array("id" => "UA", "name" => ($arResult["bIntranetInstalled"] ? GetMessage("BLOG_DESTINATION_ALL") : GetMessage("BLOG_DESTINATION_ALL_BSM")), "type" => "groups")
-								: array("id" => $type.$id, "name" => $val["NAME"], "type" => $typeText, "entityId" => $type.$id)
-						);
-					}
-				}
-			}
-
-			?>
-			var postDest<?=$arResult["Post"]["ID"]?> = <?=\CUtil::phpToJSObject($postDest)?>;
+			var postDest<?=$arResult["Post"]["ID"]?> = <?=\CUtil::phpToJSObject($arResult['postDestEntities'], false, false, true)?>;
 
 			BX.ready(function () {
 				if (
@@ -352,7 +339,7 @@ else
 					"PATH_TO_CONPANY_DEPARTMENT" => $arParams["PATH_TO_CONPANY_DEPARTMENT"],
 					"PATH_TO_VIDEO_CALL" => $arParams["PATH_TO_VIDEO_CALL"],
 					"SHOW_RATING" => $arParams["SHOW_RATING"],
-					"RATING_TYPE" => ($arResult["bIntranetInstalled"] || $arParams["RATING_TYPE"] == "like" ? "like_react" : $arParams["RATING_TYPE"]),
+					"RATING_TYPE" => ($arResult["bIntranetInstalled"] || $arParams["RATING_TYPE"] === "like" ? "like_react" : $arParams["RATING_TYPE"]),
 					"IMAGE_MAX_WIDTH" => $arParams["IMAGE_MAX_WIDTH"],
 					"IMAGE_MAX_HEIGHT" => $arParams["IMAGE_MAX_HEIGHT"],
 					"ALLOW_VIDEO" => $arParams["ALLOW_VIDEO"],
@@ -773,13 +760,13 @@ else
 					}
 
 					if(
-					(
-						empty($arParams['MODE'])
-						|| $arParams['MODE'] != 'LANDING'
-					)
-					&& $arResult["urlToEdit"] <> ''
+						(
+							empty($arParams['MODE'])
+							|| $arParams['MODE'] !== 'LANDING'
+						)
+						&& $arResult["urlToEdit"] <> ''
 						&& (
-							$arResult["PostPerm"] > BLOG_PERMS_MODERATE
+							$arResult["PostPerm"] >= BLOG_PERMS_FULL
 							|| (
 								$arResult["PostPerm"] >= BLOG_PERMS_WRITE
 								&& $arResult["Post"]["AUTHOR_ID"] == $arResult["USER_ID"]
@@ -787,7 +774,22 @@ else
 						)
 					)
 					{
-						?><a href="<?=$arResult["urlToEdit"]?>" title="<?=GetMessage("BLOG_BLOG_BLOG_EDIT")?>" target="_top"><span class="feed-destination-edit" onclick="BX.addClass(this, 'feed-destination-edit-pressed');"></span></a><?
+						if (!empty($arResult['Post']['BACKGROUND_CODE']))
+						{
+							$editHref = '#';
+							$onClick = "return BX.Livefeed.PostInstance.showBackgroundWarning({
+								urlToEdit: '".$arResult["urlToEdit"]."'
+							});";
+						}
+						else
+						{
+							$editHref = $arResult["urlToEdit"];
+							$onClick = '';
+						}
+
+						?><a href="<?=$editHref?>" onclick="<?=$onClick?>" title="<?=Loc::getMessage("BLOG_BLOG_BLOG_EDIT")?>" target="_top"><?
+							?><span class="feed-destination-edit" onclick="BX.addClass(this, 'feed-destination-edit-pressed');"></span><?
+						?></a><?
 					}
 
 					$datetime_detail = CComponentUtil::GetDateTimeFormatted(array(
@@ -808,18 +810,6 @@ else
 						}
 					?></div><?
 
-					if($arResult["Post"]["MICRO"] != "Y")
-					{
-						if ($arResult["bPublicPage"])
-						{
-							?><div class="feed-post-item"><span class="feed-post-title"><?=$arResult["Post"]["TITLE"]?></span></div><?
-						}
-						else
-						{
-							?><div class="feed-post-item"><a class="feed-post-title" href="<?=$arResult["Post"]["urlToPost"]?>" target="_top"><?=$arResult["Post"]["TITLE"]?></a></div><?
-						}
-					}
-
 				?></div><? // feed-post-title-block
 
 				$classList = [
@@ -828,9 +818,15 @@ else
 
 				if ($arResult["Post"]["IS_IMPORTANT"])
 				{
-					$classList[] = 'feed-info-block';
+					$classList[] = 'feed-post-block-background';
+					$classList[] = 'feed-post-block-important';
 				}
-				
+
+				if (!empty($arResult['Post']['BACKGROUND_CODE']))
+				{
+					$classList[] = 'feed-post-block-colored';
+				}
+
 				if (
 					(
 						$arResult["Post"]["textFormated"] === ''
@@ -844,75 +840,67 @@ else
 				
 				?><div class="<?=(implode(' ', $classList))?>" id="blog_post_outer_<?=$arResult["Post"]["ID"]?>"><?
 
-				
 					$classNameList = [];
 					if ($arResult["bFromList"])
 					{
 						$classNameList[] = 'feed-post-contentview';
 						$classNameList[] = 'feed-post-text-block-inner';
 					}
-					
 
-					?><div class="<?=implode(' ', $classNameList)?>"<?if($arResult["bFromList"]) {?> id="feed-post-contentview-BLOG_POST-<?=intval($arResult["Post"]["ID"])?>" bx-content-view-xml-id="BLOG_POST-<?=intval($arResult["Post"]["ID"])?>"<? }?>>
-						<div class="feed-post-text-block-inner-inner" id="blog_post_body_<?=$arResult["Post"]["ID"]?>"><?=$arResult["Post"]["textFormated"]?><?
+					if (
+						(
+							!empty($arResult['GRATITUDE'])
+							&& !empty($arResult['GRATITUDE']['TYPE'])
+							&& !empty($arResult['GRATITUDE']['TYPE']['XML_ID'])
+						)
+						|| $arResult["Post"]["IS_IMPORTANT"]
+						|| !empty($arResult["Post"]["BACKGROUND_CODE"])
+					)
+					{
+						$classNameList[] = 'feed-post-block-limited-width';
+					}
 
-						if ($arResult["Post"]["CUT"] == "Y")
-						{
-							?><div><a class="blog-postmore-link" href="<?=$arResult["Post"]["urlToPost"]?>"><?=GetMessage("BLOG_BLOG_BLOG_MORE")?></a></div><?
-						}
-						if (!empty($arResult["Post"]["IMPORTANT"]))
-						{
-							?><div class="feed-imp-post-footer"><?
-								?><span class="feed-imp-btn-main-wrap"><?
-									if ($arResult["Post"]["IMPORTANT"]["IS_READ"] == "Y")
+					if (!empty($arResult['Post']['BACKGROUND_CODE']))
+					{
+						$classNameList[] = 'ui-livefeed-background';
+						$classNameList[] = 'ui-livefeed-background-'.preg_replace(['/(\d+)_/', '/_/'], ['', '-'], $arResult['Post']['BACKGROUND_CODE']);
+					}
+
+					?><div class="<?=implode(' ', $classNameList)?>"<?if($arResult["bFromList"]) {?> id="feed-post-contentview-BLOG_POST-<?=(int)$arResult["Post"]["ID"]?>" bx-content-view-xml-id="BLOG_POST-<?=(int)$arResult["Post"]["ID"]?>"<? }?>>
+						<div class="feed-post-text-block-inner-inner" id="blog_post_body_<?=$arResult["Post"]["ID"]?>"><?
+
+							if ($arResult["Post"]["IS_IMPORTANT"])
+							{
+								?><div class="feed-important-icon"></div><?
+							}
+
+							if($arResult["Post"]["MICRO"] !== "Y")
+							{
+								?><div class="feed-post-item feed-post-item-title"><?
+									if ($arResult["bPublicPage"])
 									{
-										?><span class="feed-imp-btn-wrap">
-											<span class="have-read-text-block"><i></i><?=GetMessage('BLOG_ALREADY_READ')?><span class="feed-imp-post-footer-comma">,</span></span>
-										</span><?
+										?><span class="feed-post-title"><?=$arResult["Post"]["TITLE"]?></span><?
 									}
 									else
 									{
-										?><span class="feed-imp-btn-wrap"><?
-											?><button
-												class="ui-btn ui-btn-lg ui-btn-success"
-												id="blog-post-readers-btn-<?=$arResult["Post"]["ID"]?>"
-												bx-blog-post-id="<?=$arResult["Post"]["ID"]?>"
-												bx-url="<?=htmlspecialcharsbx($arResult["arUser"]["urlToPostImportant"])?>"
-												onclick="new SBPImpPost(this); return false;"
-											><?=GetMessage(trim("BLOG_READ_".$arResult["Post"]["IMPORTANT"]["USER"]["PERSONAL_GENDER"]))?></button><?
-										?></span><?
+										?><a class="feed-post-title" href="<?=$arResult["Post"]["urlToPost"]?>" target="_top"><?=$arResult["Post"]["TITLE"]?></a><?
 									}
-								?></span><?
-								?><span <?
-									?>id="blog-post-readers-count-<?=$arResult["Post"]["ID"]?>" <?
-									?>class="feed-imp-post-footer-text"<?
-									if($arResult["Post"]["IMPORTANT"]["COUNT"]<=0)
-									{
-										?> style="display:none;"<?
-									}
-									?>><?=GetMessage("BLOG_USERS_ALREADY_READ")?> <a class="feed-imp-post-user-link" href="javascript:void(0);"><?
-									?><span><?=$arResult["Post"]["IMPORTANT"]["COUNT"]?></span> <?=GetMessage("BLOG_READERS")?></a></span>
-							</div>
-							<script type="text/javascript">
-								BX.ready(function(){
-									var sbpimp<?=$arResult["Post"]["ID"]?> =  new top.SBPImpPostCounter(
-										BX('blog-post-readers-count-<?=$arResult["Post"]["ID"]?>'),
-										<?=$arResult["Post"]["ID"]?>, { 'pathToUser' : '<?=CUtil::JSEscape($arParams["~PATH_TO_USER"])?>', 'nameTemplate' : '<?=CUtil::JSEscape($arParams["NAME_TEMPLATE"])?>' }
-									);
-									<?
-									if ($arResult["Post"]["IMPORTANT"]["IS_READ"] != "Y")
-									{
-										?>
-										BX.addCustomEvent(BX('blog-post-readers-btn-<?=$arResult["Post"]["ID"]?>'), "onInit", BX.proxy(sbpimp<?=$arResult["Post"]["ID"]?>.click, sbpimp<?=$arResult["Post"]["ID"]?>));
-										<?
-									}
-									?>
-									BX.message({'BLOG_ALREADY_READ' : '<?=GetMessageJS('BLOG_ALREADY_READ')?>'});
-								});
-							</script><?
-						}
+								?></div><?
+							}
+
+							?><div class="feed-post-text"><?=$arResult["Post"]["textFormated"]?></div><?
+
+							if ($arResult["Post"]["CUT"] === "Y")
+							{
+								?><div><a class="blog-postmore-link" href="<?=$arResult["Post"]["urlToPost"]?>"><?=GetMessage("BLOG_BLOG_BLOG_MORE")?></a></div><?
+							}
+
+							require($_SERVER["DOCUMENT_ROOT"].$templateFolder."/include/important.php");
+							require($_SERVER["DOCUMENT_ROOT"].$templateFolder."/include/gratitude.php");
+
 						?></div>
 					</div><?
+
 					if($arResult["bFromList"])
 					{
 						?><div class="feed-post-text-more" onclick="BX.UI.Animations.expand({
@@ -959,13 +947,14 @@ else
 					</div><?
 				}
 
-				if($arResult["POST_PROPERTIES"]["SHOW"] == "Y")
+				if($arResult["POST_PROPERTIES"]["SHOW"] === "Y")
 				{
 					$eventHandlerID = AddEventHandler('main', 'system.field.view.file', Array('CBlogTools', 'blogUFfileShow'));
 					foreach ($arResult["POST_PROPERTIES"]["DATA"] as $FIELD_NAME => $arPostField)
 					{
 						if(!empty($arPostField["VALUE"]))
 						{
+
 							$arPostField['BLOG_DATE_PUBLISH'] = $arResult["Post"]["DATE_PUBLISH"];
 							$arPostField['URL_TO_POST'] = $arResult["Post"]["urlToPost"];
 							$arPostField['POST_ID'] = $arResult["Post"]['ID'];
@@ -981,7 +970,7 @@ else
 										"NAME_TEMPLATE" => $arParams["NAME_TEMPLATE"], 
 										"PATH_TO_USER" => $arParams["~PATH_TO_USER"],
 									),
-									"GRID" => ($arResult['Post']['hasInlineDiskFile'] ? 'N' : 'Y'),
+									"GRID" => ($arResult['Post']['hasInlineDiskFile'] || !empty($arResult['Post']['BACKGROUND_CODE']) ? 'N' : 'Y'),
 									"USE_TOGGLE_VIEW" => ($arResult["PostPerm"] >= 'W' ? 'Y' : 'N'),
 								), null, array("HIDE_ICONS"=>"Y")
 							);?><?
@@ -1013,79 +1002,6 @@ else
 				if (!empty($arResult["URL_PREVIEW"]))
 				{
 					?><?=$arResult["URL_PREVIEW"]?><?
-				}
-
-				if (!empty($arResult["GRATITUDE"]))
-				{
-					$grat_users_count = (!empty($arResult["GRATITUDE"]["USERS_FULL"]) ? count($arResult["GRATITUDE"]["USERS_FULL"]) : 0);
-
-					?><div class="feed-grat-block feed-info-block<?=($grat_users_count > 4 ? " feed-grat-block-small" : " feed-grat-block-large")?>"><?
-
-					if ($grat_users_count <= 4)
-					{
-						?><span class="feed-workday-left-side"><?
-							?><div class="feed-grat-img<?=(is_array($arResult["GRATITUDE"]["TYPE"]) ? " feed-grat-img-".htmlspecialcharsbx($arResult["GRATITUDE"]["TYPE"]["XML_ID"]) : "")?>"></div><?
-							?><div class="feed-grat-block-arrow"></div><?
-							?><div class="feed-user-name-wrap-outer"><?
-								foreach($arResult["GRATITUDE"]["USERS_FULL"] as $arGratUser)
-								{
-									$anchor_id = 'post_grat_'.$arGratUser["ID"].'_'.RandString(5);
-									$avatar = false;
-									if (isset($arGratUser["AVATAR_SRC"]) && $arGratUser["AVATAR_SRC"] <> '')
-									{
-										$avatar = $arGratUser["AVATAR_SRC"];
-									}
-									?><span class="feed-user-name-wrap">
-										<div class="ui-icon ui-icon-common-user feed-user-avatar">
-											<? if ($avatar):?>
-												<i style="background-image: url('<?=$avatar?>');" alt="<?=CUser::FormatName($arParams['NAME_TEMPLATE'], $arGratUser)?>"></i>
-<!--												<img src="--><?//=$avatar?><!--" alt="--><?//=CUser::FormatName($arParams['NAME_TEMPLATE'], $arGratUser)?><!--">-->
-											<? endif ?>
-										</div>
-										<div class="feed-user-name-wrap-inner"><?
-											?><a class="feed-workday-user-name" href="<?=($arGratUser['URL'] ? $arGratUser['URL'] : 'javascript:void(0);')?>"
-												id="<?=$anchor_id?>"
-												bx-tooltip-user-id="<?=($arGratUser['URL'] ? $arGratUser['ID'] : "")?>"
-											><?=CUser::FormatName($arParams['NAME_TEMPLATE'], $arGratUser)?></a><?
-											?><span class="feed-workday-user-position"><?=htmlspecialcharsbx($arGratUser['WORK_POSITION'])?></span>
-										</div><?
-									?></span><?
-								}
-							?></div><?
-						?></span><?
-					}
-					else
-					{
-						?><div class="feed-grat-small-left"><?
-							?><div class="feed-grat-img<?=(is_array($arResult["GRATITUDE"]["TYPE"]) ? " feed-grat-img-".htmlspecialcharsbx($arResult["GRATITUDE"]["TYPE"]["XML_ID"]) : "")?>"></div><?
-							?><div class="feed-grat-block-arrow"></div><?
-						?></div><?
-						?><div class="feed-grat-small-block-names"><?
-							foreach($arResult["GRATITUDE"]["USERS_FULL"] as $arGratUser)
-							{
-								$anchor_id = 'post_grat_'.$arGratUser["ID"].'_'.RandString(5);
-								$avatar = false;
-								if (isset($arGratUser["AVATAR_SRC"]) && $arGratUser["AVATAR_SRC"] <> '')
-								{
-									$avatar = $arGratUser["AVATAR_SRC"];
-								}
-								?><span class="feed-user-name-wrap">
-									<div class="feed-user-avatar"
-										<? if ($avatar):?>
-											style="background: url('<?=$avatar?>'); background-size: cover;"
-										<? endif ?>>
-									</div><?
-									?><a class="feed-workday-user-name"
-										href="<?=($arGratUser['URL'] ? $arGratUser['URL'] : 'javascript:void(0);')?>"
-										id="<?=$anchor_id?>"
-										bx-tooltip-user-id="<?=($arGratUser['URL'] ? $arGratUser['ID'] : "")?>"
-									><?=CUser::FormatName($arParams['NAME_TEMPLATE'], $arGratUser)?></a><?
-									?><!--<span class="feed-workday-user-position"><?=htmlspecialcharsbx($arGratUser['WORK_POSITION'])?></span>--><?
-								?></span><?
-							}
-						?></div><?
-					}
-					?></div><?
 				}
 
 				if($arResult["POST_PROPERTIES"]["SHOW"] == "Y")
@@ -1183,13 +1099,19 @@ else
 
 							?><div class="feed-inform-item feed-inform-comments feed-inform-comments-pinned">
 								<?=Loc::getMessage('BLOG_PINNED_COMMENTS')?>
+								<span class="feed-inform-comments-pinned-all"><?=$allCommentCount?></span>
 								<span class="feed-inform-comments-pinned-old"><?=$allCommentCount-$newCommentsCount?></span><?
 								$classList = [ 'feed-inform-comments-pinned-new' ];
 								if ($newCommentsCount > 0)
 								{
 									$classList[] = 'feed-inform-comments-pinned-new-active';
 								}
-								?><span class="<?=implode(' ', $classList)?>">+<?=$newCommentsCount?></span><?
+								?><span class="<?=implode(' ', $classList)?>"><?
+									?><svg width="6" height="6" viewBox="0 0 6 6" fill="none" xmlns="http://www.w3.org/2000/svg"><?
+										?><path opacity="0.840937" d="M3.36051 5.73145V3.76115H5.33081V2.70174H3.36051V0.731445H2.30111V2.70174H0.330811V3.76115H2.30111V5.73145H3.36051Z" fill="white"></path><?
+									?></svg><?
+									?><span class="feed-inform-comments-pinned-new-value"><?=$newCommentsCount?></span><?
+								?></span><?
 							?></div><?
 						}
 
@@ -1364,4 +1286,4 @@ else
 		echo GetMessage("BLOG_BLOG_BLOG_NO_AVAIBLE_MES");
 	}
 }
-?></div>
+?></div><? // feed-item-wrap

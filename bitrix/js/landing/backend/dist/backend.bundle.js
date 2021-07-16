@@ -70,7 +70,11 @@ this.BX = this.BX || {};
 	      var data = arguments.length > 1 && arguments[1] !== undefined ? arguments[1] : {};
 	      var queryParams = arguments.length > 2 && arguments[2] !== undefined ? arguments[2] : {};
 	      var uploadParams = arguments.length > 3 && arguments[3] !== undefined ? arguments[3] : {};
-	      queryParams.site_id = this.getSiteId();
+
+	      if (!queryParams.site_id) {
+	        queryParams.site_id = this.getSiteId();
+	      }
+
 	      var requestBody = {
 	        sessid: main_core.Loc.getMessage('bitrix_sessid'),
 	        action: uploadParams.action || _action.replace('Landing\\Block', 'Block'),
@@ -94,16 +98,18 @@ this.BX = this.BX || {};
 
 	        return response.result;
 	      }).catch(function (err) {
-	        if (requestBody.action !== 'Block::getById') {
-	          var error = main_core.Type.isString(err) ? {
-	            type: 'error'
-	          } : err;
-	          err.action = requestBody.action; // eslint-disable-next-line
+	        if (requestBody.action !== 'Landing::downBlock' && requestBody.action !== 'Landing::upBlock') {
+	          if (requestBody.action !== 'Block::getById' && requestBody.action !== 'Landing::move' && requestBody.action !== 'Landing::copy' && requestBody.action !== 'Site::moveFolder') {
+	            var error = main_core.Type.isString(err) ? {
+	              type: 'error'
+	            } : err;
+	            err.action = requestBody.action; // eslint-disable-next-line
 
-	          BX.Landing.ErrorManager.getInstance().add(error);
+	            BX.Landing.ErrorManager.getInstance().add(error);
+	          }
+
+	          return Promise.reject(err);
 	        }
-
-	        return Promise.reject(err);
 	      });
 	    }
 	  }, {
@@ -132,16 +138,18 @@ this.BX = this.BX || {};
 	        BX.Landing.UI.Panel.StatusPanel.getInstance().update();
 	        return response;
 	      }).catch(function (err) {
-	        if (requestBody.action !== 'Block::getById') {
-	          var error = main_core.Type.isString(err) ? {
-	            type: 'error'
-	          } : err;
-	          error.action = requestBody.action; // eslint-disable-next-line
+	        if (requestBody.action !== 'Landing::downBlock' && requestBody.action !== 'Landing::upBlock') {
+	          if (requestBody.action !== 'Block::getById') {
+	            var error = main_core.Type.isString(err) ? {
+	              type: 'error'
+	            } : err;
+	            error.action = requestBody.action; // eslint-disable-next-line
 
-	          BX.Landing.ErrorManager.getInstance().add(error);
+	            BX.Landing.ErrorManager.getInstance().add(error);
+	          }
+
+	          return Promise.reject(err);
 	        }
-
-	        return Promise.reject(err);
 	      });
 	    }
 	  }, {

@@ -69,6 +69,48 @@ class OrderController extends EntityController
 	}
 
 	/**
+	 * @param $ownerId
+	 * @param array $params
+	 */
+	public function onLandingOrderCreate(int $ownerId, int $dealId, array $params)
+	{
+		if ($ownerId <= 0)
+		{
+			throw new Main\ArgumentException('Owner ID must be greater than zero.');
+		}
+
+		if ($dealId <= 0)
+		{
+			throw new Main\ArgumentException('Deal ID must be greater than zero.');
+		}
+
+		$orderFields = $params['ORDER_FIELDS'] ?? [];
+		$settings = $params['SETTINGS'] ?? [];
+
+		$bindings = [
+			[
+				'ENTITY_TYPE_ID' => \CCrmOwnerType::Deal,
+				'ENTITY_ID' => $dealId
+			]
+		];
+
+		$entityId = OrderEntry::create([
+			'ENTITY_ID' => $ownerId,
+			'CREATED' => Main\Type\DateTime::createFromTimestamp(time() - 60),
+			'TYPE_CATEGORY_ID' => OrderCategoryType::ENCOURAGE_BUY_PRODUCTS,
+			'AUTHOR_ID' => self::resolveCreatorID($orderFields),
+			'SETTINGS' => $settings,
+			'BINDINGS' => $bindings,
+		]);
+
+		foreach($bindings as $binding)
+		{
+			$tag = TimelineEntry::prepareEntityPushTag($binding['ENTITY_TYPE_ID'], $binding['ENTITY_ID']);
+			self::pushHistoryEntry($entityId, $tag, 'timeline_activity_add');
+		}
+	}
+
+	/**
 	 * @param $ownerID
 	 * @param array $params
 	 * @throws Main\ArgumentException
@@ -369,24 +411,23 @@ class OrderController extends EntityController
 	 */
 	protected static function resolveCreatorID(array $fields)
 	{
-		$authorID = 0;
-		if(isset($fields['CREATED_BY']))
+		$authorId = 0;
+		if (isset($fields['CREATED_BY']))
 		{
-			$authorID = (int)$fields['CREATED_BY'];
+			$authorId = (int)$fields['CREATED_BY'];
 		}
 
-		if($authorID <= 0 && isset($fields['RESPONSIBLE_ID']))
+		if ($authorId <= 0 && isset($fields['RESPONSIBLE_ID']))
 		{
-			$authorID = (int)$fields['RESPONSIBLE_ID'];
+			$authorId = (int)$fields['RESPONSIBLE_ID'];
 		}
 
-		if($authorID <= 0)
+		if ($authorId <= 0)
 		{
-			//Set portal admin as default creator
-			$authorID = 1;
+			$authorId = self::getDefaultAuthorId();
 		}
 
-		return $authorID;
+		return $authorId;
 	}
 
 	/**
@@ -419,8 +460,7 @@ class OrderController extends EntityController
 
 		if($authorID <= 0)
 		{
-			//Set portal admin as default editor
-			$authorID = 1;
+			$authorID = self::getDefaultAuthorId();
 		}
 
 		return $authorID;
@@ -440,7 +480,7 @@ class OrderController extends EntityController
 		if($typeID === TimelineType::CREATION)
 		{
 			$data['TITLE'] = Loc::getMessage('CRM_ORDER_CREATION');
-			$title = htmlspecialcharsbx($data['ASSOCIATED_ENTITY']['TITLE']);
+			$title = htmlspecialcharsbx(\CUtil::JSEscape($data['ASSOCIATED_ENTITY']['TITLE']));
 			if (!empty($fields['DATE_INSERT_TIMESTAMP']))
 			{
 				$dateInsert = \CCrmComponentHelper::TrimDateTimeString(ConvertTimeStamp($fields['DATE_INSERT_TIMESTAMP'],'SHORT'));
@@ -544,8 +584,8 @@ class OrderController extends EntityController
 
 			if (isset($data['FIELDS']['VIEWED']) && $data['FIELDS']['VIEWED'] === 'Y')
 			{
-				$data['TITLE'] = Loc::getMessage('CRM_ORDER_VIEWED');
-				$data['ASSOCIATED_ENTITY']['TITLE'] = Loc::getMessage('CRM_ORDER_VIEWED_TITLE_2');
+				$data['TITLE'] = \CCrmOwnerType::GetDescription(\CCrmOwnerType::OrderPayment);
+				$data['ASSOCIATED_ENTITY']['TITLE'] = Loc::getMessage('CRM_PAYMENT_VIEWED_TITLE');
 				$data['ASSOCIATED_ENTITY']['HTML_TITLE'] = Loc::getMessage(
 					'CRM_ORDER_VIEWED_HTML_TITLE_2',
 					[
@@ -567,9 +607,20 @@ class OrderController extends EntityController
 					}
 				}
 
-				$data['TITLE'] = Loc::getMessage('CRM_ORDER_SENT');
+				$data['TITLE'] = \CCrmOwnerType::GetDescription(\CCrmOwnerType::OrderPayment);
+				$data['ASSOCIATED_ENTITY']['HTML_TITLE'] = Loc::getMessage(
+					'CRM_ORDER_VIEWED_HTML_TITLE_2',
+					[
+						'#ORDER_ID#' => $data['FIELDS']['ORDER_ID'],
+						'#DATE#' => $data['ASSOCIATED_ENTITY']['DATE'],
+						'#SUM#' => $data['ASSOCIATED_ENTITY']['SUM_WITH_CURRENCY'],
+					]
+				);
 				$data['ASSOCIATED_ENTITY']['SENT'] = 'Y';
 			}
+
+			$data['ASSOCIATED_ENTITY']['PAYMENT_ID'] = $fields['PAYMENT_ID'];
+			$data['ASSOCIATED_ENTITY']['SHIPMENT_ID'] = $fields['SHIPMENT_ID'];
 
 			unset($data['SETTINGS']);
 		}
@@ -645,16 +696,6 @@ class OrderController extends EntityController
 	 * @param $params
 	 * @throws Main\ArgumentException
 	 */
-	public function onView($ownerId, $params)
-	{
-		return $this->notifyOrderEntry($ownerId, $params);
-	}
-
-	/**
-	 * @param $ownerId
-	 * @param $params
-	 * @throws Main\ArgumentException
-	 */
 	private function notifyOrderEntry($ownerId, $params)
 	{
 		if ($ownerId <= 0)
@@ -714,5 +755,16 @@ class OrderController extends EntityController
 
 		$deal = new \CCrmDeal(false);
 		$deal->Update($dealId, $fields);
+	}
+
+	/**
+	 * @param $ownerId
+	 * @param array $params
+	 * @throws Main\ArgumentException
+	 */
+	public function onManualContinuePay($ownerId, array $params)
+	{
+		$params['SETTINGS']['FIELDS']['MANUAL_CONTINUE_PAY'] = 'Y';
+		return $this->notifyOrderEntry($ownerId, $params);
 	}
 }

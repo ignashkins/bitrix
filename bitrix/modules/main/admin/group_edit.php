@@ -10,7 +10,6 @@
  * @global CMain $APPLICATION
  * @global CUser $USER
  * @global CDatabase $DB
- * @global array $BX_GROUP_POLICY;
  */
 
 require_once(dirname(__FILE__)."/../include/prolog_admin_before.php");
@@ -36,7 +35,7 @@ while ($mr = $modules->Fetch())
 	$arModules[] = $mr["ID"];
 
 $arSites = array();
-$rsSites = CSite::GetList($by="sort", $order="asc", array("ACTIVE" => "Y"));
+$rsSites = CSite::GetList("sort", "asc", array("ACTIVE" => "Y"));
 while ($arSite = $rsSites->GetNext())
 {
 	$arSites["reference_id"][] = $arSite["ID"];
@@ -158,7 +157,7 @@ if($_SERVER["REQUEST_METHOD"] == "POST" && ($_REQUEST["save"] <> '' || $_REQUEST
 	$group = new CGroup;
 
 	$arGroupPolicy = array();
-	foreach ($BX_GROUP_POLICY as $key => $value)
+	foreach (CUser::$GROUP_POLICY as $key => $value)
 	{
 		$curVal = ${"gp_".$key};
 		$curValParent = ${"gp_".$key."_parent"};
@@ -471,7 +470,7 @@ $tabControl->BeginNextTab();
 			</script>
 			<?
 			$ind = -1;
-			$dbUsers = CUser::GetList(($b="id"), ($o="asc"), array("ACTIVE" => "Y"));
+			$dbUsers = CUser::GetList("id", "asc", array("ACTIVE" => "Y"));
 			while ($arUsers = $dbUsers->Fetch())
 			{
 				$ind++;
@@ -692,11 +691,11 @@ $tabControl->BeginNextTab();
 		</td>
 	</tr>
 	<?
-	$arGroupPolicy = unserialize(htmlspecialcharsback($str_SECURITY_POLICY));
+	$arGroupPolicy = unserialize(htmlspecialcharsback($str_SECURITY_POLICY), ['allowed_classes' => false]);
 	if (!is_array($arGroupPolicy))
 		$arGroupPolicy = array();
 
-	foreach ($BX_GROUP_POLICY as $key => $value)
+	foreach (CUser::$GROUP_POLICY as $key => $value)
 	{
 		$curVal = $arGroupPolicy[$key];
 		$curValParent = !array_key_exists($key, $arGroupPolicy);
@@ -708,7 +707,7 @@ $tabControl->BeginNextTab();
 		?>
 		<tr valign="top">
 			<td><label for="gp_<?echo $key?>"><?
-			$gpTitle = GetMessage("GP_".$key);
+			$gpTitle = GetMessage("GP_".$key, ["#SPECIAL_CHARS#" => \CUser::PASSWORD_SPECIAL_CHARS]);
 			if ($gpTitle == '')
 				$gpTitle = $key;
 
@@ -800,7 +799,7 @@ $tabControl->BeginNextTab();
 			<select id="subordinate_groups" name="subordinate_groups[]" multiple size="6">
 			<?
 			$arSubordinateGroups = CGroup::GetSubordinateGroups($ID);
-			$rsData = CGroup::GetList($by, $order, array("ACTIVE"=>"Y", "ADMIN"=>"N", "ANONYMOUS"=>"N"));
+			$rsData = CGroup::GetList('', '', array("ACTIVE"=>"Y", "ADMIN"=>"N", "ANONYMOUS"=>"N"));
 			while($arRes = $rsData->Fetch())
 			{
 				$arRes['ID'] = intval($arRes['ID']);

@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["TASKS_ALL_TASKS"] = "Всі";
 $MESS["TASKS_EMPTY_LIST"] = "Список завдань порожній";
 $MESS["TASKS_EMPTY_LIST1"] = "Створити завдання";
@@ -55,5 +55,4 @@ $MESS["TASK_COLUMN_TIMETRACKING"] = "облік часу";
 $MESS["TASK_COLUMN_TIME_ESTIMATE"] = "планові трудовитрати";
 $MESS["TASK_COLUMN_TIME_SPENT_IN_LOGS"] = "затрачений час";
 $MESS["TASK_DISALLOWED"] = "Заборонено";
-$MESS["TASK_EXPIRED"] = "Прострочено";
-?>
+$MESS["TASK_EXPIRED"] = "Протерміновано";

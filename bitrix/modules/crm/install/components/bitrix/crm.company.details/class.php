@@ -7,9 +7,9 @@ use Bitrix\Crm;
 use Bitrix\Crm\Attribute\FieldAttributeManager;
 use Bitrix\Crm\Attribute\FieldAttributeType;
 use Bitrix\Crm\Attribute\FieldAttributePhaseGroupType;
-use Bitrix\Crm\EntityAddress;
-use Bitrix\Crm\Format\CompanyAddressFormatter;
-use Bitrix\Crm\Format\AddressSeparator;
+use Bitrix\Crm\CompanyAddress;
+use Bitrix\Crm\EntityAddressType;
+use Bitrix\Crm\Format\AddressFormatter;
 use Bitrix\Crm\Tracking;
 
 if(!Main\Loader::includeModule('crm'))
@@ -80,6 +80,8 @@ class CCrmCompanyDetailsComponent extends CBitrixComponent
 	private $enableSearchHistory = true;
 	/** @var array */
 	private $defaultEntityData = [];
+	/** @var bool */
+	private $isLocationModuleIncluded = false;
 
 	public function __construct($component = null)
 	{
@@ -126,6 +128,7 @@ class CCrmCompanyDetailsComponent extends CBitrixComponent
 		global $APPLICATION;
 
 		$this->enableOutmodedFields = false;//\Bitrix\Crm\Settings\CompanySettings::getCurrent()->areOutmodedRequisitesEnabled();
+		$this->isLocationModuleIncluded = Main\Loader::includeModule('location');
 
 		//region Params
 		$this->arResult['ENTITY_ID'] = isset($this->arParams['~ENTITY_ID']) ? (int)$this->arParams['~ENTITY_ID'] : 0;
@@ -324,7 +327,8 @@ class CCrmCompanyDetailsComponent extends CBitrixComponent
 
 		$this->prepareEntityUserFields();
 		$this->prepareEntityUserFieldInfos();
-		$this->prepareEntityData();
+
+		$this->initializeData();
 
 		$this->arResult['IS_MY_COMPANY'] = $this->isMyCompany();
 
@@ -363,11 +367,7 @@ class CCrmCompanyDetailsComponent extends CBitrixComponent
 		//endregion
 
 		//region Fields
-		$this->prepareFieldInfos();
-
-		$this->prepareEntityFieldAttributes();
-
-		$this->arResult['ENTITY_FIELDS'] = $this->entityFieldInfos;
+		$this->arResult['ENTITY_FIELDS'] = $this->prepareFieldInfos();
 		$this->arResult['ENTITY_ATTRIBUTE_SCOPE'] = FieldAttributeManager::resolveEntityScope(
 			CCrmOwnerType::Company,
 			$this->entityID
@@ -424,6 +424,17 @@ class CCrmCompanyDetailsComponent extends CBitrixComponent
 						)
 					)
 				);
+
+				$relationManager = Crm\Service\Container::getInstance()->getRelationManager();
+				$this->arResult['TABS'] = array_merge(
+					$this->arResult['TABS'],
+					$relationManager->getRelationTabsForDynamicChildren(
+						\CCrmOwnerType::Company,
+						$this->entityID,
+						($this->entityID === 0)
+					)
+				);
+
 				$this->arResult['TABS'][] = array(
 					'id' => 'tab_quote',
 					'name' => Loc::getMessage('CRM_COMPANY_TAB_QUOTE'),
@@ -474,7 +485,11 @@ class CCrmCompanyDetailsComponent extends CBitrixComponent
 						)
 					)
 				);
-				if (CModule::IncludeModule('sale') && Main\Config\Option::get("crm", "crm_shop_enabled") === "Y")
+				if (
+					CModule::IncludeModule('sale')
+					&& Main\Config\Option::get("crm", "crm_shop_enabled") === "Y"
+					&& CCrmSaleHelper::isWithOrdersMode()
+				)
 				{
 					$this->arResult['TABS'][] = array(
 						'id' => 'tab_order',
@@ -983,16 +998,7 @@ class CCrmCompanyDetailsComponent extends CBitrixComponent
 							)
 						)
 					),
-					'clientEditorFieldsParams' => [
-						CCrmOwnerType::ContactName => [
-							'REQUISITES' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Contact, 'requisite'),
-							'ADDRESS' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Contact,'requisite_address'),
-						],
-						CCrmOwnerType::CompanyName => [
-							'REQUISITES' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Company, 'requisite'),
-							'ADDRESS' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Company,'requisite_address'),
-						]
-					]
+					'clientEditorFieldsParams' => $this->prepareClientEditorFieldsParams()
 				)
 			),
 			array(
@@ -1543,7 +1549,7 @@ class CCrmCompanyDetailsComponent extends CBitrixComponent
 					$this->entityData['INDUSTRY'] = $this->defaultEntityData['INDUSTRY'];
 				}
 			}
-			
+
 			if($this->isFieldHasDefaultValueAttribute($fieldsInfo, 'EMPLOYEES'))
 			{
 				$this->arResult['FIELDS_SET_DEFAULT_VALUE'][] = 'EMPLOYEES';
@@ -1609,10 +1615,9 @@ class CCrmCompanyDetailsComponent extends CBitrixComponent
 		//region Responsible
 		if(isset($this->entityData['ASSIGNED_BY_ID']) && $this->entityData['ASSIGNED_BY_ID'] > 0)
 		{
-			$by = 'ID';
-			$order = 'ASC';
 			$dbUsers = \CUser::GetList(
-				$by, $order,
+				'ID',
+				'ASC',
 				array('ID' => $this->entityData['ASSIGNED_BY_ID']),
 				array(
 					'FIELDS' => array(
@@ -1621,7 +1626,6 @@ class CCrmCompanyDetailsComponent extends CBitrixComponent
 					)
 				)
 			);
-			unset($by, $order);
 			$user = is_object($dbUsers) ? $dbUsers->Fetch() : null;
 			if(is_array($user))
 			{
@@ -1915,25 +1919,20 @@ class CCrmCompanyDetailsComponent extends CBitrixComponent
 
 		if($this->enableOutmodedFields)
 		{
-			$this->entityData['ADDRESS_HTML'] = CompanyAddressFormatter::format(
-				$this->entityData,
-				array(
-					'TYPE_ID' => EntityAddress::Primary,
-					'SEPARATOR' => AddressSeparator::HtmlLineBreak,
-					'NL2BR' => true,
-					'HTML_ENCODE' => true
-				)
-			);
-
-			$this->entityData['REG_ADDRESS_HTML'] = CompanyAddressFormatter::format(
-				$this->entityData,
-				array(
-					'TYPE_ID' => EntityAddress::Registered,
-					'SEPARATOR' => AddressSeparator::HtmlLineBreak,
-					'NL2BR' => true,
-					'HTML_ENCODE' => true
-				)
-			);
+			$this->entityData['ADDRESS_HTML'] =
+				AddressFormatter::getSingleInstance()->formatHtmlMultilineSpecialchar(
+					CompanyAddress::mapEntityFields(
+						$this->entityData,
+						['TYPE_ID' => EntityAddressType::Primary]
+					)
+				);
+			$this->entityData['REG_ADDRESS_HTML'] =
+				AddressFormatter::getSingleInstance()->formatHtmlMultilineSpecialchar(
+					CompanyAddress::mapEntityFields(
+						$this->entityData,
+						['TYPE_ID' => EntityAddressType::Registered]
+					)
+				);
 		}
 
 		Tracking\UI\Details::prepareEntityData(
@@ -2033,5 +2032,40 @@ class CCrmCompanyDetailsComponent extends CBitrixComponent
 	protected function getFileUrlTemplate(): string
 	{
 		return '/bitrix/components/bitrix/crm.company.show/show_file.php?ownerId=#owner_id#&fieldName=#field_name#&fileId=#file_id#';
+	}
+
+	protected function prepareClientEditorFieldsParams(): array
+	{
+		$result = [
+			CCrmOwnerType::ContactName => [
+				'REQUISITES' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Contact, 'requisite')
+			],
+			CCrmOwnerType::CompanyName => [
+				'REQUISITES' => \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Company, 'requisite')
+			]
+		];
+		if ($this->isLocationModuleIncluded)
+		{
+			$result[CCrmOwnerType::ContactName]['ADDRESS'] = \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Contact,'requisite_address');
+			$result[CCrmOwnerType::CompanyName]['ADDRESS'] = \CCrmComponentHelper::getFieldInfoData(CCrmOwnerType::Company,'requisite_address');
+		}
+
+		return $result;
+	}
+
+	public function initializeData()
+	{
+		$this->prepareEntityData();
+		$this->prepareFieldInfos();
+		$this->prepareEntityFieldAttributes();
+	}
+
+	public function getEntityEditorData(): array
+	{
+		return [
+			'ENTITY_ID' => $this->getEntityID(),
+			'ENTITY_DATA' => $this->prepareEntityData(),
+			'ENTITY_INFO' => $this->prepareEntityInfo()
+		];
 	}
 }

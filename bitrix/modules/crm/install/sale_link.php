@@ -174,11 +174,21 @@ if (!empty($createStatusList))
 		$crmStatus = new \CCrmStatus('INVOICE_STATUS');
 
 		$isSystem = ($statusId === 'N' || $statusId === 'P' || $statusId === 'D');
+		$semantics = null;
+		if($statusId === 'P')
+		{
+			$semantics = 'S';
+		}
+		elseif($statusId === 'D')
+		{
+			$semantics = 'F';
+		}
 		$status = array(
 			'SORT' => $statusSort,
 			'NAME' => $name,
 			'SYSTEM' => ($isSystem ? 'Y' : 'N'),
-			'NAME_INIT' => ($isSystem ? $name : '')
+			'NAME_INIT' => ($isSystem ? $name : ''),
+			'SEMANTICS' => $semantics,
 		);
 
 		if (!in_array($statusId, $arExistStatuses, true))
@@ -1911,16 +1921,16 @@ foreach($arPaySystems as $val)
 	if ($data = $dbSalePaySystem->fetch())
 	{
 		$isPaySystemsEmpty = false;
-		$result = \Bitrix\Sale\Internals\PaySystemActionTable::update($data['ID'], $val);
+		$result = \Bitrix\Sale\PaySystem\Manager::update($data['ID'], $val);
 		$id = $data['ID'];
 	}
 	else
 	{
-		$result = \Bitrix\Sale\Internals\PaySystemActionTable::add($val);
+		$result = \Bitrix\Sale\PaySystem\Manager::add($val);
 		$id = $result->getId();
 	}
 
-	$psParams = unserialize($val['PARAMS']);
+	$psParams = unserialize($val['PARAMS'], ['allowed_classes' => false]);
 	foreach ($psParams as $code => $map)
 	{
 		$tmpMap['PROVIDER_KEY'] = $map['TYPE'];
@@ -1973,7 +1983,7 @@ foreach($arPaySystems as $val)
 	$psParams['BX_PAY_SYSTEM_ID'] = array('TYPE' => '', 'VALUE' => $id);
 	$updateFields['PARAMS'] = serialize($psParams);
 
-	\Bitrix\Sale\Internals\PaySystemActionTable::update($id, $updateFields);
+	\Bitrix\Sale\PaySystem\Manager::update($id, $updateFields);
 }
 
 if ($isPaySystemsEmpty)
@@ -2092,6 +2102,7 @@ if(!($basePrice = $dbRes->Fetch()))
 	$arFields["BASE"] = "Y";
 	$arFields["SORT"] = 100;
 	$arFields["NAME"] = "BASE";
+	$arFields["XML_ID"] = "BASE";
 	$arFields["USER_GROUP"] = array(1, 2);
 	$arFields["USER_GROUP_BUY"] = array(1, 2);
 	$basePriceId = CCatalogGroup::Add($arFields);

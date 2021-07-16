@@ -667,9 +667,27 @@ export class Manager
 		return (new Uri('/saleshub/orders/')).setQueryParams(params).toString();
 	}
 
+	static getPaymentsListUrl(params)
+	{
+		if(!Type.isPlainObject(params))
+		{
+			params = {};
+		}
+		if(Manager.sessionId > 0)
+		{
+			params['sessionId'] = Manager.sessionId;
+		}
+		return (new Uri('/saleshub/payments/')).setQueryParams(params).toString();
+	}
+
 	static showOrdersList(params)
 	{
 		return Manager.openSlider(Manager.getOrdersListUrl(params));
+	}
+
+	static showPaymentsList(params)
+	{
+		return Manager.openSlider(Manager.getPaymentsListUrl(params));
 	}
 
 	static getOrderAddUrl(params)
@@ -853,6 +871,11 @@ export class Manager
 		Manager.openHelper(event, 'redirect=detail&code=9289135', 'chat_connect');
 	}
 
+	static openHowCrmStoreWorks(event)
+	{
+		Manager.openHelper(event, 'redirect=detail&code=13651476', 'crmstore_how_works');
+	}
+
 	static openHowSmsWorks(event)
 	{
 		Manager.openHelper(event, 'redirect=detail&code=9680407', 'sms_connect');
@@ -863,34 +886,19 @@ export class Manager
 		Manager.openHelper(event, 'redirect=detail&code=7872935', 'openlines_connect');
 	}
 
-	static openHowToConfigPaySystem(event)
+	static openHowToConfigDefaultPaySystem(event)
 	{
 		Manager.openHelper(event, 'redirect=detail&code=10460164', 'pay_system_connect');
 	}
 
-	static openHowToConfigSkbPaySystem(event)
+	static openHowToConfigPaySystem(event, code)
 	{
-		Manager.openHelper(event, 'redirect=detail&code=11538458', 'pay_system_connect');
+		Manager.openHelper(event, 'redirect=detail&code=' + code, 'pay_system_connect');
 	}
 
-	static openHowToConfigBePaidPaySystem(event)
+	static openHowToConfigCashboxPaySystem(event, code)
 	{
-		Manager.openHelper(event, 'redirect=detail&code=11538452', 'pay_system_connect');
-	}
-
-	static openHowToConfigLiqPayPaySystem(event)
-	{
-		Manager.openHelper(event, 'redirect=detail&code=11814321', 'pay_system_connect');
-	}
-
-	static openHowToConfigUaPayPaySystem(event)
-	{
-		Manager.openHelper(event, 'redirect=detail&code=11825299', 'pay_system_connect');
-	}
-
-	static openHowToConfigWoopkassaPaySystem(event)
-	{
-		Manager.openHelper(event, 'redirect=detail&code=12183852', 'pay_system_connect');
+		Manager.openHelper(event, 'redirect=detail&code=' + code, 'pay_system_cashbox_connect');
 	}
 
 	static openHowToUseOfflineCashBox(event)
@@ -906,6 +914,16 @@ export class Manager
 	static openHowToConfigCheckboxCashBox(event)
 	{
 		Manager.openHelper(event, 'redirect=detail&code=12306679', 'cashbox_connect');
+	}
+
+	static openHowToConfigBusinessRuCashBox(event)
+	{
+		Manager.openHelper(event, 'redirect=detail&code=12806492', 'cashbox_connect');
+	}
+
+	static openHowToSetupCheckboxCashBoxAndKeys(event)
+	{
+		Manager.openHelper(event, 'redirect=detail&code=12334663', 'cashbox_connect');
 	}
 
 	static openHowToSell(event)
@@ -936,6 +954,11 @@ export class Manager
 	static openCommonPagesHelp(event)
 	{
 		Manager.openHelper(event, 'redirect=detail&code=9604717', 'common_pages');
+	}
+
+	static openBitrix24NotificationsHelp(event)
+	{
+		Manager.openHelper(event, 'redirect=detail&code=13659402', 'bitrix24_notifications');
 	}
 
 	static openHelper(event = null, url = '', analyticsArticle = '')
@@ -1006,6 +1029,15 @@ export class Manager
 		return Manager.openSlider('/bitrix/components/bitrix/salescenter.feedback/slider.php?feedback_type=delivery_offer', {width: 735});
 	}
 
+	static openIntegrationRequestForm(event)
+	{
+		if (event && Type.isFunction(event.preventDefault))
+		{
+			event.preventDefault();
+		}
+		return Manager.openSlider('/bitrix/components/bitrix/salescenter.feedback/slider.php?feedback_type=integration_request', {width: 735});
+	}
+
 	static openApplication(params = {})
 	{
 		let url = new Uri('/saleshub/app/');
@@ -1015,6 +1047,10 @@ export class Manager
 		}
 
 		let sliderOptions = params.hasOwnProperty('sliderOptions') ? params.sliderOptions : {};
+		if (!sliderOptions.hasOwnProperty('width'))
+		{
+			sliderOptions.width = 1140;
+		}
 
 		return new Promise((resolve, reject) =>
 		{

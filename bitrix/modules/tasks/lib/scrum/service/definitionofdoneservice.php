@@ -132,6 +132,17 @@ class DefinitionOfDoneService extends Controller
 		}
 		catch (\Exception $exception)
 		{
+			try
+			{
+				EntityChecklistFacade::deleteByEntityId($entityId, $this->executiveUserId);
+			}
+			catch (\Exception $exception)
+			{
+				$this->errorCollection->setError(
+					new Error($exception->getMessage(), self::ERROR_COULD_NOT_ADD_DEFAULT_LIST)
+				);
+			}
+
 			$this->errorCollection->setError(
 				new Error($exception->getMessage(), self::ERROR_COULD_NOT_ADD_DEFAULT_LIST)
 			);
@@ -281,6 +292,13 @@ class DefinitionOfDoneService extends Controller
 
 			$itemService = new ItemService();
 			$item = $itemService->getItemBySourceId($taskId);
+			if ($item->isEmpty())
+			{
+				$this->errorCollection->setError(
+					new Error('System error', self::ERROR_COULD_NOT_READ_DOD_REQUIRED_OPTION)
+				);
+				return null;
+			}
 
 			$items = $this->getItemItemsByEntityItems($item->getId(), $entityItems);
 
@@ -310,7 +328,10 @@ class DefinitionOfDoneService extends Controller
 						'TYPE' => 'save',
 						'CAPTION' => Loc::getMessage('TASKS_SCRUM_DEFINITION_OF_DONE_TASK_COMPLETE_BUTTON')
 					],
-					'cancel'
+					[
+						'type' => 'custom',
+						'layout' => $this->getCancelButtonLayout(),
+					],
 				]
 			]);
 		}
@@ -386,7 +407,7 @@ class DefinitionOfDoneService extends Controller
 		{
 			/** @var EntityInfoColumn $entityInfo */
 			$entityInfo = $entityData['INFO'];
-			return ($entityInfo ? $entityInfo->getDodItemsRequired() : 'Y');
+			return $entityInfo->getDodItemsRequired();
 		}
 		else
 		{
@@ -399,5 +420,11 @@ class DefinitionOfDoneService extends Controller
 
 			return '';
 		}
+	}
+
+	private function getCancelButtonLayout(): string
+	{
+		return '<a class="ui-btn ui-btn-link" name="cancel">'
+			.Loc::getMessage('TASKS_SCRUM_DEFINITION_OF_DONE_TASK_CANCEL_BUTTON').'</a>';
 	}
 }

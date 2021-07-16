@@ -1,5 +1,8 @@
 <?php
-if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED!==true)die();
+if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED !== true)
+{
+	die();
+}
 
 /**
  * @var array $arParams
@@ -17,6 +20,7 @@ use Bitrix\Crm\Category\DealCategory;
 use Bitrix\Crm\Restriction\RestrictionManager;
 use Bitrix\Crm\Integration\Sender\Rc;
 use Bitrix\Crm\Recurring;
+use Bitrix\Main\Localization\Loc;
 
 $currentUserID = CCrmSecurityHelper::GetCurrentUserID();
 $CrmPerms = CCrmPerms::GetCurrentUserPermissions();
@@ -75,6 +79,8 @@ $arResult['TOOLBAR_ID'] = $toolbarID;
 $arResult['BUTTONS'] = array();
 
 $currentCategoryID = isset($arResult['CATEGORY_ID']) ? $arResult['CATEGORY_ID'] : -1;
+
+$bConfig = false;
 if ($arParams['TYPE'] == 'list')
 {
 	$bRead   = CCrmDeal::CheckReadPermission(0, $CrmPerms, $currentCategoryID);
@@ -475,10 +481,7 @@ if($arParams['TYPE'] === 'list')
 			$arResult['BUTTONS'][] = array('SEPARATOR' => true);
 		}
 
-		$entityType = CCrmOwnerType::DealName;
-		$stExportId = 'STEXPORT_'.$entityType.'_MANAGER';
-		$randomSequence = new Bitrix\Main\Type\RandomSequence($stExportId);
-		$stExportManagerId = $stExportId.'_'.$randomSequence->randString();
+		$stExportId = 'EXPORT_'. \CCrmOwnerType::DealName;
 		$componentName = 'bitrix:crm.deal.list';
 
 		$componentParams = array(
@@ -487,7 +490,7 @@ if($arParams['TYPE'] === 'list')
 			'PATH_TO_DEAL_SHOW' => $arParams['PATH_TO_DEAL_SHOW'],
 			'PATH_TO_DEAL_EDIT' => $arParams['PATH_TO_DEAL_EDIT'],
 			'NAME_TEMPLATE' => $arParams['NAME_TEMPLATE'],
-			'NAVIGATION_CONTEXT_ID' => $entityType,
+			'NAVIGATION_CONTEXT_ID' => \CCrmOwnerType::DealName,
 			'IS_RECURRING' => $arParams['IS_RECURRING'],
 			'PATH_TO_DEAL_RECUR' => $arResult['PATH_TO_DEAL_RECUR'],
 			'PATH_TO_DEAL_RECUR_SHOW' => $arResult['PATH_TO_DEAL_RECUR_SHOW'],
@@ -513,56 +516,67 @@ if($arParams['TYPE'] === 'list')
 			}
 		}
 
-		$arResult['STEXPORT_PARAMS'] = array(
-			'componentName' => $componentName,
-			'siteId' => SITE_ID,
-			'entityType' => $entityType,
-			'stExportId' => $stExportId,
-			'managerId' => $stExportManagerId,
-			'sToken' => 's'.time(),
-			'initialOptions' => array(
+		$arResult['EXPORT_CSV_PARAMS'] = [
+			'id' => $stExportId. '_CSV',
+			'controller' => 'bitrix:crm.api.export',
+			'queue' => [
+				[
+					'action' => 'dispatcher',
+				],
+			],
+			'params' => [
+				'SITE_ID' => SITE_ID,
+				'ENTITY_TYPE' => \CCrmOwnerType::DealName,
+				'EXPORT_TYPE' => 'csv',
+				'COMPONENT_NAME' => $componentName,
+				'signedParameters' => \Bitrix\Main\Component\ParameterSigner::signParameters($componentName, $componentParams),
+			],
+			'optionsFields' => array(
 				'EXPORT_ALL_FIELDS' => array(
 					'name' => 'EXPORT_ALL_FIELDS',
 					'type' => 'checkbox',
-					'title' => GetMessage('DEAL_STEXPORT_OPTION_EXPORT_ALL_FIELDS'),
+					'title' => Loc::getMessage('DEAL_STEXPORT_OPTION_EXPORT_ALL_FIELDS'),
 					'value' => 'N'
 				),
 				'EXPORT_PRODUCT_FIELDS' => array(
 					'name' => 'EXPORT_PRODUCT_FIELDS',
 					'type' => 'checkbox',
-					'title' => GetMessage('DEAL_STEXPORT_OPTION_EXPORT_PRODUCT_FIELDS'),
+					'title' => Loc::getMessage('DEAL_STEXPORT_OPTION_EXPORT_PRODUCT_FIELDS'),
 					'value' => 'N'
 				),
 			),
-			'componentParams' => \Bitrix\Main\Component\ParameterSigner::signParameters($componentName, $componentParams),
 			'messages' => array(
-				'stExportExcelDlgTitle' => GetMessage('DEAL_EXPORT_EXCEL_TITLE'),
-				'stExportExcelDlgSummary' => GetMessage('DEAL_STEXPORT_SUMMARY'),
-				'stExportCsvDlgTitle' => GetMessage('DEAL_EXPORT_CSV_TITLE'),
-				'stExportCsvDlgSummary' => GetMessage('DEAL_STEXPORT_SUMMARY'),
-			)
-		);
+				'DialogTitle' => Loc::getMessage('DEAL_EXPORT_CSV_TITLE'),
+				'DialogSummary' => Loc::getMessage('DEAL_STEXPORT_SUMMARY'),
+			),
+			'dialogMaxWidth' => 650,
+		];
+
+		// clone params for excel export
+		$arResult['EXPORT_EXCEL_PARAMS'] = $arResult['EXPORT_CSV_PARAMS'];
+		$arResult['EXPORT_EXCEL_PARAMS']['id'] = $stExportId. '_EXCEL';
+		$arResult['EXPORT_EXCEL_PARAMS']['params']['EXPORT_TYPE'] = 'excel';
+		$arResult['EXPORT_EXCEL_PARAMS']['messages']['DialogTitle'] = Loc::getMessage('DEAL_EXPORT_EXCEL_TITLE');
 
 		$arResult['BUTTONS'][] = array('SEPARATOR' => true);
 
 		$arResult['BUTTONS'][] = array(
-			'TITLE' => GetMessage('DEAL_EXPORT_CSV_TITLE'),
-			'TEXT' => GetMessage('DEAL_EXPORT_CSV'),
-			'ONCLICK' => "BX.Crm.ExportManager.items['".CUtil::JSEscape($stExportManagerId)."'].startExport('csv')",
+			'TITLE' => Loc::getMessage('DEAL_EXPORT_CSV_TITLE'),
+			'TEXT' => Loc::getMessage('DEAL_EXPORT_CSV'),
+			'ONCLICK' => "BX.UI.StepProcessing.ProcessManager.get('{$stExportId}_CSV').showDialog()",
 			'ICON' => 'btn-export'
 		);
 
 		$arResult['BUTTONS'][] = array(
-			'TITLE' => GetMessage('DEAL_EXPORT_EXCEL_TITLE'),
-			'TEXT' => GetMessage('DEAL_EXPORT_EXCEL'),
-			'ONCLICK' => "BX.Crm.ExportManager.items['".CUtil::JSEscape($stExportManagerId)."'].startExport('excel')",
+			'TITLE' => Loc::getMessage('DEAL_EXPORT_EXCEL_TITLE'),
+			'TEXT' => Loc::getMessage('DEAL_EXPORT_EXCEL'),
+			'ONCLICK' => "BX.UI.StepProcessing.ProcessManager.get('{$stExportId}_EXCEL').showDialog()",
 			'ICON' => 'btn-export'
 		);
 
 		$arResult['BUTTONS'][] = array('SEPARATOR' => true);
 
-
-		unset($entityType, $stExportId, $randomSequence, $stExportManagerId);
+		unset($stExportId);
 	}
 
 	if (
@@ -594,7 +608,11 @@ if($arParams['TYPE'] === 'list')
 		];
 	}
 
-	if(\Bitrix\Main\Loader::includeModule('rest') && is_callable('\Bitrix\Rest\Marketplace\Url::getConfigurationPlacementUrl'))
+	if(
+		\Bitrix\Main\Loader::includeModule('rest')
+		&& is_callable('\Bitrix\Rest\Marketplace\Url::getConfigurationPlacementUrl')
+		&& ($bAdd || $bWrite || $bConfig)
+	)
 	{
 		$url = \Bitrix\Rest\Marketplace\Url::getConfigurationPlacementUrl('crm_deal', 'setting_list');
 		$arResult['BUTTONS'][] = [
@@ -612,6 +630,14 @@ if($arParams['TYPE'] === 'list')
 			'TITLE' => GetMessage('DEAL_CRM_TYPE'),
 			'ONCLICK' => \Bitrix\Crm\Settings\LeadSettings::showCrmTypePopup()
 		);
+
+		$scenarioSelectionPath = CComponentEngine::makeComponentPath('bitrix:crm.scenario_selection');
+		$scenarioSelectionPath = getLocalPath('components'.$scenarioSelectionPath.'/slider.php');
+		$arResult['BUTTONS'][] = [
+			'TEXT' => Loc::getMessage('DEAL_ORDER_SCENARIO'),
+			'TITLE' => Loc::getMessage('DEAL_ORDER_SCENARIO'),
+			'ONCLICK' => 'BX.SidePanel.Instance.open("' . $scenarioSelectionPath .'", {width: 900, cacheable: false});'
+		];
 	}
 
 	if(is_array($arParams['ADDITIONAL_SETTINGS_MENU_ITEMS']))

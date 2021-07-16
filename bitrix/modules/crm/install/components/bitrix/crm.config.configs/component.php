@@ -358,6 +358,11 @@ if($_SERVER['REQUEST_METHOD'] == 'POST' && check_bitrix_sessid())
 				);
 			}
 
+			if(isset($_POST['NOTIFICATIONS_SENDER']))
+			{
+				\Bitrix\Crm\MessageSender\SettingsManager::setValue($_POST['NOTIFICATIONS_SENDER']);
+			}
+
 			if(isset($_POST['ENABLE_EXPORT_EVENT']))
 			{
 				\Bitrix\Crm\Settings\HistorySettings::getCurrent()->enableExportEvent(
@@ -732,6 +737,21 @@ $arResult['FIELDS']['tab_main'][] = array(
 	'required' => false
 );
 
+$arResult['FIELDS']['tab_main'][] = array(
+	'id' => 'NOTIFICATIONS_CONFIG',
+	'name' => GetMessage('CRM_SECTION_NOTIFICATIONS_CONFIG'),
+	'type' => 'section'
+);
+
+$arResult['FIELDS']['tab_main'][] = array(
+	'id' => 'NOTIFICATIONS_SENDER',
+	'name' => GetMessage('CRM_SECTION_NOTIFICATIONS_SENDER'),
+	'type' => 'list',
+	'items' => \Bitrix\Crm\MessageSender\SettingsManager::getSettingsList(),
+	'value' =>  \Bitrix\Crm\MessageSender\SettingsManager::getValue(),
+	'required' => false
+);
+
 $arResult['FIELDS']['tab_rest'][] = array(
 	'id' => 'ENABLE_REST_REQ_USER_FIELD_CHECK',
 	'name' => GetMessage('CRM_FIELD_ENABLE_REST_REQ_USER_FIELD_CHECK'),
@@ -1043,7 +1063,8 @@ if(\Bitrix\Main\Loader::includeModule('location'))
 		'value' =>
 			'<div class="crm-dup-control-type-radio-wrap">'.htmlspecialcharsbx($addrFormatDescrs[$curAddrFormatID]).'</div>'.
 			'<div class="crm-dup-control-type-info" id="' . $arResult['ADDR_FORMAT_DESCR_ID'] . '">' . $arResult['ADDR_FORMAT_INFOS'][$curAddrFormatID] . '</div>'.
-			'<div class="crm-dup-control-type-info">' . GetMessage('CRM_FIELD_ENTITY_ADDRESS_FORMAT_LINK') . '</div>'
+			'<div class="crm-dup-control-type-info">' . GetMessage('CRM_FIELD_ENTITY_ADDRESS_FORMAT_LINK') . '</div>'.
+			'<input type="hidden" name="ENTITY_ADDRESS_FORMAT_ID" value="'.$curAddrFormatID.'">'
 	);
 }
 else

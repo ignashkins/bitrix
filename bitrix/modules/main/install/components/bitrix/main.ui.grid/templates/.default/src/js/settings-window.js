@@ -611,13 +611,27 @@
 		 */
 		createTitle: function()
 		{
+			var tmpDiv = BX.create('div');
+			var customSettingsTitle = this.parent.getParam('SETTINGS_WINDOW_TITLE');
+
+			if (customSettingsTitle !== "")
+			{
+				customSettingsTitle = '&laquo;' + customSettingsTitle + '&raquo;';
+				tmpDiv.innerHTML = '<span>' + this.parent.getParam('SETTINGS_TITLE') + ' ' + customSettingsTitle + '</span>';
+
+				return tmpDiv.firstChild.innerText;
+			}
+
 			var gridsCount = BX.Main.gridManager.data.length;
 
 			if (gridsCount === 1)
 			{
-				var tmpDiv = BX.create('div');
 				var pageTitleNode = BX('pagetitle');
-				var pageTitle = !!pageTitleNode ? '&laquo;'+pageTitleNode.innerHTML+'&raquo;' : '';
+				var pageTitle = (
+					BX.Type.isDomNode(pageTitleNode) && BX.Type.isStringFilled(pageTitleNode.innerText)
+						? '&laquo;' + BX.Text.encode(pageTitleNode.innerText) + '&raquo;'
+						: ''
+				);
 				tmpDiv.innerHTML = '<span>'+this.parent.getParam('SETTINGS_TITLE')+' '+pageTitle+'</span>';
 				return tmpDiv.firstChild.innerText;
 			}

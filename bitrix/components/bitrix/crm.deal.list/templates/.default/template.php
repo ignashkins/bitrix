@@ -23,6 +23,7 @@ if (CModule::IncludeModule('bitrix24') && !\Bitrix\Crm\CallList\CallList::isAvai
 {
 	CBitrix24::initLicenseInfoPopupJS();
 }
+Bitrix\Main\UI\Extension::load(['crm.merger.batchmergemanager']);
 
 Bitrix\Main\Page\Asset::getInstance()->addJs('/bitrix/js/crm/progress_control.js');
 Bitrix\Main\Page\Asset::getInstance()->addJs('/bitrix/js/crm/activity.js');
@@ -31,13 +32,14 @@ Bitrix\Main\Page\Asset::getInstance()->addJs('/bitrix/js/crm/analytics.js');
 Bitrix\Main\Page\Asset::getInstance()->addJs('/bitrix/js/crm/autorun_proc.js');
 Bitrix\Main\Page\Asset::getInstance()->addCss('/bitrix/js/crm/css/autorun_proc.css');
 Bitrix\Main\Page\Asset::getInstance()->addJs('/bitrix/js/crm/batch_deletion.js');
-Bitrix\Main\Page\Asset::getInstance()->addJs('/bitrix/js/crm/batch_merge.js');
 Bitrix\Main\Page\Asset::getInstance()->addJs('/bitrix/js/crm/partial_entity_editor.js');
 Bitrix\Main\Page\Asset::getInstance()->addJs('/bitrix/js/crm/dialog.js');
 
-?><div id="batchDeletionWrapper"></div><?
-?><div id="rebuildMessageWrapper"><?
-?><div id="batchActionWrapper"></div><?
+?><div id="batchDeletionWrapper"></div>
+<?
+	echo \Bitrix\Crm\Update\Order\DealGenerator::getHtml();
+?>
+<div id="rebuildMessageWrapper"><?
 
 if($arResult['NEED_FOR_REBUILD_SEARCH_CONTENT'])
 {
@@ -392,11 +394,12 @@ foreach($arResult['DEAL'] as $sKey =>  $arDeal)
 			'TYPE_ID' => isset($arResult['TYPE_LIST'][$arDeal['TYPE_ID']]) ? $arResult['TYPE_LIST'][$arDeal['TYPE_ID']] : $arDeal['TYPE_ID'],
 			'SOURCE_ID' => isset($arResult['SOURCE_LIST'][$arDeal['SOURCE_ID']]) ? $arResult['SOURCE_LIST'][$arDeal['SOURCE_ID']] : $arDeal['SOURCE_ID'],
 			'EVENT_ID' => isset($arResult['EVENT_LIST'][$arDeal['EVENT_ID']]) ? $arResult['EVENT_LIST'][$arDeal['EVENT_ID']] : $arDeal['EVENT_ID'],
-			'CURRENCY_ID' => CCrmCurrency::GetCurrencyName($arDeal['CURRENCY_ID']),
+			'CURRENCY_ID' => CCrmCurrency::GetEncodedCurrencyName	($arDeal['CURRENCY_ID']),
 			'PRODUCT_ID' => isset($arDeal['PRODUCT_ROWS']) ? htmlspecialcharsbx(CCrmProductRow::RowsToString($arDeal['PRODUCT_ROWS'])) : '',
 			'STATE_ID' => isset($arResult['STATE_LIST'][$arDeal['STATE_ID']]) ? $arResult['STATE_LIST'][$arDeal['STATE_ID']] : $arDeal['STATE_ID'],
 			'WEBFORM_ID' => isset($arResult['WEBFORM_LIST'][$arDeal['WEBFORM_ID']]) ? $arResult['WEBFORM_LIST'][$arDeal['WEBFORM_ID']] : $arDeal['WEBFORM_ID'],
 			'ORDER_STAGE' => CCrmViewHelper::RenderDealOrderStageControl($arDeal['ORDER_STAGE']),
+			'DELIVERY_STAGE' => CCrmViewHelper::RenderDealDeliveryStageControl($arDeal['DELIVERY_STAGE']),
 			'STAGE_ID' => CCrmViewHelper::RenderDealStageControl(
 				array(
 					'PREFIX' => "{$arResult['GRID_ID']}_PROGRESS_BAR_",
@@ -1178,17 +1181,7 @@ $APPLICATION->IncludeComponent(
 				{
 					gridId: gridId,
 					entityTypeId: <?=CCrmOwnerType::Deal?>,
-					container: "batchActionWrapper",
-					stateTemplate: "<?=GetMessageJS('CRM_DEAL_STEPWISE_STATE_TEMPLATE')?>",
-					mergerUrl: "<?=htmlspecialcharsbx($arParams['PATH_TO_DEAL_MERGE'])?>",
-					messages:
-						{
-							title: "<?=GetMessageJS('CRM_DEAL_LIST_MERGE_PROC_DLG_TITLE')?>",
-							confirmation: "<?=GetMessageJS('CRM_DEAL_LIST_MERGE_PROC_DLG_SUMMARY')?>",
-							summaryCaption: "<?=GetMessageJS('CRM_DEAL_BATCH_MERGE_COMPLETED')?>",
-							summarySucceeded: "<?=GetMessageJS('CRM_DEAL_BATCH_MERGE_COUNT_SUCCEEDED')?>",
-							summaryFailed: "<?=GetMessageJS('CRM_DEAL_BATCH_MERGE_COUNT_FAILED')?>"
-						}
+					mergerUrl: "<?=\CUtil::JSEscape($arParams['PATH_TO_DEAL_MERGE'])?>"
 				}
 			);
 
@@ -1422,3 +1415,5 @@ if(!$isInternal):
 	);
 </script>
 <?endif;?>
+
+<?\Bitrix\Crm\Integration\NotificationsManager::showSignUpFormOnCrmShopCreated()?>

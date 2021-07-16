@@ -10,10 +10,10 @@ if (!CModule::IncludeModule('crm'))
 // 'Fileman' module always installed
 CModule::IncludeModule('fileman');
 
+use Bitrix\Crm\CompanyAddress;
+use Bitrix\Crm\Format\AddressFormatter;
 use Bitrix\Crm\Settings\CompanySettings;
-use Bitrix\Crm\Format\CompanyAddressFormatter;
-use Bitrix\Crm\Format\AddressSeparator;
-use Bitrix\Crm\EntityAddress;
+use Bitrix\Crm\EntityAddressType;
 
 /**
  * Bitrix vars
@@ -434,29 +434,33 @@ $arResult['FIELDS']['tab_1'][] = array(
 if($enableOutmodedFields)
 {
 	//region ADDRESS
-	$arResult['FIELDS']['tab_1'][] = array(
+	$arResult['FIELDS']['tab_1'][] = [
 		'id' => 'ADDRESS',
 		'name' => GetMessage('CRM_FIELD_ADDRESS'),
 		'type' => 'custom',
-		'value' =>  CompanyAddressFormatter::format(
-			$arResult['ELEMENT'],
-			array('SEPARATOR' => AddressSeparator::HtmlLineBreak, 'TYPE_ID' => EntityAddress::Primary, 'NL2BR' => true)
+		'value' => AddressFormatter::getSingleInstance()->formatHtmlMultiline(
+			CompanyAddress::mapEntityFields(
+				$arResult['ELEMENT'],
+				['TYPE_ID' => EntityAddressType::Primary]
+			)
 		),
 		'isTactile' => true
-	);
+	];
 	//endregion
 
 	//region ADDRESS_LEGAL
-	$arResult['FIELDS']['tab_1'][] = array(
+	$arResult['FIELDS']['tab_1'][] = [
 		'id' => 'ADDRESS_LEGAL',
 		'name' => GetMessage('CRM_FIELD_ADDRESS_LEGAL'),
 		'type' => 'custom',
-		'value' =>  CompanyAddressFormatter::format(
-			$arResult['ELEMENT'],
-			array('SEPARATOR' => AddressSeparator::HtmlLineBreak, 'TYPE_ID' => EntityAddress::Registered, 'NL2BR' => true)
+		'value' => AddressFormatter::getSingleInstance()->formatHtmlMultiline(
+			CompanyAddress::mapEntityFields(
+				$arResult['ELEMENT'],
+				['TYPE_ID' => EntityAddressType::Registered]
+			)
 		),
 		'isTactile' => true
-	);
+	];
 	//endregion
 }
 

@@ -1,5 +1,6 @@
 <?
 
+use Bitrix\Main\Config\Option;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Sender\Access\ActionDictionary;
 use Bitrix\Sender\Security;
@@ -45,6 +46,7 @@ class SenderConfigLimitsComponent extends Bitrix\Sender\Internals\CommonSenderCo
 			return false;
 		}
 
+		$this->arResult['CAN_TRACK_MAIL'] = Option::get('sender', 'track_mails') === 'Y';
 		$this->arResult['ACTION_URI'] = $this->getPath() . '/ajax.php';
 
 		$list = array();
@@ -74,7 +76,7 @@ class SenderConfigLimitsComponent extends Bitrix\Sender\Internals\CommonSenderCo
 				$initialLimit = $initialLimit ?: 1;
 
 				$percentage = $isCountLimiter ? ceil(($current / $initialLimit) * 100) : 0;
-				$percentage = $percentage > 100 ? 100 : 0;
+				$percentage = $percentage > 100 ? 100 : $percentage;
 
 				$limits[] = array(
 					'NAME' => $isCountLimiter ? $limiter->getName() : null,

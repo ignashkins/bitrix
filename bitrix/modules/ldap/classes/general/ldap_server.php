@@ -250,7 +250,7 @@ class CLdapServer
 			$arFields["FIELD_MAP"] = serialize($arFields["FIELD_MAP"]);
 		}
 
-		$ID = CDatabase::Add("b_ldap_server", $arFields);
+		$ID = $DB->Add("b_ldap_server", $arFields);
 
 		if(is_set($arFields, 'GROUPS'))
 			CLdapServer::SetGroupMap($ID, $arFields['GROUPS']);
@@ -477,7 +477,7 @@ class CLdapServer
 		$arUsers = Array();
 
 		CTimeZone::Disable();
-		$dbUsers = CUser::GetList(($o=""), ($b=""), Array("EXTERNAL_AUTH_ID"=>"LDAP#".$ldap_server_id));
+		$dbUsers = CUser::GetList('', '', Array("EXTERNAL_AUTH_ID"=>"LDAP#".$ldap_server_id));
 		CTimeZone::Enable();
 
 		while($arUser = $dbUsers->Fetch())
@@ -631,7 +631,7 @@ class __CLDAPServerDBResult extends CDBResult
 		if($res = parent::Fetch())
 		{
 			$res["ADMIN_PASSWORD"] = CLdapUtil::Decrypt($res["ADMIN_PASSWORD"]);
-			$res["FIELD_MAP"] = unserialize($res["FIELD_MAP"]);
+			$res["FIELD_MAP"] = unserialize($res["FIELD_MAP"], ['allowed_classes' => false]);
 			if(!is_array($res["FIELD_MAP"]))
 				$res["FIELD_MAP"] = Array();
 		}

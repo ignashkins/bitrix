@@ -16,7 +16,7 @@ BX.namespace("BXRL.manager");
 
 BXRL.render = {
 
-	reactionsList: ['like', 'kiss', 'laugh', 'wonder', 'cry', 'angry'],
+	reactionsList: ['like', 'kiss', 'laugh', 'wonder', 'cry', 'angry', 'facepalm'],
 	popupCurrentReaction: false,
 	popupPagesList: [],
 	popupSizeInitialized: false,
@@ -466,6 +466,11 @@ BXRL.render = {
 
 			for(var i in BXRL.render.reactionsList)
 			{
+				if (!BXRL.render.reactionsList.hasOwnProperty(i))
+				{
+					continue;
+				}
+
 				var currentEmotion = BXRL.render.reactionsList[i];
 
 				reactionsNodesList.push(BX.create('div', {
@@ -583,16 +588,16 @@ BXRL.render = {
 			BXRL.render.reactionsPopup.classList.remove('feed-post-emoji-popup-inverted');
 		}
 
-		var deltaY = (inverted ? 15 : -50);
+		var deltaY = (inverted ? 15 : -45);
 
 		if (BXRL.manager.mobile)
 		{
-			BXRL.render.touchMoveDeltaY = (inverted ? 60 : -50);
+			BXRL.render.touchMoveDeltaY = (inverted ? 60 : -45);
 			BX.adjust(BXRL.render.reactionsPopup, { style: {
 				left: '12px',
 				top: ((inverted ? (bindElementPosition.top - 23) : (bindElementPosition.top - 28)) + deltaY) + 'px',
-				width: '320px',
-				borderRadius: '68px'
+				width: '330px',
+				borderRadius: '61px'
 			} });
 
 			BXRL.render.reactionsPopup.classList.remove('feed-post-emoji-popup-invisible-final');
@@ -613,7 +618,7 @@ BXRL.render = {
 					opacity: 0
 				},
 				finish: {
-					width: 271,
+					width: 305,
 					left: (bindElementPosition.left + (bindElementPosition.width / 2) - 133),
 					top: (bindElementPosition.top + deltaY),
 					borderRadius: 50,
@@ -656,6 +661,7 @@ BXRL.render = {
 							reactions[3].style.opacity = state.opacity/100;
 							reactions[4].style.opacity = state.opacity/100;
 							reactions[5].style.opacity = state.opacity/100;
+							reactions[6].style.opacity = state.opacity/100;
 						},
 						complete: function() {
 							BXRL.render.reactionsPopup.classList.add('feed-post-emoji-popup-active-final-item');
@@ -665,6 +671,7 @@ BXRL.render = {
 							reactions[3].style.opacity = '';
 							reactions[4].style.opacity = '';
 							reactions[5].style.opacity = '';
+							reactions[6].style.opacity = '';
 						}
 					});
 					BXRL.render.reactionsPopupAnimation2.animate();
@@ -903,8 +910,7 @@ BXRL.render = {
 
 	hideReactionsPopup: function(params)
 	{
-		var
-			likeId = (BX.type.isNotEmptyString(params.likeId) ? params.likeId : false);
+		var likeId = (BX.type.isNotEmptyString(params.likeId) ? params.likeId : false);
 
 		if (BXRL.render.reactionsPopup)
 		{
@@ -1145,7 +1151,8 @@ BXRL.render = {
 				laugh: 2,
 				wonder: 3,
 				cry: 4,
-				angry: 5
+				angry: 5,
+				facepalm: 6
 			};
 			if (sample[a.reaction] < sample[b.reaction])
 			{
@@ -1515,6 +1522,21 @@ BXRL.render = {
 			}
 		}
 
+	},
+
+	onMobileCommentsGet: function()
+	{
+		var ratingEmojiSelectorPopup = document.querySelector('.feed-post-emoji-popup-container');
+		if (ratingEmojiSelectorPopup)
+		{
+			ratingEmojiSelectorPopup.style.top = 0;
+			ratingEmojiSelectorPopup.style.left = 0;
+			ratingEmojiSelectorPopup.classList.remove('feed-post-emoji-popup-active');
+			ratingEmojiSelectorPopup.classList.remove('feed-post-emoji-popup-active-final');
+			ratingEmojiSelectorPopup.classList.remove('feed-post-emoji-popup-active-final-item');
+			ratingEmojiSelectorPopup.classList.add('feed-post-emoji-popup-invisible-final');
+			ratingEmojiSelectorPopup.classList.add('feed-post-emoji-popup-invisible-final-mobile');
+		}
 	}
 };
 
@@ -1556,6 +1578,7 @@ BXRL.manager = {
 		}
 
 		BX.addCustomEvent('onBeforeMobileLivefeedRefresh', BXRL.render.reactionsPopupMobileHide);
+		BX.addCustomEvent('BX.MobileLF:onCommentsGet', BXRL.render.onMobileCommentsGet);
 
 		if (this.mobile)
 		{

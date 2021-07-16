@@ -2,6 +2,7 @@ import * as Item from './item';
 import * as Component from './components/field';
 import * as Messages from "../../form/messages";
 import * as Design from "../../form/design";
+import { getStoredFieldValue } from "../storage"
 import Event from "../../util/event";
 
 type Entity = {
@@ -174,7 +175,7 @@ class Controller extends Event
 
 		if (this.required)
 		{
-			if (items.length === 0 || !items[0].selected || items[0].value === '')
+			if (items.length === 0 || !items[0].selected || (items[0].value+'').trim() === '')
 			{
 				return true;
 			}
@@ -287,18 +288,21 @@ class Controller extends Event
 			}
 		}
 
+
+
 		let values = this.options.values || [];
+		const value = this.options.value || values[0] || getStoredFieldValue(this.getType());
 		let items = this.options.items || [];
 		let selected = !this.multiple || values.length > 0;
 		if (values.length === 0)
 		{
-			values.push('');
+			values.push(value);
+			selected = value !== 'undefined' && value !== '';
 		}
 
 		// empty single
 		if (items.length === 0 && !this.multiple)
 		{
-			let value = this.options.value || values[0];
 			if (typeof this.options.checked !== "undefined")
 			{
 				selected = !!this.options.checked;

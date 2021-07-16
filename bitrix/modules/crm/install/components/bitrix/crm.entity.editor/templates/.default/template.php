@@ -17,6 +17,7 @@ if (!defined('B_PROLOG_INCLUDED') || B_PROLOG_INCLUDED!==true)die();
 
 use \Bitrix\Main;
 use \Bitrix\Crm;
+Main\UI\Extension::load("ui.label");
 Main\UI\Extension::load("crm.entity-editor");
 Main\UI\Extension::load("crm.entity-editor.field.requisite");
 Main\UI\Extension::load("ui.icons.b24");
@@ -112,7 +113,7 @@ if(Main\Loader::includeModule('socialnetwork'))
 if($arResult['REST_USE'])
 {
 	?><span id="<?=htmlspecialcharsbx($restSectionButtonID)?>" class="crm-entity-add-app-link">
-		<?=GetMessage('CRM_ENTITY_ED_REST_SECTION')?>
+		<?=GetMessage('CRM_ENTITY_ED_REST_SECTION_2')?>
 	</span><?
 }
 
@@ -306,7 +307,7 @@ if(!empty($htmlEditorConfigs))
 			var model = BX.Crm.EntityEditorModelFactory.create(
 				<?=$arResult['ENTITY_TYPE_ID']?>,
 				"",
-				{ data: <?=CUtil::PhpToJSObject($arResult['ENTITY_DATA'])?> }
+				{ entityTypeId: <?=$arResult['ENTITY_TYPE_ID']?>, data: <?=CUtil::PhpToJSObject($arResult['ENTITY_DATA'])?> }
 			);
 
 			BX.CrmDuplicateSummaryPopup.messages =
@@ -387,6 +388,7 @@ if(!empty($htmlEditorConfigs))
 
 			BX.Crm.EntityEditorMoneyPay.messages =
 			{
+				popupItemTitle: "<?=GetMessageJS('CRM_ENTITY_EM_BUTTON_PAY_POPUP_ITEM_TITLE')?>",
 				payButtonLabel: "<?=GetMessageJS('CRM_ENTITY_EM_BUTTON_PAY')?>",
 				showPayButton: "<?=GetMessageJS('CRM_ENTITY_EM_SHOW_BUTTON_PAY')?>",
 				hidePayButton: "<?=GetMessageJS('CRM_ENTITY_EM_HIDE_BUTTON_PAY')?>",
@@ -559,11 +561,21 @@ if(!empty($htmlEditorConfigs))
 				manualOpportunityConfirmationText: "<?=GetMessageJS('CRM_EDITOR_MANUAL_OPPORTUNITY_CONFIRMATION_TEXT')?>",
 				manualOpportunityConfirmationYes: "<?=GetMessageJS('MAIN_YES')?>",
 				manualOpportunityConfirmationNo: "<?=GetMessageJS('MAIN_NO')?>",
-				manualOpportunityChangeModeTitle: "<?=GetMessageJS('CRM_EDITOR_MANUAL_OPPORTUNITY_CHANGE_TITLE_'.$arResult['ENTITY_TYPE_ID'])?>",
-				manualOpportunityChangeModeText: "<?=GetMessageJS('CRM_EDITOR_MANUAL_OPPORTUNITY_CHANGE_TEXT_'.$arResult['ENTITY_TYPE_ID'])?>",
+				manualOpportunityChangeModeTitle: "<?=
+					empty($arResult['MESSAGES']['MANUAL_OPPORTUNITY_CHANGE_MODE_TITLE'])
+						? GetMessageJS('CRM_EDITOR_MANUAL_OPPORTUNITY_CHANGE_TITLE_' . $arResult['ENTITY_TYPE_ID'])
+						: \CUtil::JSEscape($arResult['MESSAGES']['MANUAL_OPPORTUNITY_CHANGE_MODE_TITLE'])
+					?>",
+				manualOpportunityChangeModeText: "<?=
+					empty($arResult['MESSAGES']['MANUAL_OPPORTUNITY_CHANGE_MODE_TEXT'])
+						? GetMessageJS('CRM_EDITOR_MANUAL_OPPORTUNITY_CHANGE_TEXT_' . $arResult['ENTITY_TYPE_ID'])
+						: \CUtil::JSEscape($arResult['MESSAGES']['MANUAL_OPPORTUNITY_CHANGE_MODE_TEXT'])
+					?>",
 				manualOpportunityChangeModeYes: "<?=GetMessageJS('CRM_EDITOR_MANUAL_OPPORTUNITY_CHANGE_VALUE_AUTO')?>",
 				manualOpportunityChangeModeNo: "<?=GetMessageJS('CRM_EDITOR_MANUAL_OPPORTUNITY_CHANGE_VALUE_MANUAL')?>"
 			};
+
+			BX.Crm.EntityProductListController.messages = BX.Crm.EntityEditorProductRowProxy.messages;
 
 			BX.Crm.EntityEditorProductRowSummary.messages =
 			{
@@ -660,7 +672,8 @@ if(!empty($htmlEditorConfigs))
 			BX.Crm.EntityEditorDeliverySelector.messages =
 			{
 				notSelected: "<?=GetMessageJS('CRM_ENTITY_ED_DELIVERY_SELECTOR_NOT_SELECTED')?>",
-				deliveryStore: "<?=GetMessageJS('CRM_ENTITY_ED_SHIPMENT_DELIVERY_STORE')?>"
+				deliveryStore: "<?=GetMessageJS('CRM_ENTITY_ED_SHIPMENT_DELIVERY_STORE')?>",
+				deliveryProfile: "<?=GetMessageJS('CRM_ENTITY_ED_SHIPMENT_DELIVERY_PROFILE')?>",
 			};
 
 			BX.Crm.EntityEditorOrderPropertySubsection.messages =
@@ -706,6 +719,11 @@ if(!empty($htmlEditorConfigs))
 				notFound: "<?=GetMessageJS('CRM_ENTITY_ED_NOT_FOUND')?>"
 			};
 
+			BX.Crm.EntityEditorCalculatedDeliveryPrice.messages =
+			{
+				refresh: "<?=GetMessageJS('CRM_ENTITY_ED_SHIPMENT_REFRESH')?>",
+			};
+
 			BX.message(
 				{
 					"CRM_EDITOR_SAVE": "<?=GetMessageJS('CRM_ENTITY_ED_SAVE')?>",
@@ -725,7 +743,9 @@ if(!empty($htmlEditorConfigs))
 					"CRM_EDITOR_PHONE": "<?=GetMessageJS('CRM_EDITOR_PHONE')?>",
 					"CRM_EDITOR_EMAIL": "<?=GetMessageJS('CRM_EDITOR_EMAIL')?>",
 					"CRM_EDITOR_ADDRESS": "<?=GetMessageJS('CRM_EDITOR_ADDRESS')?>",
-					"CRM_EDITOR_REQUISITES": "<?=GetMessageJS('CRM_EDITOR_REQUISITES')?>"
+					"CRM_EDITOR_REQUISITES": "<?=GetMessageJS('CRM_EDITOR_REQUISITES')?>",
+					"CRM_EDITOR_PLACEMENT_CAUTION": "<?=GetMessageJS('CRM_EDITOR_PLACEMENT_CAUTION')?>",
+
 				}
 			);
 
@@ -810,6 +830,7 @@ if(!empty($htmlEditorConfigs))
 						options: <?=CUtil::PhpToJSObject($arResult['EDITOR_OPTIONS'])?>,
 						attributeConfig: <?=CUtil::PhpToJSObject($arResult['ATTRIBUTE_CONFIG'])?>,
 						showEmptyFields: <?=$arResult['SHOW_EMPTY_FIELDS'] ? 'true' : 'false'?>,
+                        ajaxData: <?=CUtil::PhpToJSObject($arResult['COMPONENT_AJAX_DATA'])?>,
 						isEmbedded: <?=$arResult['IS_EMBEDDED'] ? 'true' : 'false'?>,
 						ufAccessRights: <?=CUtil::PhpToJSObject($arResult['USER_FIELD_ACCESS_RIGHTS'])?>
 					}

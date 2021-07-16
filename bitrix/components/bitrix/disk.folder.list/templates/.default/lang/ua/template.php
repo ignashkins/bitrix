@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["DISK_FOLDER_BTN_CREATE_FOLDER"] = "Створити";
 $MESS["DISK_FOLDER_LABEL_NAME_CREATE_FOLDER"] = "Назва";
 $MESS["DISK_FOLDER_LIST_BIZPROC_LABEL"] = "Активувати Бізнес-процеси";
@@ -68,6 +68,7 @@ $MESS["DISK_FOLDER_LIST_SHARING_LABEL_RIGHT_READ"] = "Читання";
 $MESS["DISK_FOLDER_LIST_SHARING_LABEL_TOOLTIP_SHARING"] = "Всі співробітники, що мають доступ до папки, <br/> зможуть додавати нових учасників загального доступу";
 $MESS["DISK_FOLDER_LIST_SHARING_TITLE_MODAL"] = "Параметри спільного доступу";
 $MESS["DISK_FOLDER_LIST_SHARING_TITLE_MODAL_2"] = "Загальний доступ";
+$MESS["DISK_FOLDER_LIST_SHARING_TITLE_MODAL_3"] = "Загальний доступ";
 $MESS["DISK_FOLDER_LIST_SPOTLIGHT_VIEW_MODE"] = "Виберіть зручний режим перегляду файлів на диску";
 $MESS["DISK_FOLDER_LIST_SUCCESS_CONNECT_TO_DISK_FILE"] = "Файл #NAME# вдало підключений до Мого Диску";
 $MESS["DISK_FOLDER_LIST_SUCCESS_CONNECT_TO_DISK_FOLDER"] = "Папка #NAME# вдало підключена до Мого Диску";
@@ -117,4 +118,3 @@ $MESS["DISK_FOLDER_MW_CREATE_TYPE_DOC"] = "Документ";
 $MESS["DISK_FOLDER_MW_CREATE_TYPE_PPT"] = "Презентація";
 $MESS["DISK_FOLDER_MW_CREATE_TYPE_XLS"] = "Таблиця";
 $MESS["DISK_FOLDER_TITLE_CREATE_FOLDER"] = "Створення папки";
-?>

@@ -21,7 +21,7 @@ export default Vue.extend({
 	data()
 	{
 		return {
-			searchingCar: false,
+			isMakingRequest: false,
 			isCancelling: false,
 		};
 	},
@@ -35,7 +35,7 @@ export default Vue.extend({
 		},
 		makeRequest()
 		{
-			this.searchingCar = true;
+			this.isMakingRequest = true;
 
 			BX.ajax.runAction(
 				'sale.taxidelivery.sendrequest',
@@ -47,7 +47,7 @@ export default Vue.extend({
 				}
 			).then((result) => {
 			}).catch((result) => {
-				this.searchingCar = false;
+				this.isMakingRequest = false;
 				this.showError(result.errors.map((item) => item.message).join());
 			});
 		},
@@ -71,9 +71,24 @@ export default Vue.extend({
 				.then((result) => {
 					this.isCancelling = false;
 				}).catch((result) => {
-					this.isCancelling = false;
-					this.showError(result.errors.map((item) => item.message).join());
-				});
+				this.isCancelling = false;
+				this.showError(result.errors.map((item) => item.message).join());
+			});
+		},
+		checkRequestStatus()
+		{
+			BX.ajax.runAction('sale.taxidelivery.checkrequeststatus');
+		},
+		startCheckingRequestStatus()
+		{
+			clearTimeout(this._checkRequestStatusTimeoutId);
+			this._checkRequestStatusTimeoutId = setInterval(
+				() => this.checkRequestStatus(), 10 * 1000
+			);
+		},
+		stopCheckingRequestStatus()
+		{
+			clearTimeout(this._checkRequestStatusTimeoutId);
 		},
 		showError(message)
 		{
@@ -134,6 +149,14 @@ export default Vue.extend({
 			popup.show();
 		},
 	},
+	created()
+	{
+		this._checkRequestStatusTimeoutId = null;
+		if (this.isSearchingCar)
+		{
+			this.startCheckingRequestStatus();
+		}
+	},
 	computed: {
 		isExpectedPriceReceived()
 		{
@@ -141,7 +164,7 @@ export default Vue.extend({
 		},
 		isSendRequestButtonVisible()
 		{
-			if (this.searchingCar)
+			if (this.isMakingRequest)
 			{
 				return false;
 			}
@@ -161,11 +184,9 @@ export default Vue.extend({
 
 			return false;
 		},
-		isSearchingLabelVisible()
+		isSearchingCar()
 		{
-			return (this.searchingCar
-				|| (this.fields.STATUS && this.fields.STATUS === 'searching')
-			);
+			return this.isMakingRequest || (this.fields.STATUS && this.fields.STATUS === 'searching');
 		},
 		isRequestCancellationLinkVisible()
 		{
@@ -180,6 +201,19 @@ export default Vue.extend({
 				'ui-btn-wait': this.isCancelling
 			};
 		},
+	},
+	watch: {
+		isSearchingCar: function (value)
+		{
+			if (value)
+			{
+				this.startCheckingRequestStatus();
+			}
+			else
+			{
+				this.stopCheckingRequestStatus();
+			}
+		}
 	},
 	template: `
 		<div class="crm-entity-stream-section crm-entity-stream-section-new crm-entity-stream-section-planned">
@@ -201,7 +235,7 @@ export default Vue.extend({
 							<span v-if="isSendRequestButtonVisible" @click="makeRequest" class="ui-btn ui-btn-sm ui-btn-primary">
 								{{localize.TIMELINE_DELIVERY_TAXI_SEND_REQUEST}}
 							</span>
-							<span v-if="isSearchingLabelVisible" class="crm-entity-stream-content-delivery-status">
+							<span v-if="isSearchingCar" class="crm-entity-stream-content-delivery-status">
 								{{localize.TIMELINE_DELIVERY_TAXI_SEARCHING_CAR}}
 							</span>
 							<div class="crm-entity-stream-content-delivery-title">
@@ -233,7 +267,7 @@ export default Vue.extend({
 												{{localize.TIMELINE_DELIVERY_TAXI_CLIENT_DELIVERY_PRICE}}
 											</div>
 											<div class="crm-entity-stream-content-delivery-order-value crm-entity-stream-content-delivery-order-value--sm">
-												<span v-html="fields.DELIVERY_PRICE"></span>
+												<span style="font-size: 14px; color: #333;" v-html="fields.DELIVERY_PRICE"></span>
 											</div>
 										</div>
 									</td>
@@ -243,7 +277,7 @@ export default Vue.extend({
 												{{localize.TIMELINE_DELIVERY_TAXI_EXPECTED_DELIVERY_PRICE}}
 											</div>
 											<div class="crm-entity-stream-content-delivery-order-value crm-entity-stream-content-delivery-order-value--sm">												
-												<span v-if="isExpectedPriceReceived">
+												<span style="font-size: 14px; color: #333; opacity: .5;" v-if="isExpectedPriceReceived">
 													<span v-html="fields.EXPECTED_PRICE_DELIVERY"></span></span>
 												<span v-else>
 													{{localize.TIMELINE_DELIVERY_TAXI_EXPECTED_PRICE_NOT_RECEIVED}}
@@ -257,6 +291,8 @@ export default Vue.extend({
 										<performer
 											:name="fields.PERFORMER_NAME"
 											:phone="fields.PERFORMER_PHONE"
+											:phoneExt="fields.PERFORMER_PHONE_EXT"
+											:canUseTelephony="fields.CAN_USE_TELEPHONY"
 										></performer>
 									</td>
 								</tr>

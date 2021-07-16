@@ -42,6 +42,21 @@ class SenderSegmentListComponent extends Bitrix\Sender\Internals\CommonSenderCom
 	{
 		$this->arParams['GRID_ID'] =
 			isset($this->arParams['GRID_ID']) ? $this->arParams['GRID_ID'] : 'SENDER_SEGMENT_GRID';
+
+		if (\COption::GetOptionInt("sender", "group_agent_added") === 0)
+		{
+			\CAgent::AddAgent(
+				'\\Bitrix\Sender\\Posting\\SegmentDataBuilder::checkNotCompleted();',
+				"sender",
+				"N",
+				60,
+				"",
+				"Y",
+				\ConvertTimeStamp(time()+\CTimeZone::GetOffset()+450, "FULL"));
+
+				\COption::SetOptionInt("sender", "group_agent_added", 1);
+		}
+
 		parent::initParams();
 	}
 
@@ -97,7 +112,13 @@ class SenderSegmentListComponent extends Bitrix\Sender\Internals\CommonSenderCom
 		// get rows
 		$list = GroupTable::getList(array(
 			'select' => array(
-				'CNT', 'ID', 'DATE_INSERT', 'NAME', 'ADDRESS_COUNT', 'USE_COUNT'
+				'CNT',
+				'ID',
+				'DATE_INSERT',
+				'NAME',
+				'ADDRESS_COUNT',
+				'USE_COUNT',
+				'STATUS',
 			),
 			'filter' => $this->getDataFilter(),
 			'offset' => $nav->getOffset(),
@@ -120,6 +141,8 @@ class SenderSegmentListComponent extends Bitrix\Sender\Internals\CommonSenderCom
 			$item['URLS'] = array(
 				'EDIT' => str_replace('#id#', $item['ID'], $this->arParams['PATH_TO_EDIT']),
 			);
+
+			$item['STATUS'] = Loc::getMessage('SENDER_SEGMENT_LIST_COMP_UI_COLUMN_STATUS_' . $item['STATUS']);
 
 			$item['ADDRESS_COUNTER'] = Entity\Segment::getAddressCounter($item['ID'])->getArray();
 			$this->arResult['ROWS'][] = $item;
@@ -161,6 +184,16 @@ class SenderSegmentListComponent extends Bitrix\Sender\Internals\CommonSenderCom
 		elseif (in_array($requestFilter['HIDDEN'], ['Y', 'N']))
 		{
 			$filter['=HIDDEN'] = $requestFilter['HIDDEN'] === 'Y';
+		}
+
+		if (isset($requestFilter['STATUS']) && $requestFilter['STATUS'])
+		{
+			$filterValues = [];
+			foreach ($requestFilter['STATUS'] as $value)
+			{
+				$filterValues = array_merge($filterValues, explode(",", $value));
+			}
+			$filter['@STATUS'] = $filterValues;
 		}
 
 		return $filter;
@@ -233,6 +266,12 @@ class SenderSegmentListComponent extends Bitrix\Sender\Internals\CommonSenderCom
 				"sort" => "ADDRESS_COUNT",
 				"default" => true
 			),
+			array(
+				"id" => "STATUS",
+				"name" => Loc::getMessage('SENDER_SEGMENT_LIST_COMP_UI_COLUMN_STATUS'),
+				"sort" => "STATUS",
+				"default" => true
+			),
 		);
 	}
 
@@ -255,6 +294,17 @@ class SenderSegmentListComponent extends Bitrix\Sender\Internals\CommonSenderCom
 				"name" => Loc::getMessage('SENDER_SEGMENT_LIST_COMP_UI_COLUMN_HIDDEN'),
 				"type" => "checkbox",
 				"default" => true
+			],
+			[
+				"id" => "STATUS",
+				"name" => Loc::getMessage('SENDER_SEGMENT_LIST_COMP_UI_COLUMN_STATUS'),
+				"type" => "list",
+				"default" => true,
+				'params' => array('multiple' => 'Y'),
+				"items" => [
+					'N,P' => Loc::getMessage('SENDER_SEGMENT_LIST_COMP_UI_COLUMN_STATUS_P'),
+					'R,D' => Loc::getMessage('SENDER_SEGMENT_LIST_COMP_UI_COLUMN_STATUS_R'),
+				]
 			],
 		];
 	}

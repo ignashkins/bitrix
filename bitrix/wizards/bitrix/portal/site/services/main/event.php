@@ -11,7 +11,7 @@ if (WIZARD_FIRST_INSTAL !== "Y" && WIZARD_SITE_ID != 's1')
 
 	foreach ($arEventType as $eventType)
 	{
-		$dbEventMessage = CEventMessage::GetList($b="ID", $order="ASC", Array("EVENT_NAME" => $eventType));
+		$dbEventMessage = CEventMessage::GetList('id', 'asc', Array("EVENT_NAME" => $eventType));
 		while($arEventMessage = $dbEventMessage->Fetch())
 		{
 			$arSiteId = array();

@@ -254,13 +254,9 @@
 		 */
 		getById: function(id)
 		{
-			id = id.toString();
-			var rows = this.getBodyChild();
-			var row = rows.filter(function(current) {
-				return current.getId() === id;
-			});
-
-			return row.length === 1 ? row[0] : null;
+			return this.getBodyChild().find(function(current) {
+				return String(current.getId()) === String(id);
+			}) || null;
 		},
 
 
@@ -271,24 +267,23 @@
 		 */
 		get: function(node)
 		{
-			var result = null;
-			var filter;
-
-			if (BX.type.isDomNode(node))
+			if (BX.Type.isDomNode(node))
 			{
-				node = this.normalizeNode(node);
-
-				filter = this.getRows().filter(function(current) {
-					return node === current.getNode();
-				});
-
-				if (filter.length)
+				const rowNode = node.closest('.main-grid-row');
+				if (BX.Type.isDomNode(rowNode))
 				{
-					result = filter[0];
+					const rowInstance = this.getRows().find((row) => {
+						return row.getNode() === rowNode;
+					});
+
+					if (rowInstance)
+					{
+						return rowInstance;
+					}
 				}
 			}
 
-			return result;
+			return null;
 		},
 
 		/** @static @method getLast */

@@ -22,6 +22,11 @@ BX.ImMobile = function(params)
 	this.mobileActionCache = false;
 	this.mobileActionRun = false;
 
+	this.linesDetailCounter = {};
+	this.dialogDetailCounter = {};
+
+	this.callController = null;
+
 	this.revision = 9;
 	this.errorMessage = '';
 	this.isAdmin = false;
@@ -3028,7 +3033,7 @@ BX.ImMessengerMobile.prototype.openMessageMenu = function(messageId)
 		});
 
 		sheetButtons.push({
-			title: BX.message("IM_MENU_TO_POST"),
+			title: BX.message("IM_MENU_TO_POST_2"),
 			callback: BX.delegate(function () { BX.MessengerCommon.shareMessageAjax(messageId, 'POST') }, this)
 		});
 	}

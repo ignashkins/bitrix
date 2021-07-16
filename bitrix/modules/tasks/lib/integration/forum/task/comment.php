@@ -22,6 +22,7 @@ use Bitrix\Tasks\Internals\Counter;
 use Bitrix\Tasks\Internals\Registry\TaskRegistry;
 use Bitrix\Tasks\Internals\SearchIndex;
 use Bitrix\Tasks\Internals\TaskTable;
+use Bitrix\Tasks\Internals\Task\ProjectLastActivityTable;
 use Bitrix\Tasks\Internals\Task\SearchIndexTable;
 use Bitrix\Tasks\Internals\Task\ViewedTable;
 use Bitrix\Tasks\Internals\UserOption;
@@ -56,19 +57,19 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 	{
 		$result = new Result();
 
-		if(!static::includeModule())
+		if (!self::includeModule())
 		{
 			$result->addError('NO_MODULE', 'No forum module installed');
 			return $result;
 		}
 
-		Counter\CounterService::getInstance()->collectData((int) $taskId);
+		Counter\CounterService::getInstance()->collectData((int)$taskId);
 
-		if(!array_key_exists('AUTHOR_ID', $data))
+		if (!array_key_exists('AUTHOR_ID', $data))
 		{
 			$data['AUTHOR_ID'] = User::getId();
 		}
-		if(!array_key_exists('USE_SMILES', $data))
+		if (!array_key_exists('USE_SMILES', $data))
 		{
 			$data['USE_SMILES'] = 'Y';
 		}
@@ -81,13 +82,14 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 			{
 				$data['AUX_DATA'] = [
 					'auxData' => $data['UF_TASK_COMMENT_TYPE'],
-					'text' => $data['POST_MESSAGE']
+					'text' => $data['POST_MESSAGE'],
 				];
 			}
 			$data['SERVICE_TYPE'] = Forum\Comments\Service\Manager::TYPE_TASK_INFO;
-			if (defined(Forum\Comments\Service\Manager::class.'::TYPE_FORUM_DEFAULT'))
+
+			if (defined(Forum\Comments\Service\Manager::class . '::TYPE_FORUM_DEFAULT'))
 			{
-					$data['SERVICE_DATA'] = Json::encode($data['AUX_DATA']);
+				$data['SERVICE_DATA'] = Json::encode($data['AUX_DATA']);
 				$data['POST_MESSAGE'] = Forum\Comments\Service\Manager::find([
 					'SERVICE_TYPE' => Forum\Comments\Service\Manager::TYPE_TASK_INFO,
 				])->getText($data['SERVICE_DATA']);
@@ -99,22 +101,21 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 		}
 
 		$feed = new Forum\Comments\Feed(
-			static::getForumId(),
-			array(
-				"type" => "TK",
-				"id" => $taskId,
-				"xml_id" => "TASK_".$taskId
-			),
+			self::getForumId(),
+			[
+				'type' => 'TK',
+				'id' => $taskId,
+				'xml_id' => "TASK_{$taskId}",
+			],
 			$data['AUTHOR_ID']
 		);
 
 		// $feed->add() works with global-defined user fields
-		foreach($data as $k => $v)
+		foreach ($data as $key => $value)
 		{
-			if(\Bitrix\Tasks\Util\UserField::isUFKey($k))
+			if (Util\UserField::isUFKey($key))
 			{
-				$GLOBALS[$k] = $data[$k];
-				unset($data[$k]);
+				$GLOBALS[$key] = $value;
 			}
 		}
 
@@ -133,26 +134,47 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 		}
 
 		$addResult = $feed->add($data);
-		if($addResult)
+		if ($addResult)
 		{
 			$result->setData($addResult);
-			if ($data["AUX"] === "Y" && method_exists($feed, "send"))
+			if ($data['AUX'] === 'Y' && method_exists($feed, 'send'))
 			{
+				$skipUserRead = 'N';
+
+				if ($data['UF_TASK_COMMENT_TYPE'] === Comments\Internals\Comment::TYPE_EXPIRED_SOON)
+				{
+					$taskData = \CTaskItem::getInstance($taskId, $data['AUTHOR_ID']);
+					$responsibleId = (int)$taskData['RESPONSIBLE_ID'];
+					$accomplices = $taskData['ACCOMPLICES'];
+					$accomplices = (is_array($accomplices) ? $accomplices : $accomplices->export());
+					$accomplices = array_map('intval', $accomplices);
+
+					if (in_array($data['AUTHOR_ID'], array_merge([$responsibleId], $accomplices), true))
+					{
+						$skipUserRead = 'Y';
+					}
+				}
+
 				$feed->send(
 					$addResult["ID"],
-					[ "URL_TEMPLATES_PROFILE_VIEW" => Option::get('socialnetwork', 'user_page', '/company/personal/').'user/#user_id#/' ]
+					[
+						'URL_TEMPLATES_PROFILE_VIEW' => Option::get('socialnetwork', 'user_page', '/company/personal/') . 'user/#user_id#/',
+						'SKIP_USER_READ' => $skipUserRead,
+					]
 				);
 			}
 		}
-		else
+		elseif (is_array($errors = $feed->getErrors()))
 		{
-			$errors = $feed->getErrors();
-			if(is_array($errors))
+			$resultErrors = $result->getErrors();
+			foreach ($errors as $error)
 			{
-				foreach($errors as $error)
-				{
-					$result->getErrors()->add('ACTION_FAILED_REASON', $error->getMessage(), Error::TYPE_FATAL, array('CODE' => $error->getCode()));
-				}
+				$resultErrors && $resultErrors->add(
+					'ACTION_FAILED_REASON',
+					$error->getMessage(),
+					Error::TYPE_FATAL,
+					['CODE' => $error->getCode()]
+				);
 			}
 		}
 
@@ -325,7 +347,7 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 		}
 
 		Counter\CounterService::addEvent(
-			Counter\CounterDictionary::EVENT_AFTER_COMMENT_DELETE,
+			Counter\Event\EventDictionary::EVENT_AFTER_COMMENT_DELETE,
 			[
 				'TASK_ID' => (int) $taskId,
 				'USER_ID' => (int) $message['AUTHOR_ID'],
@@ -355,7 +377,10 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 		$taskParticipants = array_unique($taskParticipants);
 
 		$pushRecipients = $taskParticipants;
-		if ($groupId > 0)
+		if (
+			SocialNetwork::includeModule()
+			&& $groupId > 0
+		)
 		{
 			$pushRecipients = array_unique(
 				array_merge(
@@ -363,6 +388,8 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 					SocialNetwork\User::getUsersCanPerformOperation($groupId, 'view_all')
 				)
 			);
+
+			\CSocNetGroup::SetLastActivity($groupId);
 		}
 
 		PushService::addEvent($pushRecipients, [
@@ -445,20 +472,26 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 
 		TaskTable::update($taskId, ['ACTIVITY_DATE' => DateTime::createFromTimestamp($messageEditDateTimeStamp)]);
 
-		$oTask = new \CTaskItem($taskId, User::getAdminId());
-
 		try
 		{
+			$oTask = new \CTaskItem($taskId, User::getAdminId());
 			$arTask = $oTask->getData();
 		}
-		catch (\TasksException $e)
+		catch (\TasksException | \CTaskAssertException $e)
 		{
 			return;
 		}
 
+		if ($arTask['GROUP_ID'] > 0)
+		{
+			ProjectLastActivityTable::update(
+				$arTask['GROUP_ID'],
+				['ACTIVITY_DATE' => DateTime::createFromTimestamp($messageEditDateTimeStamp)]
+			);
+		}
+
 		if (!$aux)
 		{
-			UserOption::delete($taskId, (int)$messageAuthorId, UserOption\Option::MUTED);
 			SearchIndex::setCommentSearchIndex($taskId, $messageId, $strMessage);
 		}
 
@@ -687,6 +720,40 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 					}
 				}
 			}
+
+			if (
+				array_key_exists('GROUP_ID', $arTask)
+				&& $arTask['GROUP_ID']
+			)
+			{
+				\CSocNetGroup::SetLastActivity((int)$arTask['GROUP_ID']);
+			}
+		}
+
+		$commentType = Comments\Internals\Comment::TYPE_DEFAULT;
+		if (isset($arData['PARAMS']['UF_TASK_COMMENT_TYPE']) && !empty($arData['PARAMS']['UF_TASK_COMMENT_TYPE']))
+		{
+			$commentType = (int)$arData['PARAMS']['UF_TASK_COMMENT_TYPE'];
+		}
+
+		$isPingComment = 'N';
+		if ($aux)
+		{
+			$commentReader = Comments\Task\CommentReader::getInstance($taskId, $messageId);
+			$commentReader->setCommentData([
+				'MESSAGE' => '',
+				'AUTHOR_ID' => (int)$messageAuthorId,
+				'TYPE' => $commentType,
+				'AUX_DATA' => (is_array($arData['AUX_DATA']) ? serialize($arData['AUX_DATA']) : $arData['AUX_DATA']),
+			]);
+
+			$isPingComment = ($commentReader->isContainCodes(['COMMENT_POSTER_COMMENT_TASK_PINGED_STATUS']) ? 'Y' : 'N');
+			$arData['PARAMS']['IS_PING_COMMENT'] = $isPingComment;
+		}
+
+		if (!$aux || $isPingComment === 'Y')
+		{
+			UserOption::delete($taskId, (int)$messageAuthorId, UserOption\Option::MUTED);
 		}
 
 		$recipientsIds = static::getTaskMembersByTaskId($taskId, $occurAsUserId);
@@ -711,14 +778,8 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 			ViewedTable::set($taskId, (int)$messageAuthorId, DateTime::createFromTimestamp($messageEditDateTimeStamp));
 		}
 
-		$commentType = Comments\Internals\Comment::TYPE_DEFAULT;
-		if (isset($arData['PARAMS']['UF_TASK_COMMENT_TYPE']) && !empty($arData['PARAMS']['UF_TASK_COMMENT_TYPE']))
-		{
-			$commentType = (int)$arData['PARAMS']['UF_TASK_COMMENT_TYPE'];
-		}
-
 		Counter\CounterService::addEvent(
-			Counter\CounterDictionary::EVENT_AFTER_COMMENT_ADD,
+			Counter\Event\EventDictionary::EVENT_AFTER_COMMENT_ADD,
 			[
 				'TASK_ID' => (int) $taskId,
 				'USER_ID' => (int) $occurAsUserId,
@@ -729,25 +790,11 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 		$isCompleteComment = false;
 		if ($aux)
 		{
-			$commentReader = Comments\Task\CommentReader::getInstance($taskId, $messageId);
-			$commentReader->setCommentData([
-				'MESSAGE' => '',
-				'AUTHOR_ID' => (int)$messageAuthorId,
-				'TYPE' => $commentType,
-				'AUX_DATA' => (is_array($arData['AUX_DATA']) ? serialize($arData['AUX_DATA']) : $arData['AUX_DATA']),
-			]);
 			$commentReader->read();
-
-			$commentCodes = [];
-			foreach ($commentReader->getCommentData() as [$code, $replaces])
-			{
-				$commentCodes[] = $code;
-			}
-			$completeCodes = [
+			$isCompleteComment = $commentReader->isContainCodes([
 				'COMMENT_POSTER_COMMENT_TASK_UPDATE_STATUS_5_V2',
 				'COMMENT_POSTER_COMMENT_TASK_UPDATE_STATUS_5_APPROVE_V2',
-			];
-			$isCompleteComment = !empty(array_intersect($commentCodes, $completeCodes));
+			]);
 		}
 
 		if (Loader::includeModule('pull'))
@@ -785,6 +832,11 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 		{
 			$messageData = ['ID' => $messageId, 'POST_MESSAGE' => $strMessage];
 			static::sendNotification($messageData, $arTask, $occurAsUserId, $recipientsIds, $arData);
+		}
+
+		if (!$aux || $isPingComment === 'Y')
+		{
+			self::addToAuditor((int)$messageAuthorId, (int)$taskId);
 		}
 
 		if (!isset($arData['replica']))
@@ -1141,7 +1193,7 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 				SearchIndexTable::deleteByTaskAndMessageIds($taskID, $messageId);
 
 				Counter\CounterService::addEvent(
-					Counter\CounterDictionary::EVENT_AFTER_COMMENT_DELETE,
+					Counter\Event\EventDictionary::EVENT_AFTER_COMMENT_DELETE,
 					[
 						'TASK_ID' => (int) $taskID,
 						'USER_ID' => (int) $messageAuthorId,
@@ -1246,7 +1298,7 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 		if (
 			is_array($fields)
 			&& isset($fields['MESSAGE']['POST_MESSAGE'], $fields['PARAMS']['AUX'])
-			&& $fields['PARAMS']['AUX'] !== 'Y'
+			&& ($fields['PARAMS']['AUX'] !== 'Y' || $fields['PARAMS']['IS_PING_COMMENT'] === 'Y')
 		)
 		{
 			preg_match_all("/\[user\s*=\s*([^\]]*)\](.+?)\[\/user\]/is".BX_UTF_PCRE_MODIFIER, $fields['MESSAGE']['POST_MESSAGE'], $matches);
@@ -1273,13 +1325,13 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 						&& intval($matches[1]) > 0
 					)
 					{
-						$taskObject = new \CTaskItem(intval($matches[1]), $currentUserId);
 						try
 						{
+							$taskObject = new \CTaskItem(intval($matches[1]), $currentUserId);
 							$task = $taskObject->getData();
 							$taskParticipantList = \CTaskNotifications::getRecipientsIDs($task, false);
 						}
-						catch (\TasksException $e)
+						catch (\TasksException | \CTaskAssertException $e)
 						{
 
 						}
@@ -1408,7 +1460,7 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 //			&& array_key_exists('AUX_DATA', $eventData)
 //		)
 //		{
-//			$commentInfo = unserialize($eventData['AUX_DATA']);
+//			$commentInfo = unserialize($eventData['AUX_DATA'], ['allowed_classes' => false]);
 //			if (!$commentInfo)
 //			{
 //				return false;
@@ -1539,6 +1591,34 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 		return $message;
 	}
 
+	/**
+	 * @param int $authorId
+	 * @param int $taskId
+	 */
+	private static function addToAuditor(int $authorId, int $taskId)
+	{
+		$task = \CTaskItem::getInstance($taskId, User::getAdminId());
+		try
+		{
+			$taskData = $task->getData(false);
+			if (
+				$authorId === (int)$taskData['CREATED_BY']
+				|| $authorId === (int)$taskData['RESPONSIBLE_ID']
+				|| in_array($authorId, $taskData['ACCOMPLICES'])
+				|| in_array($authorId, $taskData['AUDITORS'])
+			)
+			{
+				return;
+			}
+			$auditors = array_merge($taskData['AUDITORS'], [$authorId]);
+			$task->update(['AUDITORS' => $auditors], ['SKIP_ACCESS_CONTROL' => true, 'FIELDS_FOR_COMMENTS' => []]);
+		}
+		catch (\TasksException $e)
+		{
+			return;
+		}
+	}
+
 	private static function getUserId()
 	{
 		$userId = User::getId();
@@ -1568,13 +1648,12 @@ final class Comment extends \Bitrix\Tasks\Integration\Forum\Comment
 
 		$arRightsTasks = \CWebDavIblock::GetTasks();	// tasks-operations
 
-		$oTask  = new \CTaskItem((int)$taskId, User::getAdminId());
-
 		try
 		{
+			$oTask  = new \CTaskItem((int)$taskId, User::getAdminId());
 			$arTask = $oTask->getData(false);
 		}
-		catch (\TasksException $e)
+		catch (\TasksException | \CTaskAssertException $e)
 		{
 			return;
 		}

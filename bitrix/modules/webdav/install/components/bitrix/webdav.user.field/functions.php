@@ -833,7 +833,7 @@ function WDUFGetPathOptions($path, $IBLOCK_ID, $arSection, $arElement = array())
 				$wdSefPathSettings = COption::GetOptionString('webdav', 'webdav_comp_sef_path_' . $IBLOCK_ID);
 				if($wdSefPathSettings)
 				{
-					$wdSefPathSettings = @unserialize($wdSefPathSettings, false);
+					$wdSefPathSettings = @unserialize($wdSefPathSettings, ['allowed_classes' => false]);
 					$SEF_FOLDER = $wdSefPathSettings['SEF_FOLDER'];
 					$wdSefPathSettings = $wdSefPathSettings['SEF_URL_TEMPLATES'];
 					if(is_array($wdSefPathSettings))

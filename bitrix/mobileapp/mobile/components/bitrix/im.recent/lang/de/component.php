@@ -1,10 +1,9 @@
-<?
+<?php
 $MESS["IM_B24DISK"] = "Bitrix24.Drive";
 $MESS["IM_CAMERA_ROLL"] = "Ein Foto machen";
 $MESS["IM_CHOOSE_FILE_TITLE"] = "Dateien";
 $MESS["IM_CHOOSE_PHOTO"] = "Aus der Galerie auswählen";
 $MESS["IM_DIALOG_UNNAMED"] = "Wird geladen...";
-$MESS["IM_LIST_LOADING"] = "Wird geladen...";
 $MESS["IM_EMPTY_BUTTON"] = "Konversation starten";
 $MESS["IM_EMPTY_OL_TEXT_1"] = "Alle Ihre Chats mit Kunden sind hier.";
 $MESS["IM_EMPTY_OL_TEXT_2"] = "Sie werden benachrichtigt, sobald ein Kunde eine Nachricht im Kommunikationskanal schreibt.";
@@ -13,6 +12,7 @@ $MESS["IM_EMPTY_TEXT_CREATE"] = "Klicken Sie auf die Schaltfläche, um einen Cha
 $MESS["IM_EMPTY_TEXT_INVITE"] = "Klicken Sie auf die Schaltfläche unten, um Ihre Kollegen in Bitrix24 einzuladen.";
 $MESS["IM_LIST_ACTION_ERROR"] = "Wir konnten Ihr Bitrix24 nicht verbinden, evtl. wegen der schwachen Internetverbindung. Versuchen Sie bitte später erneut.";
 $MESS["IM_LIST_EMPTY"] = "Es gibt momentan keine Konversationen";
+$MESS["IM_LIST_LOADING"] = "Wird geladen...";
 $MESS["IM_M_MESSAGE_SEND"] = "Senden";
 $MESS["IM_M_TEXTAREA"] = "Nachricht schreiben...";
 $MESS["IM_PROMO_VIDEO_01042020_MOBILE"] = "Videoanrufe wurden wesentlich verbessert.#BR##BR#Probieren Sie es jetzt.#BR##BR# Nutzen Sie Anrufe und Videoanrufe, um Ihre Zeit zu sparen.";
@@ -25,10 +25,10 @@ $MESS["IM_SCOPE_USERS"] = "Mitarbeiter";
 $MESS["INVITE_RESEND_DONE"] = "Einladung wurde erfolgreich gesendet.";
 $MESS["OL_LIST_EMPTY"] = "Keine Konversationen";
 $MESS["OL_SECTION_ANSWERED"] = "Beantwortet";
+$MESS["OL_SECTION_NEW"] = "Unbeantwortet";
 $MESS["OL_SECTION_PIN"] = "Fixiert";
-$MESS["OL_SECTION_WORK"] = "Unbeantwortet";
+$MESS["OL_SECTION_WORK_2"] = "In Arbeit";
 $MESS["SEARCH_RECENT"] = "NEULICH GESUCHT";
 $MESS["U_STATUS_OFFLINE"] = "Offline";
 $MESS["U_STATUS_ONLINE"] = "Online";
 $MESS["WIDGET_CHAT_CREATE_TITLE"] = "Neuer Chat";
-?>

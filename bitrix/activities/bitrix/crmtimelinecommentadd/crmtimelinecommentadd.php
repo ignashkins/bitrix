@@ -22,7 +22,7 @@ class CBPCrmTimelineCommentAdd
 		}
 
 		$documentId = $this->GetDocumentId();
-		list($ownerTypeName, $ownerId) = explode('_', $documentId[2]);
+		list($ownerTypeName, $ownerId) = mb_split('_(?=[^_]*$)', $documentId[2]);
 		$ownerTypeId = \CCrmOwnerType::ResolveID($ownerTypeName);
 
 		$authorId = CBPHelper::ExtractUsers($this->CommentUser, $documentId, true);
@@ -86,6 +86,7 @@ class CBPCrmTimelineCommentAdd
 		$dialog->setMap(array(
 			'CommentText' => array(
 				'Name' => GetMessage('BPCTLCA_COMMENT_TEXT'),
+				'Description' => GetMessage('BPCTLCA_COMMENT_TEXT'),
 				'FieldName' => 'comment_text',
 				'Type' => 'text',
 				'Required' => true,

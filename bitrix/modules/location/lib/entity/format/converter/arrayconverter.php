@@ -8,14 +8,17 @@ use Bitrix\Location\Entity\Format\Field;
 /**
  * Class ArrayConverter
  * @package Bitrix\Location\Entity\Format\Converter
+ * @internal
  */
-class ArrayConverter
+final class ArrayConverter
 {
 	/**
-	 * @param \Bitrix\Location\Entity\Format $format
+	 * Convert Format to Array
+	 *
+	 * @param Format $format
 	 * @return array
 	 */
-	public static function convertToArray(\Bitrix\Location\Entity\Format $format): array
+	public static function convertToArray(Format $format): array
 	{
 		return [
 			'code' => $format->getCode(),
@@ -23,22 +26,43 @@ class ArrayConverter
 			'description' => $format->getDescription(),
 			'delimiter' => $format->getDelimiter(),
 			'languageId' => $format->getLanguageId(),
-			'template' => $format->getTemplate(),
-			'fieldCollection' => self::convertFieldCollectionToArray($format),
+			'templateCollection' => self::convertTemplateCollectionToArray(
+				$format->getTemplateCollection()
+			),
+			'fieldCollection' => self::convertFieldCollectionToArray(
+				$format->getFieldCollection()
+			),
 			'fieldForUnRecognized' => $format->getFieldForUnRecognized()
 		];
 	}
 
 	/**
-	 * @param \Bitrix\Location\Entity\Format $format
+	 * @param Format\TemplateCollection $templateCollection
 	 * @return array
 	 */
-	public static function convertFieldCollectionToArray(\Bitrix\Location\Entity\Format $format): array
+	private static function convertTemplateCollectionToArray(Format\TemplateCollection $templateCollection): array
+	{
+		$result = [];
+
+		/** @var Format\Template $template */
+		foreach ($templateCollection as $template)
+		{
+			$result[$template->getType()] = $template->getTemplate();
+		}
+
+		return $result;
+	}
+
+	/**
+	 * @param Format\FieldCollection $fieldCollection
+	 * @return array
+	 */
+	private static function convertFieldCollectionToArray(Format\FieldCollection $fieldCollection): array
 	{
 		$result = [];
 
 		/** @var Field $field */
-		foreach ($format->getFieldCollection() as $field)
+		foreach ($fieldCollection as $field)
 		{
 			$result[] = [
 				'sort' => $field->getSort(),
@@ -52,6 +76,8 @@ class ArrayConverter
 	}
 
 	/**
+	 * Convert Array to Format
+	 *
 	 * @param array $data
 	 * @param string $languageId
 	 * @return Format
@@ -64,11 +90,7 @@ class ArrayConverter
 			->setDescription((string)$data['description'])
 			->setDelimiter((string)$data['delimiter'])
 			->setCode((string)$data['code'])
-			->setTemplate((string)$data['template'])
-			->setFieldForUnRecognized($data['fieldForUnRecognized'])
-			->setFieldCollection(
-				new Format\FieldCollection()
-			);
+			->setFieldForUnRecognized($data['fieldForUnRecognized']);
 
 		foreach ($data['fieldCollection'] as $field)
 		{
@@ -77,6 +99,13 @@ class ArrayConverter
 					->setName((string)$field['name'])
 					->setDescription((string)$field['description'])
 					->setSort((int)$field['sort'])
+			);
+		}
+
+		foreach ($data['templateCollection'] as $type => $template)
+		{
+			$result->getTemplateCollection()->addItem(
+				new Format\Template($type, $template)
 			);
 		}
 

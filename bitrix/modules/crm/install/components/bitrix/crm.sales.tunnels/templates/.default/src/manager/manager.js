@@ -1,4 +1,4 @@
-import {Event, Loc, Cache, Type} from 'main.core';
+import {Reflection, Event, Loc, Cache, Type} from 'main.core';
 import {PopupWindow, PopupWindowButtonLink} from 'main.popup';
 import {UI} from 'ui.notification';
 import {Category} from '../category/category';
@@ -17,6 +17,8 @@ export default class Manager
 	categories: Map<number, Category>;
 
 	constructor(options: {
+		entityTypeId: number,
+		documentType: Array<string>,
 		container: HTMLDivElement,
 		addCategoryButtonTop: HTMLButtonElement,
 		helpButton: HTMLButtonElement,
@@ -25,7 +27,6 @@ export default class Manager
 		robotsUrl: string,
 		generatorUrl: string,
 		permissionEditUrl: string,
-		allowWrite: boolean,
 		canEditTunnels: boolean,
 		canAddCategory: boolean,
 		categoriesQuantityLimit: number,
@@ -34,9 +35,15 @@ export default class Manager
 		showGeneratorRestrictionPopup: () => void,
 		isAvailableRobots: boolean,
 		showRobotsRestrictionPopup: () => void,
+		isSenderSupported: boolean,
+		isAutomationEnabled: boolean,
+		isStagesEnabled: boolean,
+		isChanged: boolean;
 	})
 	{
 		this.container = options.container;
+		this.entityTypeId = options.entityTypeId;
+		this.documentType = options.documentType;
 		this.addCategoryButtonTop = options.addCategoryButtonTop;
 		this.helpButton = options.helpButton;
 		this.categoriesOptions = options.categories;
@@ -44,7 +51,6 @@ export default class Manager
 		this.generatorUrl = options.generatorUrl;
 		this.permissionEditUrl = options.permissionEditUrl;
 		this.tunnelScheme = options.tunnelScheme;
-		this.allowWrite = Boolean(options.allowWrite);
 		this.canEditTunnels = Boolean(options.canEditTunnels);
 		this.canAddCategory = Boolean(options.canAddCategory);
 		this.categoriesQuantityLimit = Number(options.categoriesQuantityLimit);
@@ -53,11 +59,17 @@ export default class Manager
 		this.showGeneratorRestrictionPopup = options.showGeneratorRestrictionPopup;
 		this.isAvailableRobots = options.isAvailableRobots;
 		this.showRobotsRestrictionPopup = options.showRobotsRestrictionPopup;
+		this.isSenderSupported = options.isSenderSupported;
+		this.isStagesEnabled = options.isStagesEnabled;
+		this.isAutomationEnabled = options.isAutomationEnabled && this.isStagesEnabled;
 		this.categories = new Map();
 		this.cache = new Cache.MemoryCache();
+		this.isChanged = false;
 
 		this.initCategories();
 		this.initTunnels();
+
+		Backend.entityTypeId = this.entityTypeId;
 
 		setTimeout(() => {
 			if (!this.hasTunnels())
@@ -69,6 +81,20 @@ export default class Manager
 		Event.bind(this.getAddCategoryButton(), 'click', this.onAddCategoryClick.bind(this));
 		Event.bind(this.addCategoryButtonTop, 'click', this.onAddCategoryTopClick.bind(this));
 		Event.bind(this.helpButton, 'click', this.onHelpButtonClick.bind(this));
+
+		const toolbarComponent = Reflection.getClass('top.BX.Crm.ToolbarComponent')
+			? Reflection.getClass('top.BX.Crm.ToolbarComponent').Instance
+			: null;
+		const slider = this.getSlider();
+		if (slider && toolbarComponent)
+		{
+			Event.EventEmitter.subscribe('SidePanel.Slider:onClose', () => {
+				if (this.isChanged)
+				{
+					toolbarComponent.emitCategoriesUpdatedEvent();
+				}
+			});
+		}
 	}
 
 	hasTunnels(): boolean
@@ -155,6 +181,9 @@ export default class Manager
 					{
 						this.hideCategoryStub();
 					}
+				})
+				.catch((response) => {
+					this.showErrorPopup(makeErrorMessageFromResponse(response));
 				});
 		}
 		else
@@ -215,6 +244,7 @@ export default class Manager
 				showGeneratorRestrictionPopup: () => {},
 				isAvailableRobots: true,
 				showRobotsRestrictionPopup: () => {},
+				isStagesEnabled: this.isStagesEnabled,
 			});
 		});
 	}
@@ -230,7 +260,10 @@ export default class Manager
 		const [columnFrom] = firstCategory.getSuccessKanban().getColumns();
 		const [columnTo] = categoryStub.getProgressKanban().getColumns();
 
-		columnFrom.marker.addStubLinkTo(columnTo.marker, true);
+		if (this.isAutomationEnabled)
+		{
+			columnFrom.marker.addStubLinkTo(columnTo.marker, true);
+		}
 	}
 
 	hideCategoryStub()
@@ -259,13 +292,22 @@ export default class Manager
 
 	addCategoryFromOptions(options: CategorySourceOptions)
 	{
+		let stages = options.STAGES;
+		if (!this.isStagesEnabled)
+		{
+			stages = {
+				P: createStageStubs(5),
+				S: createStageStubs(1),
+				F: createStageStubs(2),
+			};
+		}
 		const category = new Category({
 			renderTo: this.getCategoriesContainer(),
 			appContainer: this.getAppContainer(),
 			id: options.ID,
 			name: options.NAME,
-			'default': options.IS_DEFAULT,
-			stages: options.STAGES,
+			'default': (options.IS_DEFAULT === 'Y'),
+			stages: stages,
 			sort: options.SORT,
 			access: options.ACCESS,
 			robotsSettingsLink: this.robotsUrl,
@@ -273,12 +315,14 @@ export default class Manager
 			permissionEditLink: this.permissionEditUrl,
 			generatorsCount: options.RC_COUNT,
 			generatorsListUrl: options.RC_LIST_URL,
-			allowWrite: this.allowWrite,
 			canEditTunnels: this.canEditTunnels,
 			isAvailableGenerator: this.isAvailableGenerator,
 			showGeneratorRestrictionPopup: this.showGeneratorRestrictionPopup,
 			isAvailableRobots: this.isAvailableRobots,
 			showRobotsRestrictionPopup: this.showRobotsRestrictionPopup,
+			isAutomationEnabled: this.isAutomationEnabled,
+			isSenderSupported: this.isSenderSupported,
+			isStagesEnabled: this.isStagesEnabled,
 		});
 
 		category
@@ -292,19 +336,16 @@ export default class Manager
 							NAME: value,
 						},
 					})
-					.then(({data}) => {
-						if (data.success)
-						{
-							UI.Notification.Center.notify({
-								content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
-								autoHideDelay: 1500,
-								category: 'save',
-							});
-						}
-						else
-						{
-							this.showErrorPopup(makeErrorMessageFromResponse({data}));
-						}
+					.then(() => {
+						UI.Notification.Center.notify({
+							content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
+							autoHideDelay: 1500,
+							category: 'save',
+						});
+						this.isChanged = true;
+					})
+					.catch((response) => {
+						this.showErrorPopup(makeErrorMessageFromResponse(response));
 					});
 			})
 			.subscribe('Category:access', (event) => {
@@ -315,23 +356,15 @@ export default class Manager
 						id: categoryId,
 						access : access,
 					})
-					.then(({data}) => {
-						if (data.success)
-						{
-							UI.Notification.Center.notify({
-								content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
-								autoHideDelay: 1500,
-								category: 'save',
-							});
-						}
-						else
-						{
-							this.showErrorPopup(makeErrorMessageFromResponse({data}));
-						}
-					}, ({errors}) => {
-						let data = [];
-						errors.forEach(item => data.push(item.message));
-						this.showErrorPopup(makeErrorMessageFromResponse({data : {errors : data}}));
+					.then(() => {
+						UI.Notification.Center.notify({
+							content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
+							autoHideDelay: 1500,
+							category: 'save',
+						});
+					})
+					.catch((response) => {
+						this.showErrorPopup(makeErrorMessageFromResponse(response));
 					});
 			})
 			.subscribe('Category:access:copy', (event) => {
@@ -342,23 +375,15 @@ export default class Manager
 						id: categoryId,
 						donorId : donorCategoryId,
 					})
-					.then(({data}) => {
-						if (data.success)
-						{
-							UI.Notification.Center.notify({
-								content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
-								autoHideDelay: 1500,
-								category: 'save',
-							});
-						}
-						else
-						{
-							this.showErrorPopup(makeErrorMessageFromResponse({data}));
-						}
-					}, ({errors}) => {
-						let data = [];
-						errors.forEach(item => data.push(item.message));
-						this.showErrorPopup(makeErrorMessageFromResponse({data : {errors : data}}));
+					.then(() => {
+						UI.Notification.Center.notify({
+							content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
+							autoHideDelay: 1500,
+							category: 'save',
+						});
+					})
+					.catch((response) => {
+						this.showErrorPopup(makeErrorMessageFromResponse(response));
 					});
 			})
 			.subscribe('Category:remove', (event) => {
@@ -366,21 +391,13 @@ export default class Manager
 					.removeCategory({
 						id: event.data.categoryId,
 					})
-					.then(({data}) => {
-						if (data.success)
-						{
-							event.data.onConfirm();
-							UI.Notification.Center.notify({
-								content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
-								autoHideDelay: 1500,
-								category: 'save',
-							});
-						}
-						else
-						{
-							event.data.onCancel();
-							this.showErrorPopup(makeErrorMessageFromResponse({data}));
-						}
+					.then(() => {
+						event.data.onConfirm();
+						UI.Notification.Center.notify({
+							content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
+							autoHideDelay: 1500,
+							category: 'save',
+						});
 
 						setTimeout(() => {
 							if (this.isShownCategoryStub())
@@ -392,9 +409,18 @@ export default class Manager
 
 							this.adjustCategoryStub();
 						});
+						this.isChanged = true;
+					})
+					.catch((response) => {
+						event.data.onCancel();
+						this.showErrorPopup(makeErrorMessageFromResponse(response));
 					});
 			})
 			.subscribe('Column:link', (event) => {
+				if (!this.isAutomationEnabled)
+				{
+					return;
+				}
 				if (!event.data.preventSave)
 				{
 					const from = {
@@ -406,37 +432,38 @@ export default class Manager
 						category: event.data.link.to.getData().column.getData().category.id,
 						stage: event.data.link.to.getData().column.data.stage.STATUS_ID,
 					};
+					const robotAction = event.data.link.robotAction;
 
 					Backend
-						.createRobot({from, to})
+						.createRobot({from, to, robotAction})
 						.then((response: {data: {tunnel: Tunnel, success: boolean}}) => {
-							if (response.data.success)
-							{
-								UI.Notification.Center.notify({
-									content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
-									autoHideDelay: 1500,
-									category: 'save',
-								});
+							UI.Notification.Center.notify({
+								content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
+								autoHideDelay: 1500,
+								category: 'save',
+							});
 
-								const stage = this.getStages().find((item) => {
-									return (
-										String(item.CATEGORY_ID) === String(response.data.tunnel.srcCategory)
-										&& String(item.STATUS_ID) === String(response.data.tunnel.srcStage)
-									);
-								});
+							const stage = this.getStages().find((item) => {
+								return (
+									String(item.CATEGORY_ID) === String(response.data.tunnel.srcCategory)
+									&& String(item.STATUS_ID) === String(response.data.tunnel.srcStage)
+								);
+							});
 
-								stage.TUNNELS.push(response.data.tunnel);
-							}
-							else
-							{
-								this.showErrorPopup(makeErrorMessageFromResponse({data: response.data}));
-							}
+							stage.TUNNELS.push(response.data.tunnel);
+						})
+						.catch((response) => {
+							this.showErrorPopup(makeErrorMessageFromResponse(response));
 						});
 				}
 
 				this.hideCategoryStub();
 			})
 			.subscribe('Column:removeLinkFrom', (event) => {
+				if (!this.isAutomationEnabled)
+				{
+					return;
+				}
 				if (!event.data.preventSave)
 				{
 					const columnFrom = event.data.link.from.getData().column;
@@ -459,19 +486,15 @@ export default class Manager
 
 						Backend
 							.removeRobot(requestOptions)
-							.then(({data}) => {
-								if (data.success)
-								{
-									UI.Notification.Center.notify({
-										content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
-										autoHideDelay: 1500,
-										category: 'save',
-									});
-								}
-								else
-								{
-									this.showErrorPopup(makeErrorMessageFromResponse({data}));
-								}
+							.then(() => {
+								UI.Notification.Center.notify({
+									content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
+									autoHideDelay: 1500,
+									category: 'save',
+								});
+							})
+							.catch((response) => {
+								this.showErrorPopup(makeErrorMessageFromResponse(response));
 							});
 
 						const stage = this.getStageDataById(srcStage);
@@ -489,13 +512,76 @@ export default class Manager
 					}
 				}
 			})
+			.subscribe('Column:changeRobotAction', (event) => {
+				if (!this.isAutomationEnabled || event.data.preventSave)
+				{
+					return;
+				}
+				const columnFrom = event.data.link.from.getData().column;
+				const columnTo = event.data.link.to.getData().column;
+				const srcCategory = columnFrom.getData().category.id;
+				const srcStage = columnFrom.getId();
+				const dstCategory = columnTo.getData().category.id;
+				const dstStage = columnTo.getId();
+				const tunnel = this.getTunnelByLink(event.data.link);
+
+				if (tunnel)
+				{
+					const from = {
+						category: srcCategory,
+						stage: srcStage,
+					};
+					const to = {
+						category: dstCategory,
+						stage: dstStage,
+					};
+
+					Backend
+						.removeRobot(tunnel)
+						.then(() => {
+							Backend
+								.createRobot({from, to, robotAction: event.data.link.robotAction})
+								.then((response: {data: {tunnel: Tunnel, success: boolean}}) => {
+									UI.Notification.Center.notify({
+										content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
+										autoHideDelay: 1500,
+										category: 'save',
+									});
+
+									const stage = this.getStageDataById(srcStage);
+
+									const index = stage.TUNNELS.findIndex((item) => {
+										return (
+											String(item.srcStage) === String(srcStage)
+											&& String(item.srcCategory) === String(srcCategory)
+											&& String(item.dstStage) === String(dstStage)
+											&& String(item.dstCategory) === String(dstCategory)
+										);
+									});
+
+									if (index >= 0)
+									{
+										stage.TUNNELS[index] = response.data.tunnel;
+									}
+
+									event.data.onChangeRobotEnd();
+								})
+								.catch((response) => this.showErrorPopup(makeErrorMessageFromResponse(response)));
+						})
+						.catch((response) => this.showErrorPopup(makeErrorMessageFromResponse(response)));
+				}
+			})
 			.subscribe('Column:editLink', (event) => {
+				if (!this.isAutomationEnabled)
+				{
+					return;
+				}
 				const tunnel = this.getTunnelByLink(event.data.link);
 
 				// eslint-disable-next-line
 				BX.Bizproc.Automation.API.showRobotSettings(
 					tunnel.robot,
-					['crm', 'CCrmDocumentDeal', 'DEAL'],
+					this.documentType,
 					tunnel.srcStage,
 					(robot) => {
 						tunnel.robot = robot.serialize();
@@ -509,29 +595,24 @@ export default class Manager
 								},
 								data: tunnel
 							})
-							.then(({data}) => {
-								if (data.success)
-								{
-									UI.Notification.Center.notify({
-										content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
-										autoHideDelay: 1500,
-										category: 'save',
-									});
+							.then(() => {
+								UI.Notification.Center.notify({
+									content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
+									autoHideDelay: 1500,
+									category: 'save',
+								});
 
-									tunnel.dstCategory = robot.getProperty('CategoryId');
-									tunnel.dstStage = robot.getProperty('StageId');
+								tunnel.dstCategory = robot.getProperty('CategoryId');
+								tunnel.dstStage = robot.getProperty('StageId');
 
-									const category = this.getCategory(tunnel.dstCategory);
-									const column = category.getKanbanColumn(tunnel.dstStage);
+								const category = this.getCategory(tunnel.dstCategory);
+								const column = category.getKanbanColumn(tunnel.dstStage);
 
-									event.data.link.from.updateLink(event.data.link, column.marker, true);
+								event.data.link.from.updateLink(event.data.link, column.marker, true);
 
-									this.adjustCategoryStub();
-								}
-								else
-								{
-									this.showErrorPopup(makeErrorMessageFromResponse({data}));
-								}
+								this.adjustCategoryStub();
+							}).catch((response) => {
+								this.showErrorPopup(makeErrorMessageFromResponse(response));
 							});
 					}
 				);
@@ -556,17 +637,18 @@ export default class Manager
 							autoHideDelay: 1500,
 							category: 'save',
 						});
+						this.isChanged = true;
 					});
 			})
 			.subscribe('Column:remove', (event) => {
 				if (!Type.isNil(event.data.column.data.stageId))
 				{
-					const hasTunnels = [...Marker.getAllLinks()].some((item) => {
+					const hasTunnels = this.isAutomationEnabled ? [...Marker.getAllLinks()].some((item) => {
 						return (
 							event.data.column.marker === item.from
 							|| event.data.column.marker === item.to
 						);
-					});
+					}) : false;
 
 					Backend
 						.removeStage({
@@ -574,27 +656,22 @@ export default class Manager
 							stageId: event.data.column.data.stageId,
 							entityId: event.data.column.data.entityId,
 						})
-						.then((response) => {
-							if (response.data.success)
-							{
-								event.data.onConfirm();
+						.then(() => {
+							event.data.onConfirm();
 
-								if (!hasTunnels)
-								{
-									UI.Notification.Center.notify({
-										content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
-										autoHideDelay: 1500,
-										category: 'save',
-									});
-								}
-							}
-							else
+							if (!hasTunnels)
 							{
-								event.data.onCancel();
-								this.showErrorPopup(makeErrorMessageFromResponse({
-									data: response.data,
-								}));
+								UI.Notification.Center.notify({
+									content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
+									autoHideDelay: 1500,
+									category: 'save',
+								});
+								this.isChanged = true;
 							}
+						})
+						.catch((response) => {
+							event.data.onCancel();
+							this.showErrorPopup(makeErrorMessageFromResponse(response));
 						});
 				}
 			})
@@ -616,6 +693,7 @@ export default class Manager
 								autoHideDelay: 1500,
 								category: 'save',
 							});
+							this.isChanged = true;
 						}
 						else
 						{
@@ -629,47 +707,58 @@ export default class Manager
 						name: event.data.column.getGrid().getMessage('COLUMN_TITLE_PLACEHOLDER'),
 						sort: (() => {
 							const {column} = event.data;
-							const grid = column.getGrid();
-							const prevColumn = grid.getPreviousColumnSibling(column);
 
-							return Number(prevColumn.data.stage.SORT) + 1;
+							return Number(column.data.stage.SORT) + 1;
 						})(),
 						entityId: (() => {
 							const {column} = event.data;
-							const grid = column.getGrid();
-							const prevColumn = grid.getPreviousColumnSibling(column);
 
-							return prevColumn.data.stage.ENTITY_ID;
+							return column.data.stage.ENTITY_ID;
+						})(),
+						color: BX.Kanban.Column.DEFAULT_COLOR,
+						semantics: (() => {
+							const {column} = event.data;
+
+							return column.data.stage.SEMANTICS;
+						})(),
+						categoryId: (() => {
+							const {column} = event.data;
+
+							return column.data.category.id;
 						})(),
 					})
 					.then(({data}) => {
-						if (data.success)
-						{
-							UI.Notification.Center.notify({
-								content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
-								autoHideDelay: 1500,
-								category: 'save',
-							});
+						UI.Notification.Center.notify({
+							content: Loc.getMessage('CRM_ST_NOTIFICATION_CHANGES_SAVED'),
+							autoHideDelay: 1500,
+							category: 'save',
+						});
+						this.isChanged = true;
 
-							const {column} = event.data;
-							const {stage} = data;
-							const grid = column.getGrid();
-							const prevColumn = grid.getPreviousColumnSibling(column);
-							const category = this.getCategory(prevColumn.data.category.id);
+						const {stage} = data;
+						const prevColumn = event.data.column;
+						const grid = prevColumn.getGrid();
+						const category = this.getCategory(prevColumn.data.category.id);
 
-							stage.TUNNELS = [];
+						stage.TUNNELS = [];
 
-							this.getStages().push(stage);
+						this.getStages().push(stage);
 
-							column.setOptions({
-								data: category.getColumnData(stage),
-							});
-						}
-						else
-						{
-							this.showErrorPopup(makeErrorMessageFromResponse({data}));
-						}
+						const targetId = grid.getNextColumnSibling(prevColumn);
+						// column.getGrid().removeColumn(column);
+						const column = grid.addColumn({
+							id: stage.STATUS_ID,
+							name: stage.NAME,
+							color: stage.COLOR.replace('#', ''),
+							data: category.getColumnData(stage),
+							targetId,
+						});
+						column.switchToEditMode();
+						Marker.adjustLinks();
 					})
+					.catch((response) => {
+						this.showErrorPopup(makeErrorMessageFromResponse(response));
+					});
 			})
 			.subscribe('Column:sort', (event) => {
 				const sortData = event.data.columns.map((column, index) => {
@@ -702,6 +791,7 @@ export default class Manager
 								autoHideDelay: 1500,
 								category: 'save',
 							});
+							this.isChanged = true;
 						}
 						else
 						{
@@ -833,6 +923,10 @@ export default class Manager
 
 	initTunnels()
 	{
+		if (!this.isAutomationEnabled)
+		{
+			return;
+		}
 		this.getStages()
 			.filter((stage) => {
 				return Type.isArray(stage.TUNNELS) && stage.TUNNELS.length;
@@ -850,7 +944,7 @@ export default class Manager
 						if (columnFrom && columnTo)
 						{
 							const preventEvent = true;
-							columnFrom.marker.addLinkTo(columnTo.marker, preventEvent);
+							columnFrom.marker.addLinkTo(columnTo.marker, tunnel.robotAction, preventEvent);
 						}
 					}
 				});

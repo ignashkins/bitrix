@@ -1,4 +1,5 @@
 <?php
+
 /**
  * Bitrix Framework
  * @package bitrix
@@ -10,6 +11,7 @@ IncludeModuleLangFile(__FILE__);
 
 use Bitrix\Tasks\Internals\Notification\Task\ThrottleTable;
 use Bitrix\Tasks\Internals\UserOption;
+use Bitrix\Tasks\UI;
 use Bitrix\Tasks\Util\AgentManager;
 use Bitrix\Tasks\Util\User;
 use Bitrix\Main\Localization\Loc;
@@ -341,20 +343,56 @@ class CTaskNotifications
 		$arRecipientsIDs = array_unique(CTaskNotifications::GetRecipientsIDs($arFields, $ignoreAuthor, false, $occurAsUserId));
 
 		if (
-			( ! empty($arRecipientsIDs) )
+			!empty($arRecipientsIDs)
 			&& (User::getId() || $arFields["CREATED_BY"])
 		)
 		{
-			$curUserTzOffset = (int) self::getUserTimeZoneOffset();
-			$arInvariantChangesStrs = array();
-			$arVolatileDescriptions = array();
-			$arRecipientsIDsByTimezone = array();
+			$arInvariantChangesStrs = [];
+			$arVolatileDescriptions = [];
+			$arRecipientsIDsByTimezone = [];
 			$i = 0;
 			foreach ($arChanges as $key => $value)
 			{
-				if($key == 'DESCRIPTION')
+				if ($key === 'DESCRIPTION')
 				{
 					$arInvariantChangesStrs[] = GetMessage('TASKS_MESSAGE_DESCRIPTION_UPDATED');
+					continue;
+				}
+
+				if ($key === 'ACCOMPLICES' || $key === 'AUDITORS')
+				{
+					$fromUsers = explode(",", $value["FROM_VALUE"]);
+					$toUsers = explode(",", $value["TO_VALUE"]);
+
+					$addedUsers = array_unique(array_diff($toUsers, $fromUsers));
+					$addedUsers = array_filter(
+						$addedUsers,
+						static function ($id) {
+							return (int)$id > 0;
+						}
+					);
+					$removedUsers = array_unique(array_diff($fromUsers, $toUsers));
+					$removedUsers = array_filter(
+						$removedUsers,
+						static function ($id) {
+							return (int)$id > 0;
+						}
+					);
+
+					if (count($addedUsers) > 0)
+					{
+						$arInvariantChangesStrs[] =
+							GetMessage("TASKS_MESSAGE_{$key}_ADDED")
+							. CTaskNotifications::__Users2String($addedUsers, $arUsers, $arFields['NAME_TEMPLATE'])
+						;
+					}
+					if (count($removedUsers) > 0)
+					{
+						$arInvariantChangesStrs[] =
+							GetMessage("TASKS_MESSAGE_{$key}_REMOVED")
+							. CTaskNotifications::__Users2String($removedUsers, $arUsers, $arFields['NAME_TEMPLATE'])
+						;
+					}
 					continue;
 				}
 
@@ -387,14 +425,6 @@ class CTaskNotifications
 								CTaskNotifications::__Users2String($value["FROM_VALUE"], $arUsers, $arFields["NAME_TEMPLATE"])
 								.' -> '
 								.CTaskNotifications::__Users2String($value["TO_VALUE"], $arUsers, $arFields["NAME_TEMPLATE"]);
-							break;
-
-						case "ACCOMPLICES":
-						case "AUDITORS":
-							$tmpStr .=
-								CTaskNotifications::__Users2String(explode(",", $value["FROM_VALUE"]), $arUsers, $arFields["NAME_TEMPLATE"])
-								.' -> '
-								.CTaskNotifications::__Users2String(explode(",", $value["TO_VALUE"]), $arUsers, $arFields["NAME_TEMPLATE"]);
 							break;
 
 						case "DEADLINE":
@@ -687,7 +717,7 @@ class CTaskNotifications
 	 * @param $arFields
 	 * @param bool $safeDelete
 	 */
-	function SendDeleteMessage($arFields, bool $safeDelete = false): void
+	public static function SendDeleteMessage($arFields, bool $safeDelete = false): void
 	{
 		$cacheWasEnabled = CTaskNotifications::enableStaticCache();
 
@@ -910,29 +940,364 @@ class CTaskNotifications
 		}
 	}
 
+	public static function sendExpiredSoonMessage(array $taskData): void
+	{
+		$cacheWasEnabled = self::enableStaticCache();
+
+		$parameters = [
+			'ENTITY_CODE' => 'TASK',
+			'ENTITY_OPERATION' => 'EXPIRED_SOON',
+			'EVENT_DATA' => [
+				'ACTION' => 'TASK_EXPIRED_SOON',
+				'arFields' => $taskData,
+			],
+			'NOTIFY_EVENT' => 'task_expired_soon'
+		];
+
+		self::sendExpiredSoonMessageForResponsible($taskData, $parameters);
+		self::sendExpiredSoonMessageForAccomplices($taskData, $parameters);
+
+		if ($cacheWasEnabled)
+		{
+			self::disableStaticCache();
+		}
+	}
+
+	private static function sendExpiredSoonMessageForResponsible(array $taskData, array $parameters): void
+	{
+		$createdBy = (int)$taskData['CREATED_BY'];
+		$responsibleId = (int)$taskData['RESPONSIBLE_ID'];
+		$sameCreatorMessagePart = 'SAME_CREATOR_';
+
+		$title = self::formatTaskName($taskData['ID'], $taskData['TITLE'], $taskData['GROUP_ID']);
+		/** @var \Bitrix\Tasks\Util\Type\DateTime $deadline */
+		$deadline = clone $taskData['DEADLINE'];
+		$deadline->addSecond(\CTimeZone::GetOffset($responsibleId, true));
+		$formattedDeadline = $deadline->format(UI::getHumanTimeFormat($deadline->getTimestamp()));
+
+		$messageKey = (
+			$responsibleId === $createdBy
+				? "TASKS_TASK_EXPIRED_SOON_RESPONSIBLE_{$sameCreatorMessagePart}MESSAGE"
+				: "TASKS_TASK_EXPIRED_SOON_RESPONSIBLE_MESSAGE"
+		);
+		$messages = [
+			'INSTANT' => str_replace(
+				['#TASK_TITLE#', '#DEADLINE_TIME#'],
+				[$title, $formattedDeadline],
+				self::getGenderMessage(0, $messageKey)
+			),
+			'EMAIL' => str_replace(
+				['#TASK_TITLE#', '#DEADLINE_TIME#'],
+				[strip_tags($title), $formattedDeadline],
+				self::getGenderMessage(0, $messageKey)
+			),
+			'PUSH' => self::makePushMessage($messageKey, $createdBy, $taskData),
+
+		];
+
+		self::sendMessageEx($taskData['ID'], $createdBy, [$responsibleId], $messages, $parameters);
+	}
+
+	private static function sendExpiredSoonMessageForAccomplices(array $taskData, array $parameters): void
+	{
+		$createdBy = (int)$taskData['CREATED_BY'];
+		$responsibleId = (int)$taskData['RESPONSIBLE_ID'];
+		$accomplices = array_map('intval', $taskData['ACCOMPLICES']->export());
+
+		if (empty($accomplices))
+		{
+			return;
+		}
+
+		$title = self::formatTaskName($taskData['ID'], $taskData['TITLE'], $taskData['GROUP_ID']);
+
+		if ($index = array_search($responsibleId, $accomplices, true))
+		{
+			unset($accomplices[$index]);
+		}
+
+		if (in_array($createdBy, $accomplices, true))
+		{
+			/** @var \Bitrix\Tasks\Util\Type\DateTime $deadline */
+			$deadline = clone $taskData['DEADLINE'];
+			$deadline->addSecond(\CTimeZone::GetOffset($createdBy, true));
+			$formattedDeadline = $deadline->format(UI::getHumanTimeFormat($deadline->getTimestamp()));
+
+			$messageKey = 'TASKS_TASK_EXPIRED_SOON_RESPONSIBLE_SAME_CREATOR_MESSAGE';
+			$messages = [
+				'INSTANT' => str_replace(
+					['#TASK_TITLE#', '#DEADLINE_TIME#'],
+					[$title, $formattedDeadline],
+					self::getGenderMessage(0, $messageKey)
+				),
+				'EMAIL' => str_replace(
+					['#TASK_TITLE#', '#DEADLINE_TIME#'],
+					[strip_tags($title), $formattedDeadline],
+					self::getGenderMessage(0, $messageKey)
+				),
+				'PUSH' => self::makePushMessage($messageKey, $createdBy, $taskData),
+			];
+			self::sendMessageEx($taskData['ID'], $createdBy, [$createdBy], $messages, $parameters);
+
+			unset($accomplices[array_search($createdBy, $accomplices, true)]);
+		}
+
+		foreach ($accomplices as $userId)
+		{
+			/** @var \Bitrix\Tasks\Util\Type\DateTime $deadline */
+			$deadline = clone $taskData['DEADLINE'];
+			$deadline->addSecond(\CTimeZone::GetOffset($userId, true));
+			$formattedDeadline = $deadline->format(UI::getHumanTimeFormat($deadline->getTimestamp()));
+
+			$messageKey = 'TASKS_TASK_EXPIRED_SOON_RESPONSIBLE_MESSAGE';
+			$messages = [
+				'INSTANT' => str_replace(
+					['#TASK_TITLE#', '#DEADLINE_TIME#'],
+					[$title, $formattedDeadline],
+					self::getGenderMessage(0, $messageKey)
+				),
+				'EMAIL' => str_replace(
+					['#TASK_TITLE#', '#DEADLINE_TIME#'],
+					[strip_tags($title), $formattedDeadline],
+					self::getGenderMessage(0, $messageKey)
+				),
+				'PUSH' => self::makePushMessage($messageKey, $createdBy, $taskData),
+			];
+
+			self::sendMessageEx($taskData['ID'], $createdBy, [$userId], $messages, $parameters);
+		}
+	}
+
+	public static function sendExpiredMessage(array $taskData): void
+	{
+		$cacheWasEnabled = self::enableStaticCache();
+
+		$parameters = [
+			'ENTITY_CODE' => 'TASK',
+			'ENTITY_OPERATION' => 'EXPIRED',
+			'EVENT_DATA' => [
+				'ACTION' => 'TASK_EXPIRED',
+				'arFields' => $taskData,
+			],
+		];
+
+		self::sendExpiredMessageForResponsible($taskData, $parameters);
+		self::sendExpiredMessageForAccomplices($taskData, $parameters);
+		self::sendExpiredMessageForCreator($taskData, $parameters);
+		self::sendExpiredMessageForAuditors($taskData, $parameters);
+
+		if ($cacheWasEnabled)
+		{
+			self::disableStaticCache();
+		}
+	}
+
+	private static function sendExpiredMessageForResponsible(array $taskData, array $parameters): void
+	{
+		$createdBy = (int)$taskData['CREATED_BY'];
+		$responsibleId = (int)$taskData['RESPONSIBLE_ID'];
+		$sameCreatorMessagePart = 'SAME_CREATOR_';
+
+		$title = self::formatTaskName($taskData['ID'], $taskData['TITLE'], $taskData['GROUP_ID']);
+
+		$messageKey = (
+			$responsibleId === $createdBy
+				? "TASKS_TASK_EXPIRED_RESPONSIBLE_{$sameCreatorMessagePart}MESSAGE"
+				: "TASKS_TASK_EXPIRED_RESPONSIBLE_MESSAGE"
+		);
+		$messages = [
+			'INSTANT' => str_replace(['#TASK_TITLE#'], [$title], self::getGenderMessage(0, $messageKey)),
+			'EMAIL' => str_replace(['#TASK_TITLE#'], [strip_tags($title)], self::getGenderMessage(0, $messageKey)),
+			'PUSH' => self::makePushMessage($messageKey, $createdBy, $taskData),
+		];
+
+		self::sendMessageEx($taskData['ID'], $createdBy, [$responsibleId], $messages, $parameters);
+	}
+
+	private static function sendExpiredMessageForAccomplices(array $taskData, array $parameters): void
+	{
+		$createdBy = (int)$taskData['CREATED_BY'];
+		$responsibleId = (int)$taskData['RESPONSIBLE_ID'];
+		$accomplices = array_map('intval', $taskData['ACCOMPLICES']->export());
+
+		if (empty($accomplices))
+		{
+			return;
+		}
+
+		$title = self::formatTaskName($taskData['ID'], $taskData['TITLE'], $taskData['GROUP_ID']);
+
+		if ($index = array_search($responsibleId, $accomplices, true))
+		{
+			unset($accomplices[$index]);
+		}
+
+		if (in_array($createdBy, $accomplices, true))
+		{
+			$messageKey = 'TASKS_TASK_EXPIRED_RESPONSIBLE_SAME_CREATOR_MESSAGE';
+			$messages = [
+				'INSTANT' => str_replace(['#TASK_TITLE#'], [$title], self::getGenderMessage(0, $messageKey)),
+				'EMAIL' => str_replace(['#TASK_TITLE#'], [strip_tags($title)], self::getGenderMessage(0, $messageKey)),
+				'PUSH' => self::makePushMessage($messageKey, $createdBy, $taskData),
+			];
+			self::sendMessageEx($taskData['ID'], $createdBy, [$createdBy], $messages, $parameters);
+
+			unset($accomplices[array_search($createdBy, $accomplices, true)]);
+		}
+
+		$messageKey = 'TASKS_TASK_EXPIRED_RESPONSIBLE_MESSAGE';
+		$messages = [
+			'INSTANT' => str_replace(['#TASK_TITLE#'], [$title], self::getGenderMessage(0, $messageKey)),
+			'EMAIL' => str_replace(['#TASK_TITLE#'], [strip_tags($title)], self::getGenderMessage(0, $messageKey)),
+			'PUSH' => self::makePushMessage($messageKey, $createdBy, $taskData),
+		];
+
+		self::sendMessageEx($taskData['ID'], $createdBy, $accomplices, $messages, $parameters);
+	}
+
+	private static function sendExpiredMessageForCreator(array $taskData, array $parameters): void
+	{
+		$createdBy = (int)$taskData['CREATED_BY'];
+		$responsibleId = (int)$taskData['RESPONSIBLE_ID'];
+		$accomplices = array_map('intval', $taskData['ACCOMPLICES']->export());
+
+		if ($createdBy === $responsibleId || in_array($createdBy, $accomplices, true))
+		{
+			return;
+		}
+
+		$title = self::formatTaskName($taskData['ID'], $taskData['TITLE'], $taskData['GROUP_ID']);
+
+		$messageKey = 'TASKS_TASK_EXPIRED_CREATOR_MESSAGE';
+		$messages = [
+			'INSTANT' => str_replace(['#TASK_TITLE#'], [$title], self::getGenderMessage(0, $messageKey)),
+			'EMAIL' => str_replace(['#TASK_TITLE#'], [strip_tags($title)], self::getGenderMessage(0, $messageKey)),
+			'PUSH' => self::makePushMessage($messageKey, $createdBy, $taskData),
+		];
+
+		self::sendMessageEx($taskData['ID'], $createdBy, [$createdBy], $messages, $parameters);
+	}
+
+	private static function sendExpiredMessageForAuditors(array $taskData, array $parameters): void
+	{
+		$createdBy = (int)$taskData['CREATED_BY'];
+		$responsibleId = (int)$taskData['RESPONSIBLE_ID'];
+		$accomplices = array_map('intval', $taskData['ACCOMPLICES']->export());
+		$auditors = array_map('intval', $taskData['AUDITORS']->export());
+
+		if (empty($auditors))
+		{
+			return;
+		}
+
+		$title = self::formatTaskName($taskData['ID'], $taskData['TITLE'], $taskData['GROUP_ID']);
+
+		if ($index = array_search($createdBy, $auditors, true))
+		{
+			unset($auditors[$index]);
+		}
+		if ($index = array_search($responsibleId, $auditors, true))
+		{
+			unset($auditors[$index]);
+		}
+		$auditors = array_diff($auditors, $accomplices);
+
+		$messageKey = 'TASKS_TASK_EXPIRED_AUDITOR_MESSAGE';
+		$messages = [
+			'INSTANT' => str_replace(['#TASK_TITLE#'], [$title], self::getGenderMessage(0, $messageKey)),
+			'EMAIL' => str_replace(['#TASK_TITLE#'], [strip_tags($title)], self::getGenderMessage(0, $messageKey)),
+			'PUSH' => self::makePushMessage($messageKey, $createdBy, $taskData),
+		];
+
+		self::sendMessageEx($taskData['ID'], $createdBy, $auditors, $messages, $parameters);
+	}
+
+	public static function sendPingStatusMessage(array $taskData, int $authorId): void
+	{
+		$cacheWasEnabled = self::enableStaticCache();
+
+		$responsibleId = (int)$taskData['RESPONSIBLE_ID'];
+		$accomplices = array_map('intval', $taskData['ACCOMPLICES']);
+		$recipients = array_unique(array_merge([$responsibleId], $accomplices));
+
+		if (in_array($authorId, $recipients, true))
+		{
+			unset($recipients[array_search($authorId, $recipients, true)]);
+		}
+		if (empty($recipients))
+		{
+			if ($cacheWasEnabled)
+			{
+				self::disableStaticCache();
+			}
+			return;
+		}
+
+		$parameters = [
+			'ENTITY_CODE' => 'TASK',
+			'ENTITY_OPERATION' => 'PING_STATUS',
+			'EVENT_DATA' => [
+				'ACTION' => 'TASK_PINGED_STATUS',
+				'arFields' => $taskData,
+			],
+		];
+		$title = self::formatTaskName($taskData['ID'], $taskData['TITLE'], $taskData['GROUP_ID']);
+
+		$messageKey = 'TASKS_TASK_PINGED_STATUS_MESSAGE';
+		$messages = [
+			'INSTANT' => str_replace(['#TASK_TITLE#'], [$title], self::getGenderMessage(0, $messageKey)),
+			'EMAIL' => str_replace(['#TASK_TITLE#'], [strip_tags($title)], self::getGenderMessage(0, $messageKey)),
+			'PUSH' => self::makePushMessage($messageKey, $authorId, $taskData),
+		];
+
+		self::sendMessageEx($taskData['ID'], $authorId, $recipients, $messages, $parameters);
+
+		if ($cacheWasEnabled)
+		{
+			self::disableStaticCache();
+		}
+	}
+
 	############################
 	# low-level action functions
 
-	public static function sendMessageEx($taskId, $fromUser, array $toUsers, array $messages = array(), array $parameters = array())
+	public static function sendMessageEx(
+		$taskId,
+		$fromUser,
+		array $toUsers,
+		array $messages = [],
+		array $parameters = []
+	): bool
 	{
-		if (!(IsModuleInstalled("im") && CModule::IncludeModule("im")))
+		if (!IsModuleInstalled('im') || !CModule::IncludeModule('im'))
 		{
 			return false;
 		}
 
-		if (!$fromUser || empty($toUsers) || (string) $messages['INSTANT'] == '')
+		if (!$fromUser || (string)$messages['INSTANT'] === '')
 		{
 			return false;
 		}
 
-		if((string) $parameters['ENTITY_CODE'] != '')
+		if (
+			!isset($parameters['EXCLUDE_USERS_WITH_MUTE'])
+			|| (isset($parameters['EXCLUDE_USERS_WITH_MUTE']) && $parameters['EXCLUDE_USERS_WITH_MUTE'] === 'Y')
+		)
+		{
+			$toUsers = static::excludeUsersWithMute($toUsers, $taskId);
+		}
+		unset($parameters['EXCLUDE_USERS_WITH_MUTE']);
+
+		if (empty($toUsers))
+		{
+			return false;
+		}
+
+		$entityCode = 'TASK';
+		if ((string)$parameters['ENTITY_CODE'] !== '')
 		{
 			$entityCode = $parameters['ENTITY_CODE'];
 			unset($parameters['ENTITY_CODE']);
-		}
-		else
-		{
-			$entityCode = 'TASK';
 		}
 
 //		$allowNotCommentNotifications = false;
@@ -951,17 +1316,16 @@ class CTaskNotifications
 //			return false;
 //		}
 
-		if(!isset($messages['EMAIL']))
+		if (!isset($messages['EMAIL']))
 		{
 			$messages['EMAIL'] = $messages['INSTANT'];
 		}
 
 		$eventData = $parameters['EVENT_DATA'];
-		unset($parameters['EVENT_DATA']);
 		$notifyEvent = $parameters['NOTIFY_EVENT'];
-		unset($parameters['NOTIFY_EVENT']);
 		$callbacks = $parameters['CALLBACK'];
-		unset($parameters['CALLBACK']);
+
+		unset($parameters['EVENT_DATA'], $parameters['NOTIFY_EVENT'], $parameters['CALLBACK']);
 
 		$notifyType = null;
 		if (array_key_exists('NOTIFY_TYPE', $parameters))
@@ -970,31 +1334,29 @@ class CTaskNotifications
 			unset($parameters['NOTIFY_TYPE']);
 		}
 
-		if((string) $parameters['ENTITY_OPERATION'] != '')
-		{
-			$entityOperation = $parameters['ENTITY_OPERATION'];
-			unset($parameters['ENTITY_OPERATION']);
-		}
-		else
-		{
-			$entityOperation = 'ADD';
-		}
-
+		$pushParams = null;
 		if (array_key_exists('PUSH_PARAMS', $parameters))
 		{
 			$pushParams = $parameters['PUSH_PARAMS'];
 			unset($parameters['PUSH_PARAMS']);
 		}
 
+		$entityOperation = 'ADD';
+		if ((string)$parameters['ENTITY_OPERATION'] !== '')
+		{
+			$entityOperation = $parameters['ENTITY_OPERATION'];
+			unset($parameters['ENTITY_OPERATION']);
+		}
+
 		$params = [
-			'FROM_USER_ID' 	=> $fromUser,
-			'TO_USER_IDS' 	=> $toUsers,
-			'TASK_ID' 		=> intval($taskId),
-			'MESSAGE' 		=> $messages,
-			'EVENT_DATA' 	=> $eventData,
+			'FROM_USER_ID' => $fromUser,
+			'TO_USER_IDS' => $toUsers,
+			'TASK_ID' => (int)$taskId,
+			'MESSAGE' => $messages,
+			'EVENT_DATA' => $eventData,
 			'NOTIFY_EVENT' => $notifyEvent,
-			'ENTITY_CODE' 	=> $entityCode,
-			'ENTITY_OPERATION' 	=> $entityOperation,
+			'ENTITY_CODE' => $entityCode,
+			'ENTITY_OPERATION' => $entityOperation,
 			'CALLBACK' => $callbacks,
 			'ADDITIONAL_DATA' => $parameters,
 		];
@@ -1003,7 +1365,6 @@ class CTaskNotifications
 		{
 			$params['NOTIFY_TYPE'] = $notifyType;
 		}
-
 		if ($pushParams)
 		{
 			$params['PUSH_PARAMS'] = $pushParams;
@@ -1011,12 +1372,27 @@ class CTaskNotifications
 
 		self::addToNotificationBuffer($params);
 
-		if(!self::$bufferize)
+		if (!self::$bufferize)
 		{
 			self::flushNotificationBuffer(false);
 		}
 
 		return true;
+	}
+
+	private static function excludeUsersWithMute(array $users, int $taskId): array
+	{
+		$resultUsers = [];
+
+		foreach ($users as $userId)
+		{
+			if (!UserOption::isOptionSet($taskId, $userId, UserOption\Option::MUTED))
+			{
+				$resultUsers[] = $userId;
+			}
+		}
+
+		return $resultUsers;
 	}
 
 	protected static function SendMessageToSocNet($arFields, $bSpawnedByAgent, $arChanges = null, $arTask = null, array $parameters = array())
@@ -1059,8 +1435,8 @@ class CTaskNotifications
 			$cachedAllSitesIds = array();
 
 			$dbSite = CSite::GetList(
-				$by = 'sort',
-				$order = 'desc',
+				'sort',
+				'desc',
 				array('ACTIVE' => 'Y')
 			);
 
@@ -1072,8 +1448,8 @@ class CTaskNotifications
 		if ( ! in_array( (int) $arFields["CREATED_BY"], $arCheckedUsers, true) )
 		{
 			$rsUser = CUser::GetList(
-				$by = 'ID',
-				$order = 'ASC',
+				'ID',
+				'ASC',
 				array('ID' => $arFields["CREATED_BY"]),
 				array('FIELDS' => array('ID'))
 			);
@@ -1542,29 +1918,34 @@ class CTaskNotifications
 	########################
 	# throttle functions
 
-	public static function throttleRelease()
+	public static function throttleRelease(): void
 	{
 		$items = ThrottleTable::getUpdateMessages();
-
-		if(is_array($items) && !empty($items))
+		if (is_array($items) && !empty($items))
 		{
-			$cacheAFWasDisabled = \CTasks::disableCacheAutoClear();
-			$notifADWasDisabled = \CTaskNotifications::disableAutoDeliver();
+			$cacheAutoClearingWasDisabled = \CTasks::disableCacheAutoClear();
+			$notificationAutoDeliveryWasDisabled = \CTaskNotifications::disableAutoDeliver();
 
-			// this function may be called on agent, so DO NOT relay on global user as an author, use field AUTHOR_ID instead
-			foreach($items as $item)
+			// this function may be called on agent
+			// DO NOT relay on global user as an author, use field AUTHOR_ID instead
+			foreach ($items as $item)
 			{
-				self::SendUpdateMessage($item['STATE_LAST'], $item['STATE_ORIG'], false, array(
-					'AUTHOR_ID' => $item['AUTHOR_ID'],
-					'IGNORE_AUTHOR' => isset($item['IGNORE_RECEPIENTS'][$item['AUTHOR_ID']])
-				));
+				self::SendUpdateMessage(
+					$item['STATE_LAST'],
+					$item['STATE_ORIG'],
+					false,
+					[
+						'AUTHOR_ID' => $item['AUTHOR_ID'],
+						'IGNORE_AUTHOR' => isset($item['IGNORE_RECIPIENTS'][$item['AUTHOR_ID']]),
+					]
+				);
 			}
 
-			if($notifADWasDisabled)
+			if ($notificationAutoDeliveryWasDisabled)
 			{
 				\CTaskNotifications::enableAutoDeliver();
 			}
-			if($cacheAFWasDisabled)
+			if ($cacheAutoClearingWasDisabled)
 			{
 				\CTasks::enableCacheAutoClear();
 			}
@@ -1704,8 +2085,19 @@ class CTaskNotifications
 					}
 
 					// if type is unknown, let it be "update"
-					$type = (string) $message['EVENT_DATA']['ACTION'] !== '' ? $message['EVENT_DATA']['ACTION'] : 'TASK_UPDATE';
-					if($type != 'TASK_ADD' && $type != 'TASK_UPDATE' && $type != 'TASK_DELETE' && $type != 'TASK_STATUS_CHANGED_MESSAGE')
+					$possibleTypes = [
+						'TASK_ADD',
+						'TASK_UPDATE',
+						'TASK_DELETE',
+						'TASK_STATUS_CHANGED_MESSAGE',
+						'TASK_EXPIRED_SOON',
+						'TASK_EXPIRED',
+						'TASK_PINGED_STATUS',
+					];
+					$type = (string)$message['EVENT_DATA']['ACTION'];
+					$type = ($type !== '' ? $type : 'TASK_UPDATE');
+
+					if (!in_array($type, $possibleTypes, true))
 					{
 						// unknown action type. nothing to report about
 						continue;
@@ -2041,7 +2433,7 @@ class CTaskNotifications
 					}
 					catch(\TasksException | CTaskAssertException $e)
 					{
-						$message = unserialize($e->getMessage());
+						$message = unserialize($e->getMessage(), ['allowed_classes' => false]);
 
 						return array(
 							'result' => false,
@@ -2525,7 +2917,7 @@ class CTaskNotifications
 				}
 				else
 				{
-					$userDataDb = \CUser::GetList($by, $order, ['ID' => $arUser['ID']], ['FIELDS' => ['ID', 'LID']]);
+					$userDataDb = \CUser::GetList('', '', ['ID' => $arUser['ID']], ['FIELDS' => ['ID', 'LID']]);
 					if ($userData = $userDataDb->Fetch())
 					{
 						$siteID = $userData['LID'];
@@ -2811,8 +3203,8 @@ class CTaskNotifications
 		if(!empty($absent))
 		{
 			$res = CUser::GetList(
-				$by = 'ID',
-				$order = 'ASC',
+				'ID',
+				'ASC',
 				array('ID' => implode('|', $absent)),
 				array('FIELDS' => array('NAME', 'LAST_NAME', 'SECOND_NAME', 'LOGIN', 'EMAIL', 'ID', 'PERSONAL_GENDER', 'EXTERNAL_AUTH_ID'))
 			);
@@ -2988,7 +3380,7 @@ class CTaskNotifications
 	/**
 	 * @deprecated
 	 */
-	private function __GetUsers($arFields)
+	private static function __GetUsers($arFields)
 	{
 		$arUsersIDs = array_unique(
 			array_filter(
@@ -3010,7 +3402,7 @@ class CTaskNotifications
 	/**
 	 * @deprecated
 	 */
-	private function __Users2String($arUserIDs, $arUsers, $nameTemplate = "")
+	private static function __Users2String($arUserIDs, $arUsers, $nameTemplate = "")
 	{
 		$arUsersStrs = array();
 		if (!is_array($arUserIDs))
@@ -3029,7 +3421,7 @@ class CTaskNotifications
 	/**
 	 * @deprecated
 	 */
-	function __UserIDs2Rights($arUserIDs)
+	public static function __UserIDs2Rights($arUserIDs)
 	{
 		$arUserIDs = array_unique(array_filter($arUserIDs));
 		$arRights = array();
@@ -3042,7 +3434,7 @@ class CTaskNotifications
 	/**
 	 * @deprecated
 	 */
-	function __Fields2Names($arFields)
+	public static function __Fields2Names($arFields)
 	{
 		$arFields = array_unique(array_filter($arFields));
 		$arNames = array();

@@ -143,6 +143,16 @@ BX.ajax = function(config)
 			BX.localStorage.set('ajax-' + config.lsId, 'BXAJAXWAIT', config.lsTimeout);
 		}
 
+		if (BX.Type.isFunction(config.onprogress))
+		{
+			BX.bind(config.xhr, 'progress', config.onprogress);
+		}
+
+		if (BX.Type.isFunction(config.onprogressupload) && config.xhr.upload)
+		{
+			BX.bind(config.xhr.upload, 'progress', config.onprogressupload);
+		}
+
 		config.xhr.open(config.method, config.url, config.async);
 
 		if (!config.skipBxHeader && !BX.ajax.isCrossDomain(config.url))
@@ -160,11 +170,6 @@ BX.ajax = function(config)
 				config.xhr.setRequestHeader(config.headers[i].name, config.headers[i].value);
 		}
 
-		if(!!config.onprogress)
-		{
-			BX.bind(config.xhr, 'progress', config.onprogress);
-		}
-
 		var bRequestCompleted = false;
 		var onreadystatechange = config.xhr.onreadystatechange = function(additional)
 		{
@@ -175,7 +180,7 @@ BX.ajax = function(config)
 			{
 				if (config.onfailure)
 				{
-					config.onfailure("timeout");
+					config.onfailure('timeout', '', config);
 				}
 
 				BX.onCustomEvent(config.xhr, 'onAjaxFailure', ['timeout', '', config]);
@@ -206,7 +211,7 @@ BX.ajax = function(config)
 						{
 							if (config.onfailure)
 							{
-								config.onfailure("auth", config.xhr.status);
+								config.onfailure('auth', config.xhr.status, config);
 							}
 
 							BX.onCustomEvent(config.xhr, 'onAjaxFailure', ['auth', config.xhr.status, config]);
@@ -227,7 +232,7 @@ BX.ajax = function(config)
 					{
 						if (config.onfailure)
 						{
-							config.onfailure("status", config.xhr.status);
+							config.onfailure('status', config.xhr.status, config);
 						}
 
 						BX.onCustomEvent(config.xhr, 'onAjaxFailure', ['status', config.xhr.status, config]);
@@ -678,16 +683,6 @@ BX.ajax.promise = function(config)
 			data: data
 		});
 	};
-	config.onprogress = function(data)
-	{
-		if (data.position == 0 && data.totalSize == 0)
-		{
-			result.reject({
-				reason: 'progress',
-				data: data
-			});
-		}
-	};
 
 	var xhr = BX.ajax(config);
 	if (xhr)
@@ -842,6 +837,13 @@ var prepareAjaxConfig = function(config)
 {
 	config = BX.type.isPlainObject(config) ? config : {};
 
+	config.headers = config.headers || [];
+	config.headers.push({name: 'X-Bitrix-Csrf-Token', value: BX.bitrix_sessid()});
+	if (BX.message.SITE_ID)
+	{
+		config.headers.push({name: 'X-Bitrix-Site-Id', value: BX.message.SITE_ID});
+	}
+
 	if (typeof config.json !== 'undefined')
 	{
 		if (!BX.type.isPlainObject(config.json))
@@ -849,39 +851,21 @@ var prepareAjaxConfig = function(config)
 			throw new Error('Wrong `config.json`, plain object expected.')
 		}
 
-		config.headers = config.headers || [];
 		config.headers.push({name: 'Content-Type', value: 'application/json'});
-		config.headers.push({name: 'X-Bitrix-Csrf-Token', value: BX.bitrix_sessid()});
-		if (BX.message.SITE_ID)
-		{
-			config.headers.push({name: 'X-Bitrix-Site-Id', value: BX.message.SITE_ID});
-		}
-
 		config.data = config.json;
 		config.preparePost = false;
 	}
 	else if (config.data instanceof FormData)
 	{
 		config.preparePost = false;
-
-		config.data.append('sessid', BX.bitrix_sessid());
-		if (BX.message.SITE_ID)
-		{
-			config.data.append('SITE_ID', BX.message.SITE_ID);
-		}
 		if (typeof config.signedParameters !== 'undefined')
 		{
 			config.data.append('signedParameters', config.signedParameters);
 		}
 	}
-	else
+	else if (BX.type.isPlainObject(config.data) || BX.Type.isNil(config.data))
 	{
 		config.data = BX.type.isPlainObject(config.data) ? config.data : {};
-		if (BX.message.SITE_ID)
-		{
-			config.data.SITE_ID = BX.message.SITE_ID;
-		}
-		config.data.sessid = BX.bitrix_sessid();
 		if (typeof config.signedParameters !== 'undefined')
 		{
 			config.data.signedParameters = config.signedParameters;
@@ -929,7 +913,12 @@ var buildAjaxPromiseToRestoreCsrf = function(config, withoutRestoringCsrf)
 				if (error.code === 'invalid_csrf' && error.customData.csrf)
 				{
 					BX.message({'bitrix_sessid': error.customData.csrf});
-					originalConfig.data.sessid = BX.bitrix_sessid();
+
+					originalConfig.headers = originalConfig.headers || [];
+					originalConfig.headers = originalConfig.headers.filter(function(header) {
+						return header && header.name !== 'X-Bitrix-Csrf-Token';
+					});
+					originalConfig.headers.push({name: 'X-Bitrix-Csrf-Token', value: BX.bitrix_sessid()});
 
 					csrfProblem = true;
 				}
@@ -1006,7 +995,7 @@ var buildAjaxPromiseToRestoreCsrf = function(config, withoutRestoringCsrf)
 		promise.then(function(){
 			var strings = BX.prop.getArray(assets, "string", []);
 			var stringAsset = strings.join('\n');
-			BX.html(null, stringAsset).then(function(){
+			BX.html(document.head, stringAsset, { useAdjacentHTML: true }).then(function(){
 				assetsLoaded.fulfill(response);
 			});
 		});
@@ -1043,7 +1032,9 @@ BX.ajax.runAction = function(action, config)
 		timeout: config.timeout,
 		preparePost: config.preparePost,
 		headers: config.headers,
-		onrequeststart: config.onrequeststart
+		onrequeststart: config.onrequeststart,
+		onprogress: config.onprogress,
+		onprogressupload: config.onprogressupload
 	});
 };
 
@@ -1081,7 +1072,9 @@ BX.ajax.runComponentAction = function (component, action, config)
 		timeout: config.timeout,
 		preparePost: config.preparePost,
 		headers: config.headers,
-		onrequeststart: (config.onrequeststart ? config.onrequeststart : null)
+		onrequeststart: (config.onrequeststart ? config.onrequeststart : null),
+		onprogress: config.onprogress,
+		onprogressupload: config.onprogressupload
 	});
 };
 
@@ -1501,7 +1494,7 @@ BX.ajax.UpdatePageTitle = function(title)
 	var obTitle = BX('pagetitle');
 	if (obTitle)
 	{
-		obTitle.removeChild(obTitle.firstChild);
+		BX.remove(obTitle.firstChild);
 		if (!obTitle.firstChild)
 			obTitle.appendChild(document.createTextNode(title));
 		else

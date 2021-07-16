@@ -15,11 +15,15 @@ return array(
 	'type' => ['page', 'knowledge', 'group'],
 	'fields' => array(
 		'ADDITIONAL_FIELDS' => array(
+			'THEME_CODE' => 'app',
 			'METAOG_IMAGE' => 'https://cdn.bitrix24.site/bitrix/images/demo/page/empty/preview.jpg',
 			'METAOG_TITLE' => Loc::getMessage('LANDING_DEMO_EMPTY_TITLE_PAGE'),
 			'METAOG_DESCRIPTION' => Loc::getMessage('LANDING_DEMO_EMPTY_DESCRIPTION'),
 			'METAMAIN_TITLE' => Loc::getMessage('LANDING_DEMO_EMPTY_TITLE_PAGE'),
 			'METAMAIN_DESCRIPTION' => Loc::getMessage('LANDING_DEMO_EMPTY_DESCRIPTION'),
+
+			'THEMEFONTS_SIZE' => '1',
+			'THEMEFONTS_LINE_HEIGHT' => '1.6',
 		),
 	),
 	'items' => array (),

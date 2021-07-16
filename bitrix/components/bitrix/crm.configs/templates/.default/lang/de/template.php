@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["CRM_CONFIGS_AUTOMATION_DEAL"] = "Aufträge";
 $MESS["CRM_CONFIGS_AUTOMATION_INVOICE"] = "Rechnungen";
 $MESS["CRM_CONFIGS_AUTOMATION_LEAD"] = "Leads";
@@ -62,7 +62,7 @@ $MESS["CRM_CONFIGS_SMS_LIMITS"] = "SMS-Limits";
 $MESS["CRM_CONFIGS_SMS_MARKETPLACE"] = "SMS Anwendungen";
 $MESS["CRM_CONFIGS_SMS_PROVIDER"] = "SMS Benachrichtigungen mit #PROVIDER#";
 $MESS["CRM_CONFIGS_STATUS"] = "Auswahllisten";
-$MESS["CRM_CONFIGS_TAB_APPS"] = "Anwendungen";
+$MESS["CRM_CONFIGS_TAB_APPS_2"] = "Bitrix24.Market";
 $MESS["CRM_CONFIGS_TAB_AUTOMATION"] = "Automatisierung";
 $MESS["CRM_CONFIGS_TAB_CREATION_ON_THE_BASIS"] = "Erstellen";
 $MESS["CRM_CONFIGS_TAB_INTEGRATION"] = "Integration";
@@ -76,4 +76,3 @@ $MESS["CRM_CONFIGS_TAB_WHERE_TO_BEGIN"] = "Ausgangspunkt";
 $MESS["CRM_CONFIGS_TAB_WORK_WITH_MAIL"] = "E-Mails";
 $MESS["CRM_CONFIGS_TAX"] = "Steuern";
 $MESS["CRM_CONFIGS_VOLUME"] = "Drive belegt";
-?>

@@ -1,4 +1,4 @@
-<?
+<?php
 $MESS["IMCONNECTOR_COMPONENT_LIVECHAT_CONNECTED"] = "Онлайн-чат підключений";
 $MESS["IMCONNECTOR_COMPONENT_LIVECHAT_CONNECTOR_ERROR_STATUS"] = "У процесі роботи вашого бота трапилася помилка. Вам необхідно перевірити зазначені дані і протестувати бота повторно.";
 $MESS["IMCONNECTOR_COMPONENT_LIVECHAT_CONNECT_ACTIVE"] = "Підключити";
@@ -29,6 +29,8 @@ $MESS["IMCONNECTOR_COMPONENT_LIVECHAT_SF_PAGE_IMAGE_LOAD"] = "Якщо необ�
 $MESS["IMCONNECTOR_COMPONENT_LIVECHAT_SF_PAGE_IMAGE_LOAD_BUTTON"] = "Завантажити картинку";
 $MESS["IMCONNECTOR_COMPONENT_LIVECHAT_SF_PAGE_LINK"] = "Публічне посилання на чат";
 $MESS["IMCONNECTOR_COMPONENT_LIVECHAT_SF_PAGE_NAME"] = "ваше назва";
+$MESS["IMCONNECTOR_COMPONENT_LIVECHAT_SF_PAGE_SESSION_ID"] = "Номер діалогу";
+$MESS["IMCONNECTOR_COMPONENT_LIVECHAT_SF_PAGE_SHOW_SESSION_ID"] = "показувати в заголовку віджета";
 $MESS["IMCONNECTOR_COMPONENT_LIVECHAT_SF_PAGE_SIGN"] = "Підпис";
 $MESS["IMCONNECTOR_COMPONENT_LIVECHAT_SF_PAGE_SIGN_2"] = "прибрати підпис";
 $MESS["IMCONNECTOR_COMPONENT_LIVECHAT_SF_PAGE_SIGN_3"] = "Працює з Бітрікс24";
@@ -44,4 +46,3 @@ $MESS["IMCONNECTOR_COMPONENT_LIVECHAT_SF_PHRASES_CONFIG"] = "налаштува�
 $MESS["IMCONNECTOR_COMPONENT_LIVECHAT_SF_TITLE"] = "Тема чату";
 $MESS["IMCONNECTOR_COMPONENT_LIVECHAT_SF_WIDGET_CONFIG"] = "налаштування віджета";
 $MESS["IMCONNECTOR_COMPONENT_LIVECHAT_WO_PUBLUC"] = "публічне посилання не встановлено";
-?>

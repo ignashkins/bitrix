@@ -6,14 +6,14 @@ if (WIZARD_INSTALL_DEMO_DATA)
 {
 	//desktop on index page, depending on SITE_ID
 	$sOptions = 'a:1:{s:7:"GADGETS";a:11:{s:13:"BIRTHDAY@5438";a:4:{s:6:"COLUMN";i:0;s:3:"ROW";i:0;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:11:"HONOUR@8771";a:4:{s:6:"COLUMN";i:0;s:3:"ROW";i:1;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:19:"NEW_EMPLOYEES@11193";a:4:{s:6:"COLUMN";i:0;s:3:"ROW";i:2;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:14:"OFFICIAL@13359";a:3:{s:6:"COLUMN";i:1;s:3:"ROW";i:0;s:4:"HIDE";s:1:"N";}s:10:"LIFE@14720";a:4:{s:6:"COLUMN";i:1;s:3:"ROW";i:1;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:10:"VIDEO@8095";a:4:{s:6:"COLUMN";i:1;s:3:"ROW";i:2;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:12:"PHOTOS@11262";a:4:{s:6:"COLUMN";i:1;s:3:"ROW";i:3;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:15:"desktop-actions";a:3:{s:6:"COLUMN";i:2;s:3:"ROW";i:0;s:4:"HIDE";s:1:"N";}s:9:"VOTE@4378";a:3:{s:6:"COLUMN";i:2;s:3:"ROW";i:1;s:4:"HIDE";s:1:"N";}s:22:"COMPANY_CALENDAR@20319";a:4:{s:6:"COLUMN";i:2;s:3:"ROW";i:2;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:17:"SHARED_DOCS@14908";a:4:{s:6:"COLUMN";i:2;s:3:"ROW";i:3;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}}}';
-	$arOptions = unserialize($sOptions);
+	$arOptions = unserialize($sOptions, ["allowed_classes" => false]);
 	WizardServices::SetUserOption('intranet', '~gadgets_mainpage_'.WIZARD_SITE_ID, $arOptions, $common = true);
 
 	$links = GetMessage('MAIN_OPT_DEF_LINKS');
 
 	//personal desktop, depending on SITE_ID
 	$sOptions = 'a:1:{s:7:"GADGETS";a:9:{s:13:"BIRTHDAY@8298";a:4:{s:6:"COLUMN";i:0;s:3:"ROW";i:0;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:14:"HTML_AREA@8623";a:4:{s:6:"COLUMN";i:0;s:3:"ROW";i:1;s:8:"USERDATA";a:1:{s:7:"content";s:1:" ";}s:4:"HIDE";s:1:"N";}s:13:"UPDATES@17676";a:4:{s:6:"COLUMN";i:1;s:3:"ROW";i:0;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:11:"TASKS@11589";a:4:{s:6:"COLUMN";i:1;s:3:"ROW";i:1;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:9:"BLOG@8601";a:4:{s:6:"COLUMN";i:1;s:3:"ROW";i:2;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:15:"desktop-actions";a:3:{s:6:"COLUMN";i:2;s:3:"ROW";i:0;s:4:"HIDE";s:1:"N";}s:14:"CALENDAR@22972";a:4:{s:6:"COLUMN";i:2;s:3:"ROW";i:1;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:13:"WEATHER@21928";a:4:{s:6:"COLUMN";i:2;s:3:"ROW";i:2;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:12:"PROBKI@25675";a:4:{s:6:"COLUMN";i:2;s:3:"ROW";i:3;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}}}';
-	$arOptions = unserialize($sOptions);
+	$arOptions = unserialize($sOptions, ["allowed_classes" => false]);
 	$arOptions['GADGETS']['HTML_AREA@8623']['USERDATA']['content'] = $links;
 	WizardServices::SetUserOption('intranet', '~gadgets_dashboard_'.WIZARD_SITE_ID, $arOptions, $common = true);
 }
@@ -41,27 +41,27 @@ $links = GetMessage('MAIN_OPT_DEF_LINKS');
 
 //desktop on index page
 $sOptions = 'a:1:{s:7:"GADGETS";a:11:{s:13:"BIRTHDAY@5438";a:4:{s:6:"COLUMN";i:0;s:3:"ROW";i:0;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:11:"HONOUR@8771";a:4:{s:6:"COLUMN";i:0;s:3:"ROW";i:1;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:19:"NEW_EMPLOYEES@11193";a:4:{s:6:"COLUMN";i:0;s:3:"ROW";i:2;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:14:"OFFICIAL@13359";a:3:{s:6:"COLUMN";i:1;s:3:"ROW";i:0;s:4:"HIDE";s:1:"N";}s:10:"LIFE@14720";a:4:{s:6:"COLUMN";i:1;s:3:"ROW";i:1;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:10:"VIDEO@8095";a:4:{s:6:"COLUMN";i:1;s:3:"ROW";i:2;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:12:"PHOTOS@11262";a:4:{s:6:"COLUMN";i:1;s:3:"ROW";i:3;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:15:"desktop-actions";a:3:{s:6:"COLUMN";i:2;s:3:"ROW";i:0;s:4:"HIDE";s:1:"N";}s:9:"VOTE@4378";a:3:{s:6:"COLUMN";i:2;s:3:"ROW";i:1;s:4:"HIDE";s:1:"N";}s:22:"COMPANY_CALENDAR@20319";a:4:{s:6:"COLUMN";i:2;s:3:"ROW";i:2;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:17:"SHARED_DOCS@14908";a:4:{s:6:"COLUMN";i:2;s:3:"ROW";i:3;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}}}';
-$arOptions = unserialize($sOptions);
+$arOptions = unserialize($sOptions, ["allowed_classes" => false]);
 WizardServices::SetUserOption('intranet', '~gadgets_mainpage', $arOptions, $common = true);
 
 //personal desktop
 $sOptions = 'a:1:{s:7:"GADGETS";a:9:{s:13:"BIRTHDAY@8298";a:4:{s:6:"COLUMN";i:0;s:3:"ROW";i:0;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:14:"HTML_AREA@8623";a:4:{s:6:"COLUMN";i:0;s:3:"ROW";i:1;s:8:"USERDATA";a:1:{s:7:"content";s:1:" ";}s:4:"HIDE";s:1:"N";}s:13:"UPDATES@17676";a:4:{s:6:"COLUMN";i:1;s:3:"ROW";i:0;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:11:"TASKS@11589";a:4:{s:6:"COLUMN";i:1;s:3:"ROW";i:1;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:9:"BLOG@8601";a:4:{s:6:"COLUMN";i:1;s:3:"ROW";i:2;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:15:"desktop-actions";a:3:{s:6:"COLUMN";i:2;s:3:"ROW";i:0;s:4:"HIDE";s:1:"N";}s:14:"CALENDAR@22972";a:4:{s:6:"COLUMN";i:2;s:3:"ROW";i:1;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:13:"WEATHER@21928";a:4:{s:6:"COLUMN";i:2;s:3:"ROW";i:2;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:12:"PROBKI@25675";a:4:{s:6:"COLUMN";i:2;s:3:"ROW";i:3;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}}}';
-$arOptions = unserialize($sOptions);
+$arOptions = unserialize($sOptions, ["allowed_classes" => false]);
 $arOptions['GADGETS']['HTML_AREA@8623']['USERDATA']['content'] = $links;
 WizardServices::SetUserOption('intranet', '~gadgets_dashboard', $arOptions, $common = true);
 
 //groups desktop
 $sOptions = 'a:1:{s:7:"GADGETS";a:8:{s:18:"SONET_GROUP_DESC@1";a:3:{s:6:"COLUMN";i:0;s:3:"ROW";i:0;s:4:"HIDE";s:1:"N";}s:17:"UPDATES_ENTITY@10";a:3:{s:6:"COLUMN";i:0;s:3:"ROW";i:1;s:4:"HIDE";s:1:"N";}s:7:"TASKS@4";a:3:{s:6:"COLUMN";i:0;s:3:"ROW";i:4;s:4:"HIDE";s:1:"N";}s:18:"SONET_GROUP_TAGS@5";a:3:{s:6:"COLUMN";i:0;s:3:"ROW";i:5;s:4:"HIDE";s:1:"N";}s:18:"SONET_GROUP_WIKI@6";a:3:{s:6:"COLUMN";i:0;s:3:"ROW";i:6;s:4:"HIDE";s:1:"N";}s:19:"SONET_GROUP_LINKS@7";a:3:{s:6:"COLUMN";i:1;s:3:"ROW";i:0;s:4:"HIDE";s:1:"N";}s:19:"SONET_GROUP_USERS@8";a:3:{s:6:"COLUMN";i:1;s:3:"ROW";i:1;s:4:"HIDE";s:1:"N";}s:18:"SONET_GROUP_MODS@9";a:3:{s:6:"COLUMN";i:1;s:3:"ROW";i:2;s:4:"HIDE";s:1:"N";}}}';
-$arOptions = unserialize($sOptions);
+$arOptions = unserialize($sOptions, ["allowed_classes" => false]);
 WizardServices::SetUserOption('intranet', '~gadgets_sonet_group', $arOptions, $common = false, 0);
 
 //users desktop
 $sOptions = 'a:1:{s:7:"GADGETS";a:7:{s:22:"SONET_USER_LINKS@23750";a:3:{s:6:"COLUMN";i:0;s:3:"ROW";i:0;s:4:"HIDE";s:1:"N";}s:19:"SONET_USER_GROUPS@4";a:4:{s:6:"COLUMN";i:0;s:3:"ROW";i:1;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:20:"SONET_USER_ABSENCE@7";a:4:{s:6:"COLUMN";i:0;s:3:"ROW";i:2;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:19:"SONET_USER_HONOUR@6";a:4:{s:6:"COLUMN";i:0;s:3:"ROW";i:3;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:17:"SONET_USER_DESC@8";a:4:{s:6:"COLUMN";i:1;s:3:"ROW";i:0;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}s:25:"SONET_USER_ACTIVITY@31041";a:3:{s:6:"COLUMN";i:1;s:3:"ROW";i:1;s:4:"HIDE";s:1:"N";}s:7:"TASKS@9";a:3:{s:6:"COLUMN";i:1;s:3:"ROW";i:2;s:4:"HIDE";s:1:"N";}}}';
-$arOptions = unserialize($sOptions);
+$arOptions = unserialize($sOptions, ["allowed_classes" => false]);
 WizardServices::SetUserOption('intranet', '~gadgets_sonet_user', $arOptions, $common = false, 0);
 
 //rss news desktop
-WizardServices::SetUserOption('intranet', '~gadgets_business_news', unserialize('a:1:{s:7:"GADGETS";a:1:{s:14:"RSSREADER@7338";a:4:{s:6:"COLUMN";i:0;s:3:"ROW";i:1;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}}}'), $common = true);
+WizardServices::SetUserOption('intranet', '~gadgets_business_news', unserialize('a:1:{s:7:"GADGETS";a:1:{s:14:"RSSREADER@7338";a:4:{s:6:"COLUMN";i:0;s:3:"ROW";i:1;s:8:"USERDATA";N;s:4:"HIDE";s:1:"N";}}}', ["allowed_classes" => false]), $common = true);
 
 //user edit form customization
 WizardServices::SetUserOption("form", "user_edit", Array(

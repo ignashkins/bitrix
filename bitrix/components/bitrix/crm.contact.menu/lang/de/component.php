@@ -1,7 +1,9 @@
-<?
+<?php
 $MESS["CONTACT_BUILD_REQUISITES"] = "Informationen zum Kontakt erstellen";
 $MESS["CONTACT_BUILD_REQUISITES_TITLE"] = "Informationen zum Kontakt erstellen";
 $MESS["CONTACT_DEDUPE"] = "Dublettenkontrolle";
+$MESS["CONTACT_DEDUPE_AUTOSEARCH"] = "Dubletten finden und vereinigen";
+$MESS["CONTACT_DEDUPE_HELP"] = "So können Sie die Dubletten verwalten";
 $MESS["CONTACT_DEDUPE_TITLE"] = "Dublettenkontrolle";
 $MESS["CRM_CONTACT_ADD"] = "Hinzufügen";
 $MESS["CRM_CONTACT_ADD_ACTIVITY"] = "Hinzufügen";
@@ -32,7 +34,6 @@ $MESS["CRM_CONTACT_DELETE_DLG_TITLE"] = "Kontakt löschen";
 $MESS["CRM_CONTACT_DELETE_TITLE"] = "Kontakt löschen";
 $MESS["CRM_CONTACT_EDIT"] = "Bearbeiten";
 $MESS["CRM_CONTACT_EDIT_TITLE"] = "Kontakt bearbeiten";
-$MESS["CRM_CONTACT_EXPORT"] = "Export";
 $MESS["CRM_CONTACT_EXPORT_CARDDAV"] = "Export über CardDAV";
 $MESS["CRM_CONTACT_EXPORT_CARDDAV_TITLE"] = "Kontakte über CardDAV exportieren";
 $MESS["CRM_CONTACT_EXPORT_CSV"] = "Export nach CSV";
@@ -89,4 +90,3 @@ $MESS["CRM_TASK_TAG"] = "crm";
 $MESS["CRM_TASK_TITLE_PREFIX"] = "CRM:";
 $MESS["DOCUMENT_BUTTON_TEXT"] = "Dokumente";
 $MESS["DOCUMENT_BUTTON_TITLE"] = "Dokument aus dem Kontakt erstellen";
-?>

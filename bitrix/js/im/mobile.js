@@ -29,6 +29,11 @@ BX.ImMobile = function(params)
 	this.mobileActionCache = false;
 	this.mobileActionRun = false;
 
+	this.linesDetailCounter = {};
+	this.dialogDetailCounter = {};
+
+	this.callController = null;
+
 	this.revision = 6; // mobile api revision - check include.php
 	this.errorMessage = '';
 	this.isAdmin = params.isAdmin || false;
@@ -1058,13 +1063,13 @@ BX.ImMobile.prototype.recentPageAction = function (params)
 				this.updateCounter();
 			}, this)});
 		}
-		else if (command == 'notify')
+		else if (command == 'notifyAdd')
 		{
 			this.notifyCount = params.counter;
 			this.updateCounter();
 			this.notifyRefresh();
 		}
-		else if (command == 'readNotifyList' || command == 'unreadNotifyList' || command == 'confirmNotify')
+		else if (command == 'notifyRead' || command == 'notifyUnread' || command == 'notifyConfirm')
 		{
 			this.notifyCount = params.counter;
 			this.updateCounter();
@@ -3123,7 +3128,7 @@ BX.ImMessengerMobile.prototype.openMessageMenu = function(messageId)
 		});
 
 		sheetButtons.push({
-			title: BX.message("IM_MENU_TO_POST"),
+			title: BX.message("IM_MENU_TO_POST_2"),
 			callback: BX.delegate(function () { BX.MessengerCommon.shareMessageAjax(messageId, 'POST') }, this)
 		});
 	}

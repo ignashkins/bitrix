@@ -1,5 +1,6 @@
 <?php
 $MESS["BLOG_C_HIDE"] = "Kommentare ausblenden";
+$MESS["BLOG_C_LOADING"] = "Wird geladen";
 $MESS["BLOG_C_REPLY"] = "Antworten";
 $MESS["BLOG_C_VIEW"] = "Kommentare anzeigen";
 $MESS["BPC_MES_COPYLINK"] = "Link kopieren";

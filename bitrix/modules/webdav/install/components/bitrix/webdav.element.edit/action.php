@@ -228,16 +228,18 @@ elseif ($arParams["ACTION"] == "UNDELETE")
 }
 elseif ($arParams["ACTION"] == "LOCK")
 {
-	$ob->LOCK($options = array(
+	$options = array(
 		"element_id" => $arParams["ELEMENT_ID"],
 		"scope" => "exclusive",
 		"type" => "write",
 		"owner" => $GLOBALS["USER"]->GetLogin()
-	)); 
+	);
+	$ob->LOCK($options);
 }
 elseif ($arParams["ACTION"] == "UNLOCK")
 {
-	$ob->UNLOCK($options = array("element_id" => $arParams["ELEMENT_ID"])); 
+	$options = array("element_id" => $arParams["ELEMENT_ID"]);
+	$ob->UNLOCK($options);
 }
 elseif (empty($_REQUEST["NAME"]))
 {

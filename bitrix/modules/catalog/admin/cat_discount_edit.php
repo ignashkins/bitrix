@@ -87,7 +87,7 @@ if (
 				$CONDITIONS = base64_decode($_POST['CONDITIONS']);
 				if (CheckSerializedData($CONDITIONS))
 				{
-					$CONDITIONS = unserialize($CONDITIONS);
+					$CONDITIONS = unserialize($CONDITIONS, ['allowed_classes' => false]);
 					$boolCond = true;
 				}
 				else
@@ -327,9 +327,7 @@ if (0 < $ID)
 				$strLangPath = $_SERVER['DOCUMENT_ROOT'].'/bitrix/modules/catalog/lang/';
 				$strDefLang = false;
 				$arLangList = array();
-				$by="def";
-				$order="desc";
-				$rsLangs = CLanguage::GetList($by, $order);
+				$rsLangs = CLanguage::GetList("def", "desc");
 				while ($arOneLang = $rsLangs->Fetch())
 				{
 					if (empty($strDefLang))
@@ -436,18 +434,14 @@ $context->Show();
 CAdminMessage::ShowMessage($errorMessage);
 
 $arSiteList = array();
-$by = 'sort';
-$order = 'asc';
-$rsSites = CSite::GetList($by, $order);
+$rsSites = CSite::GetList();
 while ($arSite = $rsSites->Fetch())
 {
 	$arSiteList[$arSite['LID']] = '('.$arSite['LID'].') '.$arSite['NAME'];
 }
 
 $arCurrencyList = array();
-$by2 = 'sort';
-$order2 = 'asc';
-$rsCurrencies = CCurrency::GetList($by2, $order2);
+$rsCurrencies = CCurrency::GetList('sort', 'asc');
 while ($arCurrency = $rsCurrencies->Fetch())
 {
 	$arCurrencyList[$arCurrency['CURRENCY']] = $arCurrency['CURRENCY'];
@@ -561,7 +555,7 @@ $tabControl->BeginNextFormTab();
 			{
 				if (CheckSerializedData($arDiscount['CONDITIONS']))
 				{
-					$arDiscount['CONDITIONS'] = unserialize($arDiscount['CONDITIONS']);
+					$arDiscount['CONDITIONS'] = unserialize($arDiscount['CONDITIONS'], ['allowed_classes' => false]);
 				}
 				else
 				{

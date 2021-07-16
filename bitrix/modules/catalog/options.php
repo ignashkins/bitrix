@@ -41,9 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'GET' && !empty($_REQUEST['RestoreDefaults']) 
 		$strValTmp = Option::get('catalog', 'avail_content_groups');
 
 	Option::delete('catalog', array());
-	$v1 = 'id';
-	$v2 = 'asc';
-	$z = CGroup::GetList($v1, $v2, array("ACTIVE" => "Y", "ADMIN" => "N"));
+	$z = CGroup::GetList('id', 'asc', array("ACTIVE" => "Y", "ADMIN" => "N"));
 	while($zr = $z->Fetch())
 		$APPLICATION->DelGroupRight($module_id, array($zr["ID"]));
 
@@ -175,51 +173,64 @@ if ($_SERVER['REQUEST_METHOD'] == "POST" && !empty($_POST['Update']) && !$bReadO
 	if ($updateViewedProductSettings)
 	{
 		$enableViewedProducts = $_POST['enable_viewed_products'];
-		$oldEnableViewedProducts = (string)Option::get('catalog', 'enable_viewed_products');
+		$oldEnableViewedProducts = Option::get('catalog', 'enable_viewed_products');
 		$viewedProductChange = $enableViewedProducts !== $oldEnableViewedProducts;
 		Option::set('catalog', 'enable_viewed_products', $enableViewedProducts, '');
 		if ($enableViewedProducts === 'Y')
 		{
 			$viewedPeriodChange = false;
 			$viewedTimeChange = false;
-			if (isset($_POST['viewed_period']))
+			if (isset($_POST['viewed_period']) && is_string($_POST['viewed_period']))
 			{
 				$viewedPeriod = (int)$_POST['viewed_period'];
 				if ($viewedPeriod > 0)
 				{
 					$oldViewedPeriod = (int)Option::get('catalog', 'viewed_period');
 					$viewedPeriodChange = ($viewedPeriod !== $oldViewedPeriod);
-					Option::set('catalog', 'viewed_period', $viewedPeriod, '');
+					Option::set('catalog', 'viewed_period', $viewedPeriod);
 				}
 			}
 
-			if (isset($_POST['viewed_time']))
+			if (isset($_POST['viewed_time']) && is_string($_POST['viewed_time']))
 			{
 				$viewedTime = (int)$_POST['viewed_time'];
 				if ($viewedTime > 0)
 				{
 					$oldViewedTime = (int)Option::get('catalog', 'viewed_time');
 					$viewedTimeChange = ($viewedTime !== $oldViewedTime);
-					Option::set('catalog', 'viewed_time', $viewedTime, '');
+					Option::set('catalog', 'viewed_time', $viewedTime);
 				}
 			}
 
 			if ($viewedProductChange || $viewedPeriodChange || $viewedTimeChange)
 			{
-				CAgent::RemoveAgent('\Bitrix\Catalog\CatalogViewedProductTable::clearAgent();', 'catalog');
-				CAgent::AddAgent('\Bitrix\Catalog\CatalogViewedProductTable::clearAgent();', 'catalog', 'N', (int)Option::get('catalog', 'viewed_period') * 24 * 3600);
+				CAgent::RemoveAgent(
+					'\Bitrix\Catalog\CatalogViewedProductTable::clearAgent();',
+					'catalog'
+				);
+				CAgent::AddAgent(
+					'\Bitrix\Catalog\CatalogViewedProductTable::clearAgent();',
+					'catalog',
+					'N',
+					(int)Option::get('catalog', 'viewed_period') * 86400
+				);
 			}
 
-			if (isset($_POST['viewed_count']))
+			if (isset($_POST['viewed_count']) && is_string($_POST['viewed_count']))
 			{
 				$viewedCount = (int)$_POST['viewed_count'];
 				if ($viewedCount >= 0)
-					Option::set('catalog', 'viewed_count', $viewedCount, '');
+				{
+					Option::set('catalog', 'viewed_count', $viewedCount);
+				}
 			}
 		}
 		else
 		{
-			CAgent::RemoveAgent('\Bitrix\Catalog\CatalogViewedProductTable::clearAgent();', 'catalog');
+			CAgent::RemoveAgent(
+				'\Bitrix\Catalog\CatalogViewedProductTable::clearAgent();',
+				'catalog'
+			);
 		}
 	}
 
@@ -389,34 +400,35 @@ if ($_SERVER['REQUEST_METHOD'] == "POST" && !empty($_POST['Update']) && !$bReadO
 	$arCurrentIBlocks = array();
 	$arNewIBlocksList = array();
 	$rsIBlocks = CIBlock::GetList(array());
-	while ($arOneIBlock = $rsIBlocks->Fetch())
+	while ($iblock = $rsIBlocks->Fetch())
 	{
 		// Current info
-		$arOneIBlock['ID'] = (int)$arOneIBlock['ID'];
+		$iblock['ID'] = (int)$iblock['ID'];
 		$arIBlockItem = array();
 		$arIBlockSitesList = array();
-		$rsIBlockSites = CIBlock::GetSite($arOneIBlock['ID']);
+		$rsIBlockSites = CIBlock::GetSite($iblock['ID']);
 		while ($arIBlockSite = $rsIBlockSites->Fetch())
 		{
 			$arIBlockSitesList[] = htmlspecialcharsbx($arIBlockSite['SITE_ID']);
 		}
 
-		$strInfo = '['.$arOneIBlock['IBLOCK_TYPE_ID'].'] '.htmlspecialcharsbx($arOneIBlock['NAME']).' ('.implode(' ',$arIBlockSitesList).')';
+		$strInfo = '['.$iblock['IBLOCK_TYPE_ID'].'] '.htmlspecialcharsbx($iblock['NAME']).' ('.implode(' ',$arIBlockSitesList).')';
 
 		$arIBlockItem = array(
 			'INFO' => $strInfo,
-			'ID' => $arOneIBlock['ID'],
-			'NAME' => $arOneIBlock['NAME'],
+			'ID' => $iblock['ID'],
+			'NAME' => $iblock['NAME'],
 			'SITE_ID' => $arIBlockSitesList,
-			'IBLOCK_TYPE_ID' => $arOneIBlock['IBLOCK_TYPE_ID'],
+			'IBLOCK_TYPE_ID' => $iblock['IBLOCK_TYPE_ID'],
 			'CATALOG' => 'N',
 			'PRODUCT_IBLOCK_ID' => 0,
 			'SKU_PROPERTY_ID' => 0,
 			'OFFERS_IBLOCK_ID' => 0,
 			'OFFERS_PROPERTY_ID' => 0,
 		);
-		$arCurrentIBlocks[$arOneIBlock['ID']] = $arIBlockItem;
+		$arCurrentIBlocks[$iblock['ID']] = $arIBlockItem;
 	}
+	unset($iblock, $rsIBlocks);
 	$arCatalogList = array();
 	$catalogIterator = Catalog\CatalogIblockTable::getList(array(
 		'select' => array('IBLOCK_ID', 'PRODUCT_IBLOCK_ID', 'SKU_PROPERTY_ID', 'SUBSCRIPTION', 'YANDEX_EXPORT', 'VAT_ID')
@@ -443,24 +455,68 @@ if ($_SERVER['REQUEST_METHOD'] == "POST" && !empty($_POST['Update']) && !$bReadO
 	}
 	unset($arCatalog, $catalogIterator);
 
-	foreach ($arCurrentIBlocks as &$arOneIBlock)
+	foreach ($arCurrentIBlocks as $iblock)
 	{
+		$iblockId = $iblock['ID'];
 		// From form
-		$is_cat = ((${"IS_CATALOG_".$arOneIBlock["ID"]}=="Y") ? "Y" : "N" );
-		$is_cont = ((${"IS_CONTENT_".$arOneIBlock["ID"]}!="Y") ? "N" : "Y" );
-		$yan_exp = ((${"YANDEX_EXPORT_".$arOneIBlock["ID"]}!="Y") ? "N" : "Y" );
-		$cat_vat = (int)${"VAT_ID_".$arOneIBlock["ID"]};
+		$is_cat = (
+			isset($_POST['IS_CATALOG_'.$iblockId]) && $_POST['IS_CATALOG_'.$iblockId] === 'Y'
+			? 'Y'
+			: 'N'
+		);
+		$is_cont = (
+			isset($_POST['IS_CONTENT_'.$iblockId]) && $_POST['IS_CONTENT_'.$iblockId] === 'Y'
+			? 'Y'
+			: 'N'
+		);
+		$yan_exp = (
+			isset($_POST['YANDEX_EXPORT_'.$iblockId]) && $_POST['YANDEX_EXPORT_'.$iblockId] === 'Y'
+			? 'Y'
+			: 'N'
+		);
+		$cat_vat = (
+			isset($_POST['VAT_ID_'.$iblockId]) && is_string($_POST['VAT_ID_'.$iblockId])
+			? (int)$_POST['VAT_ID_'.$iblockId]
+			: 0
+		);
+		if ($cat_vat < 0)
+		{
+			$cat_vat = 0;
+		}
 
-		$offer_name = trim(${"OFFERS_NAME_".$arOneIBlock["ID"]});
-		$offer_type = trim(${"OFFERS_TYPE_".$arOneIBlock["ID"]});
-		$offer_new_type = '';
-		$offer_new_type = trim(${"OFFERS_NEWTYPE_".$arOneIBlock["ID"]});
-		$flag_new_type = ('Y' == ${'CREATE_OFFERS_TYPE_'.$arOneIBlock["ID"]} ? 'Y' : 'N');
+		$offer_name = (
+			isset($_POST['OFFERS_NAME_'.$iblockId]) && is_string($_POST['OFFERS_NAME_'.$iblockId])
+			? trim($_POST['OFFERS_NAME_'.$iblockId])
+			: ''
+		);
+		$offer_type = (
+			isset($_POST['OFFERS_TYPE_'.$iblockId]) && is_string($_POST['OFFERS_TYPE_'.$iblockId])
+			? trim($_POST['OFFERS_TYPE_'.$iblockId])
+			: ''
+		);
+		$offer_new_type = (
+			isset($_POST['OFFERS_NEWTYPE_'.$iblockId]) && is_string($_POST['OFFERS_NEWTYPE_'.$iblockId])
+			? trim($_POST['OFFERS_NEWTYPE_'.$iblockId])
+			: ''
+		);
+		$flag_new_type = (
+			isset($_POST['CREATE_OFFERS_TYPE_'.$iblockId]) && $_POST['CREATE_OFFERS_TYPE_'.$iblockId] === 'Y'
+			? 'Y'
+			: 'N'
+		);
 
-		$offers_iblock_id = intval(${"OFFERS_IBLOCK_ID_".$arOneIBlock["ID"]});
+		$offers_iblock_id = (
+			isset($_POST['OFFERS_IBLOCK_ID_'.$iblockId]) && is_string($_POST['OFFERS_IBLOCK_ID_'.$iblockId])
+			? (int)$_POST['OFFERS_IBLOCK_ID_'.$iblockId]
+			: 0
+		);
+		if ($offers_iblock_id < 0)
+		{
+			$offers_iblock_id = 0;
+		}
 
 		$arNewIBlockItem = array(
-			'ID' => $arOneIBlock['ID'],
+			'ID' => $iblock['ID'],
 			'CATALOG' => $is_cat,
 			'SUBSCRIPTION' => $is_cont,
 			'YANDEX_EXPORT' => $yan_exp,
@@ -475,10 +531,9 @@ if ($_SERVER['REQUEST_METHOD'] == "POST" && !empty($_POST['Update']) && !$bReadO
 			'NEED_LINK' => 'N',
 			'OFFERS_PROP' => 0,
 		);
-		$arNewIBlocksList[$arOneIBlock['ID']] = $arNewIBlockItem;
+		$arNewIBlocksList[$iblock['ID']] = $arNewIBlockItem;
 	}
-	if (isset($arOneIBlock))
-		unset($arOneIBlock);
+	unset($iblockId, $iblock);
 
 	// check for offers is catalog
 	foreach ($arCurrentIBlocks as $intIBlockID => $arIBlockInfo)

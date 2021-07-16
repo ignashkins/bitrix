@@ -2,7 +2,7 @@
 
 class CUserTypeWebdavElementHistory extends CUserTypeWebdavElement
 {
-	function GetUserTypeDescription()
+	public static function GetUserTypeDescription()
 	{
 		\Bitrix\Main\Localization\Loc::loadLanguageFile($_SERVER["DOCUMENT_ROOT"]."/bitrix/modules/webdav/classes/usertypewebdav.php");
 
@@ -14,7 +14,7 @@ class CUserTypeWebdavElementHistory extends CUserTypeWebdavElement
 		);
 	}
 
-	function GetDBColumnType($arUserField)
+	public static function GetDBColumnType($arUserField)
 	{
 		global $DB;
 		switch($DB->type)
@@ -59,7 +59,7 @@ class CUserTypeWebdavElementHistory extends CUserTypeWebdavElement
 		return static::genData($file[0], $file[1]);
 	}
 
-	protected function getPostIdForComment()
+	protected static function getPostIdForComment()
 	{
 		return !empty($_POST['comment_post_id'])? $_POST['comment_post_id'] : false;
 	}
@@ -186,7 +186,7 @@ class CUserTypeWebdavElementHistory extends CUserTypeWebdavElement
 	{
 		if(is_string($value))
 		{
-			$value = @unserialize($value, false);
+			$value = @unserialize($value, ['allowed_classes' => false]);
 			if($value === false)
 			{
 				return array();

@@ -1,5 +1,8 @@
 <?php
 
+use Bitrix\Main\Application;
+use Bitrix\Main\Data\MemcacheConnection;
+
 class CPHPCacheMemcacheCluster extends \Bitrix\Main\Data\CacheEngineMemcache
 {
 	private $bQueue = null;
@@ -41,27 +44,25 @@ class CPHPCacheMemcacheCluster extends \Bitrix\Main\Data\CacheEngineMemcache
 	{
 		if (!is_object(self::$memcache))
 		{
-			self::$memcache = new Memcache;
-			$arServerList = CPHPCacheMemcacheCluster::LoadConfig();
+			$connectionPool = Application::getInstance()->getConnectionPool();
 
-			if (count($arServerList) == 1)
+			$servers = [];
+			foreach (CPHPCacheMemcacheCluster::LoadConfig() as $arServer)
 			{
-				$arServer = array_pop($arServerList);
-				self::$memcache->pconnect($arServer["HOST"], $arServer["PORT"]);
+				$servers[] = [
+					'host' => $arServer['HOST'],
+					'port' => $arServer['PORT'],
+					'weight' => ($arServer['WEIGHT'] > 0? $arServer['WEIGHT']: 1),
+				];
 			}
-			else
-			{
-				foreach ($arServerList as $arServer)
-				{
-					self::$memcache->addServer(
-						$arServer["HOST"]
-						, $arServer["PORT"]
-						, true //persistent
-						, ($arServer["WEIGHT"] > 0? $arServer["WEIGHT"]: 1)
-						, 1 //timeout
-					);
-				}
-			}
+			$connectionPool->setConnectionParameters(self::SESSION_MEMCACHE_CONNECTION, [
+				'className' => MemcacheConnection::class,
+				'servers' => $servers,
+			]);
+
+			/** @var MemcacheConnection $memcacheConnection */
+			$memcacheConnection = $connectionPool->getConnection(self::SESSION_MEMCACHE_CONNECTION);
+			self::$memcache = $memcacheConnection->getResource();
 		}
 
 		if (defined("BX_CACHE_SID"))

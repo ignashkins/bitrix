@@ -14,6 +14,7 @@ use Bitrix\Main;
 use Bitrix\Main\Localization\Loc;
 use Bitrix\Tasks\Helper;
 use Bitrix\Tasks\Internals\Counter;
+use Bitrix\Tasks\Internals\Counter\CounterDictionary;
 use Bitrix\Tasks\Ui\Filter;
 use Bitrix\Tasks\Util\Restriction\Bitrix24Restriction\Limit\TaskLimit;
 use Bitrix\Tasks\Util\User;
@@ -37,6 +38,9 @@ class TasksToolbarComponent extends TasksBaseComponent
 		static::tryParseStringParameter($arParams['DEFAULT_ROLEID'], 'view_all');
 		static::tryParseStringParameter($arParams['SHOW_TOOLBAR'], 'N');
 		static::tryParseStringParameter($arParams['PROJECT_VIEW'], 'N');
+		static::tryParseStringParameter($arParams['SCOPE'], '');
+		static::tryParseStringParameter($arParams['FILTER_FIELD'], 'PROBLEM');
+		static::tryParseStringParameter($arParams['SPRINT_SELECTED'], 'N');
 
 		if ($arParams['GROUP_ID'] > 0)
 		{
@@ -55,25 +59,21 @@ class TasksToolbarComponent extends TasksBaseComponent
 		$this->listCtrl = Filter\Task::getListCtrlInstance();
 		$this->listCtrl->useState($this->listState);
 
-		$isNotSprint = !isset($this->arParams['SPRINT_SELECTED']) || $this->arParams['SPRINT_SELECTED'] !== 'Y';
-		$showCounters = $isNotSprint && $this->hasAccessToCounters();
-		$showSpotlightSimpleCounters = $this->showSpotlight('simple_counters')
-			&& $this->arParams['SHOW_VIEW_MODE'] === 'Y';
-
-		$this->arResult['IS_NOT_SPRINT'] = $isNotSprint;
-		$this->arResult['SHOW_COUNTERS'] = $showCounters;
-		$this->arResult['SPOTLIGHT_SIMPLE_COUNTERS'] = $showSpotlightSimpleCounters;
-
+		$this->arResult['IS_NOT_SPRINT'] = ($this->arParams['SPRINT_SELECTED'] !== 'Y');
+		$this->arResult['SHOW_COUNTERS'] = ($this->arParams['SPRINT_SELECTED'] !== 'Y' && $this->hasAccessToCounters());
+		$this->arResult['SPOTLIGHT_SIMPLE_COUNTERS'] = (
+			$this->arParams['SHOW_VIEW_MODE'] === 'Y'
+			&& $this->showSpotlight('simple_counters')
+		);
 		$this->arResult['VIEW_LIST'] = $this->getViewList();
 		$this->arResult['TASK_LIMIT_EXCEEDED'] = TaskLimit::isLimitExceeded();
 
 		$this->arResult['USER_ID'] = $this->arParams['USER_ID'];
 		$this->arResult['OWNER_ID'] = $this->arParams['OWNER_ID'];
+		$this->arResult['GROUP_ID'] = $this->arParams['GROUP_ID'];
+		$this->arResult['COUNTERS'] = ($this->arParams['COUNTERS'] ?: []);
 
-		if ($showCounters)
-		{
-			$this->arResult['COUNTERS'] = $this->getCounters();
-		}
+		$this->arResult['ROLE'] = $this->getFilterRole();
 	}
 
 	/**
@@ -122,12 +122,14 @@ class TasksToolbarComponent extends TasksBaseComponent
 	 */
 	private function hasAccessToCounters(): bool
 	{
-		$userId = $this->arResult['USER_ID'];
-		$ownerId = $this->arResult['OWNER_ID'];
+		$userId = $this->arParams['USER_ID'];
+		$ownerId = $this->arParams['OWNER_ID'];
 
-		return $userId === $ownerId
+		return
+			$userId === $ownerId
 			|| User::isSuper($userId)
-			|| CTasks::IsSubordinate($ownerId, $userId);
+			|| CTasks::IsSubordinate($ownerId, $userId)
+		;
 	}
 
 	/**
@@ -135,23 +137,21 @@ class TasksToolbarComponent extends TasksBaseComponent
 	 */
 	private function getFilterRole(): string
 	{
-		$filterInstance = Helper\Filter::getInstance($this->arParams['OWNER_ID'], $this->arParams['GROUP_ID']);
+		$filterInstance = Helper\Filter::getInstance($this->arResult['OWNER_ID'], $this->arResult['GROUP_ID']);
 		$filterOptions = $filterInstance->getOptions();
 		$filter = $filterOptions->getFilter();
 
-		return (array_key_exists('ROLEID', $filter) ? $filter['ROLEID'] : Counter\Role::ALL);
-	}
+		$possibleRoles = Counter\Role::getRoles();
+		$role = Counter\Role::ALL;
 
-	/**
-	 * @return array
-	 * @throws Main\ArgumentException
-	 * @throws Main\DB\SqlQueryException
-	 * @throws Main\ObjectPropertyException
-	 * @throws Main\SystemException
-	 */
-	protected function getCounters(): array
-	{
-		$counterInstance = Counter::getInstance($this->arParams['OWNER_ID']);
-		return $counterInstance->getCounters($this->getFilterRole(), (int) $this->arParams['GROUP_ID']);
+		if (
+			array_key_exists('ROLEID', $filter)
+			&& array_key_exists($filter['ROLEID'], $possibleRoles)
+		)
+		{
+			$role = $filter['ROLEID'];
+		}
+
+		return $role;
 	}
 }

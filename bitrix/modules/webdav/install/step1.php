@@ -14,7 +14,7 @@ if($_POST["iblock"] == "Y"):
 			"title" => GetMessage("WD_ERROR_BAD_PERMISSION"));
 	else:
 		$arUGroupsEx = Array();
-		$dbUGroups = CGroup::GetList($by = "c_sort", $order = "asc");
+		$dbUGroups = CGroup::GetList();
 		while($arUGroups = $dbUGroups -> Fetch())
 		{
 			if ($arUGroups["ANONYMOUS"] == "Y")
@@ -23,7 +23,7 @@ if($_POST["iblock"] == "Y"):
 		if ($_REQUEST["create_iblock_type"] == "Y")
 		{
 			$arIBTLang = array(); $arLang = array();
-			$l = CLanguage::GetList($lby="sort", $lorder="asc");
+			$l = CLanguage::GetList();
 			while($ar = $l->ExtractFields("l_"))
 				$arIBTLang[]=$ar;
 			
@@ -64,7 +64,7 @@ if($_POST["iblock"] == "Y"):
 				"IBLOCK_TYPE_ID"=>$IBLOCK_TYPE_ID,
 				"LID"=>array());
 			$ib = new CIBlock;
-			$db_sites = CSite::GetList($lby="sort", $lorder="asc");
+			$db_sites = CSite::GetList();
 			while ($ar_sites = $db_sites->Fetch())
 			{
 				if ($ar_sites["ACTIVE"] == "Y")

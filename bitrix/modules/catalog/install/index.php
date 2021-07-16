@@ -198,10 +198,19 @@ class catalog extends CModule
 			'getBuilderList'
 		);
 
-		if (!$this->bitrix24mode)
+		if ($this->bitrix24mode)
 		{
-			CAgent::AddAgent('\Bitrix\Catalog\CatalogViewedProductTable::clearAgent();', 'catalog', 'N', (int)COption::GetOptionString("catalog", "viewed_period") * 24 * 3600);
+			Main\Config\Option::set('catalog', 'enable_viewed_products', 'Y');
+			Main\Config\Option::set('catalog', 'viewed_time', '2');
+			Main\Config\Option::set('catalog', 'viewed_count', '10');
+			Main\Config\Option::set('catalog', 'viewed_period', '1');
 		}
+		CAgent::AddAgent(
+			'\Bitrix\Catalog\CatalogViewedProductTable::clearAgent();',
+			'catalog',
+			'N',
+			(int)COption::GetOptionString("catalog", "viewed_period") * 86400
+		);
 
 		Main\Config\Option::set('catalog', 'subscribe_repeated_notify', 'Y', '');
 		if ($this->bitrix24mode)
@@ -219,11 +228,37 @@ class catalog extends CModule
 			}
 			else
 			{
-				Main\Update\Stepper::bindClass('\Bitrix\Catalog\Compatible\EventCompatibility', 'catalog', 1);
+				\CTimeZone::Disable();
+				\CAgent::AddAgent(
+					'\Bitrix\Catalog\Compatible\EventCompatibility::execAgent();',
+					'catalog',
+					'Y',
+					1,
+					'',
+					'Y',
+					\ConvertTimeStamp(time()+ 1, 'FULL'),
+					100,
+					false,
+					false
+				);
+				\CTimeZone::Enable();
 			}
 		}
 
-		Main\Update\Stepper::bindClass('\Bitrix\Catalog\Product\SystemField', 'catalog', 60);
+		\CTimeZone::Disable();
+		\CAgent::AddAgent(
+			'\Bitrix\Catalog\Product\SystemField::execAgent();',
+			'catalog',
+			'Y',
+			1,
+			'',
+			'Y',
+			\ConvertTimeStamp(time()+ 60, 'FULL'),
+			100,
+			false,
+			false
+		);
+		\CTimeZone::Enable();
 
 		$this->InstallTasks();
 
@@ -286,6 +321,7 @@ class catalog extends CModule
 	function UnInstallDB($arParams = array())
 	{
 		global $APPLICATION, $DB, $errors;
+		global $USER_FIELD_MANAGER;
 
 		if (!defined('BX_CATALOG_UNINSTALLED'))
 			define('BX_CATALOG_UNINSTALLED', true);
@@ -298,6 +334,7 @@ class catalog extends CModule
 				$APPLICATION->ThrowException(implode("", $errors));
 				return false;
 			}
+			$USER_FIELD_MANAGER->OnEntityDelete('PRODUCT');
 			$this->UnInstallTasks();
 			COption::RemoveOption("catalog");
 		}
@@ -402,6 +439,8 @@ class catalog extends CModule
 		{
 			\Bitrix\Catalog\Compatible\EventCompatibility::unRegisterEvents();
 		}
+
+
 
 		CAgent::RemoveModuleAgents('catalog');
 

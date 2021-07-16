@@ -17,7 +17,7 @@ export default class SplitButton extends Button
 	constructor(options: SplitButtonOptions)
 	{
 		options = Type.isPlainObject(options) ? options : {};
-		delete options.round;
+		// delete options.round;
 
 		if (Type.isStringFilled(options.link))
 		{
@@ -231,25 +231,6 @@ export default class SplitButton extends Button
 	getMenuTarget(): SplitSubButtonType
 	{
 		return this.menuTarget;
-	}
-
-	/**
-	 *
-	 * @param {boolean} [flag=true]
-	 * @return {this}
-	 */
-	setRound(flag?: boolean): this
-	{
-		throw new Error('BX.UI.SplitButton: a split button cannot be round.');
-	}
-
-	/**
-	 *
-	 * @return {boolean}
-	 */
-	isRound(): boolean
-	{
-		return false;
 	}
 
 	/**

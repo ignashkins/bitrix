@@ -40,6 +40,8 @@
 		isKeyMetaPressed: false,
 		clickStatus: null,
 		animationDuration: 800,
+		cancelEditHandler: null,
+		blockSize: 20,
 
 		/**
 		 * Custom format method from BXcrm-kanban-quick-form-show .2s cubic-bezier(0.88, -0.08, 0.46, 0.91) forwards.Currency.
@@ -189,13 +191,26 @@
 			}
 
 			var index = BX.util.array_search(beforeItem, this.items);
-			if (index >= 0)
+			var items = this.getItems();
+			var alreadySet = false;
+			for (itemId in items)
 			{
-				this.items.splice(index, 0, item);
+				if (items[itemId].id === item.getId())
+				{
+					alreadySet = true;
+				}
 			}
-			else
+
+			if (!alreadySet)
 			{
-				this.items.push(item);
+				if (index >= 0)
+				{
+					this.items.splice(index, 0, item);
+				}
+				else
+				{
+					this.items.push(item);
+				}
 			}
 
 			item.animate({
@@ -206,7 +221,7 @@
 				useAnimation: item.useAnimation
 			});
 
-			if (item.isCountable())
+			if (item.isCountable() && !alreadySet)
 			{
 				this.incrementTotal();
 			}
@@ -215,6 +230,14 @@
 			{
 				this.render();
 			}
+
+			BX.Event.EventEmitter.emit(
+				'Crm.Kanban.Column:onItemAdded',
+				{
+					item:item,
+					targetColumn: this,
+					beforeItem: beforeItem
+				});
 		},
 
 		addItems: function(items, beforeItem)
@@ -401,7 +424,15 @@
 							: 0;
 			this.editorId = "quick_editor_v6_" + this.getId() + "_" + entityType.toLowerCase() + "_" + categoryId;
 
-			if (typeof gridData.quickEditorPath[entityType.toLowerCase()] === "undefined")
+			if (!this.getGrid().getTypeInfoParam('isQuickEditorEnabled'))
+			{
+				return;
+			}
+			var isFactoryBasedApproach = this.getGrid().getTypeInfoParam('useFactoryBasedApproach');
+			if (
+				typeof gridData.quickEditorPath[entityType.toLowerCase()] === "undefined"
+				&& !isFactoryBasedApproach
+			)
 			{
 				return;
 			}
@@ -409,12 +440,10 @@
 			var context = {
 				PARAMS: gridData.params
 			};
-			context[((entityType === "DEAL") ? "STAGE_ID" : "STATUS_ID")] = this.getId();
+			context[this.getGrid().getTypeInfoParam('stageIdKey')] = this.getId();
 
 			// fields for form
-			var formFields = (entityType === "DEAL")
-				? ["TITLE", "OPPORTUNITY_WITH_CURRENCY", "CLIENT"]
-				: ["TITLE", "CLIENT"];
+			var formFields = this.getGrid().getTypeInfoParam('defaultQuickFormFields');
 
 			if (!this.editorNodeContainer.innerHTML)
 			{
@@ -424,68 +453,128 @@
 					this.disabledAddButton();
 				}
 
-				BX.ajax.post(
-					gridData.quickEditorPath[entityType.toLowerCase()],
-					{
-						ACTION: "PREPARE_EDITOR_HTML",
-						ACTION_ENTITY_TYPE_NAME: entityType,
-						ACTION_ENTITY_ID: 0,
-						GUID: this.editorId,
-						CONFIG_ID: gridData.editorConfigId,
-						FORCE_DEFAULT_CONFIG: "N",
-						FORCE_DEFAULT_OPTIONS:  "Y",
-						IS_EMBEDDED: "Y",
-						ENABLE_CONFIG_SCOPE_TOGGLE: "Y",
-						ENABLE_CONFIGURATION_UPDATE: "Y",
-						ENABLE_REQUIRED_USER_FIELD_CHECK: "Y",
-						ENABLE_FIELDS_CONTEXT_MENU: "N",
-						FIELDS: formFields,
-						CONTEXT: context
-					},
-					function(result)
-					{
+				if (isFactoryBasedApproach)
+				{
+					BX.ajax.runAction('crm.api.item.getEditor',  {
+						data: {
+							entityTypeId: gridData.entityTypeInt,
+							id: 0,
+							stageId: this.getId(),
+							categoryId: gridData.params.CATEGORY_ID ? gridData.params.CATEGORY_ID : 0,
+							guid: this.editorId,
+							configId: gridData.editorConfigId,
+							params: {
+								'ENABLE_PERSONAL_CONFIGURATION_UPDATE': true,
+								'ENABLE_COMMON_CONFIGURATION_UPDATE': true,
+								'ENABLE_CONFIG_SCOPE_TOGGLE': true,
+								'ENABLE_SETTINGS_FOR_ALL': true,
+							}
+						}
+					}).then(function (response){
+						var result = BX.processHTML(response.data.html);
 
-						this.editorNodeContainer.innerHTML = result;
+						this.editorNodeContainer.innerHTML = response.data.html;
 						this.editorNodeContainer.appendChild(this.editorNodeCreate);
-
-						if(!this.editorOpen)
-						{
-							this.layout.subTitleAddButton.classList.remove("crm-kanban-column-add-item-button-wait");
-							return;
-						}
-
-						if(hidden)
-						{
-							return;
-						}
 
 						this.editorNode.style.height = "0px";
 
-						var interval = setInterval(function() {
-							if(this.editorNodeContainer.offsetHeight < 150)
+						BX.ajax.processScripts(result.SCRIPT, undefined, function(){
+							var interval = setInterval(function ()
 							{
-								return
+								if (this.editorNodeContainer.offsetHeight < 150)
+								{
+									return
+								}
+
+								if (!this.editorOpen)
+								{
+									this.layout.subTitleAddButton.classList.remove("crm-kanban-column-add-item-button-wait");
+									return;
+								}
+								if (hidden)
+								{
+									return;
+								}
+
+								this.editorNode.style.height = this.editorNodeContainer.offsetHeight + "px";
+								this.layout.subTitleAddButton.classList.remove("crm-kanban-column-add-item-button-wait");
+
+								var autoHideEditor = function ()
+								{
+									this.editorNode.style.height = null;
+									BX.unbind(this.editorNode, 'transitionend', autoHideEditor);
+								}.bind(this);
+
+								BX.bind(this.editorNode, 'transitionend', autoHideEditor);
+								clearInterval(interval);
+							}.bind(this), 100);
+						}.bind(this));
+					}.bind(this));
+				}
+				else
+				{
+					BX.ajax.post(
+						gridData.quickEditorPath[entityType.toLowerCase()],
+						{
+							ACTION: "PREPARE_EDITOR_HTML",
+							ACTION_ENTITY_TYPE_NAME: entityType,
+							ACTION_ENTITY_ID: 0,
+							GUID: this.editorId,
+							CONFIG_ID: gridData.editorConfigId,
+							FORCE_DEFAULT_CONFIG: "N",
+							FORCE_DEFAULT_OPTIONS: "Y",
+							IS_EMBEDDED: "Y",
+							ENABLE_CONFIG_SCOPE_TOGGLE: "Y",
+							ENABLE_CONFIGURATION_UPDATE: "Y",
+							ENABLE_REQUIRED_USER_FIELD_CHECK: "Y",
+							ENABLE_FIELDS_CONTEXT_MENU: "N",
+							FIELDS: formFields,
+							CONTEXT: context
+						},
+						function (result)
+						{
+							this.editorNodeContainer.innerHTML = result;
+							this.editorNodeContainer.appendChild(this.editorNodeCreate);
+
+							if (!this.editorOpen)
+							{
+								this.layout.subTitleAddButton.classList.remove("crm-kanban-column-add-item-button-wait");
+								return;
 							}
 
-							this.editorNode.style.height = this.editorNodeContainer.offsetHeight + "px";
-							this.layout.subTitleAddButton.classList.remove("crm-kanban-column-add-item-button-wait");
-
-							var autoHideEditor = function()
+							if (hidden)
 							{
-								this.editorNode.style.height = null;
-								BX.unbind(this.editorNode, 'transitionend', autoHideEditor);
-							}.bind(this);
+								return;
+							}
 
-							BX.bind(this.editorNode, 'transitionend', autoHideEditor);
-							clearInterval(interval);
-						}.bind(this), 100);
-					}.bind(this)
-				);
+							this.editorNode.style.height = "0px";
+
+							var interval = setInterval(function (){
+								if (this.editorNodeContainer.offsetHeight < 150)
+								{
+									return
+								}
+
+								this.editorNode.style.height = this.editorNodeContainer.offsetHeight + "px";
+								this.layout.subTitleAddButton.classList.remove("crm-kanban-column-add-item-button-wait");
+
+								var autoHideEditor = function ()
+								{
+									this.editorNode.style.height = null;
+									BX.unbind(this.editorNode, 'transitionend', autoHideEditor);
+								}.bind(this);
+
+								BX.bind(this.editorNode, 'transitionend', autoHideEditor);
+								clearInterval(interval);
+							}.bind(this), 100);
+						}.bind(this)
+					);
+				}
 			}
 			else
 			{
 				this.getLoader().hide();
-				BX.removeClass(this.quickFormSaveButton, "ui-btn-wait");
+				this.hideQuickEditorLoader();
 			}
 
 			// catch editor instance after load
@@ -510,65 +599,70 @@
 					{
 						if (typeof params.error !== "undefined")
 						{
-							this.quickFormSaveButton.classList.remove("ui-btn-wait");
-							this.editorNode.classList.remove("crm-kanban-quick-form-wait");
+							this.hideQuickEditorLoader();
 
-							if (
-								this.editorOpen
-								&&
-								(
-									this.quickFormPartialEditor === undefined
-									||
-									(
-										this.quickFormPartialEditor !== undefined
-										&& !this.quickFormPartialEditor._isLocked
-									)
-								)
-							)
-							{
-								var formData = new FormData(this.editor._ajaxForm._elementNode),
-									presetValues = {};
-
-								var formDataEntries = formData.entries(),
-									formDataEntry = formDataEntries.next(),
-									pair;
-
-								while (!formDataEntry.done) {
-									pair = formDataEntry.value;
-									presetValues[pair[0]] = pair[1];
-									formDataEntry = formDataEntries.next();
-								}
-
-								var context = {};
-								context[((gridData.entityType === "DEAL") ? "STAGE_ID" : "STATUS_ID")] = this.id;
-								context['NOT_CHANGE_STATUS'] = 'Y';
-								this.quickFormPartialEditor = BX.Crm.QuickFormPartialEditorDialog.create(
-									"quickform-partial-entity-editor",
-									{
-										entityTypeId: gridData.entityTypeInt,
-										entityId: 0,
-										fieldNames: Object.keys(params.checkErrors),
-										context: context,
-										values: [],
-										presetValues: presetValues,
-										title: BX.message(
-											'CRM_KANBAN_QUICK_FORM_REQUIRED_FIELDS_TITLE_' + gridData.entityType
-										)
-									}
-								);
-								this.quickFormPartialEditor.open();
-							}
+							this.openQuickFormPartialEditor(Object.keys(params.checkErrors));
 						}
 					}.bind(this)
 				);
 
+				if (!this.cancelEditHandler)
+				{
+					this.cancelEditHandler = function(params)
+					{
+						this.hideQuickEditorLoader();
+					}.bind(this);
+
+					BX.addCustomEvent(
+						window,
+						"BX.Crm.EntityEditor:onFailedValidation",
+						this.cancelEditHandler
+					);
+
+					BX.addCustomEvent(
+						window,
+						"BX.Crm.EntityEditor:onRestrictionAction",
+						this.cancelEditHandler
+					);
+				}
+
 				BX.addCustomEvent(
 					window,
-					"BX.Crm.EntityEditor:onFailedValidation",
-					function(params)
+					'BX.Crm.EntityEditorAjax:onSubmitFailure',
+					function(errors)
 					{
-						this.quickFormSaveButton.classList.remove("ui-btn-wait");
-						this.editorNode.classList.remove("crm-kanban-quick-form-wait");
+						if(this.editorOpen)
+						{
+							this.quickFormSaveButton.classList.remove("ui-btn-wait");
+							this.editorNode.classList.remove("crm-kanban-quick-form-wait");
+
+							var message = '';
+							var requiredFields = [];
+							for (var i in errors)
+							{
+								if(errors.hasOwnProperty(i) && errors[i].message)
+								{
+									if(
+										errors[i].code === 'CRM_FIELD_ERROR_REQUIRED'
+										&& errors[i].customData
+										&& errors[i].customData.fieldName
+									)
+									{
+										requiredFields.push(errors[i].customData.fieldName);
+									}
+									message += errors[i].message + ', ';
+								}
+							}
+
+							if(requiredFields.length > 0)
+							{
+								this.openQuickFormPartialEditor(requiredFields);
+							}
+							else
+							{
+								BX.Kanban.Utils.showErrorDialog(BX.Text.encode(message), true);
+							}
+						}
 					}.bind(this)
 				);
 
@@ -578,9 +672,7 @@
 					function(entityData)
 					{
 						var context = entityData.sender.getContext();
-						var statusKey = (entityType === "DEAL")
-										? "STAGE_ID"
-										: "STATUS_ID";
+						var statusKey = this.getGrid().getTypeInfoParam('stageIdKey');
 						if (context[statusKey] === this.getId())
 						{
 							this.getGrid().loadNew(
@@ -591,9 +683,7 @@
 
 						if(this.editorOpen)
 						{
-							this.quickFormSaveButton.classList.remove("ui-btn-wait");
-							this.editorNode.classList.remove("crm-kanban-quick-form-wait");
-
+							this.hideQuickEditorLoader();
 							entityData.isCancelled = true;
 						}
 					}.bind(this)
@@ -636,8 +726,7 @@
 						&& this.isKeyMetaPressed && this.editorOpen)
 					{
 						this.processQuickEditor();
-						this.quickFormSaveButton.classList.add("ui-btn-wait");
-						this.editorNode.classList.add("crm-kanban-quick-form-wait");
+						this.showQuickEditorLoader();
 						BX.PreventDefault(ev);
 					}
 				}.bind(this));
@@ -669,9 +758,79 @@
 			this.layout.items.insertBefore(this.editorNode, this.layout.items.firstChild);
 		},
 
+		openQuickFormPartialEditor: function(fieldNames)
+		{
+			if (
+				!this.editorOpen
+				||
+				(this.quickFormPartialEditor && this.quickFormPartialEditor._isLocked)
+			)
+			{
+				return;
+			}
+			var formData = new FormData(this.editor._ajaxForm._elementNode),
+				presetValues = {};
+
+			var formDataEntries = formData.entries(),
+				formDataEntry = formDataEntries.next(),
+				pair;
+
+			while (!formDataEntry.done) {
+				pair = formDataEntry.value;
+				presetValues[pair[0]] = pair[1];
+				formDataEntry = formDataEntries.next();
+			}
+
+			var gridData = this.grid.getData();
+			var context = {};
+			context[this.getGrid().getTypeInfoParam('stageIdKey')] = this.id;
+			context['NOT_CHANGE_STATUS'] = 'Y';
+
+			var settings = {
+				entityTypeId: gridData.entityTypeInt,
+				entityId: 0,
+				fieldNames: fieldNames,
+				context: context,
+				values: [],
+				presetValues: presetValues,
+			};
+
+			if(this.getGrid().getTypeInfoParam('useFactoryBasedApproach'))
+			{
+				settings.title = BX.message('CRM_TYPE_ITEM_PARTIAL_EDITOR_TITLE');
+				settings.isController = true;
+				settings.entityTypeName = gridData.entityType;
+				settings.stageId = this.getId();
+			}
+			else
+			{
+				settings.title = BX.message(
+					"CRM_KANBAN_REQUIRED_FIELDS_TITLE_" + gridData.entityType
+				)
+			}
+
+			this.quickFormPartialEditor = BX.Crm.QuickFormPartialEditorDialog.create(
+				"quickform-partial-entity-editor",
+				settings
+			);
+			this.quickFormPartialEditor.open();
+		},
+
 		isEditorOpen: function()
 		{
 			return this.editorOpen;
+		},
+
+		showQuickEditorLoader: function()
+		{
+			this.quickFormSaveButton.classList.add("ui-btn-wait");
+			this.editorNode.classList.add("crm-kanban-quick-form-wait");
+		},
+
+		hideQuickEditorLoader: function()
+		{
+			this.quickFormSaveButton.classList.remove("ui-btn-wait");
+			this.editorNode.classList.remove("crm-kanban-quick-form-wait");
 		},
 
 		/**
@@ -752,8 +911,7 @@
 			}
 
 			// render layout first time
-
-			if (gridData.entityType !== "LEAD")
+			if (this.getGrid().getTypeInfoParam('showTotalPrice'))
 			{
 				if (!this.layout.subTitlePrice)
 				{
@@ -814,18 +972,13 @@
 				quickForm = true,
 				loadEditor = false;
 
-			if (
-				data.sort === 100 &&
-				(
-					gridData.entityType === "LEAD" ||
-					gridData.entityType === "DEAL"
-				)
-			)
+			if (data.sort === 100 && this.getGrid().getTypeInfoParam('hasPlusButtonTitle'))
 			{
 				loadEditor = true;
-				plusTitle = BX.message(
-					"CRM_KANBAN_PLUS_TITLE_" + gridData.entityType
-				);
+
+				plusTitle = gridData.isDynamicEntity
+					? BX.message("CRM_KANBAN_PLUS_TITLE_DYNAMIC")
+					: BX.message("CRM_KANBAN_PLUS_TITLE_" + gridData.entityType);
 			}
 
 			if (quickForm)
@@ -860,8 +1013,7 @@
 							events: {
 								click: function(ev) {
 									this.processQuickEditor();
-									this.quickFormSaveButton.classList.add("ui-btn-wait");
-									this.editorNode.classList.add("crm-kanban-quick-form-wait");
+									this.showQuickEditorLoader();
 									BX.PreventDefault(ev);
 								}.bind(this)
 							}
@@ -884,9 +1036,12 @@
 				})
 			}
 
+			var stageIdKey = this.getGrid().getTypeInfoParam('stageIdKey');
+			stageIdKey = stageIdKey.toLowerCase();
+
 			if (
-				this.canAddItem &&
-				(gridData.entityType === "LEAD" || gridData.entityType === "DEAL")
+				this.canAddItem
+				&& this.getGrid().getTypeInfoParam('isQuickEditorEnabled')
 			)
 			{
 				this.layout.subTitleAddButton = BX.create("div", {
@@ -897,17 +1052,16 @@
 					events: {
 						click: quickForm
 							? function(ev) {
+							// @todo Checking bx-ie is still actually?
 								if(document.getElementsByTagName("html")[0].classList.contains("bx-ie"))
 								{
 									if(gridData.entityType === "LEAD")
 									{
 										BX.SidePanel.Instance.open("/crm/lead/details/0/?category_id=" + gridData.params.CATEGORY_ID);
 									}
-
-									if(gridData.entityType === "DEAL")
+									else if(gridData.entityType === "DEAL")
 									{
 										BX.SidePanel.Instance.open("/crm/deal/details/0/");
-
 									}
 									return;
 								}
@@ -988,13 +1142,7 @@
 							text: plusTitle,
 							attrs: {
 								className: "crm-kanban-column-add-item-button",
-								href: this.getAddPath() +
-								(
-									gridData.entityType === "DEAL"
-										? "stage_id="
-										: "status_id="
-								) +
-								this.getId()
+								href: this.getAddPath() + stageIdKey + '=' + this.getId()
 							}
 					}) : null
 				)
@@ -1013,13 +1161,7 @@
 								text: plusTitle,
 								attrs: {
 									className: "crm-kanban-column-add-item-button",
-									href: this.getAddPath() +
-									(
-										gridData.entityType === "DEAL"
-											? "stage_id="
-											: "status_id="
-									) +
-									this.getId()
+									href: this.getAddPath() + stageIdKey + '=' + this.getId()
 								}
 							}) : null
 					),
@@ -1227,6 +1369,7 @@
 						if (itemToRemove.isCountable() && itemToRemove.isVisible())
 						{
 							this.decrementTotal();
+							this.getGrid().resetMultiSelectMode();
 						}
 
 						if (this.getGrid().isRendered())
@@ -1241,7 +1384,7 @@
 					resolve();
 				}
 			}.bind(this));
-		}
+		},
 	};
 
 })();

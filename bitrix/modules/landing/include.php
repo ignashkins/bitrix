@@ -48,6 +48,7 @@ $jsConfig = array(
 		'js' => [
 			$pathTemplate24 . '/assets/js/helpers/inline-video.js',
 		],
+		'lang' => $pathLang . '/js/video_alert.php',
 		'rel' => ['mediaplayer']
 	],
 	'map_provider' => array(
@@ -208,6 +209,13 @@ $jsConfig = array(
 		'rel' => ['landing_core'],
 	],
 
+	'landing_header_sidebar' => [
+		'js' => [
+			$pathTemplate24 . '/assets/js/helpers/header-sidebar.js',
+		],
+		'rel' => ['landing_core'],
+	],
+
 	'landing_form' => array(
 		'js' => array(
 			$pathTemplate24 . '/assets/js/helpers/form_init.js',
@@ -266,6 +274,9 @@ $jsConfig = array(
 		'js' => [
 			$pathTemplate24 . '/assets/js/helpers/lazyload.js',
 		],
+		'rel' => [
+			'main.polyfill.intersectionobserver',
+		]
 	],
 
 	'landing_auto_font_scale' => [

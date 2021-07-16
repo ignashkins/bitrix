@@ -1,9 +1,15 @@
 <?php
+$MESS["OL_COMPONENT_AUTOMATIC_MESSAGE_CLOSE_TITLE"] = "Konversation beenden";
+$MESS["OL_COMPONENT_AUTOMATIC_MESSAGE_CONTINUE_TITLE"] = "Konversation fortsetzen";
+$MESS["OL_COMPONENT_AUTOMATIC_MESSAGE_NEW_TITLE"] = "Neue Konversation";
+$MESS["OL_COMPONENT_AUTOMATIC_MESSAGE_TITLE"] = "Wir haben keine Antwort von Ihnen bekommen. Haben Sie noch weitere Fragen?";
 $MESS["OL_COMPONENT_CONFIG_EDIT_CRM_CREATE_DEAL"] = "Einen Auftrag automatisch erstellen";
 $MESS["OL_COMPONENT_CONFIG_EDIT_CRM_CREATE_DEAL_SECOND"] = "Auftragen in diesem Funnel erstellen";
 $MESS["OL_COMPONENT_CONFIG_EDIT_CRM_CREATE_DEAL_THIRD"] = "Einen aktiven Auftrag nutzen, keinen neuen erstellen";
 $MESS["OL_COMPONENT_CONFIG_EDIT_CRM_CREATE_IN_CHAT"] = "Im Chatfenster manuell erstellen";
 $MESS["OL_COMPONENT_CONFIG_EDIT_CRM_CREATE_LEAD"] = "Einen neuen Lead automatisch erstellen";
+$MESS["OL_COMPONENT_DISABLES_POPUP_HEAD_DEPARTMENT_EXCLUDED_QUEUE_TITLE"] = "Nicht mehr anzeigen";
+$MESS["OL_COMPONENT_ERROR_SAVE_CONFIG"] = "Fehler beim Speichern der Konfiguration des Kommunikationskanals.";
 $MESS["OL_COMPONENT_KPI_FIRST_ANSWER_TEXT"] = "#OPERATOR# hat maximale ursprüngliche Reaktionszeit in der Konversation ##DIALOG# überschritten.";
 $MESS["OL_COMPONENT_KPI_FURTHER_ANSWER_TEXT"] = "#OPERATOR# hat maximale Reaktionszeit in der Konversation ##DIALOG# überschritten.";
 $MESS["OL_COMPONENT_LE_BOT_LIST"] = "Chat-Bot wurde nicht ausgewählt";
